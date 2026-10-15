@@ -389,7 +389,7 @@ test('the header is opaque, lighter than the gradient top, shadowed, and underli
   expect(look.holdsTitleAndTabs).toBe(true);
   expect(look.alpha).toBe(1);
   expect(look.header).toBeGreaterThan(look.top);
-  expect(look.header - look.top).toBeLessThan(0.15);
+  expect(look.header - look.top).toBeLessThan(0.2); // three quarters of the way from the bar to the panel colour: lighter than the phone bar, still short of white
   expect(look.shadow).not.toBe('none');
   expect(look.headerLine).toBeLessThan(look.tabsLine); // the header's line is the darker of the two, just below the tabs' border
   expect(look.fullWidth).toBe(true);

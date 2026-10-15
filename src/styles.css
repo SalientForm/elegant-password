@@ -42,6 +42,11 @@
     --bad-soft: #3d2322;
     --key: #262a2f;
     --heat-rgb: 108 194 168;
+    /* Raised surfaces are lighter in the dark, so the header and bar step up from the panel colour rather than from the gradient (--bar is then unused). */
+    --phone-bar-bg: color-mix(in srgb, var(--panel), white 5%); /* a little lighter than the cards it runs above */
+    --header-bg: color-mix(in srgb, var(--panel), white 8%); /* lighter again: the header is drawn over the bar, as in light mode */
+    --line-dark: color-mix(in srgb, var(--line), white 18%); /* toward white: a darker line would vanish into the dark panels */
+    --toggle: color-mix(in srgb, var(--panel), white 4%); /* an unselected toggle sits a step above its darker pill, not sunk into it */
   }
 }
 
