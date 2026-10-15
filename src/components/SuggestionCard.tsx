@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
+import { MEMORABILITY, scoreCold } from '../lib/score';
 import { MAPPING_KIND_LABELS } from '../lib/twists';
 import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
@@ -70,6 +71,10 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   const code = useRef<HTMLElement>(null);
   const { password, hint, words, typing, checks, twists, difficulty } = suggestion;
   const whyId = `why-${index}`;
+  // The memorability breakdown comes from the same cold score as the badge.
+  const cold = useMemo(() => scoreCold(password, hint), [password, hint]);
+  const memo = cold.memorability;
+  const changedWords = cold.words.filter((w) => w.form === 'dropped' || [...w.text].length < [...w.word].length);
 
   const letterRows = typing.rowsUsed.filter((r) => r > 0 && r < 4);
 
@@ -217,6 +222,35 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
               Difficulty score: {difficulty.score} / 100 ({difficulty.label.toLowerCase()})
             </h3>
             <DifficultyTable difficulty={difficulty} />
+          </section>
+
+          <section>
+            <h3>Memorability: {memo.score} / 100</h3>
+            <p>
+              How closely it still looks like its hint, and how short it is. Words that keep their full length count in
+              full, shortened words count the fraction kept, dropped words nothing; shorter is better; a spelling that
+              differs from the hint costs a little.
+            </p>
+            <ul>
+              <li>
+                {memo.sameSize} of {cold.words.length} hint words keep their full length
+                {changedWords.length
+                  ? `: ${changedWords
+                      .map((w) => (w.form === 'dropped' ? `“${w.word}” was dropped` : `“${w.word}” became “${w.text}” (${[...w.text].length} of ${[...w.word].length} letters)`))
+                      .join(', ')}`
+                  : ''}
+                . Fidelity {Math.round(memo.fidelity * 100)}%, worth {MEMORABILITY.fidelityWeight * 100}% of the score.
+              </li>
+              <li>
+                {[...password].length} characters: brevity {Math.round(memo.brevity * 100)}% (full marks at {MEMORABILITY.shortAt} or fewer, none at{' '}
+                {MEMORABILITY.longAt} or more), worth {MEMORABILITY.brevityWeight * 100}%.
+              </li>
+              <li>
+                {memo.swappedWords === 0
+                  ? 'No spelling differs from the hint, so no penalty.'
+                  : `${memo.swappedWords} spelling${memo.swappedWords === 1 ? '' : 's'} differ${memo.swappedWords === 1 ? 's' : ''} from the hint: −${Math.min(MEMORABILITY.maxSwapPenalty, memo.swappedWords * MEMORABILITY.swapPenalty)} points.`}
+              </li>
+            </ul>
           </section>
 
           <section>

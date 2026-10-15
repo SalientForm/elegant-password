@@ -44,6 +44,7 @@ test('loads a batch of passwords that pass their checks, and is never stuck work
   // Every "Why?" starts closed; open the first: every rule is met.
   await expect(page.getByText('Fast to type')).toHaveCount(0);
   await openWhy(page);
+  await expect(cards(page).first().getByRole('heading', { name: /^Memorability: \d+ \/ 100$/ })).toBeVisible();
   await expect(cards(page).first().locator('.checks li.unmet')).toHaveCount(0);
   await expect(cards(page).first().locator('.checks li.met').first()).toBeVisible();
   // The built page carries the Content-Security-Policy; the dev server cannot (hot reloading needs inline scripts).

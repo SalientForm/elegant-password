@@ -27,7 +27,11 @@ describe('SuggestionCard', () => {
     expect(within(why).getByText(/joined with ";"/)).toBeTruthy();
     expect(screen.getByText((_, el) => el?.classList.contains('hint-line') === true).textContent).toBe(`Hint: ${s.hint}`);
     for (const c of s.checks) expect(screen.getByText(c.rule)).toBeTruthy();
-    expect(screen.getAllByText(/^(✓)?/).length).toBeGreaterThan(0);
+    // The memorability breakdown is in the "Why?" block and agrees with the badge.
+    expect(screen.getByRole('heading', { name: `Memorability: ${s.memorability} / 100` })).toBeTruthy();
+    expect(screen.getByText(/hint words keep their full length/)).toBeTruthy();
+    expect(screen.getByText(/brevity \d+%/)).toBeTruthy();
+    expect(screen.getByText(/penalty|differs? from the hint/)).toBeTruthy();
   });
 
   it('explains whole-word capitals, initials, spaces, no separator and a chosen stretch', () => {
@@ -42,6 +46,7 @@ describe('SuggestionCard', () => {
     show(initials.s, initials.context);
     open();
     expect(screen.getByText(/2 capital initials/)).toBeTruthy();
+    expect(screen.getByText(/became “[A-Z]” \(1 of \d+ letters\)/)).toBeTruthy(); // initials explained in the memorability section
     expect(screen.getByText(/Capital letters stand for whole words/)).toBeTruthy();
     expect(screen.getByText(/run together with no separator/)).toBeTruthy();
     cleanup();

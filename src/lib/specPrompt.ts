@@ -208,6 +208,7 @@ Cards are ordered easiest first (difficulty ascending, more bits first on ties) 
 - **Easy to remember**: the hint (the sentence to remember); word chips labelled by part of speech or "made-up noun" (words from the user's own sentence carry no label, only what they were when they changed; padding chips say "padding"); twisted and initial words marked with the original; the twists or change steps listed; the number of ways the twists could land.
 - **Fast to type**: Shift presses and why (and how often capital initials flip the case), share of same-row moves, average reach, same-finger pairs, rows used, separator note, and a keyboard heat map of the keys used.
 - **Difficulty score** table (the rubric lives on the Scoring page).
+- **Memorability**: the score out of 100 with its three parts spelled out: how many hint words keep their full length and what each shortened or dropped word became (“gently” became “gy”, 2 of 6 letters), fidelity as a percentage and its weight; the character count with brevity as a percentage, its cut-offs and weight; and the number of spellings that differ from the hint with the penalty they cost.
 - **Meets the requirements**: every rule with ✓/✗ and how it was met.
 
 ## 10. Strength panel
