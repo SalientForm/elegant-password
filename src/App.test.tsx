@@ -122,7 +122,7 @@ describe('App: order and pages', () => {
   it('shows the title above the tabs with the description beside it and the SalientForm credit', () => {
     render(<App />);
     const title = screen.getByRole('heading', { level: 1 });
-    expect(title.textContent).toBe('Passwords');
+    expect(title.textContent).toBe('The Elegant Password');
     const nav = screen.getByRole('navigation', { name: 'Pages' });
     expect(title.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // title first, tabs after
     expect(screen.getByText('brought to you by SalientForm')).toBeTruthy();

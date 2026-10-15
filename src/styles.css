@@ -47,11 +47,13 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .mono, code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 
 .app { max-width: 1380px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
-.topbar { position: relative; margin-bottom: 0.75rem; padding-top: 0.35rem; }
-.topbar-text { display: flex; justify-content: center; align-items: baseline; gap: 1.25rem; flex-wrap: wrap; text-align: center; padding: 0 9rem; }
+.topbar { margin-bottom: 0.75rem; padding-top: 0.35rem; }
+/* Title top left, description to its right, both centred on one horizontal centreline. */
+.topbar-text { display: flex; justify-content: flex-start; align-items: center; gap: 1.25rem; flex-wrap: wrap; text-align: left; }
+.topbar h1 { white-space: nowrap; }
 .topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 13pt; }
-.topbar .brand { position: absolute; right: 0; top: 0; font-size: 0.78rem; font-weight: 700; font-style: italic; opacity: 0.5; white-space: nowrap; }
-@media (max-width: 860px) { .topbar-text { padding: 1.4rem 0 0; } }
+/* Pinned to the top-right corner of the screen, the same distance from the top and the right edge. */
+.topbar .brand { position: fixed; top: 0.75rem; right: 0.75rem; z-index: 5; font-size: 0.78rem; font-weight: 700; font-style: italic; opacity: 0.3; white-space: nowrap; }
 
 main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
 /* The right column stays in view; the list takes whatever height is left and scrolls inside itself. */

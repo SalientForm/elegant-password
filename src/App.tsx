@@ -19,10 +19,11 @@ import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
 type Page = 'main' | 'scoring' | 'fun';
 const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : window.location.hash === '#/scoring' ? 'scoring' : 'main');
 
-const TITLES: Record<Page, [string, string]> = {
-  main: ['Passwords', 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.'],
-  scoring: ['Scoring', 'How difficulty and strength are scored.'],
-  fun: ['Fun', 'The whole app, described as one prompt.'],
+const TITLE = 'The Elegant Password';
+const DESCRIPTIONS: Record<Page, string> = {
+  main: 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.',
+  scoring: 'How difficulty, strength and memorability are scored.',
+  fun: 'The whole app, described as one prompt.',
 };
 
 const SORTS: { id: SortOrder; label: string }[] = [
@@ -48,8 +49,8 @@ export function App() {
       <div className="app">
         <header className="topbar">
           <div className="topbar-text">
-            <h1>{TITLES[page][0]}</h1>
-            <p className="tagline">{TITLES[page][1]}</p>
+            <h1>{TITLE}</h1>
+            <p className="tagline">{DESCRIPTIONS[page]}</p>
           </div>
           <span className="brand">brought to you by SalientForm</span>
         </header>
