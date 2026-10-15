@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
-import { NARROW } from './components/useMediaQuery';
+import { MEDIUM, NARROW, PHONE } from './components/useMediaQuery';
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -158,39 +158,158 @@ describe('App: order and pages', () => {
   });
 });
 
-describe('App on a phone', () => {
-  const narrowScreen = () =>
+describe('App in the medium range', () => {
+  const mediumScreen = () =>
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
-      value: (query: string) => ({ matches: query === NARROW, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }),
+      value: (query: string) => ({ matches: query === MEDIUM, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }),
     });
   afterEach(() => {
     delete (window as unknown as { matchMedia?: unknown }).matchMedia;
   });
+  const strips = () => screen.queryAllByRole('button', { expanded: false }).filter((b) => b.className === 'strip-button');
+  const shown = (id: string) => !document.getElementById(`section-panel-${id}`)!.hidden;
 
-  it('collapses the columns into Options, Suggestions and My list tabs with every feature reachable', { timeout: 30_000 }, async () => {
+  it('shows two columns, Options and Suggestions at first with Testing shrunk to a button; the outer columns trade places, Suggestions stays', { timeout: 30_000 }, async () => {
+    mediumScreen();
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const main = document.querySelector('main')!;
+    expect(main.className).toBe('columns medium outer-options');
+    expect(strips().map((b) => `${b.textContent} (${b.parentElement!.className})`)).toEqual(['Testing (strip right)']);
+    expect([shown('options'), shown('suggestions'), shown('list')]).toEqual([true, true, false]);
+    expect(screen.getByText('Site requirements')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Testing' }));
+    expect(main.className).toBe('columns medium outer-list');
+    expect(strips().map((b) => `${b.textContent} (${b.parentElement!.className})`)).toEqual(['Options (strip left)']);
+    expect([shown('options'), shown('suggestions'), shown('list')]).toEqual([false, true, true]);
+    expect(document.activeElement).toBe(document.getElementById('section-panel-list')); // focus follows the opened column
+    expect(cards().length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    expect(main.className).toBe('columns medium outer-options');
+    expect([shown('options'), shown('suggestions'), shown('list')]).toEqual([true, true, false]);
+  });
+});
+
+describe('App when too narrow for three columns', () => {
+  const narrowScreen = () =>
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: query === NARROW || query === MEDIUM, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }),
+    });
+  afterEach(() => {
+    delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+  });
+  const strips = () => screen.queryAllByRole('button', { expanded: false }).filter((b) => b.className === 'strip-button');
+  const stripLabels = () => strips().map((b) => b.textContent);
+  const visibleHeadings = () => screen.getAllByRole('heading').map((h) => h.textContent); // hidden columns are out of the accessibility tree
+
+  it('keeps one column open and shrinks the other two to Options, Suggestions and Testing buttons, in column order', { timeout: 30_000 }, async () => {
     narrowScreen();
     render(<App />);
-    const sections = within(screen.getByRole('tablist', { name: 'Sections' })).getAllByRole('tab');
-    expect(sections.map((t) => t.textContent)).toEqual(['Options', 'Suggestions', 'My list']);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
-    expect(screen.queryByText('Site requirements')).toBeNull(); // options live in their own tab
-    expect(screen.queryByLabelText('Test and practice')).toBeNull(); // so do the tester and the list
+    expect(stripLabels()).toEqual(['Options', 'Testing']); // Suggestions is open at first
+    expect(document.getElementById('section-panel-options')!.hidden).toBe(true);
+    expect(document.getElementById('section-panel-list')!.hidden).toBe(true);
+    expect(screen.queryByRole('textbox', { name: 'Test and practice' })).toBeNull(); // hidden columns are out of the accessibility tree
+    const main = document.querySelector('main')!;
+    expect(main.className).toBe('columns narrow focus-suggestions');
+    // The strips keep their columns' places; the shrunken columns stay in the DOM, hidden. A strip left of the
+    // open column reads bottom to top ("left"), one right of it top to bottom ("right").
+    expect([...main.children].slice(0, 5).map((c) => `${c.className}${(c as HTMLElement).hidden ? ' (hidden)' : ''}`)).toEqual(['strip left', 'sidebar (hidden)', 'results', 'strip right', 'aside (hidden)']);
+    for (const b of strips()) expect(b.getAttribute('aria-controls')).toBe(`section-panel-${b.textContent === 'Options' ? 'options' : 'list'}`);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Options' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    expect(stripLabels()).toEqual(['Suggestions', 'Testing']);
+    expect(main.className).toBe('columns narrow focus-options');
+    expect(strips().map((b) => b.parentElement!.className)).toEqual(['strip right', 'strip right']); // both right of the open column
+    expect(document.activeElement).toBe(document.getElementById('section-panel-options')); // focus follows the opened column
     expect(screen.getByText('Site requirements')).toBeTruthy();
     expect(screen.getByText('Swaps')).toBeTruthy();
     expect(screen.queryAllByRole('article')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Strict' }));
     expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'My list' }));
-    expect(screen.getByLabelText('Test and practice')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'My list' })).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // the floating buttons follow every tab
+    fireEvent.click(screen.getByRole('button', { name: 'Testing' }));
+    expect(stripLabels()).toEqual(['Options', 'Suggestions']);
+    expect(strips().map((b) => b.parentElement!.className)).toEqual(['strip left', 'strip left']); // both left of it
+    expect(screen.getByRole('textbox', { name: 'Test and practice' })).toBeTruthy();
+    expect(visibleHeadings()).toContain('My list');
+    expect(visibleHeadings()).not.toContain('Suggestions');
+    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // the floating buttons follow
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Suggestions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Suggestions' }));
+    expect(stripLabels()).toEqual(['Options', 'Testing']);
     expect(screen.getByRole('tablist', { name: 'How to make the sentence' })).toBeTruthy();
     expect(cards().length).toBeGreaterThan(0);
+  });
+
+  it('keeps a shrunken column mounted, so what was open in it is still open when it comes back', { timeout: 30_000 }, async () => {
+    narrowScreen();
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Why?' }));
+    expect(within(cards()[0]!).getByRole('button', { name: 'Hide why' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Testing' }));
+    expect(document.getElementById('section-panel-suggestions')!.hidden).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Suggestions' }));
+    expect(document.getElementById('section-panel-suggestions')!.hidden).toBe(false);
+    expect(within(cards()[0]!).getByRole('button', { name: 'Hide why' })).toBeTruthy();
+  });
+});
+
+describe('App on a phone', () => {
+  const phoneScreen = () =>
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: query === NARROW || query === MEDIUM || query === PHONE, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }),
+    });
+  afterEach(() => {
+    delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('gives the open column the whole width under a bar: the page links behind a hamburger at the left, the column tabs centred', { timeout: 30_000 }, async () => {
+    phoneScreen();
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const main = document.querySelector('main')!;
+    expect(main.className).toBe('columns narrow phone focus-suggestions');
+    expect(main.querySelector('.strip')).toBeNull(); // the tabs in the bar do the strips' job
+    expect(document.querySelector('.phone-bar > :first-child')!.className).toBe('phone-menu'); // the menu comes first, at the left
+    const tabs = within(screen.getByRole('tablist', { name: 'Sections' })).getAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Options', 'Suggestions', 'Testing']);
+    expect(tabs[1]!.getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).toBeNull(); // the page links are folded away
+    expect(document.getElementById('section-panel-options')!.hidden).toBe(true);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Options' }));
+    expect(main.className).toBe('columns narrow phone focus-options');
+    expect(screen.getByRole('tabpanel', { name: 'Options' })).toBe(document.getElementById('section-panel-options')); // the tab controls the column
+    expect(screen.getByText('Site requirements')).toBeTruthy();
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('tab', { name: 'Testing' }));
+    expect(screen.getByRole('textbox', { name: 'Test and practice' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Suggestions' }));
+    expect(cards().length).toBeGreaterThan(0);
+
+    const menu = screen.getByRole('button', { name: 'Pages' });
+    expect(menu.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(menu);
+    expect(menu.getAttribute('aria-expanded')).toBe('true');
+    const links = within(screen.getByRole('navigation', { name: 'Pages' })).getAllByRole('link');
+    expect(links.map((a) => a.textContent)).toEqual(['Passwords', 'Scoring', 'Fun']);
+    expect(links[0]!.getAttribute('aria-current')).toBe('page');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).toBeNull(); // Escape closes the menu
+    fireEvent.click(menu);
+    window.location.hash = '#/scoring';
+    fireEvent(window, new Event('hashchange'));
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeTruthy());
+    expect(screen.queryByRole('navigation', { name: 'Pages' })).toBeNull(); // choosing a page closes it
+    expect(screen.queryByRole('tablist', { name: 'Sections' })).toBeNull(); // no columns here: the page's name stands in
+    expect(document.querySelector('.phone-page')!.textContent).toBe('Scoring');
+    window.location.hash = '';
   });
 });

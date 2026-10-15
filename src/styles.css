@@ -77,8 +77,46 @@ main.columns > .sidebar::after, main.columns > .results::after, main.columns > .
 main.columns > .sidebar::after, main.columns > .aside::after { margin-top: -1rem; }
 main.columns > .results::after { margin-top: -0.9rem; }
 main.columns { padding-bottom: 0; }
-@media (max-width: 1100px) { main { grid-template-columns: 300px minmax(0, 1fr); } .aside { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; } main.columns > .aside { position: static; max-height: none; overflow: visible; } }
-@media (max-width: 860px) { main { grid-template-columns: 1fr; } .aside { grid-template-columns: 1fr; } }
+/*
+ * Fewer than three columns fit (the app decides): between 800 and 1100 px two
+ * columns stay open and stick like the desktop's; at 800 px and below the open
+ * column sits in normal flow and the page scrolls normally. A shrunken column
+ * is a thin strip, as tall as the viewport and stuck to its top, with its
+ * button centred in it; strips keep their columns' places in the order.
+ */
+main.columns.medium.outer-options { grid-template-columns: 300px minmax(0, 1fr) auto; } /* two columns: Suggestions and one outer column, the other a strip */
+main.columns.medium.outer-list { grid-template-columns: auto minmax(0, 1fr) 340px; }
+main.columns.focus-options { grid-template-columns: minmax(0, 1fr) auto auto; }
+main.columns.focus-suggestions { grid-template-columns: auto minmax(0, 1fr) auto; }
+main.columns.focus-list { grid-template-columns: auto auto minmax(0, 1fr); }
+main.columns.narrow > .sidebar, main.columns.narrow > .results, main.columns.narrow > .aside { position: static; max-height: none; overflow: visible; padding: 0; min-width: 0; }
+main.columns.narrow > .sidebar > *, main.columns.narrow > .results > *, main.columns.narrow > .aside > * { min-width: 0; } /* grid items would otherwise grow to their content and run under a strip */
+main.columns.narrow > .sidebar::after, main.columns.narrow > .results::after, main.columns.narrow > .aside::after { display: none; }
+main.columns > [hidden] { display: none; }
+fieldset { min-inline-size: 0; } /* the browser default, min-content, keeps a form from fitting a narrow column */
+main.columns > div:focus { outline: none; }
+main.columns > .strip { position: sticky; top: 0; height: 100vh; height: 100dvh; width: 2.25rem; display: flex; align-items: center; justify-content: center; align-self: start; }
+.strip-button { writing-mode: vertical-rl; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-weight: 600; font-size: 0.85rem; padding: 0.9rem 0.3rem; border-radius: 999px; min-height: 0; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); opacity: 0.65; }
+.strip-button:hover, .strip-button:focus-visible { color: var(--accent); border-color: var(--accent); opacity: 1; }
+.strip.left .strip-button { transform: rotate(180deg); } /* left of the open column the label reads bottom to top; right of it, top to bottom */
+/*
+ * Phones (the app decides, 600 px and below): the open column takes the whole
+ * width. A bar stuck to the top acts as the header: the page links fold into
+ * a menu behind a hamburger at its left, and the three column tabs sit
+ * centred in it.
+ */
+main.columns.phone { display: block; }
+.phone-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.3rem 0; margin: 0 0 0.9rem; background: var(--bg); border-bottom: 1px solid var(--line); }
+.phone-menu { position: relative; grid-column: 1; justify-self: start; } /* the empty track at the right mirrors it, so the tabs are centred in the bar */
+.phone-menu nav { position: absolute; top: calc(100% + 0.3rem); left: 0; z-index: 6; display: grid; min-width: 10rem; padding: 0.3rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); }
+.phone-menu nav a { padding: 0.55rem 0.8rem; border-radius: 6px; color: var(--ink); font-weight: 600; text-decoration: none; }
+.phone-menu nav a.active { background: var(--accent-soft); color: var(--accent); }
+.phone-bar .section-tabs { grid-column: 2; justify-self: center; display: flex; gap: 0.2rem; max-width: 100%; padding: 0.2rem; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
+.phone-bar .section-tabs button { border: 0; background: transparent; padding: 0.4rem 0.55rem; border-radius: 999px; font-weight: 600; font-size: 0.8rem; color: var(--muted); min-width: 0; white-space: nowrap; }
+.phone-bar .section-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
+.phone-page { grid-column: 2; justify-self: center; font-weight: 700; }
+@media (max-width: 400px) { .phone-bar .section-tabs button { font-size: 0.7rem; padding: 0.4rem 0.45rem; } } /* the narrowest phones: the three tabs still clear the hamburger */
+@media (max-width: 600px) { main.columns.narrow { gap: 0.6rem; } main.columns > .strip { width: 2rem; } .strip-button { font-size: 0.8rem; padding: 0.8rem 0.25rem; } .results-tools .segmented.sort { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); } /* the three order labels wrap into rows when they cannot share one */ .segmented > button { min-width: 0; padding-inline: 0.3rem; font-size: 0.8rem; } }
 .segmented.sort { grid-template-columns: repeat(3, 1fr); }
 .scoring { display: grid; gap: 1rem; margin-bottom: 1rem; }
 .scoring h3 { margin-top: 1rem; }
@@ -159,6 +197,12 @@ button.ghost { border-color: transparent; color: var(--muted); }
 /* One line; cut with an ellipsis only when it does not fit (the tip then shows it in full). */
 .password { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; min-width: 0; }
 .card-row > .pw-tip-anchor { flex: 1 1 auto; min-width: 0; }
+/* Too narrow for the password and its buttons on one row: password, badges and buttons each on a row, centred. */
+.card-head.stacked .card-row { flex-direction: column; align-items: stretch; justify-content: center; }
+.card-head.stacked .card-row > .pw-tip-anchor { flex: 0 0 auto; width: 100%; }
+.card-head.stacked .password { text-align: center; }
+.card-head.stacked .card-buttons { margin-left: 0; }
+.card-head.stacked .actions { justify-content: center; }
 .actions { display: flex; gap: 0.4rem; align-items: center; }
 .badge { font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
 .badge-tip { display: inline-block; }
@@ -303,15 +347,15 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .chip.fluff { background: var(--warn-soft); border: 1px dashed var(--warn); }
 
 /* Test a password, top of the right column */
-.typing-test { display: grid; gap: 0.55rem; }
+.typing-test { display: grid; gap: 0.55rem; min-width: 0; } /* grid items default to min-width auto, which would let a long password widen the column */
 .typing-test input.masked { -webkit-text-security: disc; } /* hidden without being a password field */
 .typing-test input[type='text'] { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.5rem 0.65rem; width: 100%; }
 .typing-test-controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
 .typing-result .hint-field { grid-template-columns: 3rem 1fr; }
 .typing-result .hint-field input { font: inherit; font-size: 0.85rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.3rem 0.5rem; width: 100%; }
-.typing-result { display: grid; gap: 0.4rem; font-size: 0.85rem; }
+.typing-result { display: grid; gap: 0.4rem; font-size: 0.85rem; min-width: 0; }
 .typing-result p { margin: 0; }
-.testing-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.testing-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
 .testing-row p { min-width: 0; flex: 1 1 auto; }
 .typing-result .password { font-size: 1rem; }
 .typing-stats { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.15rem; }
@@ -327,11 +371,6 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Phones and narrow windows: three tabs instead of three columns; nothing scrolls sideways. */
-.section-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.3rem; margin-bottom: 1rem; }
-.section-tabs button { border: 0; padding: 0.55rem 0.25rem; font-weight: 600; color: var(--muted); min-width: 0; }
-.section-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
-main.collapsed { display: block; }
-main.collapsed .aside { position: static; max-height: none; grid-template-columns: 1fr; }
 @media (max-width: 860px) {
   .segmented.sort { min-width: 0; }
   .results-tools .segmented.sort { min-width: 0; width: 100%; }

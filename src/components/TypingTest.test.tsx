@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { syncGenerator } from '../lib/generator';
 import { scoreAlone, scoreCold } from '../lib/score';
@@ -163,5 +163,38 @@ describe('TypingTest', () => {
     expect(within(after).getByText('M n/a')).toBeTruthy();
     expect(within(after).getByText(`S ${scoreAlone('xyzzy-42').bits.toFixed(0)}`)).toBeTruthy();
     expect(within(after).getByText(`D ${scoreAlone('xyzzy-42').difficulty.score}`)).toBeTruthy();
+  });
+
+  it('cuts a long password under test with an ellipsis and shows the whole of it as an instant tip, like the list', async () => {
+    const local = memoryStore();
+    const long = '13;Worthy;storks;openly;pet;twisty;toys;and;more;words;yet';
+    local.setItem(SELECTED_KEY, JSON.stringify([{ password: long, hint: '13 worthy storks openly pet twisty toys and more words yet', addedAt: '2026-10-15T00:00:00.000Z' }]));
+    render(
+      <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+        <TypingTest />
+      </PasswordsProvider>,
+    );
+    const code = screen.getByText(long);
+    expect(code.className).toContain('password'); // the same one-line, ellipsis style as My list
+    expect(code.getAttribute('title')).toBeNull(); // the app's instant tip, never the browser's
+    // No tip while the password fits; jsdom has no layout, so widths are faked to cut it off.
+    fireEvent.mouseEnter(code.parentElement!);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 400 });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 120 });
+    try {
+      fireEvent.mouseEnter(code.parentElement!);
+      expect(screen.getByRole('tooltip').textContent).toBe(long);
+      fireEvent.mouseLeave(code.parentElement!);
+      await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+      // Masked, the tip shows dots too: hiding the text hides it everywhere.
+      fireEvent.click(screen.getByLabelText('Show as typed'));
+      const dots = '•'.repeat(long.length);
+      fireEvent.mouseEnter(screen.getByText(dots).parentElement!);
+      expect(screen.getByRole('tooltip').textContent).toBe(dots);
+    } finally {
+      delete (HTMLElement.prototype as { scrollWidth?: unknown }).scrollWidth;
+      delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
+    }
   });
 });

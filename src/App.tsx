@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePageFirstWheel } from './components/columnScroll';
-import { NARROW, useMediaQuery } from './components/useMediaQuery';
+import { MEDIUM, NARROW, PHONE, useMediaQuery } from './components/useMediaQuery';
 import { ApplyBar } from './components/ApplyBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FunPage } from './components/FunPage';
@@ -10,7 +10,8 @@ import { SelectedList } from './components/SelectedList';
 import { SentenceInput, SentenceStrength } from './components/SentenceMode';
 import { StrengthPanel } from './components/StrengthPanel';
 import { SuggestionCard, type CardContext } from './components/SuggestionCard';
-import { TabPanel, Tabs } from './components/Tabs';
+import { MenuIcon } from './components/icons';
+import { panelId, TabPanel, Tabs, tabId } from './components/Tabs';
 import { relevantTo, TwistsPanel } from './components/TwistsPanel';
 import { TypingTest } from './components/TypingTest';
 import type { Mode } from './lib/engine';
@@ -20,17 +21,25 @@ import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
 
 type Page = 'main' | 'scoring' | 'fun';
 const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : window.location.hash === '#/scoring' ? 'scoring' : 'main');
+const PAGES: { id: Page; href: string; label: string }[] = [
+  { id: 'main', href: '#/', label: 'Passwords' },
+  { id: 'scoring', href: '#/scoring', label: 'Scoring' },
+  { id: 'fun', href: '#/fun', label: 'Fun' },
+];
 
 const TITLE = 'Thuh Eleg@nt Pa$$word!';
 /** One line for the whole app, the same on every page. */
 const DESCRIPTION = 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.';
 
 type Column = 'options' | 'suggestions' | 'list';
-const COLUMN_TABS: { id: Column; label: string }[] = [
+/** The three columns in order, each with the label of the button it shrinks to when there is no room for all three. */
+const COLUMNS: { id: Column; label: string }[] = [
   { id: 'options', label: 'Options' },
   { id: 'suggestions', label: 'Suggestions' },
-  { id: 'list', label: 'My list' },
+  { id: 'list', label: 'Testing' },
 ];
+/** A column's element id: the panel the matching tab in the phone bar controls. */
+const columnId = (id: Column) => panelId('section', id);
 
 const SORTS: { id: SortOrder; label: string; title: string }[] = [
   { id: 'memorability', label: 'Memorability', title: 'Most memorable first' },
@@ -45,6 +54,8 @@ const MODE_TABS: { id: Mode; label: string }[] = [
 
 export function App() {
   const [page, setPage] = useState<Page>(pageFromHash);
+  const [column, setColumn] = useState<Column>('suggestions');
+  const phone = useMediaQuery(PHONE);
   useEffect(() => {
     const onHash = () => setPage(pageFromHash());
     window.addEventListener('hashchange', onHash);
@@ -63,21 +74,21 @@ export function App() {
             brought to you by <strong>SalientForm</strong>
           </span>
         </header>
-        <nav className="topnav" aria-label="Pages">
-          <a href="#/" className={page === 'main' ? 'active' : ''} aria-current={page === 'main' ? 'page' : undefined}>
-            Passwords
-          </a>
-          <a href="#/scoring" className={page === 'scoring' ? 'active' : ''} aria-current={page === 'scoring' ? 'page' : undefined}>
-            Scoring
-          </a>
-          <a href="#/fun" className={page === 'fun' ? 'active' : ''} aria-current={page === 'fun' ? 'page' : undefined}>
-            Fun
-          </a>
-        </nav>
+        {phone ? (
+          <PhoneBar page={page} column={column} onColumn={setColumn} />
+        ) : (
+          <nav className="topnav" aria-label="Pages">
+            {PAGES.map((pg) => (
+              <a key={pg.id} href={pg.href} className={page === pg.id ? 'active' : ''} aria-current={page === pg.id ? 'page' : undefined}>
+                {pg.label}
+              </a>
+            ))}
+          </nav>
+        )}
         <PasswordsProvider>
           {/* Kept mounted so settings, the sentence and the typing test survive a visit to the other pages. */}
           <div hidden={page !== 'main'}>
-            <ElegantPasswords />
+            <ElegantPasswords column={column} onColumn={setColumn} />
           </div>
         </PasswordsProvider>
         {page === 'scoring' && <ScoringPage />}
@@ -87,14 +98,114 @@ export function App() {
   );
 }
 
-export function ElegantPasswords() {
+/**
+ * On a phone a bar stuck to the top acts as the header: the page links fold
+ * into a menu behind a hamburger at its left, and the three column tabs sit
+ * centred. On the Scoring and Fun pages the page's name stands where the
+ * tabs would be.
+ */
+function PhoneBar({ page, column, onColumn }: { page: Page; column: Column; onColumn: (next: Column) => void }) {
+  const [open, setOpen] = useState(false);
+  const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e: PointerEvent) => {
+      if (!menu.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation(); // closing the menu is all Escape does here (it would otherwise discard unapplied changes)
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey, { capture: true });
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey, { capture: true });
+    };
+  }, [open]);
+  useEffect(() => {
+    setOpen(false); // choosing a page closes the menu
+  }, [page]);
+  return (
+    <div className="phone-bar">
+      <div className="phone-menu" ref={menu}>
+        <button type="button" className="icon-button ghost" aria-label="Pages" aria-expanded={open} aria-controls="phone-pages" title="Pages" onClick={() => setOpen(!open)}>
+          <MenuIcon />
+        </button>
+        {open && (
+          <nav id="phone-pages" aria-label="Pages">
+            {PAGES.map((pg) => (
+              <a key={pg.id} href={pg.href} className={page === pg.id ? 'active' : ''} aria-current={page === pg.id ? 'page' : undefined} onClick={() => setOpen(false)}>
+                {pg.label}
+              </a>
+            ))}
+          </nav>
+        )}
+      </div>
+      {page === 'main' ? (
+        <Tabs tabs={COLUMNS} value={column} onChange={onColumn} label="Sections" idPrefix="section" className="section-tabs" />
+      ) : (
+        <span className="phone-page">{PAGES.find((pg) => pg.id === page)!.label}</span>
+      )}
+    </div>
+  );
+}
+
+interface ColumnsProps {
+  /** The column that is open where there is no room for all three. */
+  column: Column;
+  onColumn: (next: Column) => void;
+}
+
+export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
   const p = usePasswords();
   const { outcome, draft, applied } = p;
-  const narrow = useMediaQuery(NARROW);
-  const [column, setColumn] = useState<Column>('suggestions');
-  // Desktop: the header scrolls away first, then the three columns stick and scroll on their own.
+  const fewer = useMediaQuery(MEDIUM); // fewer than three columns fit
+  const narrow = useMediaQuery(NARROW); // only one
+  const phone = useMediaQuery(PHONE);
+  const medium = fewer && !narrow; // two: Suggestions and one outer column
+  // In the medium range Options starts open and Testing shrunk, whenever the page loads or the width enters the range; the choice is not kept.
+  const [outer, setOuter] = useState<Column>('options');
+  useEffect(() => {
+    if (medium) setOuter('options');
+  }, [medium]);
+  const isOpen = (id: Column) => (!fewer ? true : medium ? id === 'suggestions' || id === outer : id === column);
+  const shrunk = (id: Column) => !isOpen(id);
+  // Desktop and the medium range: the header scrolls away first, then the open columns stick and scroll on their own.
   const columns = useRef<HTMLElement>(null);
   usePageFirstWheel(columns, !narrow);
+  // A column opened from its button takes keyboard focus: the button it was on is gone.
+  const opened = useRef<Column>(undefined);
+  useEffect(() => {
+    const id = opened.current;
+    if (id === undefined || !isOpen(id)) return;
+    opened.current = undefined;
+    columns.current?.querySelector<HTMLElement>(`#${columnId(id)}`)?.focus({ preventScroll: true });
+  });
+  const open = (id: Column) => {
+    opened.current = id;
+    if (medium) setOuter(id);
+    else onColumn(id);
+  };
+  /** A shrunken column is a button in a strip, except on a phone, where the tabs in the bar stand in. */
+  const strips = fewer && !phone;
+  const columnProps = (id: Column) => ({
+    id: columnId(id),
+    tabIndex: -1,
+    hidden: shrunk(id),
+    ...(phone ? { role: 'tabpanel', 'aria-labelledby': tabId('section', id) } : {}),
+  });
+  const index = (id: Column) => COLUMNS.findIndex((c) => c.id === id);
+  const firstOpen = COLUMNS.find((c) => isOpen(c.id))!.id;
+  // A strip left of the open columns reads bottom to top, one right of them top to bottom (like a book spine either side).
+  const strip = (id: Column) => (
+    <div className={index(id) < index(firstOpen) ? 'strip left' : 'strip right'}>
+      <button type="button" className="strip-button" aria-expanded={false} aria-controls={columnId(id)} onClick={() => open(id)}>
+        {COLUMNS[index(id)]!.label}
+      </button>
+    </div>
+  );
   const context: CardContext | undefined =
     outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
   const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
@@ -203,34 +314,27 @@ export function ElegantPasswords() {
     </>
   );
 
-  // On a phone the three columns become three tabs, siblings of each other,
-  // so every option, suggestion and list entry stays reachable with nothing
-  // scrolling sideways.
-  if (narrow) {
-    return (
-      <main className="collapsed">
-        <Tabs tabs={COLUMN_TABS} value={column} onChange={setColumn} label="Sections" idPrefix="section" className="section-tabs" />
-        <TabPanel idPrefix="section" id="options" active={column === 'options'} className="sidebar">
-          {options}
-        </TabPanel>
-        <TabPanel idPrefix="section" id="suggestions" active={column === 'suggestions'} className="results">
-          {centre}
-        </TabPanel>
-        <TabPanel idPrefix="section" id="list" active={column === 'list'} className="aside">
-          {aside}
-        </TabPanel>
-        <ApplyBar />
-      </main>
-    );
-  }
-
+  // Fewer than three columns fit: in the medium range Suggestions and one
+  // outer column stay open and the third shrinks to a button; narrower still,
+  // one column stays open in normal flow and the other two shrink. A shrunken
+  // column is a button in a thin sticky strip, in column order, centred so it
+  // is always in reach. On a phone the open column takes the whole width and
+  // the bar's tabs choose it. Shrunken columns stay mounted, hidden, so
+  // nothing in them is lost.
   return (
-    <main ref={columns} className="columns">
-      <div className="sidebar">{options}</div>
-      <div className="results" aria-busy={p.busy}>
+    <main ref={columns} className={medium ? `columns medium outer-${outer}` : narrow ? `columns narrow${phone ? ' phone' : ''} focus-${column}` : 'columns'}>
+      {strips && shrunk('options') && strip('options')}
+      <div className="sidebar" {...columnProps('options')}>
+        {options}
+      </div>
+      {strips && shrunk('suggestions') && strip('suggestions')}
+      <div className="results" aria-busy={p.busy} {...columnProps('suggestions')}>
         {centre}
       </div>
-      <div className="aside">{aside}</div>
+      {strips && shrunk('list') && strip('list')}
+      <div className="aside" {...columnProps('list')}>
+        {aside}
+      </div>
       <ApplyBar />
     </main>
   );

@@ -84,11 +84,21 @@ explanation for each:
   the password tester above your list. The outer columns are fixed and the
   middle one takes the rest. The page scrolls until the title row and tabs
   are gone; then each column sticks and scrolls on its own.
-- **Phones.** Below 860 px the three columns become three tabs, Options,
-  Suggestions and My list, with every feature reachable and nothing
-  scrolling sideways: tables stack, the keyboard map scales, rows wrap. A
-  phone-sized Playwright project (`pnpm test:e2e`, project `phone`) fails
-  on any element past the right edge or any horizontal scroll.
+- **Narrow screens.** Below 1100 px there is no room for three columns.
+  Down to 800 px two stay open, Suggestions and one outer column (Options at
+  first, whenever the page loads or the width enters the range), and the
+  third shrinks to a button; at 800 px and below one column stays open and
+  the other two shrink. A shrunken column is a button, "Options",
+  "Suggestions" or "Testing", centred in a thin sticky strip that keeps the
+  column's place; it opens its column and shrinks another. On a
+  phone (600 px and below) the open column takes the whole width instead,
+  under a bar stuck to the top: the page links fold into a menu behind a
+  hamburger at its left and the three column tabs sit centred. This holds
+  down to a flagship phone's width with nothing clipped or scrolling
+  sideways: tables stack, the keyboard map scales, rows wrap. A phone-sized
+  Playwright project (`pnpm test:e2e`, project `phone`) fails on any element
+  past the right edge, past its column or with its text cut off, and on any
+  horizontal scroll, at 1000, 800, 412 and 360 px.
 - **Scoring page** (`#/scoring`): how strength in bits, the difficulty
   score and memorability are worked out, with the full rubric and
   time-to-guess tables.

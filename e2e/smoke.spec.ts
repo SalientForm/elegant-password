@@ -319,7 +319,7 @@ test('the header scrolls away first, then each column scrolls on its own', async
 });
 
 test('badge tips are never clipped by a card and stay inside the viewport', async ({ page }) => {
-  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.setViewportSize({ width: 1120, height: 700 }); // the narrowest three-column layout: the list sits at the right edge
   await settledPasswords(page);
   const first = cards(page).first();
   await first.getByRole('button', { name: 'Add', exact: true }).click();

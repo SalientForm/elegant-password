@@ -4,7 +4,19 @@
     "titles": [
       {
         "kind": "test",
-        "title": "collapses into three tabs and keeps every feature reachable without sideways scrolling"
+        "title": "phone: the open column fills the width under a bar with the page menu at the left and the column tabs centred"
+      },
+      {
+        "kind": "test",
+        "title": "between phone and desktop widths, the other two columns shrink to buttons in strips that stay in reach"
+      },
+      {
+        "kind": "test",
+        "title": "in the medium range two columns stay open: Options and Suggestions at first, Testing a button; the outer columns trade places"
+      },
+      {
+        "kind": "test",
+        "title": "fits the narrowest flagship phone with nothing clipped in any column"
       },
       {
         "kind": "test",
@@ -126,11 +138,31 @@
       },
       {
         "kind": "group",
+        "title": "App in the medium range"
+      },
+      {
+        "kind": "test",
+        "title": "shows two columns, Options and Suggestions at first with Testing shrunk to a button; the outer columns trade places, Suggestions stays"
+      },
+      {
+        "kind": "group",
+        "title": "App when too narrow for three columns"
+      },
+      {
+        "kind": "test",
+        "title": "keeps one column open and shrinks the other two to Options, Suggestions and Testing buttons, in column order"
+      },
+      {
+        "kind": "test",
+        "title": "keeps a shrunken column mounted, so what was open in it is still open when it comes back"
+      },
+      {
+        "kind": "group",
         "title": "App on a phone"
       },
       {
         "kind": "test",
-        "title": "collapses the columns into Options, Suggestions and My list tabs with every feature reachable"
+        "title": "gives the open column the whole width under a bar: the page links behind a hamburger at the left, the column tabs centred"
       }
     ]
   },
@@ -361,6 +393,14 @@
       },
       {
         "kind": "group",
+        "title": "SuggestionCard rows"
+      },
+      {
+        "kind": "test",
+        "title": "stacks the password, the badges and the buttons into centred rows only when the password at full width and the buttons cannot share one"
+      },
+      {
+        "kind": "group",
         "title": "memorability badge colours"
       },
       {
@@ -445,6 +485,10 @@
       {
         "kind": "test",
         "title": "takes the password last added to the list, with its hint, and scores all three badges; a typed one has no hint"
+      },
+      {
+        "kind": "test",
+        "title": "cuts a long password under test with an ellipsis and shows the whole of it as an instant tip, like the list"
       }
     ]
   },

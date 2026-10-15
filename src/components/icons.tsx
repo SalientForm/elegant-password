@@ -64,3 +64,10 @@ export const ChevronUpIcon = ({ size = 16 }: IconProps) => (
     <path d="M6 15l6-6 6 6" />
   </svg>
 );
+
+/** Three lines: the menu that the page links fold into on a phone. */
+export const MenuIcon = ({ size = 18 }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+);

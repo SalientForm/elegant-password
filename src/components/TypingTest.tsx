@@ -4,6 +4,7 @@ import { scoreAlone, scoreCold } from '../lib/score';
 import { finishAttempt, nextTarget, recordKey, startRecording, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
 import { CancelIcon } from './icons';
+import { PasswordTip } from './PasswordTip';
 import { ScoreBadges } from './SuggestionCard';
 
 interface Props {
@@ -66,6 +67,8 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
 
   const hintText = hint?.trim() ? hint.trim() : undefined;
   const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);
+  /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis with the full text as a tip, like My list. */
+  const shownTarget = target === undefined ? undefined : shown ? target : '•'.repeat([...target].length);
   const alone = useMemo(() => (target !== undefined && hintText === undefined ? scoreAlone(target) : undefined), [target, hintText]);
   const difficulty = cold?.difficulty ?? alone?.difficulty;
   const last = attempts[0];
@@ -148,11 +151,14 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
           Show as typed
         </label>
       </div>
-      {target !== undefined && difficulty && (
+      {target !== undefined && difficulty && shownTarget !== undefined && (
         <div className="typing-result" role="status">
           <div className="testing-row">
             <p>
-              <span className="field-label">Testing:</span> <code className="password">{shown ? target : '•'.repeat([...target].length)}</code>
+              <span className="field-label">Testing:</span>{' '}
+              <PasswordTip password={shownTarget}>
+                <code className="password">{shownTarget}</code>
+              </PasswordTip>
             </p>
             <button type="button" className="icon-button" onClick={clear} aria-label="Clear" title="Clear the password under test">
               <CancelIcon />

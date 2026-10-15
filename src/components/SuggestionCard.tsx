@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { roleLabel, STRENGTH_PRESETS, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
@@ -99,11 +99,41 @@ interface Props {
   onAdd?: (s: Suggestion) => void;
 }
 
+/** The width of an element's text as laid out, whatever the element's own width or clipping. */
+function textWidth(el: HTMLElement): number {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return typeof range.getBoundingClientRect === 'function' ? range.getBoundingClientRect().width : 0;
+}
+
+/** Whether a card's password at its full width and its buttons cannot share the first row. */
+export function needsStack(head: HTMLElement): boolean {
+  const row = head.querySelector<HTMLElement>('.card-row');
+  const password = head.querySelector<HTMLElement>('.password');
+  const buttons = head.querySelector<HTMLElement>('.card-buttons');
+  if (!row || !password || !buttons) return false;
+  const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+  return textWidth(password) + buttons.offsetWidth + gap > row.clientWidth + 1;
+}
+
 export function SuggestionCard({ suggestion, context, index, selected = false, onAdd }: Props) {
   const mine = context.source === 'sentence';
   const [open, setOpen] = useState(false); // every "Why?" starts closed
   const code = useRef<HTMLElement>(null);
+  const head = useRef<HTMLDivElement>(null);
   const { password, hint, words, typing, checks, twists, difficulty } = suggestion;
+  // Too narrow for the password and its buttons on one row: the password, the badges and the buttons each take a row, centred.
+  const [stacked, setStacked] = useState(false);
+  useLayoutEffect(() => {
+    const el = head.current;
+    if (!el) return undefined;
+    const measure = () => setStacked(needsStack(el));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [password]);
   const whyId = `why-${index}`;
   // The memorability breakdown comes from the same cold score as the badge.
   const cold = useMemo(() => scoreCold(password, hint), [password, hint]);
@@ -114,7 +144,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
 
   return (
     <article className="card" aria-label={`Suggestion ${index + 1}`}>
-      <div className="card-head">
+      <div className={stacked ? 'card-head stacked' : 'card-head'} ref={head}>
         <div className="card-row">
           <PasswordTip password={password}>
             <ClickToCopy text={password} className="password" ref={code}>

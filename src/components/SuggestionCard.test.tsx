@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fromSentence } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements, type Suggestion } from '../lib/generate';
 import { seeded } from '../lib/testRandom';
-import { memorabilityLevel, strengthLevel, strengthWord, SuggestionCard, type CardContext } from './SuggestionCard';
+import { memorabilityLevel, needsStack, strengthLevel, strengthWord, SuggestionCard, type CardContext } from './SuggestionCard';
 
 afterEach(cleanup);
 
@@ -96,6 +96,31 @@ describe('SuggestionCard', () => {
     cleanup();
     show(s, context, 0, { onAdd, selected: true });
     expect((screen.getByRole('button', { name: 'Added' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('SuggestionCard rows', () => {
+  const fake = (text: number, buttons: number, row: number) => {
+    Object.defineProperty(Range.prototype, 'getBoundingClientRect', { configurable: true, value: () => ({ width: text }) });
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => buttons });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => row });
+  };
+  afterEach(() => {
+    delete (Range.prototype as { getBoundingClientRect?: unknown }).getBoundingClientRect;
+    delete (HTMLElement.prototype as { offsetWidth?: unknown }).offsetWidth;
+    delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
+  });
+
+  it('stacks the password, the badges and the buttons into centred rows only when the password at full width and the buttons cannot share one', () => {
+    const { s, context } = first({});
+    fake(220, 120, 400); // 220 + 120 fits in 400 (jsdom has no layout, so widths are faked)
+    const { unmount } = show(s, context);
+    expect(document.querySelector('.card-head')!.className).toBe('card-head');
+    unmount();
+    fake(300, 120, 400); // 300 + 120 does not
+    show(s, context);
+    expect(document.querySelector('.card-head')!.className).toBe('card-head stacked');
+    expect(needsStack(document.querySelector('.card-head')!)).toBe(true);
   });
 });
 
