@@ -197,10 +197,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .mode-tabs button { border: 0; padding: 0.55rem; font-weight: 600; color: var(--muted); }
 .mode-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
 .sentence { display: grid; gap: 0.6rem; }
-.sentence textarea {
-  font: inherit; font-size: 1.05rem; color: var(--ink); background: var(--bg); resize: vertical;
-  border: 1px solid var(--line); border-radius: 7px; padding: 0.55rem 0.7rem; width: 100%;
-}
+.sentence .sentence-input { font-size: 1.05rem; padding: 0.55rem 0.7rem; }
 .strength p { margin: 0.5rem 0 0; }
 .chip.initial { outline: 1.5px solid var(--accent); }
 .field-label { font-size: 0.85rem; }

@@ -185,7 +185,7 @@ ${mappingSection()}
 
 ## 8. Use my sentence
 
-The user types a sentence (never put in the URL; kept in sessionStorage only once applied). Options: shrink words of ${DEFAULT_SENTENCE_OPTIONS.shrinkFrom}+ letters in a style (keep; drop vowels, the default; or first + last consonant, ${code('jupiter → jr')}); small words become capital initials (default on); short targets may drop words entirely (default on); compress toward N characters (default: the site maximum); pad a sentence under the minimum (default on) with a length tag last (default ${code('%total')}; or ${code('@factor')}; or none). The symbol between words is optional (separator "None").
+The user types a sentence into a single-line field (Enter submits the changes at once) (never put in the URL; kept in sessionStorage only once applied). Options: shrink words of ${DEFAULT_SENTENCE_OPTIONS.shrinkFrom}+ letters in a style (keep; drop vowels, the default; or first + last consonant, ${code('jupiter → jr')}); small words become capital initials (default on); short targets may drop words entirely (default on); compress toward N characters (default: the site maximum); pad a sentence under the minimum (default on) with a length tag last (default ${code('%total')}; or ${code('@factor')}; or none). The symbol between words is optional (separator "None").
 
 1. Normalise: strip accents, lowercase, remove apostrophes, split on anything not a-z0-9.
 2. Small words (${[...SMALL_WORDS].slice(0, 12).join(', ')}, …) become one capital letter. Then the "initials" option turns that many random other words into initials; enumerate distinct outcomes and count log2 as bits.

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { DEFAULT_SENTENCE_OPTIONS, fromSentence, type SentenceOptions } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
@@ -40,6 +40,17 @@ describe('SentenceInput', () => {
     expect(opts().targetLength).toBe(12);
     fireEvent.change(screen.getByLabelText('Compress toward (characters)'), { target: { value: '' } });
     expect(opts().targetLength).toBeNull();
+  });
+
+  it('submits on Enter in the sentence field', () => {
+    const onSubmit = vi.fn();
+    render(<SentenceInput value="Sally eats sweets" onChange={() => {}} options={DEFAULT_SENTENCE_OPTIONS} onOptionsChange={() => {}} onSubmit={onSubmit} />);
+    const field = screen.getByLabelText('Your sentence') as HTMLInputElement;
+    expect(field.tagName).toBe('INPUT');
+    fireEvent.keyDown(field, { key: 'a' });
+    expect(onSubmit).not.toHaveBeenCalled();
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(onSubmit).toHaveBeenCalledOnce();
   });
 
   it('controls padding and its length tag', () => {

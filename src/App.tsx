@@ -110,7 +110,7 @@ export function ElegantPasswords() {
           <p className="hint">A random sentence from the word lists, fitted to the rules on the left.</p>
         </TabPanel>
         <TabPanel idPrefix="mode" id="sentence" active={p.mode === 'sentence'}>
-          <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} />
+          <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} onSubmit={p.apply} />
         </TabPanel>
 
         <h2>Suggestions</h2>

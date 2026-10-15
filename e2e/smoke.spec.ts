@@ -158,7 +158,7 @@ test('pads a short sentence to the minimum with a length tag that states the len
   await settledPasswords(page);
   await page.getByRole('tab', { name: 'Use my sentence' }).click();
   await page.getByLabel('Your sentence').fill('Hi there');
-  await page.keyboard.press('Control+Enter');
+  await page.keyboard.press('Enter'); // Enter in the sentence field submits at once
   await expect(cards(page).first()).toContainText('padded to the 12-character minimum');
   const mine = await settledPasswords(page);
   for (const p of mine) {

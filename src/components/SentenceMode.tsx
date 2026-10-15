@@ -8,6 +8,8 @@ interface InputProps {
   onChange: (next: string) => void;
   options: SentenceOptions;
   onOptionsChange: (next: SentenceOptions) => void;
+  /** Called when Enter is pressed in the sentence field: submit the changes at once. */
+  onSubmit?: () => void;
 }
 
 const TAGS: { value: LengthTag; label: string }[] = [
@@ -22,19 +24,27 @@ const SHRINK: { value: ShrinkStyle; label: string; example: string }[] = [
   { value: 'ends', label: 'First + last', example: 'Two letters, first and last consonant: jupiter → jr, piece → pc' },
 ];
 
-export function SentenceInput({ value, onChange, options, onOptionsChange }: InputProps) {
+export function SentenceInput({ value, onChange, options, onOptionsChange, onSubmit }: InputProps) {
   return (
     <section className="panel sentence">
       <label className="field">
         <span>Your sentence</span>
-        <textarea
-          rows={2}
+        <input
+          type="text"
+          className="sentence-input"
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"
-          placeholder="Sally eats sweets on Sundays"
+          placeholder="Sally eats sweets on Sundays, then Enter"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && onSubmit) {
+              e.preventDefault();
+              e.stopPropagation();
+              onSubmit();
+            }
+          }}
         />
       </label>
       <div className="shrink">
