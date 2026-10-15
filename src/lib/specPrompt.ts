@@ -117,7 +117,7 @@ You are building a password generator web app called **Elegant Passwords**. It c
 
 ## 3. Pages
 
-1. **Elegant Passwords** (main page, ${code('#/')}): three columns, 1380 px wide at most. Left (300 px): the requirements form and the swaps panel. Middle (takes the rest): the two modes (Make up a sentence / Use my sentence) as an accessible tab list, the "Suggestions" heading, then a row with the order toggle ("Easiest first", the default, or "Strongest first"; a two-button group, remembered in localStorage) on the left and the Refresh button on the right, the suggestion cards in that order, and the strength panel. Right (340 px): "Test a password" (section 18) above "My list" (the user's saved passwords); the column is sticky, always in view, and the list takes the height left on screen and scrolls inside itself. Below 1100 px the right column drops under the others; below 860 px everything is one column.
+1. **Elegant Passwords** (main page, ${code('#/')}): three columns, 1380 px wide at most. Left (300 px): the requirements form and the swaps panel. Middle (takes the rest): the two modes (Make up a sentence / Use my sentence) as an accessible tab list, the "Suggestions" heading, then a row with the order toggle ("Easiest first", the default, or "Strongest first"; a two-button group, remembered in localStorage) on the left and the Refresh button on the right, the suggestion cards in that order, and the strength panel. Right (340 px): "Test a password" (section 14) above "My list" (the user's saved passwords); the column is sticky, always in view, and the list takes the height left on screen and scrolls inside itself. Below 1100 px the right column drops under the others; below 860 px everything is one column.
 2. **Scoring** (${code('#/scoring')}): how strength in bits is counted (the exact plan, cold scoring of a password from its hint, your own sentence, choosing a favourite, time to guess per preset at the three attacker speeds) and the full difficulty rubric.
 3. **Fun** (${code('#/fun')}): shows this prompt, generated from the live constants and rendered from markdown as formatted text, with Copy and Download buttons for the raw markdown.
 
@@ -199,11 +199,11 @@ The user types a sentence into a single-line field (Enter submits the changes at
 
 Example: "jupiter brings 5 leds for piece", ${code(';')} separator, glue on, 1 initial, target 12 → ${code('jr;B;5ls;Fpc')}.
 
-Strength in this mode: the sentence's guessability cannot be measured. The card's figure is the cold score (section 14) of the password against the sentence, which counts only the random initials and swaps; the strength panel says that quotes, lyrics and personal facts are weak, and a sentence under four words gets a warning that short sentences are easier to guess.
+Strength in this mode: the sentence's guessability cannot be measured. The card's figure is the cold score (section 12) of the password against the sentence, which counts only the random initials and swaps; the strength panel says that quotes, lyrics and personal facts are weak, and a sentence under four words gets a warning that short sentences are easier to guess.
 
 ## 9. Suggestion cards
 
-Cards are ordered easiest first (difficulty ascending, more bits first on ties) or strongest first (bits descending, lower difficulty first on ties), stable for exact ties. Each card shows the password, its bits and difficulty (both from the cold score, section 14), and, right-justified on the top row, Copy and "Add" ("Added" once it is in the list); on the second row the bits and badges with an expandable "Why?" with:
+Cards are ordered easiest first (difficulty ascending, more bits first on ties) or strongest first (bits descending, lower difficulty first on ties), stable for exact ties. Each card has two rows. Top row: the password on the left; Copy and "Add" ("Added", disabled, once it is in the list) right-justified. Second row: the bits, the difficulty badge and the memorability badge (all from the cold score, section 12) on the left, and the "Why?" toggle on the right. "Why?" expands to:
 - **Easy to remember**: the hint (the sentence to remember); word chips labelled by part of speech, "made-up noun" or "your word"; twisted and initial words marked with the original; the twists or change steps listed; the number of ways the twists could land.
 - **Fast to type**: Shift presses and why (and how often capital initials flip the case), share of same-row moves, average reach, same-finger pairs, rows used, separator note, and a keyboard heat map of the keys used.
 - **Difficulty score** table (the rubric lives on the Scoring page).
@@ -223,7 +223,7 @@ ${rubricTable()}
 
 Typing time model: ${SECONDS.keystroke} s per keystroke + ${SECONDS.perCost} s × transition cost + ${SECONDS.shift} s per Shift. Memory load counts words, the number and each twist. Show the full rubric on the Scoring page.
 
-## 14. Cold scoring
+## 12. Cold scoring
 
 Everything a card or a saved entry says about a password's strength and difficulty comes from one pure function of two strings: ${code('scoreCold(password, hint)')}. Nothing else goes in (not the settings, not how many suggestions were shown, not how many times Refresh was pressed), so a password scores the same wherever and whenever it appears.
 
@@ -237,7 +237,7 @@ Everything a card or a saved entry says about a password's strength and difficul
 
 Left out on purpose: length limits (unknown cold), the user's own mapping list (always the built-in 64), any selection bias. The result is memoised and plain data.
 
-## 15. State, persistence and performance
+## 13. State, persistence and performance
 
 - One React provider owns the draft and applied settings (requirements, sentence options, mappings, sentence), the mode, the current batch and the user's list, and exposes them through a hook. Forms edit the draft; generation and persistence use what is applied. Components never generate; they ask the provider.
 - Generation is one pure function ${code('runInputs(inputs) → outcome')} (never throws: requirement problems and bugs come back as messages). It runs in a Web Worker when the browser has one, inline otherwise, through one interface; answers are matched to requests by id and superseded answers are dropped. The worker is created on first use and again after dispose (so React StrictMode's extra cleanup in development cannot strand it); if it fails or stays silent for 10 s, outstanding and later requests run inline. The old batch stays on screen, dimmed, until the new one is ready; a status says "Working…".
@@ -245,11 +245,11 @@ Left out on purpose: length limits (unknown cold), the user's own mapping list (
 - localStorage: applied requirements (${code(REQUIREMENTS_KEY)}), sentence options (${code(SENTENCE_OPTIONS_KEY)}), mode (${code(MODE_KEY)}), mappings (${code(STORAGE_KEY)}), the list (${code(SELECTED_KEY)}). sessionStorage: the current batch, round and applied sentence (${code(SESSION_KEY)}), kept through a refresh and gone when the tab closes. Unapplied drafts are never stored. Every value read back is parsed as untrusted and falls back to defaults field by field.
 - **My list**: add a suggestion one at a time (a password already listed is not added twice); each entry stores only the password, the hint and when it was added; it is displayed with its cold score, Copy and Remove; "Remove all" asks once. The password is shown at 13 pt on one line; one wider than the column is cut with an ellipsis and the full password appears as a tooltip on hover. The list never scrolls sideways.
 
-## 18. Test a password
+## 14. Test a password
 
 A panel at the top of the right column. A text field (switchable to a password field; ${code('autocomplete="off"')} and the ${code('data-bwignore')}, ${code('data-1p-ignore')}, ${code('data-lpignore')} and ${code('data-form-type="other"')} attributes so password managers leave it alone; never inside a form) records every key press with a timestamp as the user types (modifiers and navigation keys excluded). Enter ends a run: the field's text is the attempt, the field clears, and the result shows. The first run's text becomes the password under test, so the first run is scored like any other. Later runs are checked against it: "Typed correctly" or "Did not match". "Lock password" keeps the password under test unchanged even when Enter is pressed on a mistyped run; unlocked, each Enter makes the new text the target. Per run: seconds from the first keystroke to Enter, characters, words per minute (five characters a word), the rubric's expected seconds for comparison, corrections (Backspace and Delete presses), accuracy (keystrokes minus a wasted key and its removal, over keystrokes), and the last few runs in one line. The password under test is scored from its text alone (${code('scoreAlone')}): a letter run that is one of this tool's words counts as one pick from that list, other letters count ${BITS_PER_ENGLISH_LETTER} bits each as English-like text, digits count log2(10) each unless they are a memorable run or a repeat, symbols log2(32) each unless repeated; plus the difficulty rubric. Nothing is stored or sent.
 
-## 17. Algorithm flow (validation)
+## 15. Algorithm flow (validation)
 
 The map below is ${code('docs/algorithm-flow.md')}, included verbatim so this prompt and the document can never disagree. Use it to validate an implementation: every criterion must be enforced at the step named for it, and the flowcharts are the order of operations.
 
@@ -263,7 +263,7 @@ ${algorithmFlow.replace(/^# .*\n/, '').replace(/^## /gm, '### ')}
 - Downloads revoke their object URL after a delay, never synchronously, so the browser can start the download.
 - The mode switch is a WAI-ARIA tab list: one tab stop, arrow keys, Home and End move and select, each tab names its panel. Segmented buttons expose ${code('aria-pressed')}; busy state is on the results region; status text uses ${code('role="status"')}.
 
-## 12. Tests (Vitest)
+## 17. Tests (Vitest)
 
 - Randomness: uniform integers, weighted choice.
 - Counting: the DP count equals brute force on small pools; sampling is uniform over the valid set.
@@ -280,10 +280,11 @@ ${algorithmFlow.replace(/^# .*\n/, '').replace(/^## /gm, '### ')}
 - The app shows the apply bar only while a draft differs, applies on request in both modes, and keeps passwords and the list across a reload.
 - Components (jsdom): number fields can be typed through and clamp on blur; tabs follow the ARIA pattern; the error boundary shows the message; Copy reports failure and selects the text; the download revokes late; the app keeps passwords and the list across a remount.
 
-## 13. Acceptance
+## 18. Acceptance
 
 - Default settings (max ${DEFAULT_REQUIREMENTS.maxLength} characters, target ${DEFAULT_REQUIREMENTS.targetBits} bits, ${DEFAULT_REQUIREMENTS.twists} swaps, separator ${code(DEFAULT_REQUIREMENTS.separator)} so the default never needs a pinky stretch) produce five sentence passwords that meet the target and pass all rules.
-- Changing any option regenerates instantly (well under 100 ms for 20 suggestions with 3 twists).
+- Changing an option is a draft; submitting it regenerates well under 100 ms for 20 suggestions with 3 swaps, off the main thread, with the previous batch kept on screen until the new one is ready.
+- The title "The Elegant Password" sits at the top left with the description beneath it and the SalientForm credit at the right end of that row; the right column stays in view while the middle scrolls.
 - Light and dark themes; layout stacks on narrow screens.
 `;
 }
