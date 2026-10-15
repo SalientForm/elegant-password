@@ -66,9 +66,11 @@ async function noSideways(page: Page, where: string) {
         return b.width > 0 && b.right > window.innerWidth + 1;
       })
       .map(name);
-    // Every open column (two of them in the medium range) is checked against its own right edge.
+    // Every open column (two of them in the medium range) is checked against its own right edge. On a phone there is no
+    // strip to cover anything and the cards run edge to edge past the column's padding, so the edge is the viewport's.
+    const phone = document.querySelector('main.phone') !== null;
     const past = [...document.querySelectorAll('main > .sidebar:not([hidden]), main > .results:not([hidden]), main > .aside:not([hidden])')].flatMap((column) => {
-      const edge = column.getBoundingClientRect().right + 1;
+      const edge = (phone ? window.innerWidth : column.getBoundingClientRect().right) + 1;
       return [...column.querySelectorAll('*')]
         .filter((el) => {
           const b = el.getBoundingClientRect();
@@ -342,6 +344,103 @@ test('sentence mode and its keyboard map fit a phone', async ({ page }) => {
   await cards(page).first().getByRole('button', { name: 'Why?', exact: true }).click();
   await expect(cards(page).first()).toContainText('Sally eats sweets on Sundays');
   await noSideways(page, 'sentence mode with Why open');
+});
+
+/*
+ * The phone layout itself, pinned so a later style change cannot quietly undo
+ * it: a full-width bar meeting the header, tabs that fit, edge-to-edge cards
+ * split by one line, a bare hamburger, and the three order choices on one row.
+ */
+
+/** Fails unless every visible card spans the viewport with square corners, only a bottom line, and touches the next card in its column. */
+async function cardsEdgeToEdge(page: Page, where: string) {
+  const found = await page.evaluate(() => {
+    const visible = (el: Element) => el.getBoundingClientRect().width > 0;
+    const panels = [...document.querySelectorAll('.panel')].filter(visible);
+    const looks = panels.map((p) => {
+      const b = p.getBoundingClientRect();
+      const cs = getComputedStyle(p);
+      return {
+        card: p.className,
+        left: Math.round(b.left),
+        width: Math.round(b.width),
+        radii: [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius],
+        borders: { top: cs.borderTopWidth, right: cs.borderRightWidth, left: cs.borderLeftWidth, bottom: cs.borderBottomWidth, bottomStyle: cs.borderBottomStyle },
+      };
+    });
+    // Consecutive cards in one column: a card directly followed by another.
+    const gaps = panels
+      .filter((p) => p.nextElementSibling?.classList.contains('panel') && visible(p.nextElementSibling))
+      .map((p) => ({ pair: `${p.className} > ${p.nextElementSibling!.className}`, gap: Math.round(p.nextElementSibling!.getBoundingClientRect().top - p.getBoundingClientRect().bottom) }));
+    return { width: window.innerWidth, looks, gaps };
+  });
+  expect(found.looks.length, `${where}: cards shown`).toBeGreaterThan(0);
+  expect(found.looks, `${where}: cards full width, square, closed by one bottom line`).toEqual(
+    found.looks.map((l) => ({ card: l.card, left: 0, width: found.width, radii: ['0px', '0px', '0px', '0px'], borders: { top: '0px', right: '0px', left: '0px', bottom: '1px', bottomStyle: 'solid' } })),
+  );
+  expect(found.gaps.length, `${where}: at least one pair of consecutive cards`).toBeGreaterThan(0);
+  expect(found.gaps, `${where}: no gap between consecutive cards`).toEqual(found.gaps.map((g) => ({ pair: g.pair, gap: 0 })));
+}
+
+test('phone: the bar spans the full width and meets the header with no gap', async ({ page }) => {
+  await settled(page);
+  const header = (await page.locator('.app-header').boundingBox())!;
+  const bar = (await page.locator('.phone-bar').boundingBox())!;
+  const width = await page.evaluate(() => window.innerWidth);
+  expect(bar.x, 'bar starts at the left edge').toBe(0);
+  expect(bar.width, 'bar as wide as the viewport').toBe(width);
+  expect(Math.abs(bar.y - (header.y + header.height)), 'bar starts where the header ends').toBeLessThanOrEqual(0.5);
+});
+
+test('phone: the section tabs fit their text at 320 and 390 px and the page never scrolls sideways', async ({ page }) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.reload();
+    await settled(page);
+    const tabs = await page.getByRole('tablist', { name: 'Sections' }).getByRole('tab').evaluateAll((buttons) =>
+      buttons.map((b) => ({ tab: b.textContent, overflows: b.scrollWidth > b.clientWidth })),
+    );
+    expect(tabs, `${width}: no tab's text overflows`).toEqual(['Options', 'Suggestions', 'Testing'].map((tab) => ({ tab, overflows: false })));
+    for (const name of ['Options', 'Testing', 'Suggestions']) {
+      await tab(page, name).click();
+      const sizes = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
+      expect(sizes.scrollWidth, `${width}, ${name}: page no wider than the viewport`).toBe(sizes.innerWidth);
+    }
+  }
+});
+
+test('phone: cards run edge to edge with square corners, one line below each and no gap between them', async ({ page }) => {
+  await settled(page);
+  await cardsEdgeToEdge(page, 'suggestions');
+  await tab(page, 'Options').click();
+  await expect(page.getByText('Requirement options')).toBeVisible();
+  await cardsEdgeToEdge(page, 'options');
+  await tab(page, 'Testing').click();
+  await expect(page.getByLabel('Test and practice', { exact: true })).toBeVisible();
+  await cardsEdgeToEdge(page, 'testing');
+});
+
+test('phone: the hamburger is the bare symbol, with no background, border or shadow', async ({ page }) => {
+  const menu = page.getByRole('button', { name: 'Pages', exact: true });
+  const chrome = () =>
+    menu.evaluate((b) => {
+      const cs = getComputedStyle(b);
+      return { background: cs.backgroundColor, borders: [cs.borderTopColor, cs.borderRightColor, cs.borderBottomColor, cs.borderLeftColor], shadow: cs.boxShadow };
+    });
+  const bare = { background: 'rgba(0, 0, 0, 0)', borders: Array(4).fill('rgba(0, 0, 0, 0)'), shadow: 'none' };
+  expect(await chrome(), 'at rest').toEqual(bare);
+  await menu.hover();
+  expect(await chrome(), 'hovered').toEqual(bare);
+});
+
+test('phone: the three order choices share one row at 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.reload();
+  await settled(page);
+  const order = page.locator('.results-tools .segmented.sort > button');
+  await expect(order).toHaveText(['Memorability', 'Difficulty', 'Strength']);
+  const rows = await order.evaluateAll((buttons) => buttons.map((b) => ({ top: Math.round(b.getBoundingClientRect().top), overflows: b.scrollWidth > b.clientWidth })));
+  expect(rows, 'all three at the same height, none cut').toEqual(rows.map(() => ({ top: rows[0]!.top, overflows: false })));
 });
 
 test('the Scoring and Fun pages fit a phone', async ({ page }) => {

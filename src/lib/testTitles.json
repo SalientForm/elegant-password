@@ -28,6 +28,26 @@
       },
       {
         "kind": "test",
+        "title": "phone: the bar spans the full width and meets the header with no gap"
+      },
+      {
+        "kind": "test",
+        "title": "phone: the section tabs fit their text at 320 and 390 px and the page never scrolls sideways"
+      },
+      {
+        "kind": "test",
+        "title": "phone: cards run edge to edge with square corners, one line below each and no gap between them"
+      },
+      {
+        "kind": "test",
+        "title": "phone: the hamburger is the bare symbol, with no background, border or shadow"
+      },
+      {
+        "kind": "test",
+        "title": "phone: the three order choices share one row at 390 px"
+      },
+      {
+        "kind": "test",
         "title": "the Scoring and Fun pages fit a phone"
       }
     ]
