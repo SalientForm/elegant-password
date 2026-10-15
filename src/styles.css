@@ -240,6 +240,9 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 /* Never scroll sideways: a long password is cut with an ellipsis and shown in full on hover. */
 .entry .entry-password { font-size: 13pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; display: block; max-width: 100%; }
 .entry { min-width: 0; overflow: hidden; }
+/* Badges, bits and buttons in an entry wrap onto new lines rather than widen the column. */
+.entry .actions { flex-wrap: wrap; min-width: 0; }
+.entry .badge, .entry .bits-label, .entry .copy-status { white-space: normal; }
 .selected .selected-list { overflow-x: hidden; }
 .entry-hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
 .entry-date { color: var(--muted); font-size: 0.72rem; }
