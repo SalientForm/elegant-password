@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fromSentence } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements, type Suggestion } from '../lib/generate';
 import { seeded } from '../lib/testRandom';
-import { SuggestionCard, type CardContext } from './SuggestionCard';
+import { memorabilityLevel, SuggestionCard, type CardContext } from './SuggestionCard';
 
 afterEach(cleanup);
 
@@ -88,5 +88,16 @@ describe('SuggestionCard', () => {
     cleanup();
     show(s, context, 0, { onAdd, selected: true });
     expect((screen.getByRole('button', { name: 'Added' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('memorability badge colours', () => {
+  it('is green above 75, yellow above 45, red at or below 45', () => {
+    expect(memorabilityLevel(100)).toBe('high');
+    expect(memorabilityLevel(76)).toBe('high');
+    expect(memorabilityLevel(75)).toBe('mid');
+    expect(memorabilityLevel(46)).toBe('mid');
+    expect(memorabilityLevel(45)).toBe('low');
+    expect(memorabilityLevel(0)).toBe('low');
   });
 });

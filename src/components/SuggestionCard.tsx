@@ -33,8 +33,9 @@ function separatorPhrase(sep: string): string {
   return `Words are joined with "${sep}", the same key every time, so it becomes a rhythm.${stretch}`;
 }
 
-/** Colour band for a memorability score. */
-export const memorabilityLevel = (score: number) => (score >= 80 ? 'high' : score >= 60 ? 'mid' : 'low');
+/** Colour band for a memorability score: green above 75, yellow above 45, red below. */
+export const MEMORABILITY_BANDS = { green: 75, yellow: 45 } as const;
+export const memorabilityLevel = (score: number) => (score > MEMORABILITY_BANDS.green ? 'high' : score > MEMORABILITY_BANDS.yellow ? 'mid' : 'low');
 
 /** The two score badges: "D 44" and "M 71", with the full reading in the tooltip. */
 export function ScoreBadges({ difficulty, memorability }: { difficulty: { score: number; level: number; label: string }; memorability: number }) {

@@ -346,6 +346,14 @@
       {
         "kind": "test",
         "title": "toggles \"Why?\", marks unmet checks, and adds to the list"
+      },
+      {
+        "kind": "group",
+        "title": "memorability badge colours"
+      },
+      {
+        "kind": "test",
+        "title": "is green above 75, yellow above 45, red at or below 45"
       }
     ]
   },

@@ -95,7 +95,7 @@ export function ScoringPage() {
           worth {MEMORABILITY.fidelityWeight * 100}% of the score. Brevity is worth the other{' '}
           {MEMORABILITY.brevityWeight * 100}%: 1 at {MEMORABILITY.shortAt} characters or fewer, falling to 0 at{' '}
           {MEMORABILITY.longAt} or more. Each swapped word then costs {MEMORABILITY.swapPenalty} points, up to{' '}
-          {MEMORABILITY.maxSwapPenalty}. 80 and above reads as easy to remember, 60 to 79 as fair, below 60 as hard.
+          {MEMORABILITY.maxSwapPenalty}. The badge is green above 75, yellow above 45, and red at 45 or below.
         </p>
       </section>
     </div>
