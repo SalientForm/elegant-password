@@ -31,11 +31,15 @@ export function ScoringPage() {
           settings, not how many suggestions you saw, so a password scores the same wherever and whenever it appears.
           The cold figure does not know the length limits, so it can sit a little above the plan's exact figure.
         </p>
-        <h3>Your own sentence</h3>
+        <h3>Words that are not on the lists</h3>
         <p>
-          How guessable a sentence is cannot be measured here. For a sentence you typed, only the random parts count:
-          which words became initials and where the swaps landed. A private, slightly odd sentence of five or more
-          words is good; quotes, lyrics and facts about you are weak because attackers try them first.
+          The same rule scores every password, whatever it came from; nothing about its origin goes in. A hint word on
+          this tool's lists counts as one pick from the smallest list holding it. Any other word counts as English-like
+          text at 2.3 bits per letter, a capital initial of it as one letter, a number as its digits (a memorable run
+          like 123 as a single pick), a dropped word as nothing; the swaps found are counted exactly, as above. This is
+          an estimate of the text, not of how guessable your sentence is to someone who knows you: a private, slightly
+          odd sentence of five or more words is good; quotes, lyrics and facts about you are weak because attackers try
+          them first.
         </p>
         <h3>Choosing a favourite</h3>
         <p>

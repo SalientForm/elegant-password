@@ -1,33 +1,28 @@
 import { useId, useRef, useState } from 'react';
 
-interface Props {
-  password: string;
-  /** The truncated display element. */
+interface TipProps {
+  /** What the tip shows. */
+  content: React.ReactNode;
+  /** Whether to open; defaults to always. */
+  when?: (anchor: HTMLElement | null) => boolean;
+  className?: string;
   children: React.ReactNode;
 }
 
-/** Whether the password display inside the anchor is cut short by its column. */
-export function isTruncated(anchor: HTMLElement | null): boolean {
-  const el = anchor?.querySelector<HTMLElement>('.password') ?? anchor;
-  return !!el && el.scrollWidth > el.clientWidth + 1;
-}
-
 /**
- * A full-password tip for a password cut short by its column. It opens only
- * when the text really is cut off: a password that fits gets no tip and no
- * rollover. Unlike the browser's own tooltip it appears at once on hover or
- * focus, stays while the pointer is over it, and its text can be selected
- * and copied. Escape closes it.
+ * The app's own tip: appears at once on hover or focus (no browser delay),
+ * stays while the pointer is over it, can be selected, and closes on leave
+ * or Escape.
  */
-export function PasswordTip({ password, children }: Props) {
+export function InstantTip({ content, when = () => true, className, children }: TipProps) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLSpanElement>(null);
   const id = useId();
-  const show = () => setOpen(isTruncated(anchor.current));
+  const show = () => setOpen(when(anchor.current));
   return (
     <span
       ref={anchor}
-      className="pw-tip-anchor"
+      className={`pw-tip-anchor${className ? ` ${className}` : ''}`}
       tabIndex={0}
       aria-describedby={open ? id : undefined}
       onMouseEnter={show}
@@ -46,9 +41,28 @@ export function PasswordTip({ password, children }: Props) {
       {children}
       {open && (
         <span role="tooltip" id={id} className="pw-tip">
-          <code>{password}</code>
+          {content}
         </span>
       )}
     </span>
+  );
+}
+
+/** Whether the password display inside the anchor is cut short by its column. */
+export function isTruncated(anchor: HTMLElement | null): boolean {
+  const el = anchor?.querySelector<HTMLElement>('.password') ?? anchor;
+  return !!el && el.scrollWidth > el.clientWidth + 1;
+}
+
+/**
+ * A full-password tip for a password cut short by its column. It opens only
+ * when the text really is cut off: a password that fits gets no tip and no
+ * rollover.
+ */
+export function PasswordTip({ password, children }: { password: string; children: React.ReactNode }) {
+  return (
+    <InstantTip content={<code>{password}</code>} when={isTruncated}>
+      {children}
+    </InstantTip>
   );
 }

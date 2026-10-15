@@ -925,6 +925,10 @@
       },
       {
         "kind": "test",
+        "title": "scores words off the lists from their text, the same rule as any password"
+      },
+      {
+        "kind": "test",
         "title": "reads the documented sentence-mode example"
       },
       {
@@ -974,6 +978,14 @@
       {
         "kind": "test",
         "title": "is on every suggestion as plain data and matches the cold score"
+      },
+      {
+        "kind": "group",
+        "title": "memorable digit runs"
+      },
+      {
+        "kind": "test",
+        "title": "means repeats, consecutive runs and well-known skips, not any pair of digits"
       }
     ]
   },

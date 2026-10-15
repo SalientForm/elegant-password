@@ -71,6 +71,6 @@ describe('SentenceInput', () => {
     expect(shown.textContent).toBe('the otters eat their salad at noon');
     expect(heading.compareDocumentPosition(shown) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // directly below the heading
     const lo = Math.min(...r.suggestions.map((s) => s.bits)).toFixed(1);
-    expect(screen.getByText(new RegExp(`add about ${lo.replace('.', '[.]')}`))).toBeTruthy();
+    expect(screen.getByText(new RegExp(`That gives ${lo.replace('.', '[.]')}`))).toBeTruthy();
   });
 });

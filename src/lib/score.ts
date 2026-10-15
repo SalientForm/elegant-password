@@ -11,8 +11,11 @@
 // restrictive typing-comfort level that contains every word), plus the
 // exact number of ways the twists could have landed. Length limits are not
 // known cold and are ignored; the strength panel shows the exact figure for
-// the current plan. A hint that is not one of the tool's sentences (your own
-// sentence) scores only its random initials and twists.
+// the current plan. A hint that is not one of the tool's sentences is scored
+// word by word from its text, the same rules for every password whatever its
+// origin: a word on the tool's lists is one pick from that list, any other
+// word is English-like text at a fixed number of bits per letter, a capital
+// initial is one letter, a number is its digits.
 
 import { scoreDifficulty, type Difficulty } from './difficulty';
 import {
@@ -86,7 +89,7 @@ export function memorabilityOf(password: string, words: readonly ScoredWord[]): 
 export interface ColdScore {
   /** Sentence bits plus twist bits plus initial-choice bits. */
   bits: number;
-  /** log2 of the sentence space, or 0 when the hint is not one of the tool's sentences. */
+  /** log2 of the sentence space: the template's exact pools when the hint is one of the tool's sentences, else the words scored from their text. */
   sentenceBits: number;
   twistBits: number;
   /** Bits from which words became random initials (your own sentence only). */
@@ -284,6 +287,43 @@ function measureMatch(words: readonly string[], scored: readonly ScoredWord[], s
   return { template: slots, comfort, sizes, bits };
 }
 
+const BITS_PER_ENGLISH_LETTER = 2.3;
+const SYMBOL_ALPHABET = 32;
+const MEMORABLE_SETS = new Set(['2468', '8642', '13579', '97531', '1357', '7531']);
+
+/** A run of digits anyone would remember: one digit repeated, consecutive digits up or down (123, 4321), or a well-known skip pattern. */
+export function isMemorableDigits(digits: string): boolean {
+  if (digits.length < 2) return true;
+  if (/^(\d)\1*$/.test(digits) || MEMORABLE_SETS.has(digits)) return true;
+  const step = Number(digits[1]) - Number(digits[0]);
+  if (Math.abs(step) !== 1) return false;
+  for (let i = 1; i < digits.length; i++) if (Number(digits[i]) - Number(digits[i - 1]) !== step) return false;
+  return true;
+}
+
+/** The smallest of the tool's lists containing a word, or undefined. */
+function smallestPoolFor(word: string): readonly string[] | undefined {
+  const candidates = POOL_SLOTS.filter((slot) => inPool(word, slot, 'relaxed', 1)).map((slot) => pools('relaxed', 1)[slot]);
+  if (isMadeUpNoun(word)) candidates.push(MADE_UP_NOUNS);
+  return candidates.sort((a, b) => a.length - b.length)[0];
+}
+
+/**
+ * Bits for one aligned word scored from its text alone, the same for every
+ * password whatever its origin: a number by its digits (a memorable run is
+ * one pick), a word on the tool's lists as one pick from the smallest list
+ * holding it (its initials list when typed as an initial), any other word as
+ * English-like text, an initial of it as one letter, a dropped word nothing.
+ */
+export function wordBitsFromText(w: ScoredWord): number {
+  if (w.form === 'dropped') return 0;
+  if (/^[0-9]+$/.test(w.word)) return isMemorableDigits(w.word) ? Math.log2(40) : w.word.length * Math.log2(10);
+  const pool = smallestPoolFor(w.word);
+  if (w.form === 'initial') return Math.log2(pool ? initialsOf(pool).length : 26);
+  if (pool) return Math.log2(pool.length);
+  return w.word.length * BITS_PER_ENGLISH_LETTER;
+}
+
 const choose = (n: number, k: number) => {
   let out = 1;
   for (let i = 1; i <= k; i++) out = (out * (n - k + i)) / i;
@@ -342,7 +382,8 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
     if (chosen > 0) initialBits = Math.log2(choose(eligible.length, chosen));
   }
 
-  const sentenceBits = match?.bits ?? 0;
+  // One rule for every password: the exact template figure when the hint is one of the tool's sentences, else each word from its text.
+  const sentenceBits = match ? match.bits : scored.reduce((sum, w) => sum + wordBitsFromText(w), 0);
   const result: ColdScore = {
     bits: sentenceBits + twistBits + initialBits,
     sentenceBits,
@@ -382,11 +423,6 @@ export interface AloneScore {
   typing: TypingProfile;
 }
 
-const BITS_PER_ENGLISH_LETTER = 2.3;
-const SYMBOL_ALPHABET = 32;
-
-const MEMORABLE_DIGITS = /^(?:(\d)\1*|0?1?2?3?4?5?6?7?8?9?|9?8?7?6?5?4?3?2?1?0?|2468|13579|1357)$/;
-
 /**
  * A rough strength figure for a password typed in with no hint, scored from
  * the text alone. Letters that are one of this tool's words count as one
@@ -401,16 +437,14 @@ export function scoreAlone(password: string): AloneScore {
     const text = m[0];
     if (/^[A-Za-z]+$/.test(text)) {
       const lower = text.toLowerCase();
-      const sizes = POOL_SLOTS.filter((slot) => inPool(lower, slot, 'relaxed', 1)).map((slot) => pools('relaxed', 1)[slot].length);
-      if (isMadeUpNoun(lower)) sizes.push(MADE_UP_NOUNS.length);
-      if (sizes.length) {
-        const poolSize = Math.min(...sizes);
-        parts.push({ text, kind: 'word', bits: Math.log2(poolSize), poolSize });
+      const pool = smallestPoolFor(lower);
+      if (pool) {
+        parts.push({ text, kind: 'word', bits: Math.log2(pool.length), poolSize: pool.length });
       } else {
         parts.push({ text, kind: 'letters', bits: text.length * BITS_PER_ENGLISH_LETTER });
       }
     } else if (/^[0-9]+$/.test(text)) {
-      parts.push({ text, kind: 'digits', bits: MEMORABLE_DIGITS.test(text) ? Math.log2(40) : text.length * Math.log2(10) });
+      parts.push({ text, kind: 'digits', bits: isMemorableDigits(text) ? Math.log2(40) : text.length * Math.log2(10) });
     } else if (/^\s+$/.test(text)) {
       parts.push({ text, kind: 'spaces', bits: 0 });
     } else {

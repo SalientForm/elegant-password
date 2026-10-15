@@ -49,10 +49,16 @@ describe('SelectedList', () => {
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     const s = first.getByText(`S ${score.bits.toFixed(0)}`);
-    expect(s.getAttribute('title')).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
+    expect(s.getAttribute('title')).toBeNull(); // the app's instant tip, not the browser's
+    fireEvent.mouseEnter(s.parentElement!);
+    expect(first.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
+    fireEvent.mouseLeave(s.parentElement!);
     const d = first.getByText(`D ${score.difficulty.score}`);
-    expect(d.getAttribute('title')).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading on hover
-    expect(first.getByText(`M ${score.memorability.score}`).getAttribute('title')).toMatch(/^Memorability \d+ of 100/);
+    fireEvent.mouseEnter(d.parentElement!);
+    expect(first.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading, at once
+    fireEvent.mouseLeave(d.parentElement!);
+    fireEvent.mouseEnter(first.getByText(`M ${score.memorability.score}`).parentElement!);
+    expect(first.getByRole('tooltip').textContent).toMatch(/^Memorability \d+ of 100/);
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
   });

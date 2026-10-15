@@ -144,15 +144,15 @@ export function SentenceStrength({ suggestions, sentence }: { suggestions: Sugge
         {sentence}
       </p>
       <p>
-        Mostly as strong as your sentence is hard to guess, and this tool cannot measure that. A private, slightly odd
-        sentence of five or more words is good. Quotes, lyrics, proverbs and anything about you (names, pets, teams) are
-        weak, because attackers try them first, along with the usual swaps like <code>a → @</code>.
+        Scored from each password and your sentence alone, by the same rule as every other password: a word on this
+        tool's lists counts as one pick from that list, any other word as English-like text, a capital initial as one
+        letter, a number as its digits, and the swaps as the number of ways they could have landed. That gives{' '}
+        {lo === hi ? lo.toFixed(1) : `${lo.toFixed(1)}–${hi.toFixed(1)}`} bits here.
       </p>
       <p className="hint">
-        The random initials and swaps add about {lo === hi ? lo.toFixed(1) : `${lo.toFixed(1)}–${hi.toFixed(1)}`} bits on
-        top, scored from each password and your sentence alone, the same way as in “Make up a sentence”. Add more swaps
-        for more. Your own choice of sentence is the one bias that cannot be counted, and it is already in the sentence
-        you typed.
+        It is an estimate of the text, not of how guessable your sentence is to someone who knows you. A private, slightly
+        odd sentence of five or more words is good. Quotes, lyrics, proverbs and anything about you (names, pets, teams)
+        are weak, because attackers try them first, along with the usual swaps like <code>a → @</code>.
       </p>
     </section>
   );

@@ -52,7 +52,9 @@ describe('fromSentence', () => {
       expect(s.password).toContain(';5'); // the number glues onto "leds"
       expect(s.password).toMatch(/;F/); // "for" is a capital initial, glued to what follows
       expect(s.password.replace(/F/, '')).toMatch(/[A-Z]/); // plus one random initial
-      expect(s.bits).toBeCloseTo(Math.log2(4)); // which of the 4 other words became the initial
+      const cold = scoreCold(s.password, s.hint);
+      expect(cold.initialBits).toBeCloseTo(Math.log2(4)); // which of the 4 other words became the initial
+      expect(s.bits).toBe(cold.bits); // the words themselves count too, by the same text rule as any password
     }
   });
 
@@ -104,9 +106,13 @@ describe('fromSentence', () => {
   });
 
   it('scores strength cold from the password and the sentence: only initials and twists count', () => {
-    // No random twists, no digit or symbol rule: nothing random happened, so nothing is counted.
+    // No random twists, no digit or symbol rule: the words themselves are scored from their text, nothing else.
     const plain = fromSentence('four little words here', req({ twists: 0, minDigits: 0, minSymbols: 0, count: 1 }), undefined, { rng: seeded() });
-    expect(plain.suggestions[0]!.bits).toBe(0);
+    const cold = scoreCold(plain.suggestions[0]!.password, plain.suggestions[0]!.hint);
+    expect(plain.suggestions[0]!.bits).toBe(cold.bits);
+    expect(cold.twistCount).toBe(0);
+    expect(cold.initialBits).toBe(0);
+    expect(cold.bits).toBe(cold.sentenceBits);
     // A digit rule forces one digit twist; where it lands is random, so it counts.
     const none = fromSentence('four little words here', req({ twists: 0, count: 1 }), undefined, { rng: seeded() });
     const forced = none.suggestions[0]!;

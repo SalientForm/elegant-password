@@ -9,7 +9,7 @@ import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
 import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
-import { PasswordTip } from './PasswordTip';
+import { InstantTip, PasswordTip } from './PasswordTip';
 
 const ROW_NAMES = ['number row', 'top row', 'home row', 'bottom row', 'space bar'];
 
@@ -53,18 +53,28 @@ interface BadgeProps {
 
 /** The three score badges: "S 48", "D 44" and "M 71", with the full reading in each tooltip. */
 export function ScoreBadges({ bits, difficulty, memorability, mine = false }: BadgeProps) {
-  const strength = `Strength ${bits.toFixed(0)} bits, ${strengthWord(bits)}${mine ? '; counts only the random initials and swaps, scored from the password and your sentence alone' : '; scored from the password and its hint alone'}`;
+  void mine; // the same rule scores every password; nothing about its origin goes in
+  const strength = `Strength ${bits.toFixed(0)} bits, ${strengthWord(bits)}; scored from the password and its hint alone`;
+  const diff = `Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`;
+  const memo = `Memorability ${memorability} of 100: how closely it still looks like its hint`;
+  // Each badge opens the app's instant tip with its full reading; no browser tooltip.
   return (
     <>
-      <span className={`badge strength memo-${strengthLevel(bits)}`} title={strength} aria-label={strength}>
-        S {bits.toFixed(0)}
-      </span>
-      <span className={`badge difficulty level-${difficulty.level}`} title={`Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`} aria-label={`Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`}>
-        D {difficulty.score}
-      </span>
-      <span className={`badge memorability memo-${memorabilityLevel(memorability)}`} title={`Memorability ${memorability} of 100: how closely it still looks like its hint`} aria-label={`Memorability ${memorability}`}>
-        M {memorability}
-      </span>
+      <InstantTip content={strength} className="badge-tip">
+        <span className={`badge strength memo-${strengthLevel(bits)}`} aria-label={strength}>
+          S {bits.toFixed(0)}
+        </span>
+      </InstantTip>
+      <InstantTip content={diff} className="badge-tip">
+        <span className={`badge difficulty level-${difficulty.level}`} aria-label={diff}>
+          D {difficulty.score}
+        </span>
+      </InstantTip>
+      <InstantTip content={memo} className="badge-tip">
+        <span className={`badge memorability memo-${memorabilityLevel(memorability)}`} aria-label={memo}>
+          M {memorability}
+        </span>
+      </InstantTip>
     </>
   );
 }

@@ -209,7 +209,9 @@ test('orders suggestions by difficulty by default, and by strength or memorabili
   await settledPasswords(page);
   const numbers = async (badge: string) => (await page.locator(`article.card .badge.${badge}`).allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
   await expect(cards(page).first().locator('.badge.memorability')).toHaveText(/^M \d+$/);
-  await expect(cards(page).first().locator('.badge.difficulty')).toHaveAttribute('title', /^Difficulty \d+, /);
+  await cards(page).first().locator('.badge.difficulty').hover();
+  await expect(page.getByRole('tooltip')).toHaveText(/^Difficulty \d+, /); // at once, the app's own tip
+  await page.mouse.move(0, 0);
   const easy = await numbers('difficulty');
   expect([...easy].sort((a, b) => a - b)).toEqual(easy);
   await page.getByRole('button', { name: 'Strength', exact: true }).click();

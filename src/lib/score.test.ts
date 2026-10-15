@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements } from './generate';
 import { fromSentence } from './fromSentence';
-import { scoreAlone, scoreCold } from './score';
+import { isMemorableDigits, scoreAlone, scoreCold, wordBitsFromText } from './score';
+import { initialsOf, pools } from './grammar';
 import { seeded } from './testRandom';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, ...over });
@@ -38,6 +39,25 @@ describe('scoreCold', () => {
     }
   });
 
+  it('scores words off the lists from their text, the same rule as any password', () => {
+    // No template, and none of these words is on any list: English-like text at 2.3 bits a letter.
+    const s = scoreCold('Xyzzy;plugh;frobnicate', 'Xyzzy plugh frobnicate');
+    expect(s.template).toBeUndefined();
+    expect(s.sentenceBits).toBeCloseTo((5 + 5 + 10) * 2.3, 5);
+    expect(s.bits).toBe(s.sentenceBits);
+    // A list word in a user's sentence is one pick from that list; a number is its digits; an initial is one letter.
+    const mixed = scoreCold('Big;otters;eat;42;F;cake', 'big otters eat 42 for cake');
+    const words = Object.fromEntries(mixed.words.map((w) => [w.word, wordBitsFromText(w)]));
+    expect(words.big).toBeCloseTo(Math.log2(pools('relaxed', 1).adj.length), 5);
+    expect(words.otters).toBeCloseTo(Math.log2(pools('relaxed', 1).noun.length), 5);
+    expect(words['42']).toBeCloseTo(2 * Math.log2(10), 5);
+    expect(words.for).toBeCloseTo(Math.log2(initialsOf(pools('relaxed', 1).prep).length), 5);
+    expect(words.cake).toBeCloseTo(4 * 2.3, 5);
+    expect(mixed.sentenceBits).toBeCloseTo(Object.values(words).reduce((a, b) => a + b, 0), 5);
+    // Nothing about origin goes in: the same password and hint score the same whichever mode made them.
+    expect(scoreCold('Big;otters;eat;42;F;cake', 'big otters eat 42 for cake')).toEqual(mixed);
+  });
+
   it('reads the documented sentence-mode example', () => {
     const s = scoreCold('jr;B;5ls;Fpc', 'jupiter brings 5 leds for piece');
     expect(s.words.map((w) => `${w.word}:${w.form}:${w.text}`)).toEqual([
@@ -51,7 +71,8 @@ describe('scoreCold', () => {
     expect(s.template).toBeUndefined();
     expect(s.initialBits).toBeCloseTo(Math.log2(4)); // one random initial among jupiter, brings, leds, piece
     expect(s.twistCount).toBe(0);
-    expect(s.bits).toBeCloseTo(2);
+    expect(s.sentenceBits).toBeGreaterThan(40); // the words themselves, scored from their text
+    expect(s.bits).toBeCloseTo(s.sentenceBits + Math.log2(4));
   });
 
   it('finds twisted words, including a symbol at the start, and counts how the swaps could have landed', () => {
@@ -79,7 +100,7 @@ describe('scoreCold', () => {
     const s = scoreCold('Cats;dogs', 'cats and dogs and owls');
     expect(s.words.map((w) => w.form)).toEqual(['word', 'dropped', 'word', 'dropped', 'dropped']);
     expect(s.aligned).toBe(false);
-    expect(s.bits).toBe(0);
+    expect(s.bits).toBeCloseTo(2 * Math.log2(pools('relaxed', 1).noun.length), 5); // only the two words found count
     expect(scoreCold('x', '').bits).toBe(0);
   });
 
@@ -161,5 +182,12 @@ describe('memorability', () => {
   it('is on every suggestion as plain data and matches the cold score', () => {
     const r = generate(req({ count: 3 }), { rng: seeded(2) });
     for (const s of r.suggestions) expect(s.memorability).toBe(scoreCold(s.password, s.hint).memorability.score);
+  });
+});
+
+describe('memorable digit runs', () => {
+  it('means repeats, consecutive runs and well-known skips, not any pair of digits', () => {
+    for (const d of ['7', '77', '123', '4321', '0123', '2468', '97531']) expect(isMemorableDigits(d), d).toBe(true);
+    for (const d of ['42', '159', '8402', '1324', '13']) expect(isMemorableDigits(d), d).toBe(false);
   });
 });
