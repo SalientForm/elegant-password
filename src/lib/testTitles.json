@@ -664,6 +664,59 @@
     ]
   },
   {
+    "file": "src/lib/ease.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "awkward moves"
+      },
+      {
+        "kind": "test",
+        "title": "are same-finger jumps and reaches of six key widths or more, never rolls, repeats or the thumb"
+      },
+      {
+        "kind": "group",
+        "title": "the deliberate swap rule"
+      },
+      {
+        "kind": "test",
+        "title": "removes an awkward move with one fixed misspelling"
+      },
+      {
+        "kind": "test",
+        "title": "leaves alone words with no awkward move, and words no rule can help"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the first letter, never splits a double letter, applies end rules at the end and keeps a soft c"
+      },
+      {
+        "kind": "test",
+        "title": "only makes a word easier: fewer awkward moves and less time on the rubric model"
+      },
+      {
+        "kind": "test",
+        "title": "draws only on sound-alike misspellings that are also built-in swaps"
+      },
+      {
+        "kind": "test",
+        "title": "never merges two words or turns one into another: the plan count stays exact and the word stays readable"
+      },
+      {
+        "kind": "test",
+        "title": "is a fixed function of the word alone: the same every time, for list words and your own"
+      },
+      {
+        "kind": "group",
+        "title": "typing comfort with deliberate swaps"
+      },
+      {
+        "kind": "test",
+        "title": "ranks words as typed, so a word its swap makes easy stays in, at the same pool sizes"
+      }
+    ]
+  },
+  {
     "file": "src/lib/engine.test.ts",
     "titles": [
       {
@@ -871,6 +924,26 @@
       {
         "kind": "test",
         "title": "ends passwords in different closing symbols, meets the digit rule by a swap or a number at either end, and varies the swaps"
+      },
+      {
+        "kind": "group",
+        "title": "deliberate swaps in your own sentence"
+      },
+      {
+        "kind": "test",
+        "title": "swaps the words kept whole, scored cold at zero bits, with the sentence kept as the hint"
+      },
+      {
+        "kind": "test",
+        "title": "leaves shortened words, initials and numbers alone, and random swaps land on the swapped spelling"
+      },
+      {
+        "kind": "test",
+        "title": "pads a short sentence after the swaps, to exactly the minimum, and the cold scorer still reads every word"
+      },
+      {
+        "kind": "test",
+        "title": "skips the swaps when they would leave too few letters for the uppercase rule"
       }
     ]
   },
@@ -1004,6 +1077,26 @@
       {
         "kind": "test",
         "title": "applies the minimum number of swaps or one more, at random"
+      },
+      {
+        "kind": "group",
+        "title": "deliberate swaps for typing ease"
+      },
+      {
+        "kind": "test",
+        "title": "types every awkward whole word with its swap, keeps the hint as written, and adds no bits"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the plan exact: the same pool sizes, with words counted at their typed length"
+      },
+      {
+        "kind": "test",
+        "title": "never swaps initials, two-letter words, made-up nouns or numbers, and random swaps on top are counted from the swapped spelling"
+      },
+      {
+        "kind": "test",
+        "title": "is deterministic: the same draw gives the same passwords, and a word is always swapped the same way"
       }
     ]
   },
@@ -1193,6 +1286,10 @@
       },
       {
         "kind": "test",
+        "title": "with deliberate swaps for typing ease on, across the same random rules"
+      },
+      {
+        "kind": "test",
         "title": "when compressing toward 12 under the default 32-character maximum"
       },
       {
@@ -1307,6 +1404,30 @@
       {
         "kind": "test",
         "title": "tries fewer swaps on long words, so a 34-letter word scores in milliseconds rather than seconds"
+      },
+      {
+        "kind": "group",
+        "title": "deliberate swaps in cold scoring"
+      },
+      {
+        "kind": "test",
+        "title": "recognises a deliberate swap from the hint alone and counts it as zero bits"
+      },
+      {
+        "kind": "test",
+        "title": "never reads a deliberate swap as a random one, which would overstate the bits"
+      },
+      {
+        "kind": "test",
+        "title": "counts random swaps on top from the deliberate spelling, as the generator places them"
+      },
+      {
+        "kind": "test",
+        "title": "credits the easier typing in difficulty, and counts each swap as one more spelling to remember"
+      },
+      {
+        "kind": "test",
+        "title": "never scores above the pools a sentence came from, with the setting on or off"
       }
     ]
   },

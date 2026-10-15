@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, trimInterior, type SentenceOptions } from './fromSentence';
 import { DEFAULT_REQUIREMENTS, RequirementsError, type Requirements } from './generate';
+import { easedText } from './ease';
 import { scoreCold } from './score';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
@@ -316,5 +317,58 @@ describe('variety across a batch of one sentence', () => {
       expect(s.checks.every((c) => c.met)).toBe(true);
       expect(scoreCold(s.password, s.hint).bits).toBeGreaterThan(0); // the hint says where the number went
     }
+  });
+});
+
+describe('deliberate swaps in your own sentence', () => {
+  const plainOpts = { ...DEFAULT_SENTENCE_OPTIONS, shrink: 'none' as const, smallWordInitials: false };
+
+  it('swaps the words kept whole, scored cold at zero bits, with the sentence kept as the hint', () => {
+    const r = fromSentence('wise kids like cool bricks', req({ easeSwaps: true, twists: 0, minDigits: 0, minSymbols: 0, maxLength: 40, count: 3 }), plainOpts, { rng: seeded(3) });
+    for (const s of r.suggestions) {
+      expect(s.password.toLowerCase()).toBe('wyse;kyds;lyke;cul;brix');
+      expect(s.hint).toBe('wise kids like cool bricks');
+      const cold = scoreCold(s.password, s.hint);
+      expect(cold.easedCount).toBe(5);
+      expect(cold.twistCount).toBe(0);
+      expect(s.bits).toBe(cold.bits);
+      expect(s.bits).toBe(scoreCold('wise;kids;like;cool;bricks', s.hint).bits); // the same as the words unswapped
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+    }
+  });
+
+  it('leaves shortened words, initials and numbers alone, and random swaps land on the swapped spelling', () => {
+    const r = fromSentence('the wise kids carve 12 bricks', req({ easeSwaps: true, twists: 2, maxLength: 40, count: 5 }), { ...DEFAULT_SENTENCE_OPTIONS, shrinkFrom: 6 }, { rng: seeded(4) });
+    for (const s of r.suggestions) {
+      const cold = scoreCold(s.password, s.hint);
+      expect(cold.aligned, `${s.password} / ${s.hint}`).toBe(true);
+      expect(s.bits).toBe(cold.bits);
+      expect(cold.words.find((w) => w.word === 'the')?.form).toBe('initial');
+      expect(cold.words.find((w) => w.word === 'bricks')?.form).toBe('short'); // "brcks": shortened, so not swapped
+      expect(cold.words.find((w) => w.word === 'kids')).toMatchObject({ form: 'eased', base: 'kyds' });
+      expect(cold.words.find((w) => w.word === '12')?.form).toBe('number');
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+    }
+  });
+
+  it('pads a short sentence after the swaps, to exactly the minimum, and the cold scorer still reads every word', () => {
+    const r = fromSentence('cool kids', req({ easeSwaps: true, twists: 1, minLength: 24, maxLength: 40, count: 5 }), plainOpts, { rng: seeded(5) });
+    for (const s of r.suggestions) {
+      expect(s.password.length, s.password).toBe(24);
+      expect(s.hint.startsWith('cool kids') || /^[0-9]+ cool kids/.test(s.hint), s.hint).toBe(true);
+      const cold = scoreCold(s.password, s.hint);
+      expect(cold.aligned, `${s.password} / ${s.hint}`).toBe(true);
+      expect(cold.words.find((w) => w.word === 'cool')).toMatchObject({ form: 'eased', base: 'cul' });
+      expect(s.bits).toBe(cold.bits);
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+    }
+  });
+
+  it('skips the swaps when they would leave too few letters for the uppercase rule', () => {
+    // Swapped, "brix dux" has 7 letters; 8 capitals are needed, so the words stay as written.
+    expect(`${easedText('bricks')} ${easedText('ducks')}`).toBe('brix dux');
+    const r = fromSentence('bricks ducks', req({ easeSwaps: true, minUppercase: 8, minDigits: 0, minSymbols: 0, minLength: 1, twists: 0, count: 1 }), plainOpts, { rng: seeded() });
+    expect(r.suggestions[0]!.password).toBe('BRICKS;DUCKS');
+    expect(scoreCold('BRICKS;DUCKS', 'bricks ducks').easedCount).toBe(0);
   });
 });

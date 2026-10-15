@@ -15,6 +15,7 @@ import {
   SLOT_LABELS,
   SMALL_SLOTS,
   templates,
+  typedPool,
   type Comfort,
   type Slot,
   type Template,
@@ -23,6 +24,7 @@ import { isPinkyStretch, lookupKey, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
 import { scoreCold } from './score';
+import { plainOf } from './ease';
 import { letterCount } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
 
@@ -75,6 +77,12 @@ export interface Requirements {
    * separator. A separator the user picks explicitly is still honoured.
    */
   avoidPinkyStretch: boolean;
+  /**
+   * Deliberate swaps for typing ease: a word with a same-finger jump or a
+   * long reach is typed with one fixed misspelling that removes it ("wise"
+   * -> "wyse"; see ease.ts). A fixed rule, so it adds no bits.
+   */
+  easeSwaps: boolean;
   count: number;
 }
 
@@ -104,6 +112,7 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
   madeUp: 0,
   glue: false,
   avoidPinkyStretch: true,
+  easeSwaps: false,
   count: 5,
 };
 
@@ -146,6 +155,8 @@ export interface Plan {
   breakdown: SlotBreakdown[];
   /** Bits lost because the length limits rule out some word combinations. */
   lengthPenaltyBits: number;
+  /** Awkward words were typed with their deliberate swaps (zero bits: a fixed rule). */
+  easeSwaps?: boolean;
 }
 
 /** A generated word's part of speech, 'yours' for a word from the user's own sentence, or 'fluff' for padding. */
@@ -322,23 +333,32 @@ export function validate(req: Requirements): void {
 
 const modelCache = new Map<string, LengthModel>();
 
-function modelFor(shape: Shape, comfort: Comfort, minDigits: number): LengthModel {
-  const key = `${comfort}:${minDigits}:${shape.slots.join(' ')}:${shape.initials.join(',')}:${shape.shorthand.join(',')}:${shape.madeUp.join(',')}`;
+// The length model counts words as typed: with deliberate swaps on, a whole
+// word's pool holds its swapped spellings, so a swap that shortens a word
+// ("bricks" -> "brix") is counted at its typed length and the count stays
+// exact. No two words share a swapped spelling, so the pool sizes, and the
+// bits, are the same as for the words as written.
+function modelFor(shape: Shape, comfort: Comfort, minDigits: number, eased: boolean): LengthModel {
+  const key = `${comfort}:${minDigits}:${eased ? 1 : 0}:${shape.slots.join(' ')}:${shape.initials.join(',')}:${shape.shorthand.join(',')}:${shape.madeUp.join(',')}`;
   let model = modelCache.get(key);
   if (!model) {
-    model = new LengthModel(shape.slots.map((_, i) => slotPool(shape, i, comfort, minDigits)));
+    model = new LengthModel(shape.slots.map((_, i) => slotPool(shape, i, comfort, minDigits, eased)));
     modelCache.set(key, model);
   }
   return model;
 }
 
-/** What a slot really chooses from: whole words, initials or two-letter forms. */
-function slotPool(shape: Shape, i: number, comfort: Comfort, minDigits: number): readonly string[] {
-  const pool = pools(comfort, minDigits)[shape.slots[i]!];
+/** Positions typed as whole words: the only ones a deliberate swap may touch. */
+const isWholeWord = (shape: Shape, i: number) =>
+  shape.slots[i] !== 'num' && !shape.madeUp.includes(i) && !shape.initials.includes(i) && !shape.shorthand.includes(i);
+
+/** What a slot really chooses from, as typed: whole words (with their deliberate swaps when on), initials or two-letter forms. */
+function slotPool(shape: Shape, i: number, comfort: Comfort, minDigits: number, eased = false): readonly string[] {
+  const pool = pools(comfort, minDigits, eased)[shape.slots[i]!];
   if (shape.madeUp.includes(i)) return MADE_UP_NOUNS;
   if (shape.initials.includes(i)) return initialsOf(pool);
   if (shape.shorthand.includes(i)) return twoLettersOf(pool);
-  return pool;
+  return eased && isWholeWord(shape, i) ? typedPool(pool) : pool;
 }
 
 /** A template with its number placed, initials chosen and glue decided. */
@@ -397,12 +417,12 @@ function shortestIn(pool: readonly string[]): number {
  * are not counted on either. A shape below the rule is never planned, so
  * every password can meet it.
  */
-export function minLettersOf(shape: Shape, comfort: Comfort, minDigits: number): number {
+export function minLettersOf(shape: Shape, comfort: Comfort, minDigits: number, eased = false): number {
   return shape.slots.reduce((sum, slot, i) => {
     if (slot === 'num' || shape.madeUp.includes(i)) return sum;
     if (shape.initials.includes(i)) return sum + 1;
     if (shape.shorthand.includes(i)) return sum + 2;
-    return sum + shortestIn(pools(comfort, minDigits)[slot]);
+    return sum + shortestIn(slotPool(shape, i, comfort, minDigits, eased)); // as typed: a swap can drop letters ("cks" -> "x")
   }, 0);
 }
 
@@ -431,11 +451,11 @@ export function plan(req: Requirements): Candidate {
       const lo = req.minLength - overhead;
       const hi = req.maxLength - overhead;
       if (hi <= 0) continue;
-      if (minLettersOf(shape, req.comfort, req.minDigits) < req.minUppercase) {
+      if (minLettersOf(shape, req.comfort, req.minDigits, req.easeSwaps) < req.minUppercase) {
         tooFewLetters = true;
         continue;
       }
-      const model = modelFor(shape, req.comfort, req.minDigits);
+      const model = modelFor(shape, req.comfort, req.minDigits, req.easeSwaps);
       const count = model.count(lo, hi);
       if (count > 0) variants.push({ shape, model, count, endSymbol, lo, hi });
     }
@@ -445,7 +465,7 @@ export function plan(req: Requirements): Candidate {
     const first = shapes[0]!;
     const bits = Math.log2(count);
     const breakdown: SlotBreakdown[] = first.slots.map((slot, i) => {
-      const size = slotPool(first, i, req.comfort, req.minDigits).length;
+      const size = slotPool(first, i, req.comfort, req.minDigits, req.easeSwaps).length;
       const form = first.madeUp.includes(i)
         ? 'madeUp'
         : first.initials.includes(i)
@@ -481,6 +501,7 @@ export function plan(req: Requirements): Candidate {
         expectedLength: meanLength,
         breakdown,
         lengthPenaltyBits: Math.max(0, unconstrained - bits),
+        easeSwaps: req.easeSwaps,
       },
     };
     if (!best || better(candidate.plan, best.plan)) best = candidate;
@@ -636,7 +657,7 @@ export function usableMappings(mappings: readonly Mapping[], req: Requirements, 
 export function generate(req: Requirements, options: GenerateOptions = {}): GenerateResult {
   const { rng = cryptoRandom, mappings = BUILT_IN_MAPPINGS } = options;
   const { plan: chosen, variants } = plan(req);
-  const p = pools(req.comfort, req.minDigits);
+  const p = pools(req.comfort, req.minDigits, req.easeSwaps);
   const warnings: string[] = [];
   const twistMappings = usableMappings(mappings, req, chosen.separator);
   if (req.twists > 0 && twistMappings.length === 0) {
@@ -665,20 +686,22 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
     const variant = variants[weightedIndex(variants.map((v) => v.count), rng)]!;
     const endSymbol = variant.endSymbol ? closings[randomInt(closings.length, rng)]!.repeat(variant.endSymbol.length) : '';
     const { shape, model } = variant;
-    const original = model.sample(variant.lo, variant.hi, rng);
-    const length = render(original, variant, chosen).length;
+    // Drawn as typed: with deliberate swaps on, awkward whole words come out already swapped ("wyse").
+    const typed = model.sample(variant.lo, variant.hi, rng);
+    const original = typed.map((w, j) => (req.easeSwaps && isWholeWord(shape, j) ? plainOf(w) : w));
+    const length = render(typed, variant, chosen).length;
     // Twists never touch the number, initials, made-up nouns or two-letter
     // words, so what the card says about those stays true.
-    const fixed = (j: number) =>
-      shape.slots[j] === 'num' || shape.initials.includes(j) || shape.madeUp.includes(j) || shape.shorthand.includes(j);
+    const fixed = (j: number) => !isWholeWord(shape, j);
     // Letters the uppercase rule can count on without touching the twisted words.
-    const fixedLetters = original.reduce((n, w, j) => {
+    const fixedLetters = typed.reduce((n, w, j) => {
       if (!fixed(j) || shape.slots[j] === 'num') return n;
       if (shape.madeUp.includes(j)) return n + (w === w.toUpperCase() ? letterCount(w) : 0);
       return n + letterCount(w);
     }, 0);
+    // Random swaps land on the words as typed, deliberate swaps included, and are counted from there.
     const twisted = applyTwists(
-      original,
+      typed,
       {
         // The minimum, or half the time one more (never above the setting's maximum): variety across a batch at no cost to the rules.
         count: Math.min(MAX_TWISTS, req.twists + (req.twists > 0 ? randomInt(2, rng) : 0)),

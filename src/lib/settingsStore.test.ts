@@ -29,6 +29,10 @@ describe('settings store', () => {
     expect(parsed.comfort).toBe('strict');
     expect(parsed.glue).toBe(DEFAULT_REQUIREMENTS.glue);
     expect(parsed.twists).toBe(3);
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, easeSwaps: true }).easeSwaps).toBe(true);
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, easeSwaps: 'yes' }).easeSwaps).toBe(DEFAULT_REQUIREMENTS.easeSwaps);
+    const older = Object.fromEntries(Object.entries(DEFAULT_REQUIREMENTS).filter(([key]) => key !== 'easeSwaps')); // saved before the option existed
+    expect(parseRequirements(older).easeSwaps).toBe(false);
   });
 
   it('returns the defaults for anything that does not validate', () => {
