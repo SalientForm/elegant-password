@@ -47,13 +47,12 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .mono, code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 
 .app { max-width: 1380px; margin: 0 auto; padding: 0.75rem 1.25rem 4rem; }
-/* The title starts at the top left of the screen, on the same row as the credit pinned top right. */
-.topbar { margin-bottom: 0.75rem; padding-top: 0; }
+/* The title starts at the top left of the screen; the credit sits at the right of the same row and scrolls with it. */
+.topbar { margin-bottom: 0.75rem; padding-top: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 /* Title top left, the description on its own line beneath it, both left-justified. */
-.topbar-text { display: grid; justify-items: start; gap: 0.3rem; text-align: left; padding-right: 14rem; }
+.topbar-text { display: grid; justify-items: start; gap: 0.3rem; text-align: left; }
 .topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 13pt; }
-/* Pinned to the top-right corner of the screen, the same distance from the top and the right edge. */
-.topbar .brand { position: fixed; top: 0.75rem; right: 0.75rem; z-index: 5; font-size: 0.78rem; font-weight: 400; font-style: italic; opacity: 0.3; white-space: nowrap; }
+.topbar .brand { flex: none; font-size: 0.78rem; font-weight: 400; font-style: italic; opacity: 0.3; white-space: nowrap; }
 .topbar .brand strong { font-weight: 700; }
 
 main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
