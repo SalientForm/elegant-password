@@ -53,7 +53,7 @@ describe('TypingTest', () => {
     const clock = { t: 0 };
     render(<TypingTest now={() => clock.t} />);
     const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
-    expect((screen.getByRole('button', { name: 'Clear' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull(); // nothing to clear yet
     typeInto(input, 'abc', clock);
     enter(input, clock);
     // A different entry is a mistyped run, not a new target.
@@ -72,8 +72,11 @@ describe('TypingTest', () => {
     expect(within(status).getByText('M n/a')).toBeTruthy();
     fireEvent.change(hintField, { target: { value: 'a b c' } });
     expect(within(screen.getByRole('status')).getByText(/^M \d+$/)).toBeTruthy();
-    // Clear drops the password under test; the next run sets a new one.
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    // The cancel icon next to the password under test drops it; the next run sets a new one.
+    const clearButton = screen.getByRole('button', { name: 'Clear' });
+    expect(clearButton.closest('.testing-row')).toBeTruthy(); // beside "Testing:"
+    expect(clearButton.querySelector('svg')).toBeTruthy(); // an icon, not a word
+    fireEvent.click(clearButton);
     expect(screen.queryByRole('status')).toBeNull();
     typeInto(input, 'xyz', clock);
     enter(input, clock);

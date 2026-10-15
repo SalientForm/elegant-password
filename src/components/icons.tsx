@@ -51,6 +51,14 @@ export const InfoIcon = ({ size = 16 }: IconProps) => (
   </svg>
 );
 
+/** A circle with a diagonal bar: the usual "cancel" / "clear" sign. */
+export const CancelIcon = ({ size = 16 }: IconProps) => (
+  <svg {...base(size)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M5.6 5.6l12.8 12.8" />
+  </svg>
+);
+
 export const ChevronUpIcon = ({ size = 16 }: IconProps) => (
   <svg {...base(size)}>
     <path d="M6 15l6-6 6 6" />

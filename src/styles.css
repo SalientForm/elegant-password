@@ -311,6 +311,8 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .typing-result .hint-field input { font: inherit; font-size: 0.85rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.3rem 0.5rem; width: 100%; }
 .typing-result { display: grid; gap: 0.4rem; font-size: 0.85rem; }
 .typing-result p { margin: 0; }
+.testing-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.testing-row p { min-width: 0; flex: 1 1 auto; }
 .typing-result .password { font-size: 1rem; }
 .typing-stats { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.15rem; }
 .typing-stats li::before { margin-right: 0.4rem; font-weight: 700; }

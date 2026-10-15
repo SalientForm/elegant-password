@@ -3,6 +3,7 @@ import { criterionOf } from '../lib/difficulty';
 import { scoreAlone, scoreCold } from '../lib/score';
 import { finishAttempt, nextTarget, recordKey, startRecording, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
+import { CancelIcon } from './icons';
 import { ScoreBadges } from './SuggestionCard';
 
 interface Props {
@@ -142,9 +143,6 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         onPaste={onPaste}
       />
       <div className="typing-test-controls">
-        <button type="button" onClick={clear} disabled={target === undefined}>
-          Clear
-        </button>
         <label className="check">
           <input type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} />
           Show as typed
@@ -152,9 +150,14 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
       </div>
       {target !== undefined && difficulty && (
         <div className="typing-result" role="status">
-          <p>
-            <span className="field-label">Testing:</span> <code className="password">{shown ? target : '•'.repeat([...target].length)}</code>
-          </p>
+          <div className="testing-row">
+            <p>
+              <span className="field-label">Testing:</span> <code className="password">{shown ? target : '•'.repeat([...target].length)}</code>
+            </p>
+            <button type="button" className="icon-button ghost" onClick={clear} aria-label="Clear" title="Clear the password under test">
+              <CancelIcon />
+            </button>
+          </div>
           {hintEditable ? (
             <label className="field inline hint-field">
               <span>Hint</span>
