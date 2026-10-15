@@ -31,7 +31,7 @@ describe('SuggestionCard', () => {
     expect(screen.getByRole('heading', { name: `Memorability: ${s.memorability} / 100` })).toBeTruthy();
     expect(screen.getByText(/hint words keep their full length/)).toBeTruthy();
     expect(screen.getByText(/brevity \d+%/)).toBeTruthy();
-    expect(screen.getByText(/penalty|differs? from the hint/)).toBeTruthy();
+    expect(screen.getByText(/^(No spelling differs from the hint, so no penalty\.|\d+ spellings? differs? from the hint: −\d+ points\.)$/)).toBeTruthy();
   });
 
   it('explains whole-word capitals, initials, spaces, no separator and a chosen stretch', () => {
