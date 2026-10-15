@@ -47,8 +47,10 @@ export function App() {
     <ErrorBoundary>
       <div className="app">
         <header className="topbar">
-          <h1>{TITLES[page][0]}</h1>
-          <p className="tagline">{TITLES[page][1]}</p>
+          <div className="topbar-text">
+            <h1>{TITLES[page][0]}</h1>
+            <p className="tagline">{TITLES[page][1]}</p>
+          </div>
           <span className="brand">brought to you by SalientForm</span>
         </header>
         <nav className="topnav" aria-label="Pages">

@@ -47,10 +47,11 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .mono, code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 
 .app { max-width: 1380px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
-.topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.5rem 1.25rem; align-items: baseline; margin-bottom: 0.75rem; }
-.topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 0.95rem; }
-.topbar .brand { justify-self: end; font-size: 0.78rem; font-weight: 700; font-style: italic; opacity: 0.75; white-space: nowrap; }
-@media (max-width: 860px) { .topbar { grid-template-columns: 1fr auto; } .topbar .tagline { grid-column: 1 / -1; } }
+.topbar { position: relative; margin-bottom: 0.75rem; padding-top: 0.35rem; }
+.topbar-text { display: flex; justify-content: center; align-items: baseline; gap: 1.25rem; flex-wrap: wrap; text-align: center; padding: 0 9rem; }
+.topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 13pt; }
+.topbar .brand { position: absolute; right: 0; top: 0; font-size: 0.78rem; font-weight: 700; font-style: italic; opacity: 0.5; white-space: nowrap; }
+@media (max-width: 860px) { .topbar-text { padding: 1.4rem 0 0; } }
 
 main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
 .aside { display: grid; gap: 1rem; }
