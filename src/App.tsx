@@ -78,11 +78,7 @@ export function App() {
           <PhoneBar page={page} column={column} onColumn={setColumn} />
         ) : (
           <nav className="topnav" aria-label="Pages">
-            {PAGES.map((pg) => (
-              <a key={pg.id} href={pg.href} className={page === pg.id ? 'active' : ''} aria-current={page === pg.id ? 'page' : undefined}>
-                {pg.label}
-              </a>
-            ))}
+            <PageLinks page={page} />
           </nav>
         )}
         <PasswordsProvider>
@@ -95,6 +91,19 @@ export function App() {
         {page === 'fun' && <FunPage />}
       </div>
     </ErrorBoundary>
+  );
+}
+
+/** The three page links: the desktop nav, and the phone menu behind the hamburger. */
+function PageLinks({ page, onPick }: { page: Page; onPick?: () => void }) {
+  return (
+    <>
+      {PAGES.map((pg) => (
+        <a key={pg.id} href={pg.href} className={page === pg.id ? 'active' : ''} aria-current={page === pg.id ? 'page' : undefined} onClick={onPick}>
+          {pg.label}
+        </a>
+      ))}
+    </>
   );
 }
 
@@ -133,15 +142,10 @@ function PhoneBar({ page, column, onColumn }: { page: Page; column: Column; onCo
         <button type="button" className="icon-button ghost" aria-label="Pages" aria-expanded={open} aria-controls="phone-pages" title="Pages" onClick={() => setOpen(!open)}>
           <MenuIcon />
         </button>
-        {open && (
-          <nav id="phone-pages" aria-label="Pages">
-            {PAGES.map((pg) => (
-              <a key={pg.id} href={pg.href} className={page === pg.id ? 'active' : ''} aria-current={page === pg.id ? 'page' : undefined} onClick={() => setOpen(false)}>
-                {pg.label}
-              </a>
-            ))}
-          </nav>
-        )}
+        {/* Always in the document, hidden while closed, so the button's aria-controls always has a target. */}
+        <nav id="phone-pages" aria-label="Pages" hidden={!open}>
+          <PageLinks page={page} onPick={() => setOpen(false)} />
+        </nav>
       </div>
       {page === 'main' ? (
         <Tabs tabs={COLUMNS} value={column} onChange={onColumn} label="Sections" idPrefix="section" className="section-tabs" />
@@ -231,14 +235,12 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
   );
   const centre = (
     <>
-
+      {/* The sentence card: how to make the sentence, and the sentence itself (generated, or the user's own). */}
+      <section className="panel sentence-card" aria-label="Sentence">
         <Tabs tabs={MODE_TABS} value={p.mode} onChange={p.setMode} label="How to make the sentence" idPrefix="mode" />
-
         <TabPanel idPrefix="mode" id="generated" active={p.mode === 'generated'}>
-          <section className="panel sentence" aria-labelledby="generated-sentence-label">
-            <span className="field-label" id="generated-sentence-label">
-              Generated sentence
-            </span>
+          <div className="sentence">
+            <span className="field-label">Generated sentence</span>
             <p className="generated-sentence" data-testid="generated-sentence" aria-live="polite">
               {ordered[0]?.hint ?? '…'}
             </p>
@@ -246,12 +248,15 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
               The sentence behind the first suggestion below, drawn at random from the word lists and fitted to the rules on
               the left. Every card shows its own under Why?.
             </p>
-          </section>
+          </div>
         </TabPanel>
         <TabPanel idPrefix="mode" id="sentence" active={p.mode === 'sentence'}>
           <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} onSubmit={p.apply} />
         </TabPanel>
+      </section>
 
+      {/* The suggestions card: the heading, the order and Refresh row, messages, and a card per password. */}
+      <section className="panel suggestions">
         <h2>Suggestions</h2>
         <div className="results-tools">
           <div className="segmented sort" role="group" aria-label="Order">
@@ -297,13 +302,20 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
                 onAdd={p.addSelected}
               />
             ))}
-            {outcome.plan ? (
-              <StrengthPanel plan={outcome.plan} target={applied.req.targetBits} />
-            ) : (
-              <SentenceStrength suggestions={outcome.suggestions} sentence={outcome.suggestions[0]?.hint ?? applied.sentence} />
-            )}
           </div>
         )}
+      </section>
+
+      {/* The strength panel stays a card of its own. */}
+      {outcome?.ok && context && (
+        <div className={p.stale ? 'batch stale' : 'batch'}>
+          {outcome.plan ? (
+            <StrengthPanel plan={outcome.plan} target={applied.req.targetBits} />
+          ) : (
+            <SentenceStrength suggestions={outcome.suggestions} sentence={outcome.suggestions[0]?.hint ?? applied.sentence} />
+          )}
+        </div>
+      )}
     </>
   );
   const aside = (

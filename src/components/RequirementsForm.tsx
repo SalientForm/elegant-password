@@ -37,7 +37,7 @@ export function RequirementsForm({ value, onChange }: Props) {
 
   return (
     <form className="panel form" onSubmit={(e) => e.preventDefault()}>
-      <h2>Site requirements</h2>
+      <h2>Requirement options</h2>
 
       <fieldset>
         <legend>Length</legend>

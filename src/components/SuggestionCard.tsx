@@ -10,6 +10,7 @@ import { DifficultyTable } from './Difficulty';
 import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
 import { InstantTip, PasswordTip } from './PasswordTip';
+import { observeResize } from './resize';
 
 const ROW_NAMES = ['number row', 'top row', 'home row', 'bottom row', 'space bar'];
 
@@ -99,21 +100,27 @@ interface Props {
   onAdd?: (s: Suggestion) => void;
 }
 
-/** The width of an element's text as laid out, whatever the element's own width or clipping. */
-function textWidth(el: HTMLElement): number {
+/** The width of an element's content as laid out, whatever its own box is stretched or clipped to. */
+function contentWidth(el: HTMLElement): number {
   const range = document.createRange();
   range.selectNodeContents(el);
   return typeof range.getBoundingClientRect === 'function' ? range.getBoundingClientRect().width : 0;
 }
 
-/** Whether a card's password at its full width and its buttons cannot share the first row. */
-export function needsStack(head: HTMLElement): boolean {
+/**
+ * Whether a card's password at its full width and its buttons cannot share
+ * the first row; undefined while the card has no layout (its column is
+ * hidden), when the last answer should stand. Both widths come from content,
+ * never from boxes the stacked layout itself stretches or centres, so the
+ * answer never depends on the state it decides.
+ */
+export function needsStack(head: HTMLElement): boolean | undefined {
   const row = head.querySelector<HTMLElement>('.card-row');
   const password = head.querySelector<HTMLElement>('.password');
   const buttons = head.querySelector<HTMLElement>('.card-buttons');
-  if (!row || !password || !buttons) return false;
+  if (!row || !password || !buttons || row.clientWidth === 0) return undefined;
   const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
-  return textWidth(password) + buttons.offsetWidth + gap > row.clientWidth + 1;
+  return contentWidth(password) + contentWidth(buttons) + gap > row.clientWidth + 1;
 }
 
 export function SuggestionCard({ suggestion, context, index, selected = false, onAdd }: Props) {
@@ -127,12 +134,12 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   useLayoutEffect(() => {
     const el = head.current;
     if (!el) return undefined;
-    const measure = () => setStacked(needsStack(el));
+    const measure = () => {
+      const next = needsStack(el);
+      if (next !== undefined) setStacked(next);
+    };
     measure();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
+    return observeResize(el, measure); // one observer serves every card; a hidden column's cards measure again once shown
   }, [password]);
   const whyId = `why-${index}`;
   // The memorability breakdown comes from the same cold score as the badge.

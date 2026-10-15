@@ -318,8 +318,44 @@ test('the header scrolls away first, then each column scrolls on its own', async
   expect(reach.bottom).toBeLessThanOrEqual(reach.box + 1);
 });
 
+test('the page background is a top-to-bottom gradient, 20% darker at the top, spanning the whole document', async ({ page }) => {
+  await settledPasswords(page);
+  const look = await page.evaluate(() => {
+    const probe = (background: string) => {
+      const el = document.createElement('div');
+      el.style.background = background;
+      document.body.append(el);
+      const colour = getComputedStyle(el).backgroundColor;
+      el.remove();
+      return colour;
+    };
+    const brightness = (c: string) => Math.max(...c.match(/[\d.]+/g)!.slice(0, 3).map(Number)) / (c.startsWith('rgb') ? 255 : 1); // rgb(0-255) or color(srgb 0-1)
+    const root = getComputedStyle(document.documentElement);
+    return { image: root.backgroundImage, attachment: root.backgroundAttachment, top: brightness(probe('var(--bg-top)')), bottom: brightness(probe('var(--bg)')), rootHeight: document.documentElement.getBoundingClientRect().height, docHeight: document.documentElement.scrollHeight };
+  });
+  expect(look.image).toContain('linear-gradient');
+  expect(look.attachment).toBe('scroll'); // the gradient belongs to the document, not the viewport
+  expect(look.rootHeight).toBeGreaterThanOrEqual(look.docHeight - 1); // so it spans the whole page
+  expect(look.top).toBeLessThan(look.bottom);
+  expect(look.top / look.bottom).toBeGreaterThan(0.77); // 20% of brightness darker at the top: no more, no less
+  expect(look.top / look.bottom).toBeLessThan(0.83);
+});
+
+test('every small icon button has the same border colour and a subtle drop shadow', async ({ page }) => {
+  await settledPasswords(page);
+  await cards(page).first().getByRole('button', { name: 'Add', exact: true }).click(); // a list entry brings Remove and Copy buttons too
+  const look = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('.icon-button')]
+      .filter((b) => b.offsetWidth > 0 && b.getAttribute('aria-pressed') !== 'true')
+      .map((b) => ({ name: b.getAttribute('aria-label'), border: getComputedStyle(b).borderColor, shadow: getComputedStyle(b).boxShadow })),
+  );
+  expect(look.length).toBeGreaterThan(4);
+  expect(new Set(look.map((b) => b.border)).size, `one border colour: ${JSON.stringify(look)}`).toBe(1);
+  expect(look.every((b) => b.shadow !== 'none')).toBe(true);
+});
+
 test('badge tips are never clipped by a card and stay inside the viewport', async ({ page }) => {
-  await page.setViewportSize({ width: 1120, height: 700 }); // the narrowest three-column layout: the list sits at the right edge
+  await page.setViewportSize({ width: 1120, height: 700 }); // a three-column width (1101 px and up) where the list sits near the right edge
   await settledPasswords(page);
   const first = cards(page).first();
   await first.getByRole('button', { name: 'Add', exact: true }).click();

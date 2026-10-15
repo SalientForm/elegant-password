@@ -131,6 +131,22 @@ describe('App: order and pages', () => {
     expect(screen.getByTestId('generated-sentence').textContent).toBe(newFirst); // follows the order
   });
 
+  it('keeps the mode tabs in the sentence card, every suggestion in the Suggestions card, and the strength panel apart', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const sentenceCard = screen.getByRole('tablist', { name: 'How to make the sentence' }).closest('.panel')!;
+    expect(sentenceCard.className).toBe('panel sentence-card');
+    expect(sentenceCard.contains(screen.getByTestId('generated-sentence'))).toBe(true);
+    const suggestions = screen.getByRole('heading', { name: 'Suggestions' }).closest('.panel')!;
+    expect(suggestions.className).toBe('panel suggestions');
+    expect(suggestions.contains(screen.getByRole('group', { name: 'Order' }))).toBe(true);
+    expect(suggestions.contains(screen.getByRole('button', { name: 'Refresh' }))).toBe(true);
+    for (const c of cards()) expect(suggestions.contains(c)).toBe(true);
+    const strength = screen.getByRole('heading', { name: 'Why this sentence is strong' }).closest('.panel')!;
+    expect(suggestions.contains(strength)).toBe(false);
+    expect(sentenceCard.contains(strength)).toBe(false);
+  });
+
   it('has a Scoring page with the rubric and the bits explanation, and keeps the typing test and list in the right column', async () => {
     render(<App />);
     expect(screen.getByLabelText('Test and practice')).toBeTruthy();
@@ -178,7 +194,7 @@ describe('App in the medium range', () => {
     expect(main.className).toBe('columns medium outer-options');
     expect(strips().map((b) => `${b.textContent} (${b.parentElement!.className})`)).toEqual(['Testing (strip right)']);
     expect([shown('options'), shown('suggestions'), shown('list')]).toEqual([true, true, false]);
-    expect(screen.getByText('Site requirements')).toBeTruthy();
+    expect(screen.getByText('Requirement options')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Testing' }));
     expect(main.className).toBe('columns medium outer-list');
@@ -226,7 +242,7 @@ describe('App when too narrow for three columns', () => {
     expect(main.className).toBe('columns narrow focus-options');
     expect(strips().map((b) => b.parentElement!.className)).toEqual(['strip right', 'strip right']); // both right of the open column
     expect(document.activeElement).toBe(document.getElementById('section-panel-options')); // focus follows the opened column
-    expect(screen.getByText('Site requirements')).toBeTruthy();
+    expect(screen.getByText('Requirement options')).toBeTruthy();
     expect(screen.getByText('Swaps')).toBeTruthy();
     expect(screen.queryAllByRole('article')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Strict' }));
@@ -287,7 +303,7 @@ describe('App on a phone', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Options' }));
     expect(main.className).toBe('columns narrow phone focus-options');
     expect(screen.getByRole('tabpanel', { name: 'Options' })).toBe(document.getElementById('section-panel-options')); // the tab controls the column
-    expect(screen.getByText('Site requirements')).toBeTruthy();
+    expect(screen.getByText('Requirement options')).toBeTruthy();
     expect(screen.queryAllByRole('article')).toHaveLength(0);
     fireEvent.click(screen.getByRole('tab', { name: 'Testing' }));
     expect(screen.getByRole('textbox', { name: 'Test and practice' })).toBeTruthy();
@@ -296,7 +312,10 @@ describe('App on a phone', () => {
 
     const menu = screen.getByRole('button', { name: 'Pages' });
     expect(menu.getAttribute('aria-expanded')).toBe('false');
+    expect(menu.getAttribute('aria-controls')).toBe('phone-pages');
+    expect(document.getElementById('phone-pages')!.hidden).toBe(true); // the menu it controls exists, hidden, while closed
     fireEvent.click(menu);
+    expect(document.getElementById('phone-pages')!.hidden).toBe(false);
     expect(menu.getAttribute('aria-expanded')).toBe('true');
     const links = within(screen.getByRole('navigation', { name: 'Pages' })).getAllByRole('link');
     expect(links.map((a) => a.textContent)).toEqual(['Passwords', 'Scoring', 'Fun']);

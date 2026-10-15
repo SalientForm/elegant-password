@@ -16,6 +16,10 @@
       },
       {
         "kind": "test",
+        "title": "cards stack on a phone and un-stack once there is room again; a batch that arrives in a hidden column measures itself when shown"
+      },
+      {
+        "kind": "test",
         "title": "fits the narrowest flagship phone with nothing clipped in any column"
       },
       {
@@ -85,6 +89,14 @@
       },
       {
         "kind": "test",
+        "title": "the page background is a top-to-bottom gradient, 20% darker at the top, spanning the whole document"
+      },
+      {
+        "kind": "test",
+        "title": "every small icon button has the same border colour and a subtle drop shadow"
+      },
+      {
+        "kind": "test",
         "title": "badge tips are never clipped by a card and stay inside the viewport"
       }
     ]
@@ -127,6 +139,10 @@
       {
         "kind": "test",
         "title": "shows the first suggestion's sentence under the mode tabs while making one up"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the mode tabs in the sentence card, every suggestion in the Suggestions card, and the strength panel apart"
       },
       {
         "kind": "test",
@@ -398,6 +414,26 @@
       {
         "kind": "test",
         "title": "stacks the password, the badges and the buttons into centred rows only when the password at full width and the buttons cannot share one"
+      },
+      {
+        "kind": "test",
+        "title": "un-stacks as soon as there is room again, measuring content rather than the boxes the stacked layout changes"
+      },
+      {
+        "kind": "test",
+        "title": "keeps its last answer while its column is hidden and measures again once shown, including a card that mounted hidden"
+      },
+      {
+        "kind": "test",
+        "title": "shares one ResizeObserver among all cards and stops watching cards that unmount"
+      },
+      {
+        "kind": "group",
+        "title": "after the rows tests"
+      },
+      {
+        "kind": "test",
+        "title": "leaves the browser's own width getters in place"
       },
       {
         "kind": "group",

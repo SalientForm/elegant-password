@@ -151,7 +151,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
           Show as typed
         </label>
       </div>
-      {target !== undefined && difficulty && shownTarget !== undefined && (
+      {shownTarget !== undefined && difficulty && (
         <div className="typing-result" role="status">
           <div className="testing-row">
             <p>

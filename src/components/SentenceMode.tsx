@@ -26,7 +26,7 @@ const SHRINK: { value: ShrinkStyle; label: string; example: string }[] = [
 
 export function SentenceInput({ value, onChange, options, onOptionsChange, onSubmit }: InputProps) {
   return (
-    <section className="panel sentence">
+    <div className="sentence">
       <label className="field">
         <span>Your sentence</span>
         <input
@@ -129,7 +129,7 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
         sentence stays in this tab until you close it and is never sent anywhere; it is only kept longer if you add a
         password to your list, as that password’s hint.
       </p>
-    </section>
+    </div>
   );
 }
 

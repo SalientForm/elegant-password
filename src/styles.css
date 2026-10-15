@@ -1,5 +1,7 @@
 :root {
   --bg: #f6f4ef;
+  --bg-top: color-mix(in srgb, var(--bg), black 20%); /* the top of the page gradient: 20% of brightness darker than the page colour */
+  --bar: color-mix(in srgb, var(--bg-top), white 10%); /* the phone bar: opaque, slightly lighter than the top it covers */
   --panel: #ffffff;
   --ink: #1f2328;
   --muted: #646a73;
@@ -16,7 +18,8 @@
   color-scheme: light dark;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: var(--ink);
-  background: var(--bg);
+  min-height: 100%;
+  background: linear-gradient(to bottom, var(--bg-top), var(--bg)); /* darker at the top, the page colour at the bottom, over the whole document */
   line-height: 1.5;
 }
 
@@ -106,8 +109,9 @@ main.columns > .strip { position: sticky; top: 0; height: 100vh; height: 100dvh;
  * centred in it.
  */
 main.columns.phone { display: block; }
-.phone-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.3rem 0; margin: 0 0 0.9rem; background: var(--bg); border-bottom: 1px solid var(--line); }
+.phone-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.3rem 0; margin: 0 0 0.9rem; background: var(--bar); border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgb(0 0 0 / 0.12); }
 .phone-menu { position: relative; grid-column: 1; justify-self: start; } /* the empty track at the right mirrors it, so the tabs are centred in the bar */
+.phone-menu nav[hidden] { display: none; } /* the menu is always in the document, so the hamburger's aria-controls has a target */
 .phone-menu nav { position: absolute; top: calc(100% + 0.3rem); left: 0; z-index: 6; display: grid; min-width: 10rem; padding: 0.3rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); }
 .phone-menu nav a { padding: 0.55rem 0.8rem; border-radius: 6px; color: var(--ink); font-weight: 600; text-decoration: none; }
 .phone-menu nav a.active { background: var(--accent-soft); color: var(--accent); }
@@ -189,8 +193,9 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .card-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; min-width: 0; }
 .card-row .actions { flex-wrap: wrap; min-width: 0; }
 .card-buttons { margin-left: auto; }
-.icon-button { width: 2rem; height: 2rem; padding: 0; display: inline-grid; place-items: center; border-radius: 7px; color: var(--ink); }
-.icon-button.ghost { color: var(--muted); }
+/* Every small icon button looks the same: one border colour, a white face and a subtle drop shadow. */
+.icon-button { width: 2rem; height: 2rem; padding: 0; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.icon-button.ghost { color: var(--muted); border-color: var(--line); }
 .icon-button:hover { color: var(--accent); }
 .icon-button[aria-pressed='true'] { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
 .icon-button svg { display: block; }
@@ -198,8 +203,8 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .password { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; min-width: 0; }
 .card-row > .pw-tip-anchor { flex: 1 1 auto; min-width: 0; }
 /* Too narrow for the password and its buttons on one row: password, badges and buttons each on a row, centred. */
-.card-head.stacked .card-row { flex-direction: column; align-items: stretch; justify-content: center; }
-.card-head.stacked .card-row > .pw-tip-anchor { flex: 0 0 auto; width: 100%; }
+.card-head.stacked .card-row { flex-direction: column; align-items: center; justify-content: center; } /* buttons and badges keep their own width, centred */
+.card-head.stacked .card-row > .pw-tip-anchor { flex: 0 0 auto; width: 100%; } /* the password keeps the full row, so a long one still ends in an ellipsis */
 .card-head.stacked .password { text-align: center; }
 .card-head.stacked .card-buttons { margin-left: 0; }
 .card-head.stacked .actions { justify-content: center; }
@@ -273,6 +278,11 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .mode-tabs button { border: 0; padding: 0.55rem; font-weight: 600; color: var(--muted); }
 .mode-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
 .sentence { display: grid; gap: 0.6rem; }
+.sentence-card { display: grid; gap: 0.8rem; }
+.sentence-card .mode-tabs { background: var(--bg); } /* the tabs sit inside the card, so the pill takes the page background */
+.panel.suggestions { display: grid; gap: 0.9rem; }
+.panel.suggestions > h2 { margin: 0; }
+.panel.suggestions .card { background: var(--bg); } /* a card inside the suggestions card */
 .sentence .sentence-input { font-size: 1.05rem; padding: 0.55rem 0.7rem; }
 .sentence-in-question { margin: 0.5rem 0 0.25rem !important; }
 .generated-sentence { margin: 0; font-size: 1.15rem; line-height: 1.4; padding: 0.55rem 0.7rem; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; }
@@ -370,8 +380,8 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .copy-bubble { position: fixed; z-index: 40; padding: 0.25rem 0.6rem; border-radius: 999px; background: var(--accent); color: var(--panel); font-size: 0.8rem; font-weight: 600; pointer-events: none; box-shadow: 0 4px 14px rgb(0 0 0 / 0.3); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* Phones and narrow windows: three tabs instead of three columns; nothing scrolls sideways. */
-@media (max-width: 860px) {
+/* One open column (800 px and below): nothing scrolls sideways, tables stack, room is left under the page for the floating buttons. */
+@media (max-width: 800px) {
   .segmented.sort { min-width: 0; }
   .results-tools .segmented.sort { min-width: 0; width: 100%; }
   .table-scroll { overflow-x: visible; }

@@ -66,16 +66,16 @@ async function noSideways(page: Page, where: string) {
         return b.width > 0 && b.right > window.innerWidth + 1;
       })
       .map(name);
-    const column = document.querySelector('main > .sidebar:not([hidden]), main > .results:not([hidden]), main > .aside:not([hidden])');
-    const edge = column ? column.getBoundingClientRect().right + 1 : Infinity;
-    const past = column
-      ? [...column.querySelectorAll('*')]
-          .filter((el) => {
-            const b = el.getBoundingClientRect();
-            return b.width > 0 && b.right > edge;
-          })
-          .map(name)
-      : [];
+    // Every open column (two of them in the medium range) is checked against its own right edge.
+    const past = [...document.querySelectorAll('main > .sidebar:not([hidden]), main > .results:not([hidden]), main > .aside:not([hidden])')].flatMap((column) => {
+      const edge = column.getBoundingClientRect().right + 1;
+      return [...column.querySelectorAll('*')]
+        .filter((el) => {
+          const b = el.getBoundingClientRect();
+          return b.width > 0 && b.right > edge;
+        })
+        .map((el) => `${name(column)} > ${name(el)}`);
+    });
     const cut = [...document.querySelectorAll('button, label, span, h2, h3, p, th, td')]
       .filter((el) => (el as HTMLElement).offsetWidth > 0 && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible' && !el.closest('.pw-tip-anchor'))
       .map(name);
@@ -102,6 +102,46 @@ async function barLaidOut(page: Page, where: string) {
   expect(menu.x, `${where}: hamburger at the left`).toBeLessThanOrEqual(bar.x + 1);
   expect(Math.abs(tabs.x + tabs.width / 2 - width / 2), `${where}: tabs centred`).toBeLessThanOrEqual(1);
   expect(menu.x + menu.width, `${where}: hamburger clear of the tabs`).toBeLessThanOrEqual(tabs.x);
+  // Opaque, slightly lighter than the top of the page gradient it covers, with a drop shadow.
+  const look = await page.evaluate(() => {
+    const probe = (background: string) => {
+      const el = document.createElement('div');
+      el.style.background = background;
+      document.body.append(el);
+      const colour = getComputedStyle(el).backgroundColor;
+      el.remove();
+      return colour;
+    };
+    const parts = (c: string) => c.match(/[\d.]+/g)!.map(Number);
+    const brightness = (c: string) => Math.max(...parts(c).slice(0, 3)) / (c.startsWith('rgb') ? 255 : 1); // rgb(0-255) or color(srgb 0-1)
+    const bar = getComputedStyle(document.querySelector('.phone-bar')!);
+    return { top: brightness(probe('var(--bg-top)')), bar: brightness(bar.backgroundColor), alpha: parts(bar.backgroundColor)[3] ?? 1, shadow: bar.boxShadow };
+  });
+  expect(look.alpha, `${where}: bar opaque`).toBe(1);
+  expect(look.bar, `${where}: bar lighter than the top of the gradient`).toBeGreaterThan(look.top);
+  expect(look.bar - look.top, `${where}: only slightly lighter`).toBeLessThan(0.15);
+  expect(look.shadow, `${where}: bar drop shadow`).not.toBe('none');
+}
+
+/** Fails unless every visible card is stacked exactly when its password at full width and its buttons cannot share a row. */
+async function stackingConsistent(page: Page, where: string) {
+  const wrong = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('article.card .card-head')]
+      .filter((head) => head.closest('[hidden]') === null)
+      .map((head) => {
+        const width = (el: Element) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          return range.getBoundingClientRect().width;
+        };
+        const row = head.querySelector('.card-row')!;
+        const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+        const should = width(head.querySelector('.password')!) + width(head.querySelector('.card-buttons')!) + gap > row.clientWidth + 1;
+        return { password: head.querySelector('.password')!.textContent, stacked: head.classList.contains('stacked'), should };
+      })
+      .filter((c) => c.stacked !== c.should),
+  );
+  expect(wrong, `${where}: cards stacked exactly when the password and buttons cannot share a row`).toEqual([]);
 }
 
 const settled = async (page: Page) => {
@@ -129,7 +169,7 @@ test('phone: the open column fills the width under a bar with the page menu at t
   await noSideways(page, 'suggestions with Why open');
 
   await tab(page, 'Options').click();
-  await expect(page.getByText('Site requirements')).toBeVisible();
+  await expect(page.getByText('Requirement options')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Swaps', exact: true })).toBeVisible();
   await noSideways(page, 'options');
   await tab(page, 'Suggestions').click();
@@ -163,6 +203,8 @@ test('phone: the open column fills the width under a bar with the page menu at t
   // The page links are behind the hamburger; choosing one closes the menu and the page's name takes the tabs' place.
   const menu = page.getByRole('button', { name: 'Pages', exact: true });
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  await expect(menu).toHaveAttribute('aria-controls', 'phone-pages');
+  await expect(page.locator('#phone-pages')).toBeHidden(); // in the document, hidden, so the button's aria-controls has a target
   await expect(page.getByRole('navigation', { name: 'Pages' })).toHaveCount(0);
   await menu.click();
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
@@ -189,7 +231,7 @@ test('between phone and desktop widths, the other two columns shrink to buttons 
 
   await strip(page, 'Options').click();
   await expect(strips(page)).toHaveText(['Suggestions', 'Testing']);
-  await expect(page.getByText('Site requirements')).toBeVisible();
+  await expect(page.getByText('Requirement options')).toBeVisible();
   await centred(page, 'options');
   await noSideways(page, 'options');
 
@@ -218,7 +260,7 @@ test('in the medium range two columns stay open: Options and Suggestions at firs
   await settled(page);
   await expect(page.locator('main')).toHaveClass('columns medium outer-options');
   await expect(strips(page)).toHaveText(['Testing']);
-  await expect(page.getByText('Site requirements')).toBeVisible();
+  await expect(page.getByText('Requirement options')).toBeVisible();
   await centred(page, 'medium');
   await noSideways(page, 'medium: options and suggestions');
   await strip(page, 'Testing').click();
@@ -232,6 +274,44 @@ test('in the medium range two columns stay open: Options and Suggestions at firs
   await page.reload();
   await settled(page);
   await expect(strips(page)).toHaveText(['Testing']);
+
+  // The bottom of the range is still the sticky two-column layout: no phone padding under the page, no stacked tables,
+  // and the page scrolls exactly to where the columns stick.
+  await page.setViewportSize({ width: 830, height: 800 });
+  await page.reload();
+  await settled(page);
+  await expect(page.locator('main')).toHaveClass('columns medium outer-options');
+  const layout = await page.evaluate(() => ({
+    padding: getComputedStyle(document.querySelector('.app')!).paddingBottom,
+    thead: getComputedStyle(document.querySelector('table.stack thead')!).display,
+    maxScroll: document.documentElement.scrollHeight - window.innerHeight,
+    columnsTop: document.querySelector('main')!.getBoundingClientRect().top + window.scrollY,
+  }));
+  expect(layout.padding).toBe('0px');
+  expect(layout.thead).not.toBe('none');
+  expect(Math.abs(layout.maxScroll - layout.columnsTop)).toBeLessThanOrEqual(1);
+});
+
+test('cards stack on a phone and un-stack once there is room again; a batch that arrives in a hidden column measures itself when shown', async ({ page }) => {
+  await settled(page);
+  await expect(page.locator('article.card .card-head.stacked').first()).toBeVisible(); // a phone column is too narrow for most passwords beside their buttons
+  await stackingConsistent(page, 'phone');
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.waitForTimeout(200);
+  await expect(page.locator('article.card .card-head.stacked')).toHaveCount(0); // room again (a 600 px row): nothing stays stacked
+  await stackingConsistent(page, 'desktop after phone');
+
+  await page.setViewportSize({ width: 760, height: 1000 });
+  await page.reload();
+  await settled(page);
+  await strip(page, 'Options').click(); // Suggestions is hidden now
+  await page.getByRole('button', { name: 'Strict', exact: true }).click();
+  await page.getByRole('button', { name: 'Submit changes', exact: true }).click(); // the new batch mounts in the hidden column
+  await expect(page.getByRole('region', { name: 'Unapplied changes' })).toHaveCount(0);
+  await strip(page, 'Suggestions').click();
+  await settled(page);
+  await expect(page.locator('article.card .card-head.stacked')).toHaveCount(0); // a 760 px window fits every password beside its buttons
+  await stackingConsistent(page, 'shown after mounting hidden');
 });
 
 test('fits the narrowest flagship phone with nothing clipped in any column', async ({ page }) => {
@@ -242,7 +322,7 @@ test('fits the narrowest flagship phone with nothing clipped in any column', asy
   await cards(page).first().getByRole('button', { name: 'Why?', exact: true }).click();
   await noSideways(page, '360: suggestions with Why open');
   await tab(page, 'Options').click();
-  await expect(page.getByText('Site requirements')).toBeVisible();
+  await expect(page.getByText('Requirement options')).toBeVisible();
   await noSideways(page, '360: options');
   await tab(page, 'Testing').click();
   await expect(page.getByLabel('Test and practice', { exact: true })).toBeVisible();

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { fromSentence } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements, type Suggestion } from '../lib/generate';
 import { seeded } from '../lib/testRandom';
+import { watchedCount } from './resize';
 import { memorabilityLevel, needsStack, strengthLevel, strengthWord, SuggestionCard, type CardContext } from './SuggestionCard';
 
 afterEach(cleanup);
@@ -100,27 +101,108 @@ describe('SuggestionCard', () => {
 });
 
 describe('SuggestionCard rows', () => {
-  const fake = (text: number, buttons: number, row: number) => {
-    Object.defineProperty(Range.prototype, 'getBoundingClientRect', { configurable: true, value: () => ({ width: text }) });
-    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => buttons });
-    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => row });
+  // jsdom has no layout: content widths come from a faked Range, box widths from faked getters. The browser's own
+  // getters are restored afterwards (offsetWidth lives on HTMLElement.prototype itself, so it must be put back, not deleted).
+  const original = {
+    offsetWidth: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth'),
+    range: Object.getOwnPropertyDescriptor(Range.prototype, 'getBoundingClientRect'),
   };
-  afterEach(() => {
-    delete (Range.prototype as { getBoundingClientRect?: unknown }).getBoundingClientRect;
-    delete (HTMLElement.prototype as { offsetWidth?: unknown }).offsetWidth;
-    delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
+  const widths = { text: 0, buttons: 0, row: 0, box: 0 };
+  let constructed = 0;
+  let notify: ((entries: { target: Element }[]) => void) | undefined;
+  beforeAll(() => {
+    Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value(this: Range) {
+        const el = this.startContainer as HTMLElement;
+        return { width: el.classList?.contains('password') ? widths.text : widths.buttons };
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => widths.box });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => widths.row });
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: (entries: { target: Element }[]) => void) {
+          constructed++;
+          notify = cb;
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
   });
+  afterAll(() => {
+    vi.unstubAllGlobals();
+    if (original.offsetWidth) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', original.offsetWidth);
+    delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth; // the fake shadowed Element.prototype's
+    if (original.range) Object.defineProperty(Range.prototype, 'getBoundingClientRect', original.range);
+    else delete (Range.prototype as { getBoundingClientRect?: unknown }).getBoundingClientRect;
+  });
+  const set = (next: Partial<typeof widths>) => Object.assign(widths, next);
+  const head = () => document.querySelector<HTMLElement>('.card-head')!;
+  const resize = () => act(() => notify?.([{ target: head() }]));
 
   it('stacks the password, the badges and the buttons into centred rows only when the password at full width and the buttons cannot share one', () => {
     const { s, context } = first({});
-    fake(220, 120, 400); // 220 + 120 fits in 400 (jsdom has no layout, so widths are faked)
+    set({ text: 220, buttons: 120, row: 400, box: 120 }); // 220 + 120 fits in 400
     const { unmount } = show(s, context);
-    expect(document.querySelector('.card-head')!.className).toBe('card-head');
+    expect(head().className).toBe('card-head');
     unmount();
-    fake(300, 120, 400); // 300 + 120 does not
+    set({ text: 300 }); // 300 + 120 does not
     show(s, context);
-    expect(document.querySelector('.card-head')!.className).toBe('card-head stacked');
-    expect(needsStack(document.querySelector('.card-head')!)).toBe(true);
+    expect(head().className).toBe('card-head stacked');
+    expect(needsStack(head())).toBe(true);
+  });
+
+  it('un-stacks as soon as there is room again, measuring content rather than the boxes the stacked layout changes', () => {
+    const { s, context } = first({});
+    set({ text: 300, buttons: 120, row: 400, box: 400 });
+    show(s, context);
+    expect(head().className).toBe('card-head stacked');
+    set({ row: 600, box: 600 }); // wider now; the buttons' box reads as the whole row, their content does not
+    resize();
+    expect(head().className).toBe('card-head');
+  });
+
+  it('keeps its last answer while its column is hidden and measures again once shown, including a card that mounted hidden', () => {
+    const { s, context } = first({});
+    set({ text: 300, buttons: 120, row: 0, box: 0 }); // no layout at all: mounted in a hidden column
+    show(s, context);
+    expect(head().className).toBe('card-head');
+    expect(needsStack(head())).toBeUndefined();
+    set({ row: 400 }); // shown
+    resize();
+    expect(head().className).toBe('card-head stacked');
+    set({ row: 0 }); // hidden again: nothing changes
+    resize();
+    expect(head().className).toBe('card-head stacked');
+    set({ row: 600 });
+    resize();
+    expect(head().className).toBe('card-head');
+  });
+
+  it('shares one ResizeObserver among all cards and stops watching cards that unmount', () => {
+    const { s, context } = first({});
+    set({ text: 100, buttons: 100, row: 400, box: 100 });
+    const before = constructed;
+    const mounted = [show(s, context, 0), show(s, context, 1), show(s, context, 2)];
+    expect(constructed - before).toBeLessThanOrEqual(1); // at most one more, and only if none existed yet
+    expect(watchedCount()).toBe(3);
+    mounted[0]!.unmount();
+    expect(watchedCount()).toBe(2);
+    cleanup();
+    expect(watchedCount()).toBe(0);
+  });
+});
+
+describe('after the rows tests', () => {
+  it("leaves the browser's own width getters in place", () => {
+    expect(Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')?.get).toBeTypeOf('function');
+    expect(document.createElement('div').offsetWidth).toBe(0); // jsdom's own answer, not undefined
+    expect(Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')).toBeUndefined(); // Element.prototype's again
+    expect(document.createElement('div').clientWidth).toBe(0);
   });
 });
 
