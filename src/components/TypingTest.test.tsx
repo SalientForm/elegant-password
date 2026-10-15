@@ -49,28 +49,35 @@ describe('TypingTest', () => {
     expect(input.value).toBe(''); // ready for the next run
   });
 
-  it('checks later runs against the target, and the lock keeps the target through a mistyped Enter', () => {
+  it('keeps the password under test through mistyped runs until Clear, and takes a typed-in hint', () => {
     const clock = { t: 0 };
     render(<TypingTest now={() => clock.t} />);
     const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    expect((screen.getByRole('button', { name: 'Clear' }) as HTMLButtonElement).disabled).toBe(true);
     typeInto(input, 'abc', clock);
     enter(input, clock);
-    // Unlocked: a different entry becomes the new target.
+    // A different entry is a mistyped run, not a new target.
     typeInto(input, 'abd', clock);
     enter(input, clock);
-    expect(screen.getByRole('status').textContent).toContain('Testing: abd');
-    // Locked: a mistake is reported and the target stays.
-    fireEvent.click(screen.getByLabelText('Lock password'));
-    typeInto(input, 'abx', clock);
-    enter(input, clock);
     const status = screen.getByRole('status');
-    expect(status.textContent).toContain('Testing: abd');
+    expect(status.textContent).toContain('Testing: abc');
     expect(status.textContent).toMatch(/Did not match/);
-    expect(status.textContent).toMatch(/\(locked\)/);
     expect(status.textContent).toMatch(/Previous runs:/);
     // Enter on an empty field does nothing.
     enter(input, clock);
-    expect(screen.getByRole('status').textContent).toContain('Testing: abd');
+    expect(screen.getByRole('status').textContent).toContain('Testing: abc');
+    // A hint can be added by hand; memorability then scores.
+    const hintField = screen.getByLabelText('Hint for the password under test') as HTMLInputElement;
+    expect(hintField.placeholder).toBe('(hint n/a)');
+    expect(within(status).getByText('M n/a')).toBeTruthy();
+    fireEvent.change(hintField, { target: { value: 'a b c' } });
+    expect(within(screen.getByRole('status')).getByText(/^M \d+$/)).toBeTruthy();
+    // Clear drops the password under test; the next run sets a new one.
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    typeInto(input, 'xyz', clock);
+    enter(input, clock);
+    expect(screen.getByRole('status').textContent).toContain('Testing: xyz');
   });
 
   it('treats a paste as choosing the password to test, with its hint when it is a known one', () => {
@@ -87,10 +94,10 @@ describe('TypingTest', () => {
     fireEvent.paste(input, { clipboardData: { getData: () => 'Pasted;secret;42\n' } });
     expect(input.value).toBe('');
     expect(screen.getByRole('status').textContent).toContain('Testing: Pasted;secret;42');
-    expect(screen.getByRole('status').textContent).toContain('Hint: (hint n/a)');
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('');
     // A password that is in the list brings its hint along.
     fireEvent.paste(input, { clipboardData: { getData: () => 'jr;B;5ls;Fpc' } });
-    expect(screen.getByRole('status').textContent).toContain('Hint: jupiter brings 5 leds for piece');
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('jupiter brings 5 leds for piece');
     expect(within(screen.getByRole('status')).getByText(/^M \d+$/)).toBeTruthy();
     // Typing it afterwards is checked against it.
     typeInto(input, 'jr;B;5ls;Fpc', clock);
@@ -130,22 +137,23 @@ describe('TypingTest', () => {
     );
     // On mount the latest list entry is under test, with its hint.
     expect(screen.getByRole('status').textContent).toContain('Testing: Old;one');
-    expect(screen.getByRole('status').textContent).toContain('Hint: old one');
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('old one');
     fireEvent.click(screen.getByText('add'));
     const status = screen.getByRole('status');
     expect(status.textContent).toContain('Testing: 13;Worthy;storks;openly;pet;twisty;toys');
-    expect(status.textContent).toContain('Hint: 13 worthy storks openly pet twisty toys');
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('13 worthy storks openly pet twisty toys');
     const cold = scoreCold('13;Worthy;storks;openly;pet;twisty;toys', '13 worthy storks openly pet twisty toys');
     expect(within(status).getByText(`S ${cold.bits.toFixed(0)}`)).toBeTruthy();
     expect(within(status).getByText(`D ${cold.difficulty.score}`)).toBeTruthy();
     expect(within(status).getByText(`M ${cold.memorability.score}`)).toBeTruthy();
-    // A password typed in by hand replaces it: no hint, so no memorability; strength and difficulty from the text alone.
+    // After Clear, a password typed in by hand is next: no hint, so no memorability; strength and difficulty from the text alone.
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
     typeInto(input, 'xyzzy-42', clock);
     enter(input, clock);
     const after = screen.getByRole('status');
     expect(after.textContent).toContain('Testing: xyzzy-42');
-    expect(after.textContent).toContain('Hint: (hint n/a)');
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('');
     expect(within(after).getByText('M n/a')).toBeTruthy();
     expect(within(after).getByText(`S ${scoreAlone('xyzzy-42').bits.toFixed(0)}`)).toBeTruthy();
     expect(within(after).getByText(`D ${scoreAlone('xyzzy-42').difficulty.score}`)).toBeTruthy();

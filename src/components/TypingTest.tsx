@@ -28,8 +28,10 @@ export const MANAGER_OPT_OUT = { 'data-bwignore': 'true', 'data-1p-ignore': 'tru
  * becomes the one under test, with its hint, so all three badges can be
  * scored; a password typed in by hand has no hint, so its strength and
  * difficulty come from the text alone and memorability is not available.
- * Later runs are checked against the target; "Lock password" keeps it even
- * when Enter is pressed on a mistyped run. Nothing leaves this component.
+ * Later runs are checked against the target until "Clear" drops it, a paste
+ * replaces it, or another password is added to the list. A hint can be
+ * typed in for a password that has none, so memorability can be scored too.
+ * Nothing leaves this component.
  */
 export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const passwords = usePasswordsOptional();
@@ -41,7 +43,6 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const [value, setValue] = useState('');
   const [target, setTarget] = useState<string | undefined>(latest?.password);
   const [hint, setHint] = useState<string | undefined>(latest?.hint);
-  const [locked, setLocked] = useState(false);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [shown, setShown] = useState(true);
   const recording = useRef<Recording>(startRecording());
@@ -59,10 +60,20 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
     setValue('');
   }, [latest]);
 
-  const cold = useMemo(() => (target !== undefined && hint !== undefined ? scoreCold(target, hint) : undefined), [target, hint]);
-  const alone = useMemo(() => (target !== undefined && hint === undefined ? scoreAlone(target) : undefined), [target, hint]);
+  const hintText = hint?.trim() ? hint.trim() : undefined;
+  const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);
+  const alone = useMemo(() => (target !== undefined && hintText === undefined ? scoreAlone(target) : undefined), [target, hintText]);
   const difficulty = cold?.difficulty ?? alone?.difficulty;
   const last = attempts[0];
+
+  /** Drop the password under test; the next run starts afresh. */
+  const clear = () => {
+    setTarget(undefined);
+    setHint(undefined);
+    setAttempts([]);
+    recording.current = startRecording();
+    setValue('');
+  };
 
   /** Pasting selects a password to test, as adding one from the list does; it is not typed into the field. */
   const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -83,9 +94,10 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
       e.stopPropagation(); // Enter here is a run, not "Submit changes"
       const typed = value;
       if (!typed) return;
-      const checkAgainst = nextTarget(target, typed, locked);
+      // The password under test stays until cleared: the first run sets it, later runs are checked against it.
+      const checkAgainst = nextTarget(target, typed, true);
       const attempt = finishAttempt(recording.current, typed, checkAgainst, at);
-      if (checkAgainst !== target) setHint(undefined); // a password typed in by hand has no hint
+      if (target === undefined) setHint(undefined); // a password typed in by hand has no hint until one is added
       setTarget(checkAgainst);
       setAttempts((list) => [attempt, ...list].slice(0, keep));
       recording.current = startRecording();
@@ -100,7 +112,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
       <h2 id="typing-test-heading">Test a password</h2>
       <p className="hint">
         Type it and press Enter. Speed and corrections are measured as you type; the first run, the password you last
-        added to your list, or one you paste here sets the one under test. Nothing is saved.
+        added to your list, or one you paste here sets the one under test until you clear it. Nothing is saved.
       </p>
       <input
         ref={input}
@@ -121,10 +133,9 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         onPaste={onPaste}
       />
       <div className="typing-test-controls">
-        <label className="check">
-          <input type="checkbox" checked={locked} disabled={!target} onChange={(e) => setLocked(e.target.checked)} />
-          Lock password
-        </label>
+        <button type="button" onClick={clear} disabled={target === undefined}>
+          Clear
+        </button>
         <label className="check">
           <input type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} />
           Show as typed
@@ -134,11 +145,26 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         <div className="typing-result" role="status">
           <p>
             <span className="field-label">Testing:</span> <code className="password">{shown ? target : '•'.repeat([...target].length)}</code>
-            {locked && <small> (locked)</small>}
           </p>
-          <p className="hint entry-hint">
-            <span className="field-label">Hint:</span> {hint ?? '(hint n/a)'}
-          </p>
+          <label className="field inline hint-field">
+            <span>Hint</span>
+            <input
+              type="text"
+              aria-label="Hint for the password under test"
+              placeholder="(hint n/a)"
+              autoComplete="off"
+              spellCheck={false}
+              value={hint ?? ''}
+              onChange={(e) => setHint(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  input.current?.focus();
+                }
+              }}
+            />
+          </label>
           <div className="actions">
             {cold ? (
               <ScoreBadges bits={cold.bits} difficulty={cold.difficulty} memorability={cold.memorability.score} />

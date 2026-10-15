@@ -305,7 +305,9 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .typing-test { display: grid; gap: 0.55rem; }
 .typing-test input.masked { -webkit-text-security: disc; } /* hidden without being a password field */
 .typing-test input[type='text'] { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.5rem 0.65rem; width: 100%; }
-.typing-test-controls { display: flex; gap: 1rem; flex-wrap: wrap; }
+.typing-test-controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.typing-result .hint-field { grid-template-columns: 3rem 1fr; }
+.typing-result .hint-field input { font: inherit; font-size: 0.85rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.3rem 0.5rem; width: 100%; }
 .typing-result { display: grid; gap: 0.4rem; font-size: 0.85rem; }
 .typing-result p { margin: 0; }
 .typing-result .password { font-size: 1rem; }

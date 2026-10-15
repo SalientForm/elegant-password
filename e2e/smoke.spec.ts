@@ -109,7 +109,7 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   // The password just added is now the one under test, hint and all three badges included.
   const practice = page.locator('.typing-result');
   await expect(practice).toContainText(`Testing: ${shown[0]}`);
-  await expect(practice).toContainText('Hint:');
+  await expect(page.getByLabel('Hint for the password under test', { exact: true })).not.toHaveValue('');
   await expect(practice.locator('.badge.strength')).toHaveText(`S ${bits}`);
   await expect(practice.locator('.badge.memorability')).toHaveText(/^M \d+$/);
 
@@ -202,10 +202,13 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
   await expect(status).toContainText('Testing: Sleepy;otters');
   await expect(status).toContainText('Typed correctly');
   await expect(status).toContainText('1 correction');
-  await expect(status).toContainText('Hint: (hint n/a)'); // typed by hand: no hint
+  const hintField = page.getByLabel('Hint for the password under test', { exact: true });
+  await expect(hintField).toHaveValue(''); // typed by hand: no hint yet
   await expect(status.locator('.badge.strength')).toHaveText(/^S \d+$/);
   await expect(status.locator('.badge.difficulty')).toHaveText(/^D \d+$/);
   await expect(status.locator('.badge.memorability')).toHaveText('M n/a');
+  await hintField.fill('sleepy otters');
+  await expect(status.locator('.badge.memorability')).toHaveText(/^M \d+$/); // a hint added by hand scores memorability
   // Pasting into the field chooses that password to test instead of typing it.
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.evaluate(() => navigator.clipboard.writeText('Pasted;words;77'));
@@ -213,14 +216,15 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
   await page.keyboard.press('Control+V');
   await expect(status).toContainText('Testing: Pasted;words;77');
   await expect(field).toHaveValue('');
-  await field.pressSequentially('Sleepy;otters', { delay: 10 });
-  await page.keyboard.press('Enter');
-  await expect(status).toContainText('Testing: Sleepy;otters'); // unlocked: a typed run becomes the target again
-  await page.getByLabel('Lock password', { exact: true }).check();
   await field.pressSequentially('Sleepy;otter', { delay: 10 });
   await page.keyboard.press('Enter');
-  await expect(status).toContainText('Did not match');
-  await expect(status).toContainText('Testing: Sleepy;otters');
+  await expect(status).toContainText('Did not match'); // the pasted password stays under test
+  await expect(status).toContainText('Testing: Pasted;words;77');
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(status).toHaveCount(0);
+  await field.pressSequentially('Sleepy;otters', { delay: 10 });
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.typing-result')).toContainText('Testing: Sleepy;otters'); // after Clear, the next run sets the target
 });
 
 test('orders suggestions by difficulty by default, and by strength or memorability on request', async ({ page }) => {

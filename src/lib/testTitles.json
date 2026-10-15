@@ -424,7 +424,7 @@
       },
       {
         "kind": "test",
-        "title": "checks later runs against the target, and the lock keeps the target through a mistyped Enter"
+        "title": "keeps the password under test through mistyped runs until Clear, and takes a typed-in hint"
       },
       {
         "kind": "test",
