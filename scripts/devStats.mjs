@@ -60,10 +60,11 @@ function transcripts() {
   }
   const byModel = new Map();
   for (const { model, usage } of calls.values()) {
-    const t = byModel.get(model) ?? { model, calls: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0 };
+    const t = byModel.get(model) ?? { model, calls: 0, input: 0, cacheWrite: 0, cacheWrite1h: 0, cacheRead: 0, output: 0 };
     t.calls++;
     t.input += usage.input_tokens ?? 0;
     t.cacheWrite += usage.cache_creation_input_tokens ?? 0;
+    t.cacheWrite1h += usage.cache_creation?.ephemeral_1h_input_tokens ?? 0; // the rest are 5-minute writes, priced lower
     t.cacheRead += usage.cache_read_input_tokens ?? 0;
     t.output += usage.output_tokens ?? 0;
     byModel.set(model, t);

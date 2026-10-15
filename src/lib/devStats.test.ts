@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compact, DEV_STATS, devStatList, duration, modelName } from './devStats';
+import { apiCost, compact, DEV_STATS, devStatList, dollars, duration, modelName, PRICES } from './devStats';
 
 describe('development stats', () => {
   it('names models from their ids', () => {
@@ -24,5 +24,24 @@ describe('development stats', () => {
     const shares = [...list[1]!.detail.matchAll(/(\d+) % of tokens/g)].map((m) => Number(m[1]));
     expect(shares.length).toBe(DEV_STATS.models.length);
     expect(Math.abs(shares.reduce((a, b) => a + b, 0) - 100)).toBeLessThanOrEqual(DEV_STATS.models.length);
+  });
+});
+
+describe('estimated API cost', () => {
+  it('prices each kind of token at its own rate, 1-hour cache writes above 5-minute ones', () => {
+    const m = { model: 'claude-opus-5-5', calls: 1, input: 1e6, cacheWrite: 3e6, cacheWrite1h: 1e6, cacheRead: 10e6, output: 1e6 };
+    expect(apiCost(m)).toEqual({ input: 4, writes: 2 * 5 + 8, reads: 2, output: 20, total: 4 + 18 + 2 + 20 });
+  });
+
+  it('leaves a model without a known price out of the total rather than guessing', () => {
+    expect(apiCost({ model: 'claude-unknown-1', calls: 1, input: 1, cacheWrite: 0, cacheWrite1h: 0, cacheRead: 0, output: 1 })).toBeNull();
+    const s = { ...DEV_STATS, models: [...DEV_STATS.models, { model: 'claude-unknown-1', calls: 1, input: 1, cacheWrite: 0, cacheWrite1h: 0, cacheRead: 0, output: 1 }] };
+    expect(devStatList(s).find((x) => x.label === 'Estimated cost over the API')!.detail).toContain('not counted: Claude Unknown 1');
+  });
+
+  it('prices every model in the snapshot', () => {
+    for (const m of DEV_STATS.models) expect(PRICES[m.model], m.model).toBeDefined();
+    expect(dollars(211.6)).toBe('$212');
+    expect(dollars(0.4)).toBe('$0.40');
   });
 });

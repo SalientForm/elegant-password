@@ -704,6 +704,22 @@
       {
         "kind": "test",
         "title": "adds the tokens of every model, and every share rounds to the whole"
+      },
+      {
+        "kind": "group",
+        "title": "estimated API cost"
+      },
+      {
+        "kind": "test",
+        "title": "prices each kind of token at its own rate, 1-hour cache writes above 5-minute ones"
+      },
+      {
+        "kind": "test",
+        "title": "leaves a model without a known price out of the total rather than guessing"
+      },
+      {
+        "kind": "test",
+        "title": "prices every model in the snapshot"
       }
     ]
   },
