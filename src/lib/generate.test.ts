@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, type Requirements } from './generate';
+import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, type Requirements } from './generate';
 import { seeded } from './testRandom';
 import { isMadeUpNoun, twoLetter } from './grammar';
 import { scoreCold } from './score';
@@ -286,6 +286,39 @@ describe('audit fixes', () => {
       expect(cold.template).toBeDefined();
       expect(s.hint.split(' ')).toHaveLength(s.words.length);
       expect(JSON.parse(JSON.stringify(s))).toEqual(s);
+    }
+  });
+});
+
+describe('edges of a password', () => {
+  it('never start or end with a space or the separator', () => {
+    expect(trimSeparators(';test;', ';')).toBe('test');
+    expect(trimSeparators(' test ', ' ')).toBe('test');
+    expect(trimSeparators(';; a;b ;;', ';')).toBe('a;b');
+    expect(trimSeparators('a;b', ';')).toBe('a;b');
+    expect(trimSeparators('a.b.', ';')).toBe('a.b.'); // another symbol is not a separator
+    expect(trimSeparators(' x ', '')).toBe('x');
+    expect(trimSeparators(' x ', 'auto')).toBe('x');
+    expect(trimSeparators('', ';')).toBe('');
+  });
+
+  it('closing marks never use the separator character, so the rule costs nothing', () => {
+    const req = { ...DEFAULT_REQUIREMENTS, separator: '.', allowedSymbols: '.?;', minSymbols: 6 };
+    expect(closingSymbol(req, ['.', '?', ';'], '.')).toBe('?');
+    const r = generate(req, { rng: seeded(3) });
+    expect(r.plan.endSymbol).not.toContain('.');
+    for (const s of r.suggestions) {
+      expect(s.password).not.toMatch(/^[ .]|[ .]$/);
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+    }
+    // Only when nothing else is allowed does the closing mark fall back to the separator.
+    expect(closingSymbol({ ...req, allowedSymbols: '.' }, ['.'], '.')).toBe('.');
+  });
+
+  it('holds for every generated password', () => {
+    for (const separator of [';', ' ', '.', '-']) {
+      const r = generate({ ...DEFAULT_REQUIREMENTS, separator, minSymbols: 3, count: 10, avoidPinkyStretch: false }, { rng: seeded(11) });
+      for (const s of r.suggestions) expect(s.password, separator).not.toMatch(new RegExp(`^[ ${separator.replace('-', '\\-')}]|[ ${separator.replace('-', '\\-')}]$`));
     }
   });
 });

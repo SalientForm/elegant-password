@@ -231,12 +231,33 @@ export function resolveSeparator(req: Requirements, allowed: string[]): string {
   return req.separator;
 }
 
-/** The symbol used to close the sentence when separators do not supply enough. */
-export function closingSymbol(req: Requirements, allowed: string[]): string | undefined {
+/**
+ * The symbol used to close the sentence when separators do not supply
+ * enough. Never the separator character itself: a password must not end
+ * with its separator (see trimSeparators), so closing marks are drawn from
+ * the other allowed symbols whenever there is one.
+ */
+export function closingSymbol(req: Requirements, allowed: string[], separator = ''): string | undefined {
   // If every allowed symbol is a pinky stretch, a stretch beats failing the rule.
   const comfortable = comfortableSymbols(req);
   const pool = comfortable.length ? comfortable : allowed;
-  return END_PREFERENCE.find((s) => pool.includes(s)) ?? pool[0];
+  const other = pool.filter((s) => s !== separator);
+  const from = other.length ? other : pool;
+  return END_PREFERENCE.find((s) => from.includes(s)) ?? from[0];
+}
+
+/**
+ * A password never starts or ends with a space, and the separator counts as
+ * a space for this: ";test;" with ";" as the separator is "test". Applied to
+ * every password the app makes, as the last step.
+ */
+export function trimSeparators(password: string, separator: string): string {
+  const edge = new Set([' ', ...(separator && separator !== 'auto' ? [separator] : [])]);
+  let start = 0;
+  let end = password.length;
+  while (start < end && edge.has(password[start]!)) start++;
+  while (end > start && edge.has(password[end - 1]!)) end--;
+  return password.slice(start, end);
 }
 
 /** Closing marks a template needs: whatever symbols its separators do not supply. */
@@ -379,7 +400,7 @@ export function plan(req: Requirements): Candidate {
   validate(req);
   const allowed = allowedSymbolSet(req);
   const separator = resolveSeparator(req, allowed);
-  const closing = closingSymbol(req, allowed);
+  const closing = closingSymbol(req, allowed, separator);
 
   const withNumber = req.includeNumber || req.minDigits > 0;
   let best: Candidate | undefined;
@@ -506,7 +527,7 @@ export function applyUppercase(
 
 function render(words: string[], variant: Variant, plan: Plan): string {
   const cased = applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i));
-  return joinTokens(cased, variant.shape.glue, plan.separator) + variant.endSymbol;
+  return trimSeparators(joinTokens(cased, variant.shape.glue, plan.separator) + variant.endSymbol, plan.separator);
 }
 
 export interface CheckContext {

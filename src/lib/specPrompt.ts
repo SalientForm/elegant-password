@@ -182,7 +182,8 @@ Plus every pair "clause + ${code('and')} + clause" where the first clause has at
 
 ### Rendering
 - **Separator**: the chosen one; "auto" uses space if allowed, else the first allowed and comfortable of ${SEPARATOR_PREFERENCE.map(code).join(' ')}, else none.
-- **Symbols**: symbol separators count toward minSymbols; any shortfall is a repeated closing mark, preferring ${END_PREFERENCE.map(code).join(' ')} (first comfortable allowed one).
+- **Symbols**: symbol separators count toward minSymbols; any shortfall is a repeated closing mark, preferring ${END_PREFERENCE.map(code).join(' ')} (first comfortable allowed one), never the separator character itself unless it is the only allowed symbol.
+- **Edges**: a password never starts or ends with a space, and the separator counts as a space for this: as the last step of making any password (generated or from a sentence, padding included), leading and trailing spaces and separator characters are stripped, so ${code(';test;')} with ${code(';')} as the separator becomes ${code('test')}.
 - **Uppercase**: capital initials and ALL-CAPS made-up nouns count first. Then for 1, capitalise the first letter of the first ordinary word; for more, write whole ordinary words in capitals from the start until the count is met (Shift held once, no case flipping). Made-up nouns are never recased, which also keeps the count exact.
 - **Capital initials**: N words become one capital letter, chosen by fixed priority ${INITIAL_PRIORITY.map((s) => SLOT_LABELS[s]).join(' > ')} (skipping made-up nouns). The slot's pool becomes its distinct initials, so entropy stays exact. Show a word to picture for each initial.
 - **Two-letter words**: N words are typed as their first letter and last consonant (${code('gently → gy')}), by priority ${SHORTHAND_PRIORITY.map((s) => SLOT_LABELS[s]).join(' > ')}, skipping initials. The slot's pool becomes its distinct two-letter forms, so entropy stays exact.

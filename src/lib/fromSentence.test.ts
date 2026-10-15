@@ -204,3 +204,15 @@ describe('padding', () => {
     }
   });
 });
+
+describe('edges of a sentence-mode password', () => {
+  it('never start or end with a space or the separator, even with closing marks and padding', () => {
+    for (const separator of [';', ' ', '.']) {
+      const r = fromSentence('tiny bits', req({ separator, allowedSymbols: '.;?!', minSymbols: 4, minLength: 20, twists: 0, count: 4 }), undefined, { rng: seeded(5) });
+      for (const s of r.suggestions) {
+        expect(s.password, separator).not.toMatch(new RegExp(`^[ ${separator}]|[ ${separator}]$`));
+        for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+      }
+    }
+  });
+});

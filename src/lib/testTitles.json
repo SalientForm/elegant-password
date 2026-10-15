@@ -659,6 +659,14 @@
       {
         "kind": "test",
         "title": "keeps the sentence's own material first: words are kept whole before any padding is added"
+      },
+      {
+        "kind": "group",
+        "title": "edges of a sentence-mode password"
+      },
+      {
+        "kind": "test",
+        "title": "never start or end with a space or the separator, even with closing marks and padding"
       }
     ]
   },
@@ -748,6 +756,22 @@
       {
         "kind": "test",
         "title": "scores each suggestion cold from its password and hint, as plain data"
+      },
+      {
+        "kind": "group",
+        "title": "edges of a password"
+      },
+      {
+        "kind": "test",
+        "title": "never start or end with a space or the separator"
+      },
+      {
+        "kind": "test",
+        "title": "closing marks never use the separator character, so the rule costs nothing"
+      },
+      {
+        "kind": "test",
+        "title": "holds for every generated password"
       }
     ]
   },

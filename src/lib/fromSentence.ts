@@ -41,6 +41,7 @@ import {
   joinTokens,
   RequirementsError,
   resolveSeparator,
+  trimSeparators,
   usableMappings,
   validate,
   type GenerateOptions,
@@ -450,7 +451,7 @@ function finish(state: readonly Token[], initialBits: number, limit: number, ctx
 
   // 6. Case, join, closing marks.
   let ending = endSymbol;
-  let password = joinTokens(texts(), glue, separator) + ending;
+  let password = trimSeparators(joinTokens(texts(), glue, separator) + ending, separator);
   let length = [...password].length;
 
   // 7. Padding, when the sentence cannot supply the minimum on its own.
@@ -488,7 +489,7 @@ function finish(state: readonly Token[], initialBits: number, limit: number, ctx
           if (piece.kind === 'tag') remembered.push(piece.text);
         }
       }
-      password = joinTokens(texts(), glueOf(tokens), separator) + ending;
+      password = trimSeparators(joinTokens(texts(), glueOf(tokens), separator) + ending, separator);
       length = [...password].length;
       if (remembered.length) hint = `${hint} ${remembered.join(' ')}`;
     }
@@ -562,7 +563,7 @@ export function fromSentence(
 
   const allowed = allowedSymbolSet(req);
   const separator = resolveSeparator(req, allowed);
-  const closing = closingSymbol(req, allowed);
+  const closing = closingSymbol(req, allowed, separator);
   const usable = usableMappings(mappings, req);
   const ctx: Context = {
     base: words,
