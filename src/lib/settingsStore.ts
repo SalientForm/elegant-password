@@ -5,7 +5,7 @@
 import { MODES, type Mode } from './engine';
 import type { LengthTag } from './fluff';
 import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from './fromSentence';
-import { DEFAULT_REQUIREMENTS, validate, type Requirements, type Separator } from './generate';
+import { DEFAULT_REQUIREMENTS, separatorProblem, validate, type Requirements } from './generate';
 import { COMFORT_SHARE, type Comfort } from './grammar';
 import { SORT_ORDERS, type SortOrder } from './sort';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, writeJson, type KeyValueStore } from './storage';
@@ -15,7 +15,6 @@ export const SENTENCE_OPTIONS_KEY = 'elegant-passwords:sentence-options:v1';
 export const MODE_KEY = 'elegant-passwords:mode:v1';
 export const SORT_KEY = 'elegant-passwords:sort:v1';
 
-const SEPARATORS: readonly Separator[] = ['auto', ' ', ';', '-', '.', '_', ',', ''];
 const SHRINK_STYLES: readonly ShrinkStyle[] = ['none', 'vowels', 'ends'];
 const LENGTH_TAGS: readonly LengthTag[] = ['total', 'factor', 'none'];
 
@@ -27,7 +26,7 @@ export function parseRequirements(raw: unknown): Requirements {
     const value = raw[key];
     const fallback = DEFAULT_REQUIREMENTS[key];
     if (key === 'separator') {
-      if (isString(value) && SEPARATORS.includes(value as Separator)) out.separator = value;
+      if (isString(value) && !separatorProblem(value, { allowSpaces: true, allowedSymbols: isString(raw.allowedSymbols) ? raw.allowedSymbols : DEFAULT_REQUIREMENTS.allowedSymbols })) out.separator = value;
     } else if (key === 'comfort') {
       if (isString(value) && value in COMFORT_SHARE) out.comfort = value as Comfort;
     } else if (typeof fallback === 'number') {

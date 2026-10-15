@@ -26,7 +26,22 @@ import { scoreCold } from './score';
 import { letterCount } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
 
-export type Separator = 'auto' | ' ' | ';' | '-' | '.' | '_' | ',' | '';
+/**
+ * What goes between words: 'auto' (the fastest the site allows), '' (nothing),
+ * or one character: a space, or any symbol the site allows.
+ */
+export type Separator = string;
+
+/** Why a separator cannot be used, or undefined when it can. */
+export function separatorProblem(separator: string, req: Pick<Requirements, 'allowSpaces' | 'allowedSymbols'>): string | undefined {
+  if (separator === 'auto' || separator === '') return undefined;
+  if ([...separator].length !== 1) return 'The separator must be a single character.';
+  if (separator === ' ') return req.allowSpaces ? undefined : 'Space is chosen as the separator, but spaces are not allowed.';
+  if (!isSymbol(separator)) return 'The separator must be a symbol or a space, not a letter or digit.';
+  if (!lookupKey(separator)) return `"${separator}" is not on a standard keyboard.`;
+  if (![...req.allowedSymbols].includes(separator)) return `"${separator}" is chosen as the separator, but it is not an allowed symbol.`;
+  return undefined;
+}
 
 export interface Requirements {
   minLength: number;
@@ -210,12 +225,9 @@ export function resolveSeparator(req: Requirements, allowed: string[]): string {
     const comfortable = comfortableSymbols(req);
     return SEPARATOR_PREFERENCE.find((s) => comfortable.includes(s)) ?? '';
   }
-  if (req.separator === ' ' && !req.allowSpaces) {
-    throw new RequirementsError('Space is chosen as the separator, but spaces are not allowed.');
-  }
-  if (isSymbol(req.separator) && !allowed.includes(req.separator)) {
-    throw new RequirementsError(`"${req.separator}" is chosen as the separator, but it is not an allowed symbol.`);
-  }
+  const problem = separatorProblem(req.separator, req);
+  if (problem) throw new RequirementsError(problem);
+  void allowed;
   return req.separator;
 }
 
@@ -269,6 +281,7 @@ export function validate(req: Requirements): void {
   if (!Number.isInteger(req.count) || req.count < 1 || req.count > 20) {
     throw new RequirementsError('Number of suggestions must be between 1 and 20.');
   }
+  if (typeof req.separator !== 'string') throw new RequirementsError('The separator must be text.');
 }
 
 const modelCache = new Map<string, LengthModel>();

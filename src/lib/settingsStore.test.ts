@@ -22,6 +22,9 @@ describe('settings store', () => {
     const parsed = parseRequirements({ ...DEFAULT_REQUIREMENTS, maxLength: 40, separator: 'nope', comfort: 'strict', glue: 'yes', twists: 3 });
     expect(parsed.maxLength).toBe(40);
     expect(parsed.separator).toBe(DEFAULT_REQUIREMENTS.separator);
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, separator: '+', allowedSymbols: '+' }).separator).toBe('+');
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, separator: 'x' }).separator).toBe(DEFAULT_REQUIREMENTS.separator);
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, separator: '' }).separator).toBe('');
     expect(parsed.comfort).toBe('strict');
     expect(parsed.glue).toBe(DEFAULT_REQUIREMENTS.glue);
     expect(parsed.twists).toBe(3);

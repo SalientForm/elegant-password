@@ -72,7 +72,7 @@ function requirementsTable(): string {
     ['minSymbols', String(d.minSymbols), `0-${MAX_SYMBOLS}, "at least N"`],
     ['allowedSymbols', code(d.allowedSymbols), 'Symbols the site accepts'],
     ['allowSpaces', String(d.allowSpaces), 'Whether the site accepts spaces'],
-    ['separator', code(d.separator), `auto, space, ${[';', '.', '-', ',', '_'].map(code).join(', ')}, or none (a symbol between words is optional)`],
+    ['separator', code(d.separator), 'auto (the fastest the site allows), none, or any one character: a space, or a symbol the site allows'],
     ['includeNumber', String(d.includeNumber), 'Include a number even when digits are not required'],
     ['targetBits', String(d.targetBits), `Presets: ${STRENGTH_PRESETS.map((p) => `${p.label} ${p.bits}`).join(', ')}; or custom`],
     ['comfort', d.comfort, `strict / balanced / relaxed (keeps ${Object.values(COMFORT_SHARE).map((s) => `${s * 100}%`).join(' / ')} of each word pool)`],
@@ -132,7 +132,7 @@ ${requirementsTable()}
 - **Drafts and Submit**: every edit to the rules, swaps, sentence or sentence options is a draft. Two buttons with a strong drop shadow float over the page, with no backdrop and no message, while the draft differs from what is applied: Discard and Submit changes. While they show, Enter anywhere submits (except on a button, link or select, where Enter keeps its own job; Ctrl+Enter and ⌘+Enter always submit) and Escape discards. They disappear when nothing differs. Applying saves the settings and regenerates. "Refresh" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
 - Number inputs can be typed through: the text stays as typed ("1" on the way to "10" is not snapped to the minimum); only whole numbers in range are committed as you type, and leaving the field clamps into range or restores the last value. Clearing an "at least" field never unticks its box.
 - Validation errors are shown in place of suggestions as a readable message, never thrown at the user. Any other render error is caught by an error boundary that shows the message and a reload button.
-- Separator choices that the site does not allow are disabled; stretchy ones are labelled "(pinky stretch)" while the pinky toggle is on.
+- "Use a separator between words" is a checkbox. Ticked, a one-character field takes the separator: any symbol the site allows, or a space; left empty it means auto, the fastest the site allows. A line under the field explains the choice (auto, a space on the thumb, the character used, a pinky stretch kept because it was chosen) or the problem (not allowed, a letter or digit, more than one character, not on a keyboard). Unticked, words run together; re-ticking brings the last character back.
 
 ## 5. Keyboard model and typing cost
 

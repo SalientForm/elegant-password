@@ -261,7 +261,7 @@
       },
       {
         "kind": "test",
-        "title": "offers only separators the site allows and labels pinky stretches"
+        "title": "uses a separator only when ticked, accepts any allowed character, and explains problems"
       }
     ]
   },

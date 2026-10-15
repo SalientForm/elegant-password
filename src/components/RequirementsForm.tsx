@@ -1,5 +1,6 @@
 import type { Comfort } from '../lib/grammar';
-import { MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, STRENGTH_PRESETS, type Requirements, type Separator } from '../lib/generate';
+import { MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, separatorProblem, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
+import { useState } from 'react';
 import { isPinkyStretch } from '../lib/keyboard';
 import { NumberField } from './NumberField';
 
@@ -7,17 +8,6 @@ interface Props {
   value: Requirements;
   onChange: (next: Requirements) => void;
 }
-
-const SEPARATORS: { value: Separator; label: string }[] = [
-  { value: 'auto', label: 'Fastest allowed' },
-  { value: ' ', label: 'Space' },
-  { value: ';', label: 'Semicolon  ; (home row)' },
-  { value: '.', label: 'Dot  .' },
-  { value: '-', label: 'Dash  -' },
-  { value: ',', label: 'Comma  ,' },
-  { value: '_', label: 'Underscore  _' },
-  { value: '', label: 'None (run together)' },
-];
 
 const MUST_CONTAIN: { key: 'minUppercase' | 'minDigits' | 'minSymbols'; label: string; max: number }[] = [
   { key: 'minUppercase', label: 'Uppercase letters', max: MAX_UPPERCASE },
@@ -39,8 +29,11 @@ export function RequirementsForm({ value, onChange }: Props) {
     max,
     onCommit: (n: number | null) => n !== null && set(key, n),
   });
-  const sepAllowed = (s: Separator) =>
-    s === 'auto' || s === '' || (s === ' ' ? value.allowSpaces : value.allowedSymbols.includes(s));
+  // The last separator character chosen, so unticking and re-ticking "Use a separator" brings it back.
+  const [lastSeparator, setLastSeparator] = useState(value.separator === '' ? ';' : value.separator);
+  const useSeparator = value.separator !== '';
+  const separatorIssue = separatorProblem(value.separator, value);
+  const separatorStretch = value.avoidPinkyStretch && value.separator !== 'auto' && value.separator !== '' && isPinkyStretch(value.separator);
 
   return (
     <form className="panel form" onSubmit={(e) => e.preventDefault()}>
@@ -156,17 +149,46 @@ export function RequirementsForm({ value, onChange }: Props) {
 
       <fieldset>
         <legend>Style</legend>
-        <label className="field">
-          <span>Between words</span>
-          <select value={value.separator} onChange={(e) => set('separator', e.target.value as Separator)}>
-            {SEPARATORS.map((s) => (
-              <option key={s.label} value={s.value} disabled={!sepAllowed(s.value)}>
-                {s.label}
-                {value.avoidPinkyStretch && s.value !== 'auto' && s.value !== '' && isPinkyStretch(s.value) ? ' (pinky stretch)' : ''}
-              </option>
-            ))}
-          </select>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={useSeparator}
+            onChange={(e) => set('separator', e.target.checked ? lastSeparator : '')}
+          />
+          Use a separator between words
         </label>
+        {useSeparator && (
+          <>
+            <label className="field inline">
+              <span>Separator character</span>
+              <input
+                type="text"
+                className="mono"
+                maxLength={1}
+                spellCheck={false}
+                autoComplete="off"
+                placeholder="auto"
+                aria-label="Separator character"
+                value={value.separator === 'auto' ? '' : value.separator}
+                onChange={(e) => {
+                  const next = e.target.value === '' ? 'auto' : [...e.target.value].slice(-1).join('');
+                  setLastSeparator(next);
+                  set('separator', next);
+                }}
+              />
+            </label>
+            <p className={separatorIssue ? 'field-error' : 'hint'}>
+              {separatorIssue ??
+                (value.separator === 'auto'
+                  ? 'Empty: the fastest the site allows (a space, else ; . - , _).'
+                  : separatorStretch
+                    ? `"${value.separator}" is a pinky stretch; kept because you chose it.`
+                    : value.separator === ' '
+                      ? 'A space: typed with the thumb.'
+                      : `Words are joined with "${value.separator}".`)}
+            </p>
+          </>
+        )}
         <label className="check">
           <input
             type="checkbox"

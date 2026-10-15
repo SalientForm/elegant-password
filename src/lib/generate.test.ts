@@ -141,6 +141,16 @@ describe('generate', () => {
     expect(() => generate(req({ minSymbols: 1, allowedSymbols: '', allowSpaces: true }))).toThrow(RequirementsError);
     expect(() => generate(req({ separator: ' ', allowSpaces: false }))).toThrow(RequirementsError);
     expect(() => generate(req({ separator: '-', allowedSymbols: '!' }))).toThrow(RequirementsError);
+    expect(() => generate(req({ separator: 'x' }))).toThrow(/not a letter or digit/);
+    expect(() => generate(req({ separator: ';;' }))).toThrow(/single character/);
+    expect(() => generate(req({ separator: 'é', allowedSymbols: 'é' }))).toThrow(/standard keyboard/);
+    // Any allowed symbol works as the separator, not only the ones that used to be in a list.
+    const plus = generate(req({ separator: '+', allowedSymbols: '+.', avoidPinkyStretch: false, count: 2 }), { rng: seeded() });
+    expect(plus.plan.separator).toBe('+');
+    for (const s of plus.suggestions) {
+      expect(s.password).toContain('+');
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+    }
     expect(() => generate(req({ minLength: 1, maxLength: 4 }))).toThrow(RequirementsError);
   });
 });

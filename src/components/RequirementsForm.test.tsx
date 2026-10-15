@@ -75,16 +75,30 @@ describe('RequirementsForm', () => {
     expect(req().glue).toBe(true);
   });
 
-  it('offers only separators the site allows and labels pinky stretches', () => {
-    render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, allowedSymbols: ';-', allowSpaces: false }} />);
-    const select = screen.getByLabelText('Between words') as HTMLSelectElement;
-    const option = (text: RegExp) => [...select.options].find((o) => text.test(o.text))!;
-    expect(option(/Space/).disabled).toBe(true);
-    expect(option(/Dot/).disabled).toBe(true);
-    expect(option(/Semicolon/).disabled).toBe(false);
-    expect(option(/Dash/).text).toMatch(/pinky stretch/);
-    expect(option(/Semicolon/).text).not.toMatch(/pinky stretch/);
-    fireEvent.change(select, { target: { value: '-' } });
+  it('uses a separator only when ticked, accepts any allowed character, and explains problems', () => {
+    render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, allowedSymbols: ';-' }} />);
+    const box = screen.getByRole('checkbox', { name: 'Use a separator between words' }) as HTMLInputElement;
+    expect(box.checked).toBe(true); // the default ";"
+    const field = screen.getByLabelText('Separator character') as HTMLInputElement;
+    expect(field.value).toBe(';');
+    fireEvent.change(field, { target: { value: '-' } });
     expect(req().separator).toBe('-');
+    expect(screen.getByText(/pinky stretch; kept because you chose it/)).toBeTruthy();
+    fireEvent.change(field, { target: { value: '#' } });
+    expect(req().separator).toBe('#');
+    expect(screen.getByText(/not an allowed symbol/)).toBeTruthy();
+    fireEvent.change(field, { target: { value: 'x' } });
+    expect(screen.getByText(/not a letter or digit/)).toBeTruthy();
+    fireEvent.change(field, { target: { value: '' } });
+    expect(req().separator).toBe('auto'); // empty means the fastest allowed
+    expect(screen.getByText(/fastest the site allows/)).toBeTruthy();
+    fireEvent.change(field, { target: { value: ' ' } });
+    expect(req().separator).toBe(' ');
+    expect(screen.getByText(/typed with the thumb/)).toBeTruthy();
+    fireEvent.click(box);
+    expect(req().separator).toBe('');
+    expect(screen.queryByLabelText('Separator character')).toBeNull();
+    fireEvent.click(box);
+    expect(req().separator).toBe(' '); // back to the last one chosen
   });
 });
