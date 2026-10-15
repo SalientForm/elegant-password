@@ -82,7 +82,8 @@ explanation for each:
   Memorability or Strength with the toggle above them; the choice is
   remembered), and on the right
   the password tester above your list. The outer columns are fixed and the
-  middle one takes the rest.
+  middle one takes the rest. The page scrolls until the title row and tabs
+  are gone; then each column sticks and scrolls on its own.
 - **Phones.** Below 860 px the three columns become three tabs, Options,
   Suggestions and My list, with every feature reachable and nothing
   scrolling sideways: tables stack, the keyboard map scales, rows wrap. A

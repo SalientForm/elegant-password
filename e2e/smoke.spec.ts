@@ -241,3 +241,59 @@ test('the Scoring page explains bits and shows the rubric', async ({ page }) => 
   await page.getByRole('link', { name: 'Passwords' }).click();
   await expect(cards(page).first()).toBeVisible();
 });
+
+test('the header scrolls away first, then each column scrolls on its own', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await settledPasswords(page);
+  // Make the middle column taller than the viewport by opening a card, then start from the very top.
+  await openWhy(page);
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll<HTMLElement>('main > *')) el.scrollTop = 0;
+    window.scrollTo(0, 0);
+  });
+  await page.waitForTimeout(100);
+  const state = () =>
+    page.evaluate(() => {
+      const top = (sel: string) => document.querySelector<HTMLElement>(sel)!.scrollTop;
+      const main = document.querySelector('main')!;
+      const stickyTop = parseFloat(getComputedStyle(main.firstElementChild!).top) || 0;
+      return { pageY: window.scrollY, left: top('main > .sidebar'), middle: top('main > .results'), right: top('main > .aside'), stop: main.getBoundingClientRect().top + window.scrollY - stickyTop };
+    });
+  const start = await state();
+  expect(start.pageY).toBe(0);
+  // Wheel over the middle column: the page moves first, the header scrolls up, the columns do not scroll yet.
+  const middle = page.locator('main > .results');
+  await middle.hover();
+  await page.mouse.wheel(0, 60);
+  await page.waitForTimeout(150);
+  const afterOne = await state();
+  expect(afterOne.pageY).toBeGreaterThan(0);
+  expect(afterOne.pageY).toBeLessThanOrEqual(Math.ceil(start.stop)); // the page stops where the columns stick (whole pixels)
+  expect(afterOne.middle).toBe(0);
+  // Keep going: once the header is gone, only the middle column scrolls, and the others stay put.
+  for (let i = 0; i < 20; i++) await page.mouse.wheel(0, 200);
+  await page.waitForTimeout(200);
+  const afterMany = await state();
+  expect(Math.abs(afterMany.pageY - start.stop)).toBeLessThanOrEqual(1);
+  expect(afterMany.middle).toBeGreaterThan(0);
+  expect(afterMany.left).toBe(0);
+  expect(afterMany.right).toBe(0);
+  // Scrolling the left column moves only the left column, and never past its own content.
+  await page.locator('main > .sidebar').hover();
+  for (let i = 0; i < 30; i++) await page.mouse.wheel(0, 300);
+  await page.waitForTimeout(200);
+  const left = await state();
+  expect(left.left).toBeGreaterThan(0);
+  expect(left.middle).toBe(afterMany.middle);
+  const maxLeft = await page.evaluate(() => { const el = document.querySelector<HTMLElement>('main > .sidebar')!; return el.scrollHeight - el.clientHeight; });
+  expect(left.left).toBeLessThanOrEqual(maxLeft);
+  expect(Math.abs(left.pageY - start.stop)).toBeLessThanOrEqual(1); // the page itself goes no further
+  // The end of a column is reachable: its last content is fully inside the box once scrolled to the max.
+  const reach = await page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>('main > .sidebar')!;
+    el.scrollTop = el.scrollHeight;
+    const last = el.querySelector<HTMLElement>('.panel:last-of-type')!;
+    return { bottom: last.getBoundingClientRect().bottom, box: el.getBoundingClientRect().bottom };
+  });
+  expect(reach.bottom).toBeLessThanOrEqual(reach.box + 1);
+});

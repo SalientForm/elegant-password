@@ -66,6 +66,10 @@
       {
         "kind": "test",
         "title": "the Scoring page explains bits and shows the rubric"
+      },
+      {
+        "kind": "test",
+        "title": "the header scrolls away first, then each column scrolls on its own"
       }
     ]
   },
@@ -429,6 +433,23 @@
       {
         "kind": "test",
         "title": "takes the password last added to the list, with its hint, and scores all three badges; a typed one has no hint"
+      }
+    ]
+  },
+  {
+    "file": "src/components/columnScroll.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "page-first wheel routing"
+      },
+      {
+        "kind": "test",
+        "title": "scrolls the page while the header is in view, then leaves the columns to themselves"
+      },
+      {
+        "kind": "test",
+        "title": "never intercepts scrolling up"
       }
     ]
   },

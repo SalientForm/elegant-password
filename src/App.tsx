@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { usePageFirstWheel } from './components/columnScroll';
 import { NARROW, useMediaQuery } from './components/useMediaQuery';
 import { ApplyBar } from './components/ApplyBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -94,6 +95,9 @@ export function ElegantPasswords() {
   const { outcome, draft, applied } = p;
   const narrow = useMediaQuery(NARROW);
   const [column, setColumn] = useState<Column>('suggestions');
+  // Desktop: the header scrolls away first, then the three columns stick and scroll on their own.
+  const columns = useRef<HTMLElement>(null);
+  usePageFirstWheel(columns, !narrow);
   const context: CardContext | undefined =
     outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
   const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
@@ -224,7 +228,7 @@ export function ElegantPasswords() {
   }
 
   return (
-    <main>
+    <main ref={columns} className="columns">
       <div className="sidebar">{options}</div>
       <div className="results" aria-busy={p.busy}>
         {centre}
