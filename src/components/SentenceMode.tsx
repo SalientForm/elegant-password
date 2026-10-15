@@ -133,13 +133,16 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
   );
 }
 
-export function SentenceStrength({ suggestions }: { suggestions: Suggestion[] }) {
+export function SentenceStrength({ suggestions, sentence }: { suggestions: Suggestion[]; sentence: string }) {
   const bits = suggestions.map((s) => s.bits);
   const lo = Math.min(...bits);
   const hi = Math.max(...bits);
   return (
     <section className="panel strength">
       <h2>How strong is this sentence?</h2>
+      <p className="generated-sentence sentence-in-question" data-testid="sentence-in-question">
+        {sentence}
+      </p>
       <p>
         Mostly as strong as your sentence is hard to guess, and this tool cannot measure that. A private, slightly odd
         sentence of five or more words is good. Quotes, lyrics, proverbs and anything about you (names, pets, teams) are

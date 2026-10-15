@@ -200,7 +200,7 @@ The user types a sentence into a single-line field (Enter submits the changes at
 
 Example: "jupiter brings 5 leds for piece", ${code(';')} separator, glue on, 1 initial, target 12 → ${code('jr;B;5ls;Fpc')}.
 
-Strength in this mode: the sentence's guessability cannot be measured. The card's figure, labelled "≈N bits" like every other, is the cold score (section 12) of the password against the sentence, which counts only the random initials and swaps; the strength panel says that quotes, lyrics and personal facts are weak, and a sentence under four words gets a warning that short sentences are easier to guess.
+Strength in this mode: the panel is headed "How strong is this sentence?" with the sentence in question printed directly beneath the heading. The sentence's guessability cannot be measured. The card's figure, labelled "≈N bits" like every other, is the cold score (section 12) of the password against the sentence, which counts only the random initials and swaps; the strength panel says that quotes, lyrics and personal facts are weak, and a sentence under four words gets a warning that short sentences are easier to guess.
 
 ## 9. Suggestion cards
 

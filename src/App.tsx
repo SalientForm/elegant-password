@@ -187,7 +187,7 @@ export function ElegantPasswords() {
             {outcome.plan ? (
               <StrengthPanel plan={outcome.plan} target={applied.req.targetBits} />
             ) : (
-              <SentenceStrength suggestions={outcome.suggestions} />
+              <SentenceStrength suggestions={outcome.suggestions} sentence={outcome.suggestions[0]?.hint ?? applied.sentence} />
             )}
           </div>
         )}
