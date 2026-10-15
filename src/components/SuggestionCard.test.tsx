@@ -65,10 +65,10 @@ describe('SuggestionCard', () => {
     expect(screen.getByText('Made-up rule').closest('li')!.className).toBe('unmet');
     fireEvent.click(screen.getByRole('button', { name: 'Hide why' }));
     expect(screen.queryByText('Fast to type')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Add to my list' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(onAdd).toHaveBeenCalledWith(broken);
     cleanup();
     show(s, context, 0, { onAdd, selected: true });
-    expect((screen.getByRole('button', { name: 'In my list' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Added' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

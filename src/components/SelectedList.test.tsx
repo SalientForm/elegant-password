@@ -55,7 +55,7 @@ describe('SelectedList', () => {
     fireEvent.click(removeAll);
     fireEvent.click(removeAll);
     expect(screen.queryByRole('list', { name: 'My passwords' })).toBeNull();
-    expect(screen.getByText('Nothing yet. Use “Add to my list” on a suggestion.')).toBeTruthy();
+    expect(screen.getByText('Nothing yet. Use “Add” on a suggestion.')).toBeTruthy();
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)).toEqual([]);
   });
 });

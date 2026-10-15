@@ -72,7 +72,7 @@ export function SelectedList() {
         from the password and hint alone, so it reads the same every time.
       </p>
       {selected.length === 0 ? (
-        <p className="hint">Nothing yet. Use “Add to my list” on a suggestion.</p>
+        <p className="hint">Nothing yet. Use “Add” on a suggestion.</p>
       ) : (
         <ul className="selected-list" aria-label="My passwords">
           {selected.map((entry) => (

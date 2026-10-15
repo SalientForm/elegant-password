@@ -18,12 +18,12 @@ describe('App', () => {
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const card = cards()[0]!;
     const password = within(card).getByText((_, el) => el?.classList.contains('password') === true).textContent!;
-    fireEvent.click(within(card).getByRole('button', { name: 'Add to my list' }));
+    fireEvent.click(within(card).getByRole('button', { name: 'Add' }));
     const list = screen.getByRole('list', { name: 'My passwords' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(1);
     expect(list.textContent).toContain(password);
     expect(list.textContent).toMatch(/Hint:/);
-    expect(within(card).getByRole('button', { name: 'In my list' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Added' })).toBeTruthy();
     const passwords = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent);
 
     first.unmount();

@@ -203,7 +203,7 @@ Strength in this mode: the sentence's guessability cannot be measured. The card'
 
 ## 9. Suggestion cards
 
-Cards are ordered easiest first (difficulty ascending, more bits first on ties) or strongest first (bits descending, lower difficulty first on ties), stable for exact ties. Each card shows the password, its bits and difficulty (both from the cold score, section 14), Copy, "Add to my list", and an expandable "Why?" with:
+Cards are ordered easiest first (difficulty ascending, more bits first on ties) or strongest first (bits descending, lower difficulty first on ties), stable for exact ties. Each card shows the password, its bits and difficulty (both from the cold score, section 14), and, right-justified on the top row, Copy and "Add" ("Added" once it is in the list); on the second row the bits and badges with an expandable "Why?" with:
 - **Easy to remember**: the hint (the sentence to remember); word chips labelled by part of speech, "made-up noun" or "your word"; twisted and initial words marked with the original; the twists or change steps listed; the number of ways the twists could land.
 - **Fast to type**: Shift presses and why (and how often capital initials flip the case), share of same-row moves, average reach, same-finger pairs, rows used, separator note, and a keyboard heat map of the keys used.
 - **Difficulty score** table (the rubric lives on the Scoring page).

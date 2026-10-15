@@ -88,8 +88,8 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   const shown = await settledPasswords(page);
   const first = cards(page).first();
   const bits = (await first.locator('.bits-label').textContent())!.replace(/[^0-9]/g, '');
-  await first.getByRole('button', { name: 'Add to my list' }).click();
-  await expect(first.getByRole('button', { name: 'In my list' })).toBeDisabled();
+  await first.getByRole('button', { name: 'Add' }).click();
+  await expect(first.getByRole('button', { name: 'Added' })).toBeDisabled();
   const list = page.getByRole('list', { name: 'My passwords' });
   await expect(list.getByRole('listitem')).toHaveCount(1);
   await expect(list).toContainText(shown[0]!);

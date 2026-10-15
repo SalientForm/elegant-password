@@ -60,25 +60,31 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   return (
     <article className="card" aria-label={`Suggestion ${index + 1}`}>
       <div className="card-head">
-        <code className="password" ref={code}>
-          {password}
-        </code>
-        <div className="actions">
-          <span className="bits-label" title="Scored from the password and its hint alone, so it is the same every time">
-            {mine ? `+${suggestion.bits.toFixed(0)} random bits` : `≈${suggestion.bits.toFixed(0)} bits`}
-          </span>
-          <span className={`badge difficulty level-${difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard: typing effort and memory load">
-            Difficulty {difficulty.score} · {difficulty.label.toLowerCase()}
-          </span>
-          <span className={`badge memorability memo-${memorabilityLevel(suggestion.memorability)}`} title="Memorability, 0 to 100: how closely it still looks like its hint, and how short it is">
-            Memorability {suggestion.memorability}
-          </span>
-          <CopyButton text={password} fallback={code} />
-          {onAdd && (
-            <button type="button" onClick={() => onAdd(suggestion)} disabled={selected} aria-pressed={selected}>
-              {selected ? 'In my list' : 'Add to my list'}
-            </button>
-          )}
+        <div className="card-row">
+          <code className="password" ref={code}>
+            {password}
+          </code>
+          <div className="actions card-buttons">
+            <CopyButton text={password} fallback={code} />
+            {onAdd && (
+              <button type="button" onClick={() => onAdd(suggestion)} disabled={selected} aria-pressed={selected} title={selected ? 'Already in my list' : 'Add to my list'}>
+                {selected ? 'Added' : 'Add'}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="card-row">
+          <div className="actions">
+            <span className="bits-label" title="Scored from the password and its hint alone, so it is the same every time">
+              {mine ? `+${suggestion.bits.toFixed(0)} random bits` : `≈${suggestion.bits.toFixed(0)} bits`}
+            </span>
+            <span className={`badge difficulty level-${difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard: typing effort and memory load">
+              Difficulty {difficulty.score} · {difficulty.label.toLowerCase()}
+            </span>
+            <span className={`badge memorability memo-${memorabilityLevel(suggestion.memorability)}`} title="Memorability, 0 to 100: how closely it still looks like its hint, and how short it is">
+              Memorability {suggestion.memorability}
+            </span>
+          </div>
           <button type="button" className="ghost" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={whyId}>
             {open ? 'Hide why' : 'Why?'}
           </button>
