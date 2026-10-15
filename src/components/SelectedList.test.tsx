@@ -27,8 +27,8 @@ function mount(entries = ENTRIES) {
 }
 
 describe('SelectedList', () => {
-  it('shows each entry with its hint, its cold score and when it was added', () => {
-    mount();
+  it('shows each entry with its hint and its cold score, and keeps the date out of sight', () => {
+    const local = mount();
     const items = within(screen.getByRole('list', { name: 'My passwords' })).getAllByRole('listitem');
     expect(items).toHaveLength(2);
     const first = within(items[0]!);
@@ -38,8 +38,8 @@ describe('SelectedList', () => {
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     expect(first.getByText(`≈${score.bits.toFixed(0)} bits`)).toBeTruthy();
     expect(first.getByText(new RegExp(`Difficulty ${score.difficulty.score}`))).toBeTruthy();
-    expect(first.getByText(/Added/)).toBeTruthy();
-    expect(within(items[1]!).queryByText(/Added/)).toBeNull(); // the epoch placeholder is not a date worth showing
+    expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
+    expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
   });
 
   it('removes one entry, and removes all only on a second click', () => {

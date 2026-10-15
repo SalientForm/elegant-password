@@ -8,7 +8,7 @@ import { memorabilityLevel } from './SuggestionCard';
 function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
   const score = useMemo(() => scoreCold(entry.password, entry.hint), [entry.password, entry.hint]);
   const code = useRef<HTMLElement>(null);
-  const added = new Date(entry.addedAt);
+  // addedAt is kept in storage but not shown.
   return (
     <li className="entry">
       <div className="entry-main">
@@ -34,11 +34,6 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
           Remove
         </button>
       </div>
-      {!Number.isNaN(added.getTime()) && added.getTime() > 0 && (
-        <small className="entry-date">
-          Added <time dateTime={entry.addedAt}>{added.toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' })}</time>
-        </small>
-      )}
     </li>
   );
 }
