@@ -34,7 +34,7 @@ export function parseMappingSettings(raw: string | null): MappingSettings {
   }
 }
 
-export function loadMappingSettings(storage: Pick<Storage, 'getItem'> | undefined = globalThis.localStorage): MappingSettings {
+export function loadMappingSettings(storage: Pick<Storage, 'getItem'> | undefined): MappingSettings {
   try {
     return parseMappingSettings(storage?.getItem(STORAGE_KEY) ?? null);
   } catch {
@@ -44,7 +44,7 @@ export function loadMappingSettings(storage: Pick<Storage, 'getItem'> | undefine
 
 export function saveMappingSettings(
   settings: MappingSettings,
-  storage: Pick<Storage, 'setItem'> | undefined = globalThis.localStorage,
+  storage: Pick<Storage, 'setItem'> | undefined,
 ): void {
   try {
     storage?.setItem(STORAGE_KEY, JSON.stringify(settings));

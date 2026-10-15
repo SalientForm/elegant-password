@@ -38,6 +38,7 @@ export const MANAGER_OPT_OUT = { 'data-bwignore': 'true', 'data-1p-ignore': 'tru
 export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const passwords = usePasswordsOptional();
   const latest = passwords?.selected.at(-1);
+  const listSize = passwords?.selected.length ?? 0;
   /** The hint for a password we know about: from the list, or from the suggestions on screen. */
   const hintFor = (password: string): string | undefined =>
     passwords?.selected.find((e) => e.password === password)?.hint ??
@@ -52,10 +53,14 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const recording = useRef<Recording>(startRecording());
   const input = useRef<HTMLInputElement>(null);
   const lastLatest = useRef(latest?.password);
+  const lastSize = useRef(listSize);
 
-  // A password just added to the list is the one to practise, hint and all.
+  // A password just added to the list is the one to practise, hint and all. Only an addition: removing the
+  // last entry must not swap the password under test (and the runs made on it) for an older entry.
   useEffect(() => {
-    if (!latest || latest.password === lastLatest.current) return;
+    const grew = listSize > lastSize.current;
+    lastSize.current = listSize;
+    if (!latest || latest.password === lastLatest.current || !grew) return;
     lastLatest.current = latest.password;
     setTarget(latest.password);
     setHint(latest.hint);
@@ -63,7 +68,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
     setAttempts([]);
     recording.current = startRecording();
     setValue('');
-  }, [latest]);
+  }, [latest, listSize]);
 
   const hintText = hint?.trim() ? hint.trim() : undefined;
   const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);

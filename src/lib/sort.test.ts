@@ -25,3 +25,10 @@ describe('sortSuggestions', () => {
     expect([...strong].sort((a, b) => b - a)).toEqual(strong);
   });
 });
+
+describe('tie-breaks on equal bits', () => {
+  it('strength: equal bits fall back to the lower difficulty, then the higher memorability', () => {
+    const tied = [s(50, 60, 70, 'a'), s(50, 30, 70, 'b'), s(50, 30, 90, 'c'), s(55, 90, 10, 'd')];
+    expect(sortSuggestions(tied as never, 'strength').map((x) => (x as unknown as { id: string }).id)).toEqual(['d', 'c', 'b', 'a']);
+  });
+});

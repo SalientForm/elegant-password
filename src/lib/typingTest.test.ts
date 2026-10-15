@@ -48,3 +48,15 @@ describe('typing test', () => {
     expect(nextTarget('first', 'secnod', true)).toBe('first');
   });
 });
+
+describe('keys that are not typing', () => {
+  it('ignores AltGr, dead, IME, function and navigation keys, but counts Backspace and Delete as corrections', () => {
+    let rec = startRecording();
+    for (const key of ['AltGraph', 'Dead', 'Process', 'Compose', 'Insert', 'NumLock', 'PageUp', 'PageDown', 'F1', 'Unidentified', 'Shift', 'ArrowLeft']) rec = recordKey(rec, key, 10);
+    expect(rec.keys).toHaveLength(0);
+    rec = recordKey(rec, '@', 20);
+    rec = recordKey(rec, 'Backspace', 30);
+    rec = recordKey(rec, 'Delete', 40);
+    expect(rec.keys.map((k) => k.key)).toEqual(['@', 'Backspace', 'Delete']);
+  });
+});

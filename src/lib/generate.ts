@@ -242,8 +242,14 @@ export function closingSymbol(req: Requirements, allowed: string[], separator = 
   const comfortable = comfortableSymbols(req);
   const pool = comfortable.length ? comfortable : allowed;
   const other = pool.filter((s) => s !== separator);
-  const from = other.length ? other : pool;
-  return END_PREFERENCE.find((s) => from.includes(s)) ?? from[0];
+  return END_PREFERENCE.find((s) => other.includes(s)) ?? other[0];
+}
+
+/** Why closing marks are needed but none can be used, for the error message. */
+export function noClosingProblem(allowed: readonly string[], separator: string): string {
+  return allowed.length > 0 && allowed.every((s) => s === separator)
+    ? `Symbols are required, but the only allowed symbol is the separator "${separator}", which cannot end a password. Allow another symbol or require fewer.`
+    : 'Symbols are required, but no allowed symbols are listed.';
 }
 
 /**
@@ -411,9 +417,7 @@ export function plan(req: Requirements): Candidate {
     for (const shape of shapes) {
       const separators = shape.slots.length - 1 - shape.glue.filter(Boolean).length;
       const endSymbol = endSymbolFor(separators, separator, req, closing);
-      if (endSymbol === undefined) {
-        throw new RequirementsError('Symbols are required, but no allowed symbols are listed.');
-      }
+      if (endSymbol === undefined) throw new RequirementsError(noClosingProblem(allowed, separator));
       const overhead = separators * separator.length + endSymbol.length;
       const lo = req.minLength - overhead;
       const hi = req.maxLength - overhead;
@@ -601,9 +605,15 @@ export interface GenerateOptions {
   mappings?: readonly Mapping[];
 }
 
-/** Mappings whose output only uses characters the site accepts. */
-export function usableMappings(mappings: readonly Mapping[], req: Requirements): Mapping[] {
+/**
+ * Mappings whose output only uses characters the site accepts, and never the
+ * separator: a password never starts or ends with its separator, so a swap
+ * that put it at a word's edge would be trimmed away and leave the password
+ * short.
+ */
+export function usableMappings(mappings: readonly Mapping[], req: Requirements, separator = ''): Mapping[] {
   const allowed = new Set(comfortableSymbols(req));
+  if (separator) allowed.delete(separator);
   return mappings.filter((m) => [...m.to].every((c) => /[a-z0-9]/.test(c) || allowed.has(c)));
 }
 
@@ -612,7 +622,7 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
   const { plan: chosen, variants } = plan(req);
   const p = pools(req.comfort, req.minDigits);
   const warnings: string[] = [];
-  const twistMappings = usableMappings(mappings, req);
+  const twistMappings = usableMappings(mappings, req, chosen.separator);
   if (req.twists > 0 && twistMappings.length === 0) {
     warnings.push(
       `Twists are on, but every enabled mapping uses a symbol this site does not allow${req.avoidPinkyStretch ? ' or that needs a pinky stretch' : ''}.`,

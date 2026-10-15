@@ -29,3 +29,22 @@ describe('mapping settings', () => {
     expect(() => saveMappingSettings({ disabled: [], custom: [] }, broken)).not.toThrow();
   });
 });
+
+describe('mapping settings when the browser blocks storage', () => {
+  it('neither loads nor saves through a localStorage whose getter throws: an undefined store means defaults, quietly', () => {
+    const had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    try {
+      expect(loadMappingSettings(undefined)).toEqual({ disabled: [], custom: [] });
+      expect(() => saveMappingSettings({ disabled: ['a>@'], custom: [] }, undefined)).not.toThrow();
+    } finally {
+      if (had) Object.defineProperty(globalThis, 'localStorage', had);
+      else delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  });
+});

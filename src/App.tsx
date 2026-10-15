@@ -65,22 +65,26 @@ export function App() {
   return (
     <ErrorBoundary>
       <div className="app">
-        <header className="topbar">
-          <div className="topbar-text">
-            <h1>{TITLE}</h1>
-            <p className="tagline">{DESCRIPTION}</p>
+        {/* The header: the title area and the three primary tabs (on a phone the tabs fold into the bar below, which sticks on its own). */}
+        <header className="app-header">
+          <div className="header-inner">
+            <div className="topbar">
+              <div className="topbar-text">
+                <h1>{TITLE}</h1>
+                <p className="tagline">{DESCRIPTION}</p>
+              </div>
+              <span className="brand">
+                brought to you by <strong>SalientForm</strong>
+              </span>
+            </div>
+            {!phone && (
+              <nav className="topnav" aria-label="Pages">
+                <PageLinks page={page} />
+              </nav>
+            )}
           </div>
-          <span className="brand">
-            brought to you by <strong>SalientForm</strong>
-          </span>
         </header>
-        {phone ? (
-          <PhoneBar page={page} column={column} onColumn={setColumn} />
-        ) : (
-          <nav className="topnav" aria-label="Pages">
-            <PageLinks page={page} />
-          </nav>
-        )}
+        {phone && <PhoneBar page={page} column={column} onColumn={setColumn} />}
         <PasswordsProvider>
           {/* Kept mounted so settings, the sentence and the typing test survive a visit to the other pages. */}
           <div hidden={page !== 'main'}>
@@ -124,6 +128,7 @@ function PhoneBar({ page, column, onColumn }: { page: Page; column: Column; onCo
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       e.stopPropagation(); // closing the menu is all Escape does here (it would otherwise discard unapplied changes)
+      if (menu.current?.contains(document.activeElement)) menu.current.querySelector('button')?.focus(); // focus never drops to the body
       setOpen(false);
     };
     document.addEventListener('pointerdown', onDown);

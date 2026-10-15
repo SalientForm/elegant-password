@@ -40,7 +40,8 @@ describe('keyboard model', () => {
     for (const c of "[{'\"/?;:.,@#$%^&*(pqaz") expect(isPinkyStretch(c), c).toBe(false);
   });
 
-  it('rejects characters outside the model', () => {
-    expect(() => typingProfile('café')).toThrow();
+  it('charges characters outside the model as a shifted press of the farthest key instead of rejecting them', () => {
+    expect(() => typingProfile('café')).not.toThrow();
+    expect(typingProfile('café').shiftPresses).toBe(typingProfile('cafe').shiftPresses + 1);
   });
 });

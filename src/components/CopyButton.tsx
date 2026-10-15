@@ -31,8 +31,8 @@ export function CopyButton({ text, fallback, label = 'Copy', className, icon = f
       <button type="button" className={icon ? `icon-button${className ? ` ${className}` : ''}` : className} onClick={copy} aria-label={icon ? name : undefined} title={icon ? name : undefined}>
         {icon ? state === 'copied' ? <CheckIcon /> : <CopyIcon /> : name}
       </button>
-      <span role="status" className={state === 'failed' ? 'copy-status failed' : 'copy-status'}>
-        {state === 'failed' ? COPY_MESSAGES.failed : ''}
+      <span role="status" className={state === 'failed' ? 'copy-status failed' : state === 'copied' ? 'copy-status sr-only' : 'copy-status'}>
+        {COPY_MESSAGES[state]}
       </span>
     </>
   );

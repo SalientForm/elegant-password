@@ -38,13 +38,14 @@ export interface Attempt {
 export const CORRECTION_KEYS = new Set(['Backspace', 'Delete']);
 
 /** Keys that are not typing at all (modifiers, navigation) and are not recorded. */
-const IGNORED = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
+/** Keys that are not typing: modifiers, navigation, AltGr, dead and IME keys, function keys. Every named key except Backspace and Delete, which are corrections. */
+const ignored = (key: string) => key.length > 1 && key !== 'Backspace' && key !== 'Delete';
 
 export const startRecording = (): Recording => ({ keys: [] });
 
 /** Record a key press; returns the same recording for convenience. Ignores modifiers and Enter. */
 export function recordKey(recording: Recording, key: string, at: number): Recording {
-  if (key === 'Enter' || IGNORED.has(key)) return recording;
+  if (key === 'Enter' || ignored(key)) return recording;
   recording.keys.push({ key, at });
   return recording;
 }

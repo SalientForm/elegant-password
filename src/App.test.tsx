@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
+import { REQUIREMENTS_KEY } from './lib/settingsStore';
 import { MEDIUM, NARROW, PHONE } from './components/useMediaQuery';
 
 afterEach(cleanup);
@@ -320,8 +321,10 @@ describe('App on a phone', () => {
     const links = within(screen.getByRole('navigation', { name: 'Pages' })).getAllByRole('link');
     expect(links.map((a) => a.textContent)).toEqual(['Passwords', 'Scoring', 'Fun']);
     expect(links[0]!.getAttribute('aria-current')).toBe('page');
+    within(screen.getByRole('navigation', { name: 'Pages' })).getByRole('link', { name: 'Scoring' }).focus();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('navigation', { name: 'Pages' })).toBeNull(); // Escape closes the menu
+    expect(document.activeElement).toBe(menu); // and focus returns to the hamburger rather than dropping to the body
     fireEvent.click(menu);
     window.location.hash = '#/scoring';
     fireEvent(window, new Event('hashchange'));
@@ -330,5 +333,58 @@ describe('App on a phone', () => {
     expect(screen.queryByRole('tablist', { name: 'Sections' })).toBeNull(); // no columns here: the page's name stands in
     expect(document.querySelector('.phone-page')!.textContent).toBe('Scoring');
     window.location.hash = '';
+  });
+});
+
+describe('App: Enter inside forms and number fields', () => {
+  it('lets Enter in the add-mapping form add the mapping even while changes are pending, instead of submitting the draft', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Strict' })); // a pending draft
+    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy();
+    const replace = screen.getByLabelText('Replace') as HTMLInputElement;
+    const withField = screen.getByLabelText('With') as HTMLInputElement;
+    fireEvent.change(replace, { target: { value: 'cat' } });
+    fireEvent.change(withField, { target: { value: 'k@' } });
+    expect(fireEvent.keyDown(withField, { key: 'Enter' })).toBe(true); // not prevented: the form's own submission goes ahead
+    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // and the draft was not submitted by it
+    fireEvent.submit(withField.closest('form')!);
+    expect(screen.getByRole('button', { name: /Remove cat to k@/ })).toBeTruthy();
+  });
+
+  it('applies the clamped number a field shows when Enter is pressed in it, not an earlier valid prefix', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const count = screen.getByLabelText('Suggestions') as HTMLInputElement;
+    fireEvent.focus(count);
+    fireEvent.change(count, { target: { value: '3' } }); // "3" on the way to "30": committed as a draft
+    fireEvent.change(count, { target: { value: '30' } }); // over the maximum of 20: not committed
+    fireEvent.keyDown(count, { key: 'Enter' });
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(REQUIREMENTS_KEY)!).count).toBe(20));
+    expect(count.value).toBe('20');
+  });
+});
+
+describe('App header', () => {
+  it('is one header holding the title area and the page tabs on desktop; on a phone the sticky bar sits outside it', { timeout: 30_000 }, async () => {
+    const { unmount } = render(<App />);
+    const header = screen.getByRole('banner');
+    expect(header.className).toBe('app-header');
+    expect(within(header).getByRole('heading', { level: 1 }).textContent).toBe('Thuh Eleg@nt Pa$$word!');
+    expect(within(header).getByRole('navigation', { name: 'Pages' })).toBeTruthy();
+    unmount();
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: query === NARROW || query === MEDIUM || query === PHONE, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }),
+    });
+    try {
+      render(<App />);
+      const phoneHeader = screen.getByRole('banner');
+      expect(within(phoneHeader).getByRole('heading', { level: 1 })).toBeTruthy();
+      expect(phoneHeader.querySelector('.phone-bar')).toBeNull(); // the bar must stick on its own, so it is not inside the header
+      expect(document.querySelector('.phone-bar')).toBeTruthy();
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
   });
 });

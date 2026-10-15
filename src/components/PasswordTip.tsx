@@ -7,6 +7,8 @@ interface TipProps {
   /** Whether to open; defaults to always. */
   when?: (anchor: HTMLElement | null) => boolean;
   className?: string;
+  /** Whether the anchor itself is a tab stop; false when it wraps something already focusable. */
+  focusable?: boolean;
   children: React.ReactNode;
 }
 
@@ -21,7 +23,7 @@ const GAP = 4; // px between the anchor and the tip
  * the viewport: shifted left near the right edge, flipped above the anchor
  * when there is no room below.
  */
-export function InstantTip({ content, when = () => true, className, children }: TipProps) {
+export function InstantTip({ content, when = () => true, className, focusable = true, children }: TipProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ left: number; top: number }>();
   const anchor = useRef<HTMLSpanElement>(null);
@@ -66,7 +68,7 @@ export function InstantTip({ content, when = () => true, className, children }: 
     <span
       ref={anchor}
       className={`pw-tip-anchor${className ? ` ${className}` : ''}`}
-      tabIndex={0}
+      tabIndex={focusable ? 0 : -1}
       aria-describedby={open ? id : undefined}
       onMouseEnter={show}
       onMouseLeave={leaveSoon}
@@ -114,7 +116,7 @@ export function isTruncated(anchor: HTMLElement | null): boolean {
  */
 export function PasswordTip({ password, children }: { password: string; children: React.ReactNode }) {
   return (
-    <InstantTip content={<code>{password}</code>} when={isTruncated}>
+    <InstantTip content={<code>{password}</code>} when={isTruncated} focusable={false}>
       {children}
     </InstantTip>
   );

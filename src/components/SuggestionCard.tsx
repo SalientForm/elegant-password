@@ -2,7 +2,9 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { roleLabel, STRENGTH_PRESETS, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
-import { MEMORABILITY, scoreCold } from '../lib/score';
+import { MEMORABILITY, MEMORABILITY_BANDS, scoreCold, STRENGTH_BANDS } from '../lib/score';
+
+export { MEMORABILITY_BANDS, STRENGTH_BANDS };
 import { MAPPING_KIND_LABELS } from '../lib/twists';
 import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
@@ -35,11 +37,9 @@ function separatorPhrase(sep: string): string {
 }
 
 /** Colour band for a memorability score: green above 75, yellow above 45, red below. */
-export const MEMORABILITY_BANDS = { green: 75, yellow: 45 } as const;
 export const memorabilityLevel = (score: number) => (score > MEMORABILITY_BANDS.green ? 'high' : score > MEMORABILITY_BANDS.yellow ? 'mid' : 'low');
 
 /** Colour band for strength in bits: green from the "Strong" preset up, yellow from "Everyday", red below. */
-export const STRENGTH_BANDS = { green: 50, yellow: 40 } as const;
 export const strengthLevel = (bits: number) => (bits >= STRENGTH_BANDS.green ? 'high' : bits >= STRENGTH_BANDS.yellow ? 'mid' : 'low');
 /** The preset a strength reaches, for the tooltip: "master password", "very strong", "strong", "everyday", or "weak". */
 export const strengthWord = (bits: number) => [...STRENGTH_PRESETS].reverse().find((p) => bits >= p.bits)?.label.toLowerCase() ?? 'weak';

@@ -146,7 +146,13 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
               })}
             </div>
           )}
-          <form className="add-mapping" onSubmit={add}>
+          <form
+            className="add-mapping"
+            onSubmit={add}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.stopPropagation(); // Enter here adds the mapping, never submits the draft
+            }}
+          >
             <input aria-label="Replace" placeholder="replace" value={from} onChange={(e) => setFrom(e.target.value)} spellCheck={false} />
             <span>→</span>
             <input aria-label="With" placeholder="with" value={to} onChange={(e) => setTo(e.target.value)} spellCheck={false} />

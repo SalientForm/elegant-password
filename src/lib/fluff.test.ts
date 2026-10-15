@@ -95,3 +95,15 @@ describe('planFluff', () => {
     expect(describeFluff(plan, 50)).toMatch(/padded to the 50-character minimum with the word “rabbit”, “%50” \(the whole password is 50 characters\)/);
   });
 });
+
+describe('total tags at a power-of-ten minimum', () => {
+  it('never states a number under the minimum: a 7-character body under a minimum of 10 gets %10, not %9', () => {
+    expect(totalTagNumber(7, 10)).toBe(10);
+    expect(totalTagNumber(7)).toBe(9); // without a minimum, the smallest number that works
+    expect(totalTagNumber(96, 100)).toBe(100);
+    expect(totalTagNumber(97, 100)).toBe(101);
+    const plan = planFluff({ length: 7, min: 10, max: 32, separator: ';', tag: 'total', totalSymbol: '%', factorSymbol: '@', mark: '!', words: [], rng: seeded(1) });
+    expect(plan?.total).toBe(10);
+    expect(plan?.pieces.at(-1)?.text).toBe('%10');
+  });
+});

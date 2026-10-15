@@ -23,6 +23,7 @@ export function usePageFirstWheel(ref: RefObject<HTMLElement | null>, enabled: b
     const el = ref.current;
     if (!enabled || !el) return undefined;
     const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) return; // pinch zoom and Ctrl+wheel are the browser's
       // The page stops where the columns stick, or wherever it can scroll no further, whichever comes first.
       const first = el.firstElementChild;
       const stickyTop = first ? parseFloat(getComputedStyle(first).top) || 0 : 0;

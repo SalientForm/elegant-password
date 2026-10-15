@@ -3,6 +3,7 @@ import { DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, 
 import { DEFAULT_REQUIREMENTS, RequirementsError, type Requirements } from './generate';
 import { scoreCold } from './score';
 import { seeded } from './testRandom';
+import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, minLength: 8, ...over });
 
@@ -214,5 +215,77 @@ describe('edges of a sentence-mode password', () => {
         for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
       }
     }
+  });
+});
+
+describe('fromSentence: fits found by review', () => {
+  const upper = (s: string) => (s.match(/[A-Z]/g) ?? []).length;
+
+  it('pads a short sentence to a power-of-ten minimum with a tag that states that minimum', () => {
+    for (const s of ['my dog', 'hi', 'why me']) {
+      const r = fromSentence(s, req({ minLength: 10, maxLength: 32 }), undefined, { rng: seeded(3) });
+      for (const sg of r.suggestions) {
+        expect([...sg.password].length).toBeGreaterThanOrEqual(10);
+        expect(sg.checks.every((c) => c.met)).toBe(true);
+      }
+    }
+  });
+
+  it('keeps the separator before a padding word even when a glued number comes right before it', () => {
+    for (let seed = 1; seed <= 5; seed++) {
+      const r = fromSentence('why dry', req({ glue: true, minLength: 20, maxLength: 32, separator: ';' }), undefined, { rng: seeded(seed) });
+      for (const sg of r.suggestions) expect([...sg.password].length).toBeGreaterThanOrEqual(20);
+    }
+  });
+
+  it('pads to an exact length when the least-compressed fit is under it and the state before is over it', () => {
+    for (let seed = 1; seed <= 5; seed++) {
+      const r = fromSentence('jupiter dog piece', req({ minLength: 12, maxLength: 12 }), undefined, { rng: seeded(seed) });
+      for (const sg of r.suggestions) expect([...sg.password].length).toBe(12);
+    }
+  });
+
+  it('keeps long words whole rather than shrinking away the letters the uppercase rule needs', () => {
+    const r = fromSentence('elephants', req({ minUppercase: 3, minLength: 1 }), { ...DEFAULT_SENTENCE_OPTIONS, shrink: 'ends', shrinkFrom: 4 }, { rng: seeded(1) });
+    for (const sg of r.suggestions) expect(upper(sg.password)).toBeGreaterThanOrEqual(3);
+    const r2 = fromSentence('the elephants remember', req({ minUppercase: 6, minLength: 1 }), { ...DEFAULT_SENTENCE_OPTIONS, shrink: 'ends', shrinkFrom: 4 }, { rng: seeded(1) });
+    for (const sg of r2.suggestions) expect(upper(sg.password)).toBeGreaterThanOrEqual(6);
+  });
+
+  it('refuses closing marks that would be the separator, naming it, instead of a password that fails the symbol rule', () => {
+    expect(() => fromSentence('tiny cats', req({ separator: '$', allowedSymbols: '$', minSymbols: 2 }))).toThrow(/only allowed symbol is the separator/);
+    expect(() => fromSentence('cats sit', req({ separator: '(', allowedSymbols: '(', minUppercase: 0, minSymbols: 2 }))).toThrow(/only allowed symbol is the separator/);
+    const ok = fromSentence('tiny cats sit', req({ separator: '$', allowedSymbols: '$', minSymbols: 2 }), undefined, { rng: seeded(1) });
+    for (const sg of ok.suggestions) {
+      expect(sg.checks.every((c) => c.met)).toBe(true);
+      expect(sg.password.endsWith('$')).toBe(false);
+    }
+  });
+
+  it('never lets a swap produce the separator character, which the edge trim would remove', () => {
+    const mappings: Mapping[] = [...BUILT_IN_MAPPINGS, { from: 's', to: ';', kind: 'symbol' }];
+    for (let seed = 1; seed <= 6; seed++) {
+      const r = fromSentence('minks buy a rat', req({ minLength: 15, maxLength: 15, separator: ';', twists: 2 }), undefined, { rng: seeded(seed), mappings });
+      for (const sg of r.suggestions) {
+        expect([...sg.password].length).toBe(15);
+        expect(sg.password.includes(';;')).toBe(false);
+      }
+    }
+  });
+
+  it('turns a pasted paragraph into initials without enumerating every choice', () => {
+    const paragraph = Array.from({ length: 200 }, (_, i) => ['river', 'otters', 'carry', 'bright', 'stones', 'home', 'under', 'quiet', 'skies'][i % 9]).join(' ');
+    const started = performance.now();
+    const r = fromSentence(paragraph, req({ initials: 3, minLength: 12, maxLength: 64, count: 1 }), { ...DEFAULT_SENTENCE_OPTIONS, allowDropping: true }, { rng: seeded(1) });
+    expect(performance.now() - started).toBeLessThan(3000);
+    expect(r.suggestions).toHaveLength(1);
+    expect(upper(r.suggestions[0]!.password)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('meets a symbol rule of 8 on long words quickly: at most three swaps per rule, closing marks for the rest', () => {
+    const started = performance.now();
+    const r = fromSentence('supercalifragilisticexpialidocious antidisestablishmentarianism', req({ minSymbols: 8, maxLength: 64 }), undefined, { rng: seeded(1) });
+    expect(performance.now() - started).toBeLessThan(1500);
+    for (const sg of r.suggestions) expect(sg.checks.every((c) => c.met)).toBe(true);
   });
 });

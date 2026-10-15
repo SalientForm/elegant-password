@@ -39,3 +39,17 @@ describe('session store', () => {
     expect(isOutcome({ ok: false, error: 'why' })).toBe(true);
   });
 });
+
+describe('session records the cards cannot read', () => {
+  it('rejects a suggestion whose typing profile or plan breakdown lacks the fields a card reads, instead of crashing a render', () => {
+    const good = runInputs({ mode: 'generated', req: { ...DEFAULT_REQUIREMENTS, count: 1 }, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: BUILT_IN_MAPPINGS });
+    expect(isOutcome(good)).toBe(true);
+    if (!good.ok) throw new Error('unexpected');
+    const s = good.suggestions[0]!;
+    expect(isSuggestion({ ...s, typing: {} })).toBe(false);
+    expect(isSuggestion({ ...s, typing: { ...s.typing, rowsUsed: 'none' } })).toBe(false);
+    expect(isSuggestion({ ...s, typing: { ...s.typing, shiftPresses: undefined } })).toBe(false);
+    expect(isOutcome({ ...good, plan: { ...good.plan, breakdown: [{ label: 'x' }] } })).toBe(false);
+    expect(isOutcome({ ...good, plan: { ...good.plan, breakdown: [{ label: 'x', poolSize: 3, bits: 1.5 }] } })).toBe(true);
+  });
+});

@@ -198,3 +198,54 @@ describe('TypingTest', () => {
     }
   });
 });
+
+describe('TypingTest with characters off the US keyboard', () => {
+  it('scores a run such as “café” instead of taking the page down', () => {
+    const clock = { t: 0 };
+    render(
+      <PasswordsProvider generator={syncGenerator()} local={memoryStore()} session={memoryStore()} debounceMs={0}>
+        <TypingTest now={() => clock.t} />
+      </PasswordsProvider>,
+    );
+    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    typeInto(input, 'café£1', clock);
+    enter(input, clock);
+    const status = screen.getByRole('status');
+    expect(status.textContent).toContain('Testing: café£1');
+    expect(status.textContent).toContain('Typed correctly');
+    expect(within(status).getByText(/^S \d+$/)).toBeTruthy();
+    expect(within(status).getByText(/^D \d+$/)).toBeTruthy();
+  });
+});
+
+describe('TypingTest and the list shrinking', () => {
+  it('keeps the password under test, and its runs, when the latest list entry is removed; only an addition retargets', () => {
+    const local = memoryStore();
+    local.setItem(
+      SELECTED_KEY,
+      JSON.stringify([
+        { password: 'Old;one', hint: 'old one', addedAt: '2026-10-15T00:00:00.000Z' },
+        { password: 'New;two', hint: 'new two', addedAt: '2026-10-15T01:00:00.000Z' },
+      ]),
+    );
+    const clock = { t: 0 };
+    function Remover() {
+      const p = usePasswords();
+      return <button onClick={() => p.removeSelected('New;two')}>remove latest</button>;
+    }
+    render(
+      <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+        <Remover />
+        <TypingTest now={() => clock.t} />
+      </PasswordsProvider>,
+    );
+    expect(screen.getByRole('status').textContent).toContain('Testing: New;two');
+    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    typeInto(input, 'New;two', clock);
+    enter(input, clock);
+    expect(screen.getByRole('status').textContent).toContain('Typed correctly');
+    fireEvent.click(screen.getByText('remove latest'));
+    expect(screen.getByRole('status').textContent).toContain('Testing: New;two'); // still, with its run
+    expect(screen.getByRole('status').textContent).toContain('Typed correctly');
+  });
+});

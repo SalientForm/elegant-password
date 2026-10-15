@@ -44,7 +44,8 @@ describe('CopyButton', () => {
     });
     expect(write).toHaveBeenCalledWith('secret-pw');
     expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toBe('');
+    expect(screen.getByRole('status').textContent).toBe('Copied'); // announced to assistive technology, visually hidden
+    expect(screen.getByRole('status').className).toContain('sr-only');
   });
 
   it('selects the text and says so when the clipboard is unavailable', async () => {

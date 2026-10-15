@@ -60,6 +60,7 @@ test('edits are a draft until applied; applying saves, regenerates, and survives
 
   await page.getByRole('button', { name: 'Strict', exact: true }).click();
   await expect(applyBar(page)).toBeVisible();
+  await page.waitForTimeout(400); // past any debounce: a wrongly triggered regeneration would have landed by now
   expect(await passwords(page)).toEqual(before); // nothing regenerated
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elegant-passwords:requirements:v1') ?? '{}').comfort)).not.toBe('strict');
 
@@ -354,6 +355,58 @@ test('every small icon button has the same border colour and a subtle drop shado
   expect(look.every((b) => b.shadow !== 'none')).toBe(true);
 });
 
+test('the header is opaque, lighter than the gradient top, shadowed, and underlines the tabs with a slightly darker line', async ({ page }) => {
+  await settledPasswords(page);
+  const look = await page.evaluate(() => {
+    const probe = (background: string) => {
+      const el = document.createElement('div');
+      el.style.background = background;
+      document.body.append(el);
+      const colour = getComputedStyle(el).backgroundColor;
+      el.remove();
+      return colour;
+    };
+    const parts = (c: string) => c.match(/[\d.]+/g)!.map(Number);
+    const brightness = (c: string) => Math.max(...parts(c).slice(0, 3)) / (c.startsWith('rgb') ? 255 : 1);
+    const header = document.querySelector('header.app-header')!;
+    const nav = header.querySelector('nav')!;
+    const hs = getComputedStyle(header);
+    const headerBox = header.getBoundingClientRect();
+    return {
+      holdsTitleAndTabs: !!header.querySelector('h1') && nav.getAttribute('aria-label') === 'Pages',
+      top: brightness(probe('var(--bg-top)')),
+      header: brightness(hs.backgroundColor),
+      alpha: parts(hs.backgroundColor)[3] ?? 1,
+      shadow: hs.boxShadow,
+      headerLine: brightness(hs.borderBottomColor),
+      tabsLine: brightness(getComputedStyle(nav).borderBottomColor),
+      fullWidth: headerBox.left <= 0 && headerBox.right >= window.innerWidth - 1,
+    };
+  });
+  expect(look.holdsTitleAndTabs).toBe(true);
+  expect(look.alpha).toBe(1);
+  expect(look.header).toBeGreaterThan(look.top);
+  expect(look.header - look.top).toBeLessThan(0.15);
+  expect(look.shadow).not.toBe('none');
+  expect(look.headerLine).toBeLessThan(look.tabsLine); // the header's line is the darker of the two, just below the tabs' border
+  expect(look.fullWidth).toBe(true);
+});
+
+test('the floating buttons never cover the end of the middle column', async ({ page }) => {
+  await settledPasswords(page);
+  await page.getByRole('button', { name: 'Strict', exact: true }).click();
+  await expect(applyBar(page)).toBeVisible();
+  const gap = await page.evaluate(() => {
+    window.scrollTo(0, 1e9); // the page to its stop, where the columns stick
+    const column = document.querySelector<HTMLElement>('main > .results')!;
+    column.scrollTop = 1e9; // the column to its end
+    const bar = document.querySelector('.apply-bar')!.getBoundingClientRect();
+    const last = [...column.children].filter((c) => !c.classList.contains('apply-bar')).at(-1)!.getBoundingClientRect();
+    return bar.top - last.bottom;
+  });
+  expect(gap).toBeGreaterThanOrEqual(0); // the last panel ends above the buttons
+});
+
 test('badge tips are never clipped by a card and stay inside the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1120, height: 700 }); // a three-column width (1101 px and up) where the list sits near the right edge
   await settledPasswords(page);
@@ -374,10 +427,9 @@ test('badge tips are never clipped by a card and stay inside the viewport', asyn
   await first.locator('.badge.strength').hover();
   await expect(page.getByRole('tooltip')).toBeVisible();
   box = (await page.getByRole('tooltip').boundingBox())!;
-  const card = (await first.boundingBox())!;
   expect(box.width).toBeGreaterThan(100);
   expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
-  // The tip is rendered outside the card element, so the card's overflow cannot cut it.
-  expect(await page.getByRole('tooltip').evaluate((el) => el.closest('article') === null)).toBe(true);
-  void card;
+  // The tip is rendered at the document level, outside the card element, so the card's overflow cannot cut it: it is in the body, not the article, and nothing clips it.
+  expect(await page.getByRole('tooltip').evaluate((el) => el.closest('article') === null && el.parentElement === document.body)).toBe(true);
+  expect(box.height).toBeGreaterThan(10);
 });

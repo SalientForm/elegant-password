@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, type Requirements } from './generate';
 import { seeded } from './testRandom';
+import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
 import { isMadeUpNoun, twoLetter } from './grammar';
 import { scoreCold } from './score';
 
@@ -311,14 +312,42 @@ describe('edges of a password', () => {
       expect(s.password).not.toMatch(/^[ .]|[ .]$/);
       for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
     }
-    // Only when nothing else is allowed does the closing mark fall back to the separator.
-    expect(closingSymbol({ ...req, allowedSymbols: '.' }, ['.'], '.')).toBe('.');
+    // When nothing else is allowed there is no closing mark at all: the request is refused rather than a password trimmed short.
+    expect(closingSymbol({ ...req, allowedSymbols: '.' }, ['.'], '.')).toBeUndefined();
   });
 
   it('holds for every generated password', () => {
     for (const separator of [';', ' ', '.', '-']) {
       const r = generate({ ...DEFAULT_REQUIREMENTS, separator, minSymbols: 3, count: 10, avoidPinkyStretch: false }, { rng: seeded(11) });
       for (const s of r.suggestions) expect(s.password, separator).not.toMatch(new RegExp(`^[ ${separator.replace('-', '\\-')}]|[ ${separator.replace('-', '\\-')}]$`));
+    }
+  });
+});
+
+describe('generate: the separator is never a closing mark or a swap output', () => {
+  it('refuses closing marks that would be the separator, naming it, instead of a password short on symbols', () => {
+    expect(() => generate({ ...DEFAULT_REQUIREMENTS, separator: '.', allowedSymbols: '.', allowSpaces: false, minSymbols: 6 })).toThrow(/only allowed symbol is the separator/);
+    // Separators alone meeting the rule are fine, and no password ends with one.
+    const ok = generate({ ...DEFAULT_REQUIREMENTS, separator: '.', allowedSymbols: '.', allowSpaces: false, minSymbols: 2, count: 10 }, { rng: seeded(1) });
+    for (const s of ok.suggestions) {
+      expect(s.checks.every((c) => c.met)).toBe(true);
+      expect(s.password.endsWith('.')).toBe(false);
+    }
+  });
+
+  it('never draws a swap whose output is the separator, which the edge trim would remove and leave the password short', () => {
+    for (let seed = 1; seed <= 5; seed++) {
+      const r = generate({ ...DEFAULT_REQUIREMENTS, separator: '$', allowedSymbols: '$', allowSpaces: false, minLength: 20, maxLength: 20, twists: 2, count: 20 }, { rng: seeded(seed) });
+      for (const s of r.suggestions) {
+        expect([...s.password].length).toBe(20);
+        expect(s.checks.every((c) => c.met)).toBe(true);
+      }
+    }
+    const custom: Mapping[] = [...BUILT_IN_MAPPINGS, { from: 's', to: ';', kind: 'symbol' }];
+    const r = generate({ ...DEFAULT_REQUIREMENTS, count: 20, twists: 2 }, { rng: seeded(2), mappings: custom });
+    for (const s of r.suggestions) {
+      expect([...s.password].length).toBeGreaterThanOrEqual(DEFAULT_REQUIREMENTS.minLength);
+      expect(s.password.includes(';;')).toBe(false);
     }
   });
 });

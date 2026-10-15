@@ -108,7 +108,10 @@ export interface ColdScore {
   memorability: Memorability;
 }
 
-const MAX_TWISTS_PER_WORD = 3;
+/** How many swaps the cold aligner tries per word, for words of up to ten letters. */
+export const MAX_TWISTS_PER_WORD = 3;
+/** Fewer for long words: enumerating spellings grows combinatorially with length (a 34-letter word with three swaps took seconds). */
+export const twistsToTry = (length: number) => (length <= 10 ? MAX_TWISTS_PER_WORD : length <= 16 ? 2 : 1);
 const COMFORTS: readonly Comfort[] = ['strict', 'balanced', 'relaxed'];
 const POOL_SLOTS: readonly Exclude<Slot, 'num' | 'and'>[] = ['adj', 'noun', 'verb', 'adv', 'end', 'prep'];
 
@@ -177,7 +180,7 @@ function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): Sc
   if (best?.form === 'word') return best;
   for (const { base, form } of forms) {
     if (form === 'number') continue;
-    for (const s of spellingsOf(base, mappings, MAX_TWISTS_PER_WORD)) {
+    for (const s of spellingsOf(base, mappings, twistsToTry(base.length))) {
       if (s.twists === 0) continue;
       if (startsWithFold(rest, s.text)) consider({ word, form, base, text: rest.slice(0, s.text.length), twists: s.twists });
       // Padding may have repeated a digit or symbol of this spelling; the longer run is the same word.
@@ -287,8 +290,15 @@ function measureMatch(words: readonly string[], scored: readonly ScoredWord[], s
   return { template: slots, comfort, sizes, bits };
 }
 
-const BITS_PER_ENGLISH_LETTER = 2.3;
-const SYMBOL_ALPHABET = 32;
+/** Bits per letter of English-like text that is on no list. */
+export const BITS_PER_ENGLISH_LETTER = 2.3;
+/** Choices per symbol when a symbol is scored on its own. */
+export const SYMBOL_ALPHABET = 32;
+/** A memorable digit run (a repeat, a consecutive run, a well-known skip) counts as one pick from this many. */
+export const MEMORABLE_DIGITS_CHOICES = 40;
+/** Badge colour bands: strength in bits (green from the "Strong" preset, yellow from "Everyday") and memorability out of 100. */
+export const STRENGTH_BANDS = { green: 50, yellow: 40 } as const;
+export const MEMORABILITY_BANDS = { green: 75, yellow: 45 } as const;
 const MEMORABLE_SETS = new Set(['2468', '8642', '13579', '97531', '1357', '7531']);
 
 /** A run of digits anyone would remember: one digit repeated, consecutive digits up or down (123, 4321), or a well-known skip pattern. */
@@ -317,7 +327,7 @@ function smallestPoolFor(word: string): readonly string[] | undefined {
  */
 export function wordBitsFromText(w: ScoredWord): number {
   if (w.form === 'dropped') return 0;
-  if (/^[0-9]+$/.test(w.word)) return isMemorableDigits(w.word) ? Math.log2(40) : w.word.length * Math.log2(10);
+  if (/^[0-9]+$/.test(w.word)) return isMemorableDigits(w.word) ? Math.log2(MEMORABLE_DIGITS_CHOICES) : w.word.length * Math.log2(10);
   const pool = smallestPoolFor(w.word);
   if (w.form === 'initial') return Math.log2(pool ? initialsOf(pool).length : 26);
   if (pool) return Math.log2(pool.length);
@@ -444,7 +454,7 @@ export function scoreAlone(password: string): AloneScore {
         parts.push({ text, kind: 'letters', bits: text.length * BITS_PER_ENGLISH_LETTER });
       }
     } else if (/^[0-9]+$/.test(text)) {
-      parts.push({ text, kind: 'digits', bits: isMemorableDigits(text) ? Math.log2(40) : text.length * Math.log2(10) });
+      parts.push({ text, kind: 'digits', bits: isMemorableDigits(text) ? Math.log2(MEMORABLE_DIGITS_CHOICES) : text.length * Math.log2(10) });
     } else if (/^\s+$/.test(text)) {
       parts.push({ text, kind: 'spaces', bits: 0 });
     } else {

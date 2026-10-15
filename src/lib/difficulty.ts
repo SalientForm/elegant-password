@@ -6,7 +6,7 @@
 // weights add up to 100. Cut-points were calibrated on generated passwords
 // so the default settings land in the easy-to-moderate range.
 
-import { isPinkyStretch, isRoll, lookupKey, transitionCost } from './keyboard';
+import { isPinkyStretch, isRoll, pressFor, transitionCost } from './keyboard';
 
 export const LEVELS = ['Effortless', 'Easy', 'Moderate', 'Demanding', 'Hard'] as const;
 export type Level = 0 | 1 | 2 | 3 | 4;
@@ -152,9 +152,7 @@ export const SECONDS = { keystroke: 0.12, perCost: 0.05, shift: 0.12 } as const;
 
 export function measure(password: string, chunks: number): Measurements {
   const presses = [...password].map((c) => {
-    const k = lookupKey(c);
-    if (!k) throw new Error(`Character ${JSON.stringify(c)} is not on the QWERTY model`);
-    return { ...k, char: c };
+    return { ...pressFor(c), char: c };
   });
 
   let seconds = presses.length * SECONDS.keystroke;
@@ -206,8 +204,11 @@ export function levelFor(value: number, cutPoints: Criterion['cutPoints'], highe
   return level as Level;
 }
 
+/** Each level spans this many points: 0-20, 21-40, 41-60, 61-80, 81-100. */
+export const LEVEL_WIDTH = 20;
+
 export function overallLevel(score: number): Level {
-  return Math.min(4, Math.floor(score / 20.0001)) as Level;
+  return Math.min(4, Math.floor(score / (LEVEL_WIDTH + 0.0001))) as Level;
 }
 
 /** Score a password against the rubric. `chunks` is how many pieces there are to remember. */

@@ -15,6 +15,7 @@ import {
   saveRequirements,
   saveSentenceOptions,
 } from './settingsStore';
+import { DEFAULT_SORT } from './sort';
 import { memoryStore } from './storage';
 
 describe('settings store', () => {
@@ -33,8 +34,8 @@ describe('settings store', () => {
   it('returns the defaults for anything that does not validate', () => {
     expect(parseRequirements(null)).toBe(DEFAULT_REQUIREMENTS);
     expect(parseRequirements('x')).toBe(DEFAULT_REQUIREMENTS);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, minLength: 30, maxLength: 20 })).toBe(DEFAULT_REQUIREMENTS);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, count: 99 })).toBe(DEFAULT_REQUIREMENTS);
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, minLength: 30, maxLength: 20 })).toEqual({ ...DEFAULT_REQUIREMENTS, maxLength: 20 }); // repaired, not discarded
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, count: 99 })).toEqual(DEFAULT_REQUIREMENTS);
   });
 
   it('parses sentence options and the mode', () => {
@@ -75,5 +76,30 @@ describe('settings store', () => {
     expect(loadMode(store)).toBe('sentence');
     expect(loadRequirements(undefined)).toBe(DEFAULT_REQUIREMENTS);
     expect(loadMode(undefined)).toBe('generated');
+  });
+});
+
+describe('stored requirements that fail validation as a whole', () => {
+  it('are repaired field by field, so a minimum above the maximum never wipes every other setting on reload', () => {
+    const stored = { ...DEFAULT_REQUIREMENTS, minLength: 40, maxLength: 32, twists: 3, allowSpaces: false, initials: 2, separator: '-' };
+    const parsed = parseRequirements(stored);
+    expect(parsed.twists).toBe(3);
+    expect(parsed.allowSpaces).toBe(false);
+    expect(parsed.initials).toBe(2);
+    expect(parsed.separator).toBe('-');
+    expect(parsed.minLength).toBeLessThanOrEqual(parsed.maxLength);
+    expect(parsed.maxLength).toBe(32);
+    // Two bad fields at once still keep the rest.
+    const twice = parseRequirements({ ...stored, count: 99 });
+    expect(twice.twists).toBe(3);
+    expect(twice.count).toBe(DEFAULT_REQUIREMENTS.count);
+  });
+
+  it('treats prototype keys as odd data: a stored "toString" is neither a comfort level nor an order', () => {
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, comfort: 'toString' }).comfort).toBe(DEFAULT_REQUIREMENTS.comfort);
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, comfort: 'constructor' }).comfort).toBe(DEFAULT_REQUIREMENTS.comfort);
+    expect(parseSort('toString')).toBe(DEFAULT_SORT);
+    expect(parseSort('constructor')).toBe(DEFAULT_SORT);
+    expect(parseSort('easiest')).toBe('difficulty'); // the real legacy names still map
   });
 });

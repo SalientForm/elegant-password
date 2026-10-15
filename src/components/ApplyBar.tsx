@@ -21,7 +21,9 @@ export function ApplyBar() {
       const tag = (e.target as HTMLElement | null)?.tagName ?? '';
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || !OWN_ENTER.has(tag))) {
         e.preventDefault();
-        apply();
+        // An input commits its own value on this same key press; let that render first, then apply what it left.
+        if (tag === 'INPUT') queueMicrotask(apply);
+        else apply();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         discard();

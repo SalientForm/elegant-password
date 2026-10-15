@@ -33,7 +33,7 @@ export function isSuggestion(x: unknown): x is Suggestion {
     isFiniteNumber(x.twistBits) &&
     isFiniteNumber(x.twistOptions) &&
     isFiniteNumber(x.bits) &&
-    isRecord(x.typing) &&
+    isTyping(x.typing) &&
     isRecord(x.difficulty) &&
     isFiniteNumber(x.difficulty.score) &&
     isFiniteNumber(x.memorability) &&
@@ -43,6 +43,17 @@ export function isSuggestion(x: unknown): x is Suggestion {
     x.checks.every((c) => isRecord(c) && isString(c.rule) && isBoolean(c.met) && isString(c.how))
   );
 }
+
+/** The typing profile fields a card reads; a tampered or outdated record falls back instead of crashing a render. */
+const isTyping = (t: unknown): boolean =>
+  isRecord(t) &&
+  Array.isArray(t.rowsUsed) &&
+  t.rowsUsed.every(isFiniteNumber) &&
+  isFiniteNumber(t.shiftPresses) &&
+  isFiniteNumber(t.caseChanges) &&
+  isFiniteNumber(t.sameRowShare) &&
+  isFiniteNumber(t.averageDistance) &&
+  isFiniteNumber(t.sameFingerPairs);
 
 export function isOutcome(x: unknown): x is Outcome {
   if (!isRecord(x)) return false;
@@ -54,7 +65,8 @@ export function isOutcome(x: unknown): x is Outcome {
     Array.isArray(x.suggestions) &&
     x.suggestions.every(isSuggestion) &&
     isStringArray(x.warnings) &&
-    (x.plan === undefined || (isRecord(x.plan) && isFiniteNumber(x.plan.bits) && Array.isArray(x.plan.breakdown)))
+    (x.plan === undefined ||
+      (isRecord(x.plan) && isFiniteNumber(x.plan.bits) && Array.isArray(x.plan.breakdown) && x.plan.breakdown.every((b) => isRecord(b) && isString(b.label) && isFiniteNumber(b.poolSize) && isFiniteNumber(b.bits))))
   );
 }
 

@@ -97,6 +97,14 @@
       },
       {
         "kind": "test",
+        "title": "the header is opaque, lighter than the gradient top, shadowed, and underlines the tabs with a slightly darker line"
+      },
+      {
+        "kind": "test",
+        "title": "the floating buttons never cover the end of the middle column"
+      },
+      {
+        "kind": "test",
         "title": "badge tips are never clipped by a card and stay inside the viewport"
       }
     ]
@@ -179,6 +187,26 @@
       {
         "kind": "test",
         "title": "gives the open column the whole width under a bar: the page links behind a hamburger at the left, the column tabs centred"
+      },
+      {
+        "kind": "group",
+        "title": "App: Enter inside forms and number fields"
+      },
+      {
+        "kind": "test",
+        "title": "lets Enter in the add-mapping form add the mapping even while changes are pending, instead of submitting the draft"
+      },
+      {
+        "kind": "test",
+        "title": "applies the clamped number a field shows when Enter is pressed in it, not an earlier valid prefix"
+      },
+      {
+        "kind": "group",
+        "title": "App header"
+      },
+      {
+        "kind": "test",
+        "title": "is one header holding the title area and the page tabs on desktop; on a phone the sticky bar sits outside it"
       }
     ]
   },
@@ -356,6 +384,14 @@
       {
         "kind": "test",
         "title": "removes one entry, and removes all only on a second click"
+      },
+      {
+        "kind": "group",
+        "title": "SelectedList with characters off the US keyboard"
+      },
+      {
+        "kind": "test",
+        "title": "shows an entry such as “naïve;otters” restored from storage, scored, instead of crashing the page"
       }
     ]
   },
@@ -450,6 +486,14 @@
       {
         "kind": "test",
         "title": "is green from 50 bits, yellow from 40, red below, and names the preset reached"
+      },
+      {
+        "kind": "group",
+        "title": "tab stops on a card"
+      },
+      {
+        "kind": "test",
+        "title": "makes the password one stop (the password itself, a button) and each badge a focusable anchor"
       }
     ]
   },
@@ -525,6 +569,22 @@
       {
         "kind": "test",
         "title": "cuts a long password under test with an ellipsis and shows the whole of it as an instant tip, like the list"
+      },
+      {
+        "kind": "group",
+        "title": "TypingTest with characters off the US keyboard"
+      },
+      {
+        "kind": "test",
+        "title": "scores a run such as “café” instead of taking the page down"
+      },
+      {
+        "kind": "group",
+        "title": "TypingTest and the list shrinking"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the password under test, and its runs, when the latest list entry is removed; only an addition retargets"
       }
     ]
   },
@@ -542,6 +602,14 @@
       {
         "kind": "test",
         "title": "never intercepts scrolling up"
+      },
+      {
+        "kind": "group",
+        "title": "usePageFirstWheel and zoom"
+      },
+      {
+        "kind": "test",
+        "title": "never intercepts Ctrl+wheel or ⌘+wheel, which are pinch zoom, while still routing a plain wheel to the page"
       }
     ]
   },
@@ -654,6 +722,14 @@
       {
         "kind": "test",
         "title": "applies repeats inside the word and describes the plan"
+      },
+      {
+        "kind": "group",
+        "title": "total tags at a power-of-ten minimum"
+      },
+      {
+        "kind": "test",
+        "title": "never states a number under the minimum: a 7-character body under a minimum of 10 gets %10, not %9"
       }
     ]
   },
@@ -747,6 +823,42 @@
       {
         "kind": "test",
         "title": "never start or end with a space or the separator, even with closing marks and padding"
+      },
+      {
+        "kind": "group",
+        "title": "fromSentence: fits found by review"
+      },
+      {
+        "kind": "test",
+        "title": "pads a short sentence to a power-of-ten minimum with a tag that states that minimum"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the separator before a padding word even when a glued number comes right before it"
+      },
+      {
+        "kind": "test",
+        "title": "pads to an exact length when the least-compressed fit is under it and the state before is over it"
+      },
+      {
+        "kind": "test",
+        "title": "keeps long words whole rather than shrinking away the letters the uppercase rule needs"
+      },
+      {
+        "kind": "test",
+        "title": "refuses closing marks that would be the separator, naming it, instead of a password that fails the symbol rule"
+      },
+      {
+        "kind": "test",
+        "title": "never lets a swap produce the separator character, which the edge trim would remove"
+      },
+      {
+        "kind": "test",
+        "title": "turns a pasted paragraph into initials without enumerating every choice"
+      },
+      {
+        "kind": "test",
+        "title": "meets a symbol rule of 8 on long words quickly: at most three swaps per rule, closing marks for the rest"
       }
     ]
   },
@@ -852,6 +964,18 @@
       {
         "kind": "test",
         "title": "holds for every generated password"
+      },
+      {
+        "kind": "group",
+        "title": "generate: the separator is never a closing mark or a swap output"
+      },
+      {
+        "kind": "test",
+        "title": "refuses closing marks that would be the separator, naming it, instead of a password short on symbols"
+      },
+      {
+        "kind": "test",
+        "title": "never draws a swap whose output is the separator, which the edge trim would remove and leave the password short"
       }
     ]
   },
@@ -929,7 +1053,7 @@
       },
       {
         "kind": "test",
-        "title": "rejects characters outside the model"
+        "title": "charges characters outside the model as a shifted press of the farthest key instead of rejecting them"
       }
     ]
   },
@@ -976,6 +1100,14 @@
       {
         "kind": "test",
         "title": "survives blocked storage"
+      },
+      {
+        "kind": "group",
+        "title": "mapping settings when the browser blocks storage"
+      },
+      {
+        "kind": "test",
+        "title": "neither loads nor saves through a localStorage whose getter throws: an undefined store means defaults, quietly"
       }
     ]
   },
@@ -1127,6 +1259,26 @@
       {
         "kind": "test",
         "title": "means repeats, consecutive runs and well-known skips, not any pair of digits"
+      },
+      {
+        "kind": "group",
+        "title": "characters off the US keyboard"
+      },
+      {
+        "kind": "test",
+        "title": "scores pasted text with accents, currency signs or tabs instead of throwing"
+      },
+      {
+        "kind": "test",
+        "title": "charges such a character as a shifted press of the key furthest from home"
+      },
+      {
+        "kind": "group",
+        "title": "cold scoring very long words"
+      },
+      {
+        "kind": "test",
+        "title": "tries fewer swaps on long words, so a 34-letter word scores in milliseconds rather than seconds"
       }
     ]
   },
@@ -1169,6 +1321,14 @@
       {
         "kind": "test",
         "title": "rejects anything malformed rather than trusting it"
+      },
+      {
+        "kind": "group",
+        "title": "session records the cards cannot read"
+      },
+      {
+        "kind": "test",
+        "title": "rejects a suggestion whose typing profile or plan breakdown lacks the fields a card reads, instead of crashing a render"
       }
     ]
   },
@@ -1194,6 +1354,18 @@
       {
         "kind": "test",
         "title": "round-trips through a store and survives a missing store"
+      },
+      {
+        "kind": "group",
+        "title": "stored requirements that fail validation as a whole"
+      },
+      {
+        "kind": "test",
+        "title": "are repaired field by field, so a minimum above the maximum never wipes every other setting on reload"
+      },
+      {
+        "kind": "test",
+        "title": "treats prototype keys as odd data: a stored \"toString\" is neither a comfort level nor an order"
       }
     ]
   },
@@ -1211,6 +1383,14 @@
       {
         "kind": "test",
         "title": "works on real suggestions"
+      },
+      {
+        "kind": "group",
+        "title": "tie-breaks on equal bits"
+      },
+      {
+        "kind": "test",
+        "title": "strength: equal bits fall back to the lower difficulty, then the higher memorability"
       }
     ]
   },
@@ -1364,6 +1544,14 @@
       {
         "kind": "test",
         "title": "locks the target when asked: a mistyped Enter does not replace it"
+      },
+      {
+        "kind": "group",
+        "title": "keys that are not typing"
+      },
+      {
+        "kind": "test",
+        "title": "ignores AltGr, dead, IME, function and navigation keys, but counts Backspace and Delete as corrections"
       }
     ]
   },
@@ -1410,6 +1598,14 @@
       {
         "kind": "test",
         "title": "drops answers to superseded requests"
+      },
+      {
+        "kind": "group",
+        "title": "PasswordsProvider: a contradictory requirement set"
+      },
+      {
+        "kind": "test",
+        "title": "is persisted as applied, and a reload repairs the lengths while keeping every other setting"
       }
     ]
   }

@@ -209,3 +209,38 @@ describe('PasswordsProvider', () => {
     expect(text('first')).toBe(fresh.ok ? fresh.suggestions[0]!.password : '');
   });
 });
+
+describe('PasswordsProvider: a contradictory requirement set', () => {
+  function Tweaker() {
+    const p = usePasswords();
+    return (
+      <>
+        <button onClick={() => p.setReq({ ...p.draft.req, minLength: 40, maxLength: 32, twists: 3, allowSpaces: false })}>contradict</button>
+        <button onClick={() => p.apply()}>apply</button>
+        <pre data-testid="applied">{JSON.stringify(p.applied.req)}</pre>
+      </>
+    );
+  }
+  it('is persisted as applied, and a reload repairs the lengths while keeping every other setting', async () => {
+    const local = memoryStore();
+    const first = render(
+      <PasswordsProvider generator={countingGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+        <Tweaker />
+      </PasswordsProvider>,
+    );
+    fireEvent.click(screen.getByText('contradict'));
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).minLength).toBe(40));
+    first.unmount();
+    render(
+      <PasswordsProvider generator={countingGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+        <Tweaker />
+      </PasswordsProvider>,
+    );
+    const applied = JSON.parse(screen.getByTestId('applied').textContent!);
+    expect(applied.twists).toBe(3);
+    expect(applied.allowSpaces).toBe(false);
+    expect(applied.maxLength).toBe(32);
+    expect(applied.minLength).toBeLessThanOrEqual(32);
+  });
+});

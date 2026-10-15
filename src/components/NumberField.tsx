@@ -18,7 +18,7 @@ interface Props extends InputProps {
  * numbers in range are committed as you type, and leaving the field clamps
  * whatever is there into range (or restores the last value).
  */
-export function NumberField({ value, min, max, onCommit, allowEmpty = false, onFocus, onBlur, ...rest }: Props) {
+export function NumberField({ value, min, max, onCommit, allowEmpty = false, onFocus, onBlur, onKeyDown, ...rest }: Props) {
   const show = (v: number | null) => (v === null ? '' : String(v));
   const [text, setText] = useState(show(value));
   const [editing, setEditing] = useState(false);
@@ -32,6 +32,20 @@ export function NumberField({ value, min, max, onCommit, allowEmpty = false, onF
     if (s.trim() === '') return allowEmpty ? null : undefined;
     const n = Number(s);
     return Number.isInteger(n) ? n : undefined;
+  };
+  /** Clamp whatever is typed into range (or restore the last value) and commit it. */
+  const commit = () => {
+    const n = parse(text);
+    if (n === null) {
+      onCommit(null);
+      setText('');
+    } else if (n === undefined) {
+      setText(show(value));
+    } else {
+      const clamped = Math.min(max, Math.max(min, n));
+      onCommit(clamped);
+      setText(String(clamped));
+    }
   };
 
   return (
@@ -53,19 +67,13 @@ export function NumberField({ value, min, max, onCommit, allowEmpty = false, onF
         if (n === null) onCommit(null);
         else if (n !== undefined && n >= min && n <= max) onCommit(n);
       }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit(); // so what Enter submits is what the field shows, clamped, not an earlier valid prefix
+        onKeyDown?.(e);
+      }}
       onBlur={(e) => {
         setEditing(false);
-        const n = parse(text);
-        if (n === null) {
-          onCommit(null);
-          setText('');
-        } else if (n === undefined) {
-          setText(show(value));
-        } else {
-          const clamped = Math.min(max, Math.max(min, n));
-          onCommit(clamped);
-          setText(String(clamped));
-        }
+        commit();
         onBlur?.(e);
       }}
     />

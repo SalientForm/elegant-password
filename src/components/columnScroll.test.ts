@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
+import { describe, expect, it, vi } from 'vitest';
 import { pageScrollFor } from './columnScroll';
 
 describe('page-first wheel routing', () => {
@@ -15,5 +16,33 @@ describe('page-first wheel routing', () => {
     expect(pageScrollFor(-100, 180, 0)).toBeUndefined();
     expect(pageScrollFor(-100, 180, 500)).toBeUndefined();
     expect(pageScrollFor(0, 180, 0)).toBeUndefined();
+  });
+});
+
+describe('usePageFirstWheel and zoom', () => {
+  it('never intercepts Ctrl+wheel or ⌘+wheel, which are pinch zoom, while still routing a plain wheel to the page', async () => {
+    const { render, cleanup, fireEvent } = await import('@testing-library/react');
+    const React = await import('react');
+    const { usePageFirstWheel } = await import('./columnScroll');
+    function Columns() {
+      const ref = React.useRef<HTMLElement>(null);
+      usePageFirstWheel(ref, true);
+      return React.createElement('main', { ref, 'data-testid': 'main' }, React.createElement('div', { style: { top: 0 } }));
+    }
+    const scrollBy = vi.fn();
+    Object.defineProperty(window, 'scrollBy', { configurable: true, value: scrollBy });
+    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 3000 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+    const { getByTestId } = render(React.createElement(Columns));
+    const main = getByTestId('main');
+    main.getBoundingClientRect = () => ({ top: 200, bottom: 1000, left: 0, right: 100, width: 100, height: 800, x: 0, y: 200, toJSON: () => ({}) });
+    expect(fireEvent.wheel(main, { deltaY: 50 })).toBe(false); // intercepted: routed to the page
+    expect(scrollBy).toHaveBeenCalled();
+    scrollBy.mockClear();
+    expect(fireEvent.wheel(main, { deltaY: 50, ctrlKey: true })).toBe(true); // left to the browser
+    expect(fireEvent.wheel(main, { deltaY: 50, metaKey: true })).toBe(true);
+    expect(scrollBy).not.toHaveBeenCalled();
+    cleanup();
+    delete (document.documentElement as { scrollHeight?: unknown }).scrollHeight;
   });
 });

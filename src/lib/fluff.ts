@@ -82,10 +82,11 @@ export function smallestFactor(n: number): number {
  * The number a total tag states when added to a password of `length`
  * characters: the only N with N = length + 1 + digits(N).
  */
-export function totalTagNumber(length: number): number {
+export function totalTagNumber(length: number, min = 0): number {
+  // The smallest number that is at least `min`: a 7-character body under a minimum of 10 gets %10, not %9.
   for (let d = 1; d <= 4; d++) {
     const n = length + 1 + d;
-    if (digitsOf(n) === d) return n;
+    if (digitsOf(n) === d && n >= min) return n;
   }
   throw new RangeError(`No total tag fits a length of ${length}`);
 }
@@ -157,12 +158,12 @@ export function planFluff(inputs: FluffInputs): FluffPlan | undefined {
     const tagLen = 1 + digitsOf(min);
     if (short >= tagLen) {
       const body = fill(short - tagLen, short, inputs, 0);
-      const total = length + body.filled + 1 + digitsOf(totalTagNumber(length + body.filled));
-      const n = totalTagNumber(length + body.filled);
+      const n = totalTagNumber(length + body.filled, min);
+      const total = length + body.filled + 1 + digitsOf(n);
       if (total <= max) return { pieces: [...body.pieces, { kind: 'tag', text: `${totalSymbol}${n}`, number: n }], total };
     } else {
       // The tag alone already covers the gap; it states the true total.
-      const n = totalTagNumber(length);
+      const n = totalTagNumber(length, min);
       if (n <= max) return { pieces: [{ kind: 'tag', text: `${totalSymbol}${n}`, number: n }], total: n };
     }
   }

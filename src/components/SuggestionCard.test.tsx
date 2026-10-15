@@ -231,3 +231,19 @@ describe('strength badge', () => {
     expect(strengthWord(12)).toBe('weak');
   });
 });
+
+describe('tab stops on a card', () => {
+  it('makes the password one stop (the password itself, a button) and each badge a focusable anchor', () => {
+    const { s, context } = first({});
+    show(s, context);
+    const password = screen.getByText(s.password);
+    expect(password.getAttribute('tabindex')).toBe('0'); // the button
+    expect(password.parentElement!.className).toContain('pw-tip-anchor');
+    expect(password.parentElement!.getAttribute('tabindex')).toBe('-1'); // the anchor around it is not a second stop
+    for (const badge of ['Strength', 'Difficulty', 'Memorability']) {
+      const anchor = screen.getByLabelText(new RegExp(`^${badge} `)).parentElement!;
+      expect(anchor.className).toContain('pw-tip-anchor');
+      expect(anchor.getAttribute('tabindex')).toBe('0');
+    }
+  });
+});

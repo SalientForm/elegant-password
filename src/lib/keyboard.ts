@@ -68,6 +68,14 @@ export function lookupKey(char: string): { key: Key; shifted: boolean } | undefi
   return KEYS.get(char);
 }
 
+/**
+ * A character the US layout has no key for (é, £, a tab) is charged as a
+ * shifted press of the key furthest from home, since it takes a dead key,
+ * AltGr or a compose sequence; scoring never throws on text a user pastes.
+ */
+export const OFF_MODEL_PRESS: { key: Key; shifted: boolean } = { key: KEYS.get('`')!.key, shifted: true };
+export const pressFor = (char: string): { key: Key; shifted: boolean } => KEYS.get(char) ?? OFF_MODEL_PRESS;
+
 // Where each pinky rests on the home row.
 const PINKY_HOME = { 0: lookupKey('a')!.key, 7: lookupKey(';')!.key } as const;
 
@@ -139,9 +147,7 @@ export interface TypingProfile {
 
 export function typingProfile(text: string): TypingProfile {
   const presses = [...text].map((c) => {
-    const k = lookupKey(c);
-    if (!k) throw new Error(`Character ${JSON.stringify(c)} is not on the QWERTY model`);
-    return k;
+    return pressFor(c);
   });
 
   let cost = 0;

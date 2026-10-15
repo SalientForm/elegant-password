@@ -28,7 +28,7 @@ export function parseRequirements(raw: unknown): Requirements {
     if (key === 'separator') {
       if (isString(value) && !separatorProblem(value, { allowSpaces: true, allowedSymbols: isString(raw.allowedSymbols) ? raw.allowedSymbols : DEFAULT_REQUIREMENTS.allowedSymbols })) out.separator = value;
     } else if (key === 'comfort') {
-      if (isString(value) && value in COMFORT_SHARE) out.comfort = value as Comfort;
+      if (isString(value) && own(COMFORT_SHARE, value)) out.comfort = value as Comfort;
     } else if (typeof fallback === 'number') {
       if (isFiniteNumber(value)) out[key] = value;
     } else if (typeof fallback === 'boolean') {
@@ -38,13 +38,39 @@ export function parseRequirements(raw: unknown): Requirements {
     }
   }
   const req = out as unknown as Requirements;
+  if (valid(req)) return req;
+  // Validation looks across fields (the minimum against the maximum): repair the record field by field, each
+  // offending field back to its default, rather than discard it, so one bad field never wipes every other setting.
+  const keys = Object.keys(DEFAULT_REQUIREMENTS) as (keyof Requirements)[];
+  const reset = (base: Requirements, ...which: (keyof Requirements)[]) => Object.assign({ ...base }, ...which.map((k) => ({ [k]: DEFAULT_REQUIREMENTS[k] }))) as Requirements;
+  for (const key of keys) {
+    const fixed = reset(req, key);
+    if (valid(fixed)) return fixed;
+  }
+  for (const a of keys) {
+    for (const b of keys) {
+      if (a === b) continue;
+      const fixed = reset(req, a, b);
+      if (valid(fixed)) return fixed;
+    }
+  }
+  let fixed = req;
+  for (const key of keys) {
+    fixed = reset(fixed, key);
+    if (valid(fixed)) return fixed;
+  }
+  return DEFAULT_REQUIREMENTS;
+}
+
+const valid = (req: Requirements): boolean => {
   try {
     validate(req);
-    return req;
+    return true;
   } catch {
-    return DEFAULT_REQUIREMENTS;
+    return false;
   }
-}
+};
+const own = (o: object, key: string) => Object.prototype.hasOwnProperty.call(o, key); // never a prototype key such as "toString"
 
 export function parseSentenceOptions(raw: unknown): SentenceOptions {
   if (!isRecord(raw)) return DEFAULT_SENTENCE_OPTIONS;
@@ -74,7 +100,7 @@ export const saveSentenceOptions = (store: KeyValueStore | undefined, opts: Sent
 export function parseSort(raw: unknown): SortOrder {
   // Earlier versions stored 'easiest' and 'strongest'.
   const legacy: Record<string, SortOrder> = { easiest: 'difficulty', strongest: 'strength' };
-  if (isString(raw) && raw in legacy) return legacy[raw]!;
+  if (isString(raw) && own(legacy, raw)) return legacy[raw]!;
   return isString(raw) && SORT_ORDERS.includes(raw as SortOrder) ? (raw as SortOrder) : DEFAULT_SORT;
 }
 

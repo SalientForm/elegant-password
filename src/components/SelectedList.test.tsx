@@ -83,3 +83,14 @@ describe('SelectedList', () => {
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)).toEqual([]);
   });
 });
+
+describe('SelectedList with characters off the US keyboard', () => {
+  it('shows an entry such as “naïve;otters” restored from storage, scored, instead of crashing the page', () => {
+    mount([{ password: 'naïve;otters', hint: 'naive otters', addedAt: '2026-10-15T12:00:00.000Z' }]);
+    const item = within(screen.getByRole('list', { name: 'My passwords' })).getByRole('listitem');
+    expect(within(item).getByText('naïve;otters')).toBeTruthy();
+    const score = scoreCold('naïve;otters', 'naive otters');
+    expect(within(item).getByText(`D ${score.difficulty.score}`)).toBeTruthy();
+    expect(within(item).getByText(`M ${score.memorability.score}`)).toBeTruthy();
+  });
+});

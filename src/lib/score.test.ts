@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements } from './generate';
 import { fromSentence } from './fromSentence';
-import { isMemorableDigits, scoreAlone, scoreCold, wordBitsFromText } from './score';
+import { isMemorableDigits, scoreAlone, scoreCold, twistsToTry, wordBitsFromText } from './score';
 import { initialsOf, pools } from './grammar';
 import { seeded } from './testRandom';
+import { lookupKey, OFF_MODEL_PRESS, pressFor } from './keyboard';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, ...over });
 
@@ -189,5 +190,37 @@ describe('memorable digit runs', () => {
   it('means repeats, consecutive runs and well-known skips, not any pair of digits', () => {
     for (const d of ['7', '77', '123', '4321', '0123', '2468', '97531']) expect(isMemorableDigits(d), d).toBe(true);
     for (const d of ['42', '159', '8402', '1324', '13']) expect(isMemorableDigits(d), d).toBe(false);
+  });
+});
+
+describe('characters off the US keyboard', () => {
+  it('scores pasted text with accents, currency signs or tabs instead of throwing', () => {
+    for (const text of ['café', '£12', '€uro', 'naïve;otters', 'tab\there', '日本']) {
+      const alone = scoreAlone(text);
+      expect(Number.isFinite(alone.bits)).toBe(true);
+      expect(alone.difficulty.score).toBeGreaterThanOrEqual(0);
+    }
+    const cold = scoreCold('naïve;otters', 'naive otters');
+    expect(Number.isFinite(cold.bits)).toBe(true);
+    expect(cold.memorability.score).toBeGreaterThanOrEqual(0);
+  });
+
+  it('charges such a character as a shifted press of the key furthest from home', () => {
+    expect(pressFor('é')).toEqual(OFF_MODEL_PRESS);
+    expect(OFF_MODEL_PRESS.shifted).toBe(true);
+    expect(pressFor('é').key).toBe(lookupKey('`')!.key);
+    expect(scoreAlone('cafe').difficulty.score).toBeLessThan(scoreAlone('café').difficulty.score); // it costs more, never nothing
+  });
+});
+
+describe('cold scoring very long words', () => {
+  it('tries fewer swaps on long words, so a 34-letter word scores in milliseconds rather than seconds', () => {
+    expect(twistsToTry(8)).toBe(3);
+    expect(twistsToTry(12)).toBe(2);
+    expect(twistsToTry(34)).toBe(1);
+    const started = performance.now();
+    const r = scoreCold('Sprclfr6lstcxpldkz;@ntd$stbl$hmntrnsm....', 'supercalifragilisticexpialidocious antidisestablishmentarianism');
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(Number.isFinite(r.bits)).toBe(true);
   });
 });
