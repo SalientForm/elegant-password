@@ -11,7 +11,8 @@ explanation for each:
   so you remember one picture, not a string.
 - **Fast to type**: words are ranked on a QWERTY model that rewards nearby keys
   and runs along one row, and penalises long reaches, row jumps, same-finger
-  pairs and Shift. Case never alternates: at most one capital, at the start.
+  pairs and Shift. Case never alternates inside a word: one capital starts a
+  word, and several mean whole words in capitals.
   The default separator is `;`, on the home row under the right pinky; "auto"
   prefers a space (thumb) when the site allows one.
 - **Strong**: entropy is computed exactly, as log2 of the number of passwords
@@ -28,8 +29,9 @@ explanation for each:
 
 - **Two modes.** *Make up a sentence* generates one; *Use my sentence* takes
   yours ("Sally eats sweets" -> `Salli3@tswts!`) and fits it to the rules:
-  lowercase, drop inner vowels from long words, twist letters for required
-  digits and symbols, then append only what twists cannot supply. The
+  lowercase, drop inner vowels from long words, meet required digits with
+  swaps half the time and otherwise a number in front or at the end, and
+  required symbols with a few swaps, then closing marks. The
   sentence is kept in this tab only (sessionStorage) so a refresh does not
   lose it, and is never sent anywhere; it is only kept longer if you add a
   password to your list, as that password's hint.
@@ -111,8 +113,9 @@ explanation for each:
   scored too and becomes the password under test; corrections (Backspace,
   Delete), time, words per minute and accuracy are reported against the
   rubric's estimate, with a strength figure estimated from the text alone
-  (`scoreAlone`). "Lock password" keeps the target through a mistyped Enter.
-  Nothing is stored.
+  (`scoreAlone`). The password under test stays, through mistyped runs,
+  until the Clear button, a paste or a new list entry replaces it; one that
+  arrived without a hint can be given one. Nothing is stored.
 - **Fun page** (`#/fun`): a full rebuild-the-app spec prompt, generated from
   the live constants and rendered as formatted text, with Copy and Download
   of the markdown. It embeds the algorithm flow document verbatim as a

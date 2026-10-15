@@ -12,8 +12,8 @@ two-letter words, made-up nouns, glue, swaps) each have their own step.
 | Criterion | Kind | Where it is enforced |
 | --- | --- | --- |
 | Length between min and max | generic (range) | Planning: the length model counts only word sequences whose letters plus separators and closing marks fit. Swaps are limited to a length window. Sentence mode compresses to the target; a sentence under the minimum is padded (section 3) and anything still outside the range is refused. |
-| At least N uppercase letters | generic (class count) | Planning never picks a shape with fewer letters than N; swaps keep at least N letters; rendering capitalises the first letter (N = 1) or whole words (N ≥ 2). Capital initials and ALL-CAPS made-up nouns count first. |
-| At least N digits | generic (class count) | Generated: the number has N digits. Sentence: digit swaps first (`e→3`, `for→4`), then a comfortable N-digit number is appended. |
+| At least N uppercase letters | generic (class count) | Planning never picks a shape with fewer letters than N; swaps keep at least N letters; rendering capitalises one letter (N = 1) or whole words (N ≥ 2), starting at the first ordinary word (generated) or a random word, wrapping round (sentence). Capital initials and ALL-CAPS made-up nouns count first. |
+| At least N digits | generic (class count) | Generated: the number has N digits. Sentence: half the time digit swaps first (`e→3`, `for→4`), then a comfortable number of the missing digits goes in front or at the end, at random, and into the hint there. |
 | At least N symbols | generic (class count) | Symbol separators count; the shortfall is symbol swaps (sentence mode, a random number of them up to three) or a closing symbol drawn at random for each password from the allowed comfortable set (never the separator), repeated. |
 | Only these symbols, spaces or not | generic (alphabet) | Every symbol the tool picks on its own (separator, closing mark, swap output) is filtered by the allowed set; closing marks and swap outputs are never the separator character, since a password never starts or ends with its separator (when the separator is the only allowed symbol and marks are needed, the request is refused). A separator chosen by hand must be allowed or the request is rejected. |
 | Separator | specific | `auto` → space if allowed, else the first allowed and comfortable of `; . - , _`, else none. A chosen separator is honoured even if it is a stretch. |
@@ -25,7 +25,7 @@ two-letter words, made-up nouns, glue, swaps) each have their own step.
 | Two-letter words | specific | Fixed-priority positions become first letter + last consonant; pool becomes distinct pairs. Never swapped. |
 | Made-up nouns | specific | The first N noun slots draw from the key-roll words (all lowercase or ALL CAPS). Never swapped, never recased. |
 | Glue | specific | The number and small-word initials attach to the next word without a separator; the separator count drops accordingly. |
-| Swaps (twists) | specific | Exactly N where the letters allow, placed uniformly among every distinct outcome inside the length and letter limits; fewer with a warning when they do not. |
+| Swaps (twists) | specific | The minimum N, or half the time N + 1 (never above 3), where the letters allow, placed uniformly among every distinct outcome inside the length and letter limits; fewer with a warning when they do not. |
 | Count | generic | Each suggestion is an independent draw. |
 
 ## 2. Make up a sentence
@@ -52,7 +52,8 @@ Why planning before sampling: the entropy must be known exactly, so the set
 of possible passwords is counted first and the password is then drawn
 uniformly from exactly that set. Fixed rules (which positions become
 initials, how capitals are applied, the separator) add no bits and are not
-random.
+random. The closing symbol is drawn at random for each password, for variety,
+but counts no bits either.
 
 ## 3. Use my sentence
 
@@ -91,11 +92,11 @@ everywhere it appears (a card, the saved list, a year later).
 ```mermaid
 flowchart TD
   A[password + hint] --> B[normalise the hint into words]
-  B --> C[align each word in the password:\nwhole, shortened, initial, number, or swapped spelling;\nstep over one separator when nothing matches in place]
+  B --> C[align each word in the password:\nwhole, shortened, initial, number, or swapped spelling;\nelse further along the run of symbols that follows]
   C --> C2[repeated digits or symbols count as the\nsame word; a length tag's digits are a number word]
   C2 --> D{hint matches a\nsentence template?}
   D -- yes --> E[most restrictive comfort level whose pools\ncontain every word → pool sizes →\nsentence bits = Σ log2 sizes + number position]
-  D -- no --> F[sentence bits = 0;\ninitial-choice bits = log2 C(eligible words, initials)]
+  D -- no --> F[each word from its text: a list pick,\n2.3 bits a letter, or its digits;\n+ log2 C(eligible words, initials)]
   E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the swaps found]
   F --> G
   G --> H[difficulty rubric on the password,\nmemory load = words + swaps]
