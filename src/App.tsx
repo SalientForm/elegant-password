@@ -21,7 +21,7 @@ const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : win
 
 const TITLE = 'The Elegant Password';
 const DESCRIPTIONS: Record<Page, string> = {
-  main: 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.',
+  main: 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.',
   scoring: 'How difficulty, strength and memorability are scored.',
   fun: 'The whole app, described as one prompt.',
 };
