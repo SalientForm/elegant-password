@@ -1,7 +1,9 @@
 :root {
   --bg: #f6f4ef;
   --bg-top: color-mix(in srgb, var(--bg), black 20%); /* the top of the page gradient: 20% of brightness darker than the page colour */
-  --bar: color-mix(in srgb, var(--bg-top), white 20%); /* the header and the phone bar: opaque, a fifth of the way to white from the top of the gradient they cover */
+  --bar: color-mix(in srgb, var(--bg-top), white 20%); /* opaque, a fifth of the way to white from the top of the gradient the header and phone bar cover */
+  --phone-bar-bg: color-mix(in srgb, var(--bar), var(--panel) 50%); /* the phone bar: half way from that to the panel colour (white in light mode) */
+  --header-bg: color-mix(in srgb, var(--bar), var(--panel) 75%); /* the top header: three quarters of the way, lighter than the bar that runs under it */
   --line-dark: color-mix(in srgb, var(--line), black 18%); /* the header's bottom line, a shade darker than the tabs' border above it */
   --toggle: color-mix(in srgb, var(--panel), var(--bg) 30%); /* an unselected toggle button: near white, just off the panel colour */
   --panel: #ffffff;
@@ -112,17 +114,19 @@ main.columns > .strip { position: sticky; top: 0; height: 100vh; height: 100dvh;
  * centred in it.
  */
 main.columns.phone { display: block; }
-.phone-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.3rem max(0.9rem, env(safe-area-inset-right, 0px)) 0.3rem max(0.9rem, env(safe-area-inset-left, 0px)); margin: 0 calc(50% - 50vw) 0.9rem; background: var(--bar); border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgb(0 0 0 / 0.12); } /* full width, its content lined up with the page's */
+.phone-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.3rem max(0.9rem, env(safe-area-inset-right, 0px)) 0.3rem max(0.9rem, env(safe-area-inset-left, 0px)); margin: 0 calc(50% - 50vw) 0.9rem; background: var(--phone-bar-bg); border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgb(0 0 0 / 0.12); } /* full width, its content lined up with the page's */
 .phone-menu { position: relative; grid-column: 1; justify-self: start; } /* the empty track at the right mirrors it, so the tabs are centred in the bar */
+.phone-menu > button.icon-button, .phone-menu > button.icon-button:hover { background: transparent; border-color: transparent; box-shadow: none; } /* the hamburger is the bare symbol, no button chrome */
 .phone-menu nav[hidden] { display: none; } /* the menu is always in the document, so the hamburger's aria-controls has a target */
 .phone-menu nav { position: absolute; top: calc(100% + 0.3rem); left: 0; z-index: 6; display: grid; min-width: 10rem; padding: 0.3rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); }
 .phone-menu nav a { padding: 0.55rem 0.8rem; border-radius: 6px; color: var(--ink); font-weight: 600; text-decoration: none; }
 .phone-menu nav a.active { background: var(--accent-soft); color: var(--accent); }
-.phone-bar .section-tabs { grid-column: 2; justify-self: center; display: flex; gap: 0.2rem; max-width: 100%; padding: 0.2rem; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
-.phone-bar .section-tabs button { border: 0; background: transparent; padding: 0.4rem 0.55rem; border-radius: 999px; font-weight: 600; font-size: 0.8rem; color: var(--muted); min-width: 0; white-space: nowrap; }
-.phone-bar .section-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
+.phone-bar .section-tabs { grid-column: 2; justify-self: center; display: flex; gap: 0.2rem; max-width: 100%; padding: 0.2rem; background: color-mix(in srgb, var(--bg) 50%, transparent); border: 1px solid var(--line-dark); border-radius: var(--radius); } /* styled like the toggle groups, the pill's page background half see-through over the bar */
+.phone-bar .section-tabs button { border: 1px solid var(--line-dark); background: var(--toggle); padding: 0.4rem 0.5rem; border-radius: 7px; font-weight: 600; font-size: 0.8rem; color: var(--muted); min-width: 0; white-space: nowrap; }
+.phone-bar .section-tabs button[aria-selected='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .phone-page { grid-column: 2; justify-self: center; font-weight: 700; }
-@media (max-width: 400px) { .phone-bar .section-tabs button { font-size: 0.7rem; padding: 0.4rem 0.45rem; } } /* the narrowest phones: the three tabs still clear the hamburger */
+@media (max-width: 400px) { .phone-bar { gap: 0.2rem; } .phone-bar .section-tabs { gap: 0.1rem; } .phone-bar .section-tabs button { font-size: 0.7rem; } } /* the narrowest phones: the three tabs still clear the hamburger */
+@media (max-width: 359px) { .phone-bar { grid-template-columns: 2.6rem minmax(0, 1fr) 0; } } /* below 360 px the empty track mirroring the hamburger gives its room to the tabs, which sit a little right of centre */
 @media (max-width: 600px) { main.columns.narrow { gap: 0.6rem; } main.columns > .strip { width: 2rem; } .strip-button { font-size: 0.8rem; padding: 0.8rem 0.25rem; } .results-tools .segmented.sort { display: flex; flex-wrap: wrap; } .results-tools .segmented.sort > button { flex: 1 1 0; min-width: max-content; } /* the three order labels share a row at equal widths, and wrap only when one no longer fits */ .segmented > button { min-width: 0; padding-inline: 0.3rem; font-size: 0.8rem; } }
 .segmented.sort { grid-template-columns: repeat(3, 1fr); }
 .scoring { display: grid; gap: 1rem; margin-bottom: 1rem; }
@@ -130,6 +134,16 @@ main.columns.phone { display: block; }
 .scoring p { margin: 0.4rem 0 0; }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; }
+/*
+ * On a phone the cards run edge to edge with square corners and no gaps, each
+ * closed by one straight line below it, so a single line separates two cards.
+ * The first card meets the bar's own bottom line.
+ */
+@media (max-width: 600px) {
+  .panel { margin-inline: calc(50% - 50vw); border-width: 0 0 1px; border-color: var(--line-dark); border-radius: 0; padding-inline: max(1.2rem, env(safe-area-inset-left, 0px)) max(1.2rem, env(safe-area-inset-right, 0px)); }
+  main.columns.phone > .sidebar, main.columns.phone > .results, main.columns.phone > .aside, .scoring { gap: 0; }
+  main.columns.phone, .scoring { margin-top: -0.9rem; } /* cancels the bar's bottom margin */
+}
 
 .sidebar { display: grid; gap: 1rem; }
 .form, .twists { display: grid; gap: 0.9rem; }
@@ -307,7 +321,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
  * the tabs' own light border just above it. Its inner box lines up with the
  * page content.
  */
-.app-header { margin: -0.75rem calc(50% - 50vw) 1.25rem; padding-top: 0.75rem; background: var(--bar); border-bottom: 1px solid var(--line-dark); box-shadow: 0 2px 10px rgb(0 0 0 / 0.1); }
+.app-header { margin: -0.75rem calc(50% - 50vw) 1.25rem; padding-top: 0.75rem; background: var(--header-bg); border-bottom: 1px solid var(--line-dark); box-shadow: 0 2px 10px rgb(0 0 0 / 0.1); }
 .app-header .header-inner { max-width: 1380px; margin: 0 auto; padding: 0 1.25rem; }
 /* On a phone the bar below meets the header with no gap, and the header (with its shadow) is drawn over it, so the bar reads as running out from underneath. */
 @media (max-width: 600px) { .app-header { position: relative; z-index: 6; margin-bottom: 0; } }
