@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements } from './generate';
 import { fromSentence } from './fromSentence';
-import { scoreCold } from './score';
+import { scoreAlone, scoreCold } from './score';
 import { seeded } from './testRandom';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, ...over });
@@ -94,10 +94,45 @@ describe('scoreCold', () => {
     }
   });
 
+  it('reads padding: repeated characters inside a word and a length tag after it', () => {
+    const repeated = scoreCold('$t33333l', 'steel');
+    expect(repeated.words[0]).toMatchObject({ form: 'word', text: '$t33333l', twists: 3 });
+    expect(repeated.aligned).toBe(true);
+    const tagged = scoreCold('Sally;e4ts;swts;123;%24', 'Sally eats sweets 123 %24');
+    expect(tagged.aligned).toBe(true);
+    expect(tagged.words.map((w) => w.text)).toEqual(['Sally', 'e4ts', 'swts', '123', '24']);
+    // An in-place symbol still wins over skipping: "@pples" is the word, not a tag.
+    expect(scoreCold('Big;@pples', 'big apples').words[1]).toMatchObject({ text: '@pples', twists: 1 });
+  });
+
   it('is fast enough to score a whole list on every render', () => {
     const r = generate(req({ twists: 3, count: 20, maxLength: 48 }), { rng: seeded(8) });
     const start = performance.now();
     for (const s of r.suggestions) scoreCold(`${s.password}`, `${s.hint} `); // cache miss: different key
     expect(performance.now() - start).toBeLessThan(400);
+  });
+});
+
+describe('scoreAlone', () => {
+  it('is a pure function of the text and recognises this tool\'s own words', () => {
+    const a = scoreAlone('Sleepy;otters;paint;7;boats!!');
+    expect(a).toEqual(scoreAlone('Sleepy;otters;paint;7;boats!!'));
+    const words = a.parts.filter((p) => p.kind === 'word');
+    expect(words.map((p) => p.text)).toEqual(['Sleepy', 'otters', 'paint', 'boats']);
+    expect(words.every((p) => p.poolSize! > 100 && p.bits > 6)).toBe(true);
+    expect(a.parts.find((p) => p.text === '7')).toMatchObject({ kind: 'digits' });
+    expect(a.parts.find((p) => p.text === '!!')).toMatchObject({ kind: 'symbols' });
+    expect(a.bits).toBeGreaterThan(30);
+    expect(a.difficulty.measurements.chunks).toBe(10); // 5 runs of letters or digits, 4 separators, the closing marks
+  });
+
+  it('counts unknown letters as English-like text and free digits and symbols as full choices', () => {
+    const text = scoreAlone('xqzv');
+    expect(text.parts[0]).toMatchObject({ kind: 'letters' });
+    expect(text.bits).toBeCloseTo(4 * 2.3);
+    expect(scoreAlone('8402').bits).toBeCloseTo(4 * Math.log2(10));
+    expect(scoreAlone('1234').bits).toBeLessThan(scoreAlone('8402').bits); // a memorable run is one pick
+    expect(scoreAlone('!!!!').bits).toBeLessThan(scoreAlone('!@#$').bits); // a repeat is one symbol and a count
+    expect(scoreAlone('').bits).toBe(0);
   });
 });

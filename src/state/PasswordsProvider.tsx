@@ -13,7 +13,8 @@ import { createGenerator, type Generator } from '../lib/generator';
 import { activeMappings, loadMappingSettings, saveMappingSettings, type MappingSettings } from '../lib/mappingStore';
 import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from '../lib/selectedStore';
 import { loadSession, saveSession } from '../lib/sessionStore';
-import { loadMode, loadRequirements, loadSentenceOptions, saveMode, saveRequirements, saveSentenceOptions } from '../lib/settingsStore';
+import { loadMode, loadRequirements, loadSentenceOptions, loadSort, saveMode, saveRequirements, saveSentenceOptions, saveSort } from '../lib/settingsStore';
+import type { SortOrder } from '../lib/sort';
 import { browserStore, type KeyValueStore } from '../lib/storage';
 import type { Mapping } from '../lib/twists';
 
@@ -45,6 +46,9 @@ export interface PasswordsContextValue {
   /** Which mode is open. Takes effect at once; it is navigation, not a setting. */
   mode: Mode;
   setMode: (next: Mode) => void;
+  /** How suggestions are ordered on screen. Takes effect at once. */
+  sort: SortOrder;
+  setSort: (next: SortOrder) => void;
   /** The last finished batch, kept on screen while the next one is made. */
   outcome: Outcome | null;
   /** True while a batch is being generated. */
@@ -95,6 +99,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   }));
   const [draft, setDraft] = useState<Settings>(applied);
   const [mode, setMode] = useState(() => loadMode(localStore));
+  const [sort, setSort] = useState(() => loadSort(localStore));
   const [selected, setSelected] = useState(() => loadSelected(localStore));
   const [round, setRound] = useState(restored?.round ?? 0);
   const [result, setResult] = useState<Result | null>(
@@ -134,6 +139,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   useEffect(() => void saveSentenceOptions(localStore, applied.sentenceOptions), [localStore, applied.sentenceOptions]);
   useEffect(() => saveMappingSettings(applied.mappingSettings, localStore), [localStore, applied.mappingSettings]);
   useEffect(() => void saveMode(localStore, mode), [localStore, mode]);
+  useEffect(() => void saveSort(localStore, sort), [localStore, sort]);
   useEffect(() => void saveSelected(localStore, selected), [localStore, selected]);
 
   // Generate when the applied inputs or the round change, unless the batch on
@@ -198,6 +204,8 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       mappings,
       mode,
       setMode,
+      sort,
+      setSort,
       outcome: result?.outcome ?? null,
       busy,
       stale: !!result && result.key !== key,
@@ -208,7 +216,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       clearSelected,
       isSelected,
     }),
-    [draft, applied, dirty, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, result, busy, key, regenerate, selected, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, result, busy, key, regenerate, selected, addSelected, removeSelected, clearSelected, isSelected],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;

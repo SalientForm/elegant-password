@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, trimInterior } from './fromSentence';
+import { DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, trimInterior, type SentenceOptions } from './fromSentence';
 import { DEFAULT_REQUIREMENTS, RequirementsError, type Requirements } from './generate';
 import { scoreCold } from './score';
 import { seeded } from './testRandom';
@@ -42,7 +42,7 @@ describe('fromSentence', () => {
     const r = fromSentence(
       'jupiter brings 5 leds for piece',
       req({ separator: ';', glue: true, initials: 1, twists: 0, minLength: 8, count: 8 }),
-      { shrink: 'vowels', shrinkFrom: 6, allowDropping: true, smallWordInitials: true, targetLength: 12 },
+      { ...DEFAULT_SENTENCE_OPTIONS, shrink: 'vowels', shrinkFrom: 6, allowDropping: true, smallWordInitials: true, targetLength: 12 },
       { rng: seeded(12) },
     );
     console.log(r.suggestions.map((s) => s.password).join('  '));
@@ -60,14 +60,14 @@ describe('fromSentence', () => {
     const r = fromSentence(
       'jupiter brings bright leds',
       req({ separator: ' ', twists: 0, minDigits: 0, minSymbols: 0, minUppercase: 0, minLength: 4, count: 1 }),
-      { shrink: 'ends', shrinkFrom: 4, allowDropping: true, smallWordInitials: true, targetLength: null },
+      { ...DEFAULT_SENTENCE_OPTIONS, shrink: 'ends', shrinkFrom: 4, allowDropping: true, smallWordInitials: true, targetLength: null },
       { rng: seeded() },
     );
     expect(r.suggestions[0]!.password).toBe('jr bs bt ls');
   });
 
   it('drops small words, then others, for very short targets', () => {
-    const opts = { shrink: 'vowels' as const, shrinkFrom: 6, allowDropping: true, smallWordInitials: false, targetLength: 8 };
+    const opts = { ...DEFAULT_SENTENCE_OPTIONS, shrink: 'vowels' as const, shrinkFrom: 6, allowDropping: true, smallWordInitials: false, targetLength: 8 };
     const r = fromSentence('the cat sat on the warm mat by the door', req({ separator: '', twists: 0, minLength: 6, count: 3 }), opts, {
       rng: seeded(),
     });
@@ -119,8 +119,82 @@ describe('fromSentence', () => {
 
   it('explains what cannot be fitted', () => {
     expect(() => fromSentence('', req({}))).toThrow(/Type a sentence/);
-    expect(() => fromSentence('hi', req({ minLength: 20 }), undefined, { rng: seeded() })).toThrow(/under the 20 minimum/);
+    const noPadding = { ...DEFAULT_SENTENCE_OPTIONS, padding: false };
+    expect(() => fromSentence('hi', req({ minLength: 20 }), noPadding, { rng: seeded() })).toThrow(/under the 20 minimum/);
     const noDropping = { ...DEFAULT_SENTENCE_OPTIONS, allowDropping: false };
     expect(() => fromSentence('a b c d e f g h i j k l m n o p', req({ maxLength: 12 }), noDropping, { rng: seeded() })).toThrow(RequirementsError);
+  });
+});
+
+describe('padding', () => {
+  const short = (over: Partial<Requirements>, opts: Partial<SentenceOptions> = {}, sentence = 'hi there', seed = 3) =>
+    fromSentence(sentence, req({ twists: 0, count: 3, ...over }), { ...DEFAULT_SENTENCE_OPTIONS, ...opts }, { rng: seeded(seed) });
+
+  it('pads a short sentence to exactly the minimum, ending with a total-length tag that states that length', () => {
+    const r = short({ minLength: 20, maxLength: 32 });
+    for (const s of r.suggestions) {
+      expect(s.password.length).toBe(20);
+      expect(s.password).toMatch(/%20$/);
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+      expect(s.steps.join(' ')).toMatch(/padded to the 20-character minimum/);
+      expect(s.hint).toMatch(/^hi there .*%20$/);
+      expect(scoreCold(s.password, s.hint).aligned).toBe(true);
+    }
+  });
+
+  it('adds a whole word only when more than 3 characters short, and uses repeats, digits and marks for the rest', () => {
+    // "Hi;th3re" is 8 characters; 12 wants 4 more: too few for a word, so one repeat and the tag.
+    const small = short({ minLength: 12, maxLength: 32 }).suggestions[0]!;
+    expect(small.password).toHaveLength(12);
+    expect(small.words.some((w) => w.slot === 'fluff')).toBe(false);
+    // 30 wants 22 more: words fill most of it.
+    const big = short({ minLength: 30, maxLength: 40 }).suggestions[0]!;
+    expect(big.password).toHaveLength(30);
+    expect(big.words.filter((w) => w.slot === 'fluff').length).toBeGreaterThan(0);
+    expect(big.password).toMatch(/%30$/);
+    // No symbols at all, so no tag and no marks: digits and repeats only.
+    const bare = short({ minLength: 14, maxLength: 20, minSymbols: 0, allowedSymbols: '', separator: '' }).suggestions[0]!;
+    expect(bare.password.length).toBeGreaterThanOrEqual(14);
+    expect(bare.password).toMatch(/^[A-Za-z0-9]+$/);
+  });
+
+  it('uses a factor tag when asked: the number divides the length of everything before it', () => {
+    const r = short({ minLength: 20, maxLength: 32 }, { lengthTag: 'factor' });
+    for (const s of r.suggestions) {
+      expect(s.password).toHaveLength(20);
+      const m = s.password.match(/@(\d+)$/);
+      expect(m, s.password).toBeTruthy();
+      const left = s.password.length - m![0].length;
+      expect(left % Number(m![1])).toBe(0);
+      expect(scoreCold(s.password, s.hint).aligned).toBe(true);
+    }
+  });
+
+  it('repeats a digit a swap put inside a word, and the cold scorer still reads the word', () => {
+    // A two-character gap with no tag symbols and no marks allowed: the repeat is the only exact filler.
+    const base = short({ minLength: 1, maxLength: 40, allowedSymbols: ';', separator: ';' }, {}, 'sweet steel beams').suggestions[0]!;
+    const digit = base.password.match(/[0-9]/);
+    expect(digit, base.password).toBeTruthy();
+    const padded = short({ minLength: base.password.length + 2, maxLength: 40, allowedSymbols: ';', separator: ';' }, { lengthTag: 'none' }, 'sweet steel beams').suggestions[0]!;
+    expect(padded.password).toHaveLength(base.password.length + 2);
+    expect(padded.password).toMatch(/([0-9])\1\1/); // the digit the swap placed, repeated twice more
+    expect(padded.steps.join(' ')).toMatch(/repeated 2 more times/);
+    const cold = scoreCold(padded.password, padded.hint);
+    expect(cold.aligned).toBe(true);
+    expect(cold.twistCount).toBe(scoreCold(base.password, base.hint).twistCount);
+  });
+
+  it('respects the maximum and falls back to the sentence problem when padding is off', () => {
+    const tight = short({ minLength: 20, maxLength: 20 });
+    for (const s of tight.suggestions) expect(s.password).toHaveLength(20);
+    expect(() => short({ minLength: 20 }, { padding: false })).toThrow(/under the 20 minimum/);
+  });
+
+  it('keeps the sentence\'s own material first: words are kept whole before any padding is added', () => {
+    const r = short({ minLength: 17, maxLength: 32 }, {}, 'Sally eats sweets');
+    for (const s of r.suggestions) {
+      expect(s.password.length).toBeGreaterThanOrEqual(17);
+      expect(s.steps.join(' ')).not.toMatch(/shortened|padded/); // "sweets" kept whole did the job
+    }
   });
 });

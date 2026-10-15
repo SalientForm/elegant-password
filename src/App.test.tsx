@@ -67,7 +67,7 @@ describe('App: apply changes', () => {
     expect(screen.getByRole('button', { name: 'Strict' }).getAttribute('aria-pressed')).toBe('false');
 
     fireEvent.click(screen.getByRole('button', { name: 'Strict' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
     await waitFor(() => expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull());
     await waitFor(() => expect(passwordsShown()).not.toEqual(before), { timeout: 10_000 });
     expect(JSON.parse(window.localStorage.getItem('elegant-passwords:requirements:v1')!).comfort).toBe('strict');
@@ -78,7 +78,7 @@ describe('App: apply changes', () => {
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     fireEvent.keyDown(screen.getAllByRole('tab')[0]!, { key: 'ArrowRight' });
     fireEvent.change(screen.getByLabelText('Your sentence'), { target: { value: 'Sally eats sweets on Sundays' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
     // The first card's "Why?" is open and shows the hint: the sentence itself.
     await waitFor(() => expect(within(cards()[0]!).getByText(/Sally eats sweets on Sundays/)).toBeTruthy(), { timeout: 10_000 });
     const shown = passwordsShown();
@@ -87,5 +87,35 @@ describe('App: apply changes', () => {
     await waitFor(() => expect(cards().length).toBe(shown.length));
     expect(passwordsShown()).toEqual(shown);
     expect((screen.getByLabelText('Your sentence') as HTMLTextAreaElement).value).toBe('Sally eats sweets on Sundays');
+  });
+});
+
+describe('App: order and pages', () => {
+  const scores = () => cards().map((c) => Number(within(c).getByText(/^Difficulty \d+/).textContent!.match(/\d+/)![0]));
+  const bits = () => cards().map((c) => Number(within(c).getByText(/bits$/).textContent!.match(/\d+/)![0]));
+
+  it('shows suggestions easiest first by default and strongest first on request', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const easy = scores();
+    expect([...easy].sort((a, b) => a - b)).toEqual(easy);
+    expect(screen.getByRole('button', { name: 'Easiest first' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Strongest first' }));
+    const strong = bits();
+    expect([...strong].sort((a, b) => b - a)).toEqual(strong);
+    expect(JSON.parse(window.localStorage.getItem('elegant-passwords:sort:v1')!)).toBe('strongest');
+  });
+
+  it('has a Scoring page with the rubric and the bits explanation, and keeps the typing test and list in the right column', async () => {
+    render(<App />);
+    expect(screen.getByLabelText('Password to test')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'My list' })).toBeTruthy();
+    expect(screen.queryByText('How difficulty is scored')).toBeNull();
+    window.location.hash = '#/scoring';
+    fireEvent(window, new Event('hashchange'));
+    expect(await screen.findByRole('heading', { name: 'Strength, in bits' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeTruthy();
+    expect(screen.getByText('Finger rolls')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Scoring' }).getAttribute('aria-current')).toBe('page');
   });
 });

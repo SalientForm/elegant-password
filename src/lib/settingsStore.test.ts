@@ -3,6 +3,9 @@ import { DEFAULT_SENTENCE_OPTIONS } from './fromSentence';
 import { DEFAULT_REQUIREMENTS } from './generate';
 import {
   loadMode,
+  loadSort,
+  parseSort,
+  saveSort,
   loadRequirements,
   loadSentenceOptions,
   parseMode,
@@ -42,9 +45,17 @@ describe('settings store', () => {
     });
     expect(parseSentenceOptions({ shrink: 'wat', shrinkFrom: 1, targetLength: 'x' })).toEqual(DEFAULT_SENTENCE_OPTIONS);
     expect(parseSentenceOptions({ targetLength: null })).toEqual(DEFAULT_SENTENCE_OPTIONS);
+    expect(parseSentenceOptions({ padding: false, lengthTag: 'factor' })).toMatchObject({ padding: false, lengthTag: 'factor' });
+    expect(parseSentenceOptions({ padding: 'no', lengthTag: 'percent' })).toMatchObject({ padding: true, lengthTag: 'total' });
     expect(parseMode('sentence')).toBe('sentence');
     expect(parseMode('other')).toBe('generated');
     expect(parseMode(undefined)).toBe('generated');
+    expect(parseSort('strongest')).toBe('strongest');
+    expect(parseSort('weakest')).toBe('easiest');
+    const store = memoryStore();
+    saveSort(store, 'strongest');
+    expect(loadSort(store)).toBe('strongest');
+    expect(loadSort(undefined)).toBe('easiest');
   });
 
   it('round-trips through a store and survives a missing store', () => {

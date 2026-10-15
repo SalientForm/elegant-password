@@ -1,20 +1,33 @@
 import { useEffect, useState } from 'react';
 import { ApplyBar } from './components/ApplyBar';
-import { RubricPanel } from './components/Difficulty';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FunPage } from './components/FunPage';
 import { RequirementsForm } from './components/RequirementsForm';
+import { ScoringPage } from './components/ScoringPage';
 import { SelectedList } from './components/SelectedList';
 import { SentenceInput, SentenceStrength } from './components/SentenceMode';
 import { StrengthPanel } from './components/StrengthPanel';
 import { SuggestionCard, type CardContext } from './components/SuggestionCard';
 import { TabPanel, Tabs } from './components/Tabs';
 import { TwistsPanel } from './components/TwistsPanel';
+import { TypingTest } from './components/TypingTest';
 import type { Mode } from './lib/engine';
+import { sortSuggestions, type SortOrder } from './lib/sort';
 import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
 
-type Page = 'main' | 'fun';
-const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : 'main');
+type Page = 'main' | 'scoring' | 'fun';
+const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : window.location.hash === '#/scoring' ? 'scoring' : 'main');
+
+const TITLES: Record<Page, [string, string]> = {
+  main: ['Elegant Passwords', 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.'],
+  scoring: ['Scoring', 'How difficulty and strength are scored.'],
+  fun: ['Fun', 'The whole app, described as one prompt.'],
+};
+
+const SORTS: { id: SortOrder; label: string }[] = [
+  { id: 'easiest', label: 'Easiest first' },
+  { id: 'strongest', label: 'Strongest first' },
+];
 
 const MODE_TABS: { id: Mode; label: string }[] = [
   { id: 'generated', label: 'Make up a sentence' },
@@ -36,24 +49,24 @@ export function App() {
           <a href="#/" className={page === 'main' ? 'active' : ''} aria-current={page === 'main' ? 'page' : undefined}>
             Elegant Passwords
           </a>
+          <a href="#/scoring" className={page === 'scoring' ? 'active' : ''} aria-current={page === 'scoring' ? 'page' : undefined}>
+            Scoring
+          </a>
           <a href="#/fun" className={page === 'fun' ? 'active' : ''} aria-current={page === 'fun' ? 'page' : undefined}>
             Fun
           </a>
         </nav>
         <header>
-          <h1>{page === 'fun' ? 'Fun' : 'Elegant Passwords'}</h1>
-          <p>
-            {page === 'fun'
-              ? 'The whole app, described as one prompt.'
-              : 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.'}
-          </p>
+          <h1>{TITLES[page][0]}</h1>
+          <p>{TITLES[page][1]}</p>
         </header>
         <PasswordsProvider>
-          {/* Kept mounted so settings and the sentence survive a visit to Fun. */}
+          {/* Kept mounted so settings, the sentence and the typing test survive a visit to the other pages. */}
           <div hidden={page !== 'main'}>
             <ElegantPasswords />
           </div>
         </PasswordsProvider>
+        {page === 'scoring' && <ScoringPage />}
         {page === 'fun' && <FunPage />}
       </div>
     </ErrorBoundary>
@@ -67,6 +80,7 @@ export function ElegantPasswords() {
     outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
   const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
   const nothingToRun = p.mode === 'sentence' && !draft.sentence.trim();
+  const ordered = outcome?.ok ? sortSuggestions(outcome.suggestions, p.sort) : [];
 
   return (
     <main>
@@ -88,6 +102,13 @@ export function ElegantPasswords() {
         <div className="results-head">
           <h2>Suggestions</h2>
           <div className="actions">
+            <div className="segmented sort" role="group" aria-label="Order">
+              {SORTS.map((s) => (
+                <button type="button" key={s.id} className={p.sort === s.id ? 'active' : ''} aria-pressed={p.sort === s.id} onClick={() => p.setSort(s.id)}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
             {p.busy && (
               <span className="working" role="status">
                 Working…
@@ -113,9 +134,9 @@ export function ElegantPasswords() {
                 {w}
               </p>
             ))}
-            {outcome.suggestions.map((s, i) => (
+            {ordered.map((s, i) => (
               <SuggestionCard
-                key={`${i}-${s.password}`}
+                key={s.password}
                 suggestion={s}
                 context={context}
                 index={i}
@@ -128,10 +149,12 @@ export function ElegantPasswords() {
             ) : (
               <SentenceStrength suggestions={outcome.suggestions} />
             )}
-            <RubricPanel />
           </div>
         )}
+      </div>
 
+      <div className="aside">
+        <TypingTest />
         <SelectedList />
       </div>
       <ApplyBar />

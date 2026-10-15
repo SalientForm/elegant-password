@@ -95,6 +95,32 @@ function formsOf(word: string): { base: string; form: WordForm }[] {
 
 const startsWithFold = (text: string, prefix: string) => text.slice(0, prefix.length).toLowerCase() === prefix.toLowerCase();
 
+const escapeRe = (c: string) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Padding may repeat a digit or symbol a swap put inside a word ("$t33l" ->
+ * "$t33333l"). How much of `rest` a spelling covers when each of its
+ * non-letter characters may run on, or undefined when it does not fit.
+ */
+const expandCache = new Map<string, RegExp | null>();
+const EXPAND_CACHE_LIMIT = 5000;
+
+function expandedLength(rest: string, spelling: string): number | undefined {
+  // Cheap checks first: the run must start like the spelling, and the spelling must have something to repeat.
+  if (rest.length <= spelling.length || !startsWithFold(rest, spelling[0]!)) return undefined;
+  let re = expandCache.get(spelling);
+  if (re === undefined) {
+    re = /[^a-zA-Z]/.test(spelling)
+      ? new RegExp('^' + [...spelling].map((c) => (/[a-zA-Z]/.test(c) ? escapeRe(c) : `${escapeRe(c)}+`)).join(''), 'i')
+      : null;
+    if (expandCache.size >= EXPAND_CACHE_LIMIT) expandCache.clear();
+    expandCache.set(spelling, re);
+  }
+  if (!re) return undefined;
+  const m = rest.match(re);
+  return m && m[0].length > spelling.length ? m[0].length : undefined;
+}
+
 /** The longest way `word` could appear at the start of `rest`; fewest twists on ties. */
 function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): ScoredWord | undefined {
   const forms = formsOf(word);
@@ -113,7 +139,11 @@ function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): Sc
   for (const { base, form } of forms) {
     if (form === 'number') continue;
     for (const s of spellingsOf(base, mappings, MAX_TWISTS_PER_WORD)) {
-      if (s.twists > 0 && startsWithFold(rest, s.text)) consider({ word, form, base, text: rest.slice(0, s.text.length), twists: s.twists });
+      if (s.twists === 0) continue;
+      if (startsWithFold(rest, s.text)) consider({ word, form, base, text: rest.slice(0, s.text.length), twists: s.twists });
+      // Padding may have repeated a digit or symbol of this spelling; the longer run is the same word.
+      const n = expandedLength(rest, s.text);
+      if (n !== undefined) consider({ word, form, base, text: rest.slice(0, n), twists: s.twists });
     }
   }
   return best;
@@ -121,9 +151,10 @@ function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): Sc
 
 /**
  * Walk the hint words through the password. A word is looked for where the
- * last one ended and, failing that, one character on (past a separator).
- * Symbols are never skipped blindly: a twist can put one at the start of a
- * word ("apples" -> "@pples").
+ * last one ended and, failing that, further along the run of symbols that
+ * follows (a separator, closing marks, the symbol of a length tag like
+ * "%50"). Symbols are never skipped blindly: a twist can put one at the
+ * start of a word ("apples" -> "@pples"), so matching in place always wins.
  */
 function align(password: string, words: readonly string[], mappings: readonly Mapping[]): ScoredWord[] {
   let pos = 0;
@@ -131,9 +162,9 @@ function align(password: string, words: readonly string[], mappings: readonly Ma
   for (const word of words) {
     let match = bestMatch(password.slice(pos), word, mappings);
     let skipped = 0;
-    if (!match && pos < password.length && /[^A-Za-z0-9]/.test(password[pos]!)) {
-      match = bestMatch(password.slice(pos + 1), word, mappings);
-      skipped = 1;
+    while (!match && pos + skipped < password.length && /[^A-Za-z0-9]/.test(password[pos + skipped]!)) {
+      skipped++;
+      match = bestMatch(password.slice(pos + skipped), word, mappings);
     }
     if (!match) {
       out.push({ word, form: 'dropped', base: '', text: '', twists: 0 });
@@ -295,4 +326,62 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
     cache.set(key, result);
   }
   return result;
+}
+
+
+/** One run of characters in a password scored on its own. */
+export interface AlonePart {
+  text: string;
+  kind: 'word' | 'letters' | 'digits' | 'symbols' | 'spaces';
+  bits: number;
+  /** Set when the letters are one of this tool's words (any list). */
+  poolSize?: number;
+}
+
+export interface AloneScore {
+  bits: number;
+  parts: AlonePart[];
+  difficulty: Difficulty;
+  typing: TypingProfile;
+}
+
+const BITS_PER_ENGLISH_LETTER = 2.3;
+const SYMBOL_ALPHABET = 32;
+
+const MEMORABLE_DIGITS = /^(?:(\d)\1*|0?1?2?3?4?5?6?7?8?9?|9?8?7?6?5?4?3?2?1?0?|2468|13579|1357)$/;
+
+/**
+ * A rough strength figure for a password typed in with no hint, scored from
+ * the text alone. Letters that are one of this tool's words count as one
+ * choice from that list; other letters count as English-like text; digits
+ * and symbols count as free choices unless they are a memorable run or a
+ * repeat. It is deterministic and the same everywhere, and it is an estimate:
+ * it knows nothing about where the password came from.
+ */
+export function scoreAlone(password: string): AloneScore {
+  const parts: AlonePart[] = [];
+  for (const m of password.matchAll(/[A-Za-z]+|[0-9]+|\s+|[^A-Za-z0-9\s]+/g)) {
+    const text = m[0];
+    if (/^[A-Za-z]+$/.test(text)) {
+      const lower = text.toLowerCase();
+      const sizes = POOL_SLOTS.filter((slot) => inPool(lower, slot, 'relaxed', 1)).map((slot) => pools('relaxed', 1)[slot].length);
+      if (isMadeUpNoun(lower)) sizes.push(MADE_UP_NOUNS.length);
+      if (sizes.length) {
+        const poolSize = Math.min(...sizes);
+        parts.push({ text, kind: 'word', bits: Math.log2(poolSize), poolSize });
+      } else {
+        parts.push({ text, kind: 'letters', bits: text.length * BITS_PER_ENGLISH_LETTER });
+      }
+    } else if (/^[0-9]+$/.test(text)) {
+      parts.push({ text, kind: 'digits', bits: MEMORABLE_DIGITS.test(text) ? Math.log2(40) : text.length * Math.log2(10) });
+    } else if (/^\s+$/.test(text)) {
+      parts.push({ text, kind: 'spaces', bits: 0 });
+    } else {
+      const repeated = /^(.)\1*$/.test(text);
+      parts.push({ text, kind: 'symbols', bits: repeated ? Math.log2(SYMBOL_ALPHABET) + Math.log2(text.length + 1) : text.length * Math.log2(SYMBOL_ALPHABET) });
+    }
+  }
+  const bits = parts.reduce((sum, p) => sum + p.bits, 0);
+  const chunks = parts.filter((p) => p.kind !== 'spaces').length;
+  return { bits, parts, difficulty: scoreDifficulty(password, chunks), typing: typingProfile(password) };
 }

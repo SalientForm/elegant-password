@@ -18,17 +18,23 @@
 //   5. Apply the user's random twists.
 //   6. Capitalise if still needed, join (numbers and small-word initials can
 //      glue onto the next word: "5ls", "Fpc"), add closing marks.
+//   7. If the sentence is still under the site's minimum even with every
+//      word kept whole, pad it: a word when more than 3 short, a repeated
+//      digit or symbol, a run of digits, closing marks, and a length tag
+//      last ("%50": 50 characters in all). Planned exactly; see fluff.ts.
 //
 // Strength: the sentence is the user's secret and its guessability cannot be
 // measured here. The card's figure is scored cold from the password and the
 // sentence, so it counts only the random initials and twists: a lower bound
 // on what this tool adds.
 
+import { applyRepeat, describeFluff, planFluff, type FluffPlan, type LengthTag } from './fluff';
 import {
   allowedSymbolSet,
   applyUppercase,
   checkRequirements,
   closingSymbol,
+  comfortableSymbols,
   countUpper,
   fewerSwapsWarning,
   isSymbol,
@@ -62,6 +68,10 @@ export interface SentenceOptions {
   smallWordInitials: boolean;
   /** Compress toward this many characters (null = only the site maximum). */
   targetLength: number | null;
+  /** Pad a sentence that is under the site's minimum, after every word has been kept whole. */
+  padding: boolean;
+  /** The self-describing tag that ends the padding: "%50" (total length), "@3" (a factor of the length before it), or none. */
+  lengthTag: LengthTag;
 }
 
 export const DEFAULT_SENTENCE_OPTIONS: SentenceOptions = {
@@ -70,6 +80,8 @@ export const DEFAULT_SENTENCE_OPTIONS: SentenceOptions = {
   allowDropping: true,
   smallWordInitials: true,
   targetLength: null,
+  padding: true,
+  lengthTag: 'total',
 };
 
 export interface SentenceResult {
@@ -79,7 +91,7 @@ export interface SentenceResult {
   warnings: string[];
 }
 
-type Kind = 'word' | 'number' | 'initial';
+type Kind = 'word' | 'number' | 'initial' | 'fluff';
 
 interface Token {
   text: string;
@@ -252,24 +264,33 @@ function attempt(ctx: Context): Attempt {
   // leave the sentence under the minimum length, back off: first keep the
   // longest words whole, then use fewer initials.
   const shrink = opts.shrink === 'vowels' ? dropVowels : opts.shrink === 'ends' ? twoLetter : undefined;
-  let result: Attempt = { problem: 'Could not fit this sentence to the requirements.' };
-  for (let count = req.initials; count >= 0; count--) {
-    const initials = randomInitials(start, count, Math.max(1, req.minUppercase), rng);
-    const whole = initials.tokens;
-    // 3. Shrink long words in the chosen style.
-    const shrinkable = whole
+  // 3. Shrink long words in the chosen style, keeping the `keepWhole` longest ones whole.
+  const shrinkableOf = (whole: Token[]) =>
+    whole
       .map((t, i) => [t, i] as const)
       .filter(([t]) => shrink && t.kind === 'word' && t.text.length >= opts.shrinkFrom && shrink(t.text) !== t.text)
       .sort((a, b) => b[0].text.length - a[0].text.length)
       .map(([, i]) => i);
-    const shrunk = (keepWhole: number) =>
-      whole.map((t, i) => (shrinkable.indexOf(i) >= keepWhole && shrink ? { ...t, text: shrink(t.text) } : t));
+  const shaped = (whole: Token[], keepWhole: number) => {
+    const shrinkable = shrinkableOf(whole);
+    return whole.map((t, i) => (shrinkable.indexOf(i) >= keepWhole && shrink ? { ...t, text: shrink(t.text) } : t));
+  };
+  let result: Attempt = { problem: 'Could not fit this sentence to the requirements.' };
+  for (let count = req.initials; count >= 0; count--) {
+    const initials = randomInitials(start, count, Math.max(1, req.minUppercase), rng);
+    const shrinkable = shrinkableOf(initials.tokens);
     for (let keepWhole = 0; keepWhole <= shrinkable.length; keepWhole++) {
-      result = fitLength(shrunk(keepWhole), initials.bits, ctx);
+      result = fitLength(shaped(initials.tokens, keepWhole), initials.bits, ctx);
       if (result.suggestion && keepWhole > 0) result.suggestion.steps.push('kept some long words whole to reach the minimum length');
       if (result.suggestion && count < req.initials) result.suggestion.steps.push('used fewer random initials to reach the minimum length');
       if (!result.tooShort) return result;
     }
+  }
+  // 7. The sentence cannot supply the minimum on its own: keep every word
+  // whole, keep the chosen initials, and pad the rest.
+  if (result.tooShort && opts.padding) {
+    const initials = randomInitials(start, req.initials, Math.max(1, req.minUppercase), rng);
+    result = fitLength(shaped(initials.tokens, Infinity), initials.bits, ctx, true);
   }
   return result;
 }
@@ -288,7 +309,7 @@ interface Problem {
 /** How many ladder states a fit finished; exposed for tests of the search. */
 export const searchStats = { finishes: 0, states: 0 };
 
-function fitLength(start: Token[], initialBits: number, ctx: Context): Attempt {
+function fitLength(start: Token[], initialBits: number, ctx: Context, pad = false): Attempt {
   const { req, opts, separator, ladderCache } = ctx;
   // Compress one step at a time and keep the least-compressed state whose
   // finished password fits. Finishing is exact, so there is no guessing.
@@ -324,7 +345,7 @@ function fitLength(start: Token[], initialBits: number, ctx: Context): Attempt {
     let f = finished.get(i);
     if (!f) {
       searchStats.finishes++;
-      f = finish(candidates[i]!, initialBits, limit, ctx);
+      f = finish(candidates[i]!, initialBits, limit, ctx, pad);
       finished.set(i, f);
     }
     return f;
@@ -364,9 +385,10 @@ function fitLength(start: Token[], initialBits: number, ctx: Context): Attempt {
   return { suggestion: best.suggestion, missedTarget: opts.targetLength !== null && best.length > limit };
 }
 
-/** Steps 4-6 on one compression state: required digits and symbols, random twists, case and joining. */
-function finish(state: readonly Token[], initialBits: number, limit: number, ctx: Context): Finished | Problem {
-  const { base, hint, req, separator, closing, mappings, rng } = ctx;
+/** Steps 4-7 on one compression state: required digits and symbols, random twists, case and joining, and padding when asked. */
+function finish(state: readonly Token[], initialBits: number, limit: number, ctx: Context, pad = false): Finished | Problem {
+  const { base, req, opts, separator, closing, mappings, rng } = ctx;
+  let { hint } = ctx;
   void initialBits; // the initial choice is scored cold from the hint; kept for the explanation
   // Capitalise first: twists only match lowercase letters, so the capitals
   // the uppercase rule needs can never be swapped away.
@@ -427,8 +449,50 @@ function finish(state: readonly Token[], initialBits: number, limit: number, ctx
   setTexts(random.words);
 
   // 6. Case, join, closing marks.
-  const password = joinTokens(texts(), glue, separator) + endSymbol;
-  const length = [...password].length;
+  let ending = endSymbol;
+  let password = joinTokens(texts(), glue, separator) + ending;
+  let length = [...password].length;
+
+  // 7. Padding, when the sentence cannot supply the minimum on its own.
+  let fluff: FluffPlan | undefined;
+  if (length < req.minLength && pad) {
+    const comfortable = comfortableSymbols(req);
+    const repeatIndex = tokens.findIndex((t) => t.kind === 'word' && /[0-9]/.test(t.text));
+    const symbolIndex = repeatIndex < 0 ? tokens.findIndex((t) => t.kind === 'word' && /[^a-zA-Z0-9]/.test(t.text)) : -1;
+    const repeatAt = repeatIndex >= 0 ? repeatIndex : symbolIndex;
+    const p = pools(req.comfort, 1);
+    fluff = planFluff({
+      length,
+      min: req.minLength,
+      max: req.maxLength,
+      separator,
+      tag: opts.lengthTag,
+      totalSymbol: ['%', '$', '#'].find((s) => comfortable.includes(s)),
+      factorSymbol: comfortable.includes('@') ? '@' : undefined,
+      mark: comfortable.includes('!') ? '!' : closing,
+      repeatable: repeatAt >= 0 ? { tokenIndex: repeatAt, char: tokens[repeatAt]!.text.match(/[0-9]/)?.[0] ?? tokens[repeatAt]!.text.match(/[^a-zA-Z0-9]/)![0] } : undefined,
+      words: [...p.adj, ...p.noun],
+      rng,
+    });
+    if (fluff) {
+      const remembered: string[] = [];
+      for (const piece of fluff.pieces) {
+        if (piece.kind === 'repeat') {
+          const t = tokens[piece.tokenIndex!]!;
+          tokens[piece.tokenIndex!] = { ...t, text: applyRepeat(t.text, piece.char!, piece.text) };
+        } else if (piece.kind === 'word' || piece.kind === 'sequence') {
+          tokens.push({ text: piece.text, original: piece.text, kind: 'fluff', small: false });
+          remembered.push(piece.text);
+        } else {
+          ending += piece.text;
+          if (piece.kind === 'tag') remembered.push(piece.text);
+        }
+      }
+      password = joinTokens(texts(), glueOf(tokens), separator) + ending;
+      length = [...password].length;
+      if (remembered.length) hint = `${hint} ${remembered.join(' ')}`;
+    }
+  }
   if (length < req.minLength) {
     return {
       problem: `Your sentence makes ${length} characters, under the ${req.minLength} minimum. Add a few words or lower the minimum.`,
@@ -454,6 +518,7 @@ function finish(state: readonly Token[], initialBits: number, limit: number, ctx
     steps.push(`for the ${rules} rule: ${forced.map(describeTwist).join(', ')}`);
   }
   if (endSymbol) steps.push(`ended with “${endSymbol}” for the symbol rule`);
+  if (fluff) steps.push(describeFluff(fluff, req.minLength));
 
   const score = scoreCold(password, hint);
   return {
@@ -461,7 +526,7 @@ function finish(state: readonly Token[], initialBits: number, limit: number, ctx
     suggestion: {
       password,
       hint,
-      words: tokens.map((t) => ({ text: t.text, original: t.original, slot: 'yours' as const })),
+      words: tokens.map((t) => ({ text: t.text, original: t.original, slot: t.kind === 'fluff' ? ('fluff' as const) : ('yours' as const) })),
       steps,
       twists: random.applied,
       twistBits: score.twistBits,
@@ -471,7 +536,7 @@ function finish(state: readonly Token[], initialBits: number, limit: number, ctx
       difficulty: score.difficulty,
       checks: checkRequirements(password, req, {
         separator,
-        endSymbol,
+        endSymbol: ending,
         uppercaseHow: inits.length ? `capital initials: ${inits.map((t) => t.text).join(' ')}` : undefined,
         digitsHow: digitTwists.length ? `twisted ${digitTwists.map(describeTwist).join(', ')}` : undefined,
         symbolsHow: symbolTwists.length ? `twisted ${symbolTwists.map(describeTwist).join(', ')}` : undefined,

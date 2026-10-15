@@ -46,12 +46,18 @@ h2 { font-size: 1.1rem; }
 h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .mono, code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 
-.app { max-width: 1180px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+.app { max-width: 1380px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 header { margin-bottom: 1.75rem; }
 header p { color: var(--muted); max-width: 62ch; margin: 0.4rem 0 0; }
 
-main { display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: start; }
-@media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
+.aside { display: grid; gap: 1rem; }
+@media (max-width: 1100px) { main { grid-template-columns: 300px minmax(0, 1fr); } .aside { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; } }
+@media (max-width: 860px) { main { grid-template-columns: 1fr; } .aside { grid-template-columns: 1fr; } }
+.segmented.sort { grid-template-columns: 1fr 1fr; }
+.scoring { display: grid; gap: 1rem; }
+.scoring h3 { margin-top: 1rem; }
+.scoring p { margin: 0.4rem 0 0; }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; }
 
@@ -193,10 +199,23 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .fun-head { display: flex; justify-content: space-between; gap: 1rem; align-items: start; flex-wrap: wrap; }
 .fun-head > div:first-child { max-width: 60ch; }
 .prompt {
-  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.25rem;
-  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8rem; line-height: 1.55;
-  white-space: pre-wrap; word-break: break-word; margin: 0; max-height: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.5rem;
+  font-size: 0.92rem; line-height: 1.6; margin: 0; max-width: 100%; overflow-x: auto;
 }
+.prose h1 { font-size: 1.6rem; margin: 0 0 0.75rem; }
+.prose h2 { font-size: 1.2rem; margin: 1.6rem 0 0.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.prose h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+.prose p { margin: 0.5rem 0; }
+.prose ul, .prose ol { padding-left: 1.4rem; margin: 0.4rem 0; }
+.prose li { margin: 0.2rem 0; }
+.prose code { font-size: 0.85em; background: var(--key); padding: 0.05rem 0.3rem; border-radius: 4px; }
+.prose pre { background: var(--key); padding: 0.8rem 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.8rem; line-height: 1.5; }
+.prose pre code { background: transparent; padding: 0; }
+.prose table { border-collapse: collapse; width: 100%; margin: 0.6rem 0; font-size: 0.85rem; display: block; overflow-x: auto; }
+.prose th, .prose td { text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.prose th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.prose strong { font-weight: 650; }
+.prose blockquote { margin: 0.5rem 0; padding-left: 0.9rem; border-left: 3px solid var(--line); color: var(--muted); }
 .shrink { display: grid; grid-template-columns: auto 4rem auto 1fr; gap: 0.5rem; align-items: center; }
 .shrink input { width: 100%; font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.35rem 0.5rem; }
 @media (max-width: 600px) { .shrink { grid-template-columns: auto 4rem auto; } .shrink .segmented { grid-column: 1 / -1; } }
@@ -218,12 +237,21 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 [role='tabpanel'][hidden] { display: none; }
 .actions .status { font-size: 0.75rem; }
 
-/* Floating apply bar */
-.apply-bar {
-  position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 20;
-  display: flex; gap: 0.5rem; align-items: center;
-  background: var(--panel); border: 1px solid var(--accent); border-radius: 999px;
-  padding: 0.45rem 0.45rem 0.45rem 1rem; font-size: 0.9rem;
-  box-shadow: 0 8px 28px rgb(0 0 0 / 0.18);
-}
-@media (max-width: 600px) { .apply-bar { left: 1rem; right: 1rem; justify-content: space-between; border-radius: 14px; } }
+/* Floating submit / discard buttons: no backdrop, just the two buttons over the page */
+.apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 1.25rem; z-index: 20; display: flex; gap: 0.5rem; align-items: center; justify-content: center; pointer-events: none; }
+.apply-bar .floating { pointer-events: auto; border-radius: 999px; padding: 0.6rem 1.1rem; font-size: 0.9rem; box-shadow: 0 8px 24px rgb(0 0 0 / 0.22); }
+.apply-bar .floating.ghost { background: var(--panel); border-color: var(--line); color: var(--ink); }
+@media (max-width: 600px) { .apply-bar { left: 0; right: 0; transform: none; } }
+.chip.fluff { background: var(--warn-soft); border: 1px dashed var(--warn); }
+
+/* Test a password, top of the right column */
+.typing-test { display: grid; gap: 0.55rem; }
+.typing-test input[type='text'], .typing-test input[type='password'] { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.5rem 0.65rem; width: 100%; }
+.typing-test-controls { display: flex; gap: 1rem; flex-wrap: wrap; }
+.typing-result { display: grid; gap: 0.4rem; font-size: 0.85rem; }
+.typing-result p { margin: 0; }
+.typing-result .password { font-size: 1rem; }
+.typing-stats { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.15rem; }
+.typing-stats li::before { margin-right: 0.4rem; font-weight: 700; }
+.typing-stats .met::before { content: '✓'; color: var(--accent); }
+.typing-stats .unmet::before { content: '✗'; color: var(--bad); }

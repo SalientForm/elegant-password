@@ -3,17 +3,21 @@
 // in localStorage. Anything malformed falls back to the default.
 
 import { MODES, type Mode } from './engine';
+import type { LengthTag } from './fluff';
 import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from './fromSentence';
 import { DEFAULT_REQUIREMENTS, validate, type Requirements, type Separator } from './generate';
 import { COMFORT_SHARE, type Comfort } from './grammar';
+import { SORT_ORDERS, type SortOrder } from './sort';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, writeJson, type KeyValueStore } from './storage';
 
 export const REQUIREMENTS_KEY = 'elegant-passwords:requirements:v1';
 export const SENTENCE_OPTIONS_KEY = 'elegant-passwords:sentence-options:v1';
 export const MODE_KEY = 'elegant-passwords:mode:v1';
+export const SORT_KEY = 'elegant-passwords:sort:v1';
 
 const SEPARATORS: readonly Separator[] = ['auto', ' ', ';', '-', '.', '_', ',', ''];
 const SHRINK_STYLES: readonly ShrinkStyle[] = ['none', 'vowels', 'ends'];
+const LENGTH_TAGS: readonly LengthTag[] = ['total', 'factor', 'none'];
 
 /** The stored requirements, field by field, falling back to the defaults for anything odd. */
 export function parseRequirements(raw: unknown): Requirements {
@@ -55,6 +59,8 @@ export function parseSentenceOptions(raw: unknown): SentenceOptions {
     allowDropping: isBoolean(raw.allowDropping) ? raw.allowDropping : d.allowDropping,
     smallWordInitials: isBoolean(raw.smallWordInitials) ? raw.smallWordInitials : d.smallWordInitials,
     targetLength,
+    padding: isBoolean(raw.padding) ? raw.padding : d.padding,
+    lengthTag: isString(raw.lengthTag) && LENGTH_TAGS.includes(raw.lengthTag as LengthTag) ? (raw.lengthTag as LengthTag) : d.lengthTag,
   };
 }
 
@@ -66,5 +72,11 @@ export const loadRequirements = (store: KeyValueStore | undefined) => parseRequi
 export const saveRequirements = (store: KeyValueStore | undefined, req: Requirements) => writeJson(store, REQUIREMENTS_KEY, req);
 export const loadSentenceOptions = (store: KeyValueStore | undefined) => parseSentenceOptions(readJson(store, SENTENCE_OPTIONS_KEY));
 export const saveSentenceOptions = (store: KeyValueStore | undefined, opts: SentenceOptions) => writeJson(store, SENTENCE_OPTIONS_KEY, opts);
+export function parseSort(raw: unknown): SortOrder {
+  return isString(raw) && SORT_ORDERS.includes(raw as SortOrder) ? (raw as SortOrder) : 'easiest';
+}
+
+export const loadSort = (store: KeyValueStore | undefined) => parseSort(readJson(store, SORT_KEY));
+export const saveSort = (store: KeyValueStore | undefined, sort: SortOrder) => writeJson(store, SORT_KEY, sort);
 export const loadMode = (store: KeyValueStore | undefined) => parseMode(readJson(store, MODE_KEY));
 export const saveMode = (store: KeyValueStore | undefined, mode: Mode) => writeJson(store, MODE_KEY, mode);

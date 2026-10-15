@@ -42,16 +42,9 @@ const band = (c: Criterion, level: number) => {
 };
 
 /** The whole rubric: what each criterion measures and where its levels start. */
-export function RubricPanel() {
+export function RubricTable() {
   return (
-    <details className="panel rubric-panel">
-      <summary>
-        <h2>How difficulty is scored</h2>
-      </summary>
-      <p className="hint">
-        Each criterion lands on a level from Effortless (0) to Hard (4). It earns weight × level ÷ 4 points; the
-        weights add up to 100. Totals: 0–20 effortless, 21–40 easy, 41–60 moderate, 61–80 demanding, 81–100 hard.
-      </p>
+    <>
       <div className="table-scroll">
         <table className="rubric">
           <thead>
@@ -79,6 +72,6 @@ export function RubricPanel() {
           </tbody>
         </table>
       </div>
-    </details>
+    </>
   );
 }

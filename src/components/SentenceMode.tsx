@@ -1,3 +1,4 @@
+import type { LengthTag } from '../lib/fluff';
 import type { SentenceOptions, ShrinkStyle } from '../lib/fromSentence';
 import type { Suggestion } from '../lib/generate';
 import { NumberField } from './NumberField';
@@ -8,6 +9,12 @@ interface InputProps {
   options: SentenceOptions;
   onOptionsChange: (next: SentenceOptions) => void;
 }
+
+const TAGS: { value: LengthTag; label: string }[] = [
+  { value: 'total', label: '%total: the whole length (%50 = 50 characters in all)' },
+  { value: 'factor', label: '@factor: a number that divides the length before it (@3)' },
+  { value: 'none', label: 'None' },
+];
 
 const SHRINK: { value: ShrinkStyle; label: string; example: string }[] = [
   { value: 'none', label: 'Keep', example: 'Words stay whole unless the target length needs them shorter.' },
@@ -74,6 +81,25 @@ export function SentenceInput({ value, onChange, options, onOptionsChange }: Inp
         />
         Short targets may drop words entirely (small words first)
       </label>
+      <label className="check">
+        <input type="checkbox" checked={options.padding} onChange={(e) => onOptionsChange({ ...options, padding: e.target.checked })} />
+        Pad a sentence that is under the minimum length
+      </label>
+      <label className="field">
+        <span>Length tag at the end of the padding</span>
+        <select value={options.lengthTag} disabled={!options.padding} onChange={(e) => onOptionsChange({ ...options, lengthTag: e.target.value as LengthTag })}>
+          {TAGS.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="hint">
+        Padding only adds what is missing, after every word has been kept whole: a word when more than 3 short, a digit
+        or symbol repeated (“$t33l” → “$t33333l”), a run of digits (123), closing marks (!!), and the tag last. The tag
+        states the finished length, so it is worked out once, never by trial: 47 characters get “%50”.
+      </p>
       <label className="field inline">
         <span>Compress toward (characters)</span>
         <NumberField

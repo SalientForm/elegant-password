@@ -133,10 +133,10 @@ export interface Plan {
   lengthPenaltyBits: number;
 }
 
-/** A generated word's part of speech, or 'yours' for a word from the user's own sentence. */
-export type WordRole = Slot | 'yours';
+/** A generated word's part of speech, 'yours' for a word from the user's own sentence, or 'fluff' for padding. */
+export type WordRole = Slot | 'yours' | 'fluff';
 
-export const ROLE_LABELS: Record<WordRole, string> = { ...SLOT_LABELS, yours: 'your word' };
+export const ROLE_LABELS: Record<WordRole, string> = { ...SLOT_LABELS, yours: 'your word', fluff: 'padding' };
 
 /** Label for a word chip: made-up nouns get their own label. */
 export function roleLabel(word: { text: string; original: string; slot: WordRole }, madeUp: boolean): string {

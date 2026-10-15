@@ -33,10 +33,16 @@ explanation for each:
   sentence is kept in this tab only (sessionStorage) so a refresh does not
   lose it, and is never sent anywhere; it is only kept longer if you add a
   password to your list, as that password's hint.
-- **Apply, then it sticks.** Edits to the rules, swaps or sentence are a
-  draft: a floating "Apply changes" bar appears (Ctrl+Enter also applies)
-  and disappears once there is nothing to apply. Applying saves the
-  settings and regenerates; "New passwords" applies any draft too.
+- **Submit, then it sticks.** Edits to the rules, swaps or sentence are a
+  draft: "Discard" and "Submit changes" float over the page (Ctrl+Enter
+  also submits) and disappear once there is nothing to submit. Submitting
+  saves the settings and regenerates; "New passwords" submits any draft too.
+- **Padding.** A sentence that is under the site's minimum even with every
+  word kept whole is padded, planned once with no retry: a word when more
+  than 3 short, a swapped digit or symbol repeated (`$t33l` -> `$t33333l`),
+  a run of digits, closing marks, and a length tag last. `%50` says the
+  whole password is 50 characters (so 47 characters get `%50`, never 53);
+  `@3` says 3 divides the length before it. Both switchable.
 - **Survives a refresh.** The current passwords and the applied sentence
   live in sessionStorage (gone when the tab closes); the applied settings,
   mode, mappings and your list live in localStorage. On reload the same
@@ -71,8 +77,24 @@ explanation for each:
   each compression step is finished into a real password and the
   least-compressed one that fits is kept. Property tests prove any sentence
   reduces to 12 characters that pass every rule (`src/lib/reduceTo12.test.ts`).
+- **Layout.** Three columns: the rules and swaps on the left, suggestions in
+  the middle (ordered easiest to type first by default, or strongest first
+  with the toggle above them; the choice is remembered), and on the right
+  the password tester above your list. The outer columns are fixed and the
+  middle one takes the rest.
+- **Scoring page** (`#/scoring`): how strength in bits and the difficulty
+  score are worked out, with the full rubric and time-to-guess tables.
+- **Test a password** (top of the right column): type any password and
+  press Enter. Every keystroke is timed as you type, so the first run is
+  scored too and becomes the password under test; corrections (Backspace,
+  Delete), time, words per minute and accuracy are reported against the
+  rubric's estimate, with a strength figure estimated from the text alone
+  (`scoreAlone`). "Lock password" keeps the target through a mistyped Enter.
+  Nothing is stored.
 - **Fun page** (`#/fun`): a full rebuild-the-app spec prompt, generated from
-  the live constants, with Copy and Download.
+  the live constants and rendered as formatted text, with Copy and Download
+  of the markdown. It embeds the algorithm flow document verbatim as a
+  validation section.
 - **Off the main thread.** A provider (`src/state/PasswordsProvider.tsx`)
   owns all state and runs generation in a Web Worker (inline where there is
   none), so typing never waits on the maths and the old batch stays on

@@ -11,7 +11,7 @@ two-letter words, made-up nouns, glue, swaps) each have their own step.
 
 | Criterion | Kind | Where it is enforced |
 | --- | --- | --- |
-| Length between min and max | generic (range) | Planning: the length model counts only word sequences whose letters plus separators and closing marks fit. Swaps are limited to a length window. Sentence mode compresses to the target and rejects anything outside the range. |
+| Length between min and max | generic (range) | Planning: the length model counts only word sequences whose letters plus separators and closing marks fit. Swaps are limited to a length window. Sentence mode compresses to the target; a sentence under the minimum is padded (section 3) and anything still outside the range is refused. |
 | At least N uppercase letters | generic (class count) | Planning never picks a shape with fewer letters than N; swaps keep at least N letters; rendering capitalises the first letter (N = 1) or whole words (N ≥ 2). Capital initials and ALL-CAPS made-up nouns count first. |
 | At least N digits | generic (class count) | Generated: the number has N digits. Sentence: digit swaps first (`e→3`, `for→4`), then a comfortable N-digit number is appended. |
 | At least N symbols | generic (class count) | Symbol separators count; the shortfall is symbol swaps (sentence mode) or repeated closing marks (`.`, `!`, `?`). |
@@ -68,8 +68,15 @@ flowchart TD
   H --> I{fits min…target?}
   I -- too long even when fully compressed --> J[explain: use fewer words or raise the maximum]
   I -- too short at the start --> K[back off: keep long words whole,\nthen fewer random initials]
+  K -- still short --> P[pad, planned once:\nword if > 3 short → repeated digit/symbol\n→ digit run → closing marks → length tag last\n%N = whole length, @N divides the length before it]
+  P --> L
   I -- yes --> L[cold score from password + sentence]
 ```
+
+Padding is arithmetic, not trial: a total tag's number is the one N with
+N = length + 1 + digits(N), so 47 characters get `%50` and 48 get `%51`;
+a factor tag picks the smallest divisor of the length to its left. The
+filler before the tag is sized to land exactly on the minimum.
 
 The ladder is monotone: every step shortens the bare text, so the first
 state that fits is found with log₂(states) finishes instead of one per
@@ -85,7 +92,8 @@ everywhere it appears (a card, the saved list, a year later).
 flowchart TD
   A[password + hint] --> B[normalise the hint into words]
   B --> C[align each word in the password:\nwhole, shortened, initial, number, or swapped spelling;\nstep over one separator when nothing matches in place]
-  C --> D{hint matches a\nsentence template?}
+  C --> C2[repeated digits or symbols count as the\nsame word; a length tag's digits are a number word]
+  C2 --> D{hint matches a\nsentence template?}
   D -- yes --> E[most restrictive comfort level whose pools\ncontain every word → pool sizes →\nsentence bits = Σ log2 sizes + number position]
   D -- no --> F[sentence bits = 0;\ninitial-choice bits = log2 C(eligible words, initials)]
   E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the swaps found]
@@ -102,7 +110,7 @@ do not discount; the strength panel says so in one sentence.
 ## 5. When the flow runs
 
 Edits are a draft. The flow above runs when the draft is applied (the
-floating "Apply changes" bar, Ctrl+Enter, or "New passwords", which applies
+floating "Submit changes" bar, Ctrl+Enter, or "New passwords", which applies
 and rolls), and once on load if the stored batch was not made from the
 applied inputs. Applied inputs are persisted; drafts are not.
 

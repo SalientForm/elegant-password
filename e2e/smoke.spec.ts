@@ -63,7 +63,7 @@ test('edits are a draft until applied; applying saves, regenerates, and survives
   await expect(page.getByRole('button', { name: 'Strict' })).toHaveAttribute('aria-pressed', 'false');
 
   await page.getByRole('button', { name: 'Strict' }).click();
-  await applyBar(page).getByRole('button', { name: 'Apply changes' }).click();
+  await applyBar(page).getByRole('button', { name: 'Submit changes' }).click();
   await expect(applyBar(page)).toHaveCount(0);
   await expect.poll(async () => passwords(page)).not.toEqual(before);
   const applied = await settledPasswords(page);
@@ -140,7 +140,7 @@ test('number fields can be typed through and apply as a draft', async ({ page })
   await count.pressSequentially('10');
   await expect(count).toHaveValue('10');
   await expect(applyBar(page)).toBeVisible();
-  await applyBar(page).getByRole('button', { name: 'Apply changes' }).click();
+  await applyBar(page).getByRole('button', { name: 'Submit changes' }).click();
   await expect(cards(page)).toHaveCount(10);
 });
 
@@ -152,4 +152,59 @@ test('the Fun page shows the spec and downloads it', async ({ page }) => {
   expect((await download).suggestedFilename()).toBe('elegant-passwords-spec.md');
   await page.getByRole('link', { name: 'Elegant Passwords' }).click();
   await expect(cards(page).first()).toBeVisible(); // state survived the visit
+});
+
+test('pads a short sentence to the minimum with a length tag that states the length', async ({ page }) => {
+  await settledPasswords(page);
+  await page.getByRole('tab', { name: 'Use my sentence' }).click();
+  await page.getByLabel('Your sentence').fill('Hi there');
+  await page.keyboard.press('Control+Enter');
+  await expect(cards(page).first()).toContainText('padded to the 12-character minimum');
+  const mine = await settledPasswords(page);
+  for (const p of mine) {
+    expect(p.length).toBe(12);
+    expect(p).toMatch(/%12$/);
+  }
+});
+
+test('tests a typed password in the masthead: speed, corrections, strength, and the lock', async ({ page }) => {
+  const field = page.getByLabel('Password to test');
+  await field.click();
+  await field.pressSequentially('Sleepy;otterx', { delay: 20 });
+  await page.keyboard.press('Backspace');
+  await field.pressSequentially('s', { delay: 20 });
+  await page.keyboard.press('Enter');
+  const status = page.locator('.typing-result');
+  await expect(status).toContainText('Testing: Sleepy;otters');
+  await expect(status).toContainText('Typed correctly');
+  await expect(status).toContainText('1 correction');
+  await expect(status).toContainText('bits');
+  await expect(status).toContainText('Difficulty');
+  await page.getByLabel('Lock password').check();
+  await field.pressSequentially('Sleepy;otter', { delay: 10 });
+  await page.keyboard.press('Enter');
+  await expect(status).toContainText('Did not match');
+  await expect(status).toContainText('Testing: Sleepy;otters');
+});
+
+test('orders suggestions easiest first by default and strongest first on request', async ({ page }) => {
+  await settledPasswords(page);
+  const difficulties = async () => (await page.locator('article.card .badge').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
+  const easy = await difficulties();
+  expect([...easy].sort((a, b) => a - b)).toEqual(easy);
+  await page.getByRole('button', { name: 'Strongest first' }).click();
+  const bits = (await page.locator('article.card .bits-label').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
+  expect([...bits].sort((a, b) => b - a)).toEqual(bits);
+  await page.reload();
+  await settledPasswords(page);
+  await expect(page.getByRole('button', { name: 'Strongest first' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('the Scoring page explains bits and shows the rubric', async ({ page }) => {
+  await page.getByRole('link', { name: 'Scoring' }).click();
+  await expect(page.getByRole('heading', { name: 'Strength, in bits' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeVisible();
+  await expect(page.getByText('Finger rolls')).toBeVisible();
+  await page.getByRole('link', { name: 'Elegant Passwords' }).click();
+  await expect(cards(page).first()).toBeVisible();
 });

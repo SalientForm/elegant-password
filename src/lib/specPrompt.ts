@@ -36,6 +36,9 @@ import { SESSION_KEY } from './sessionStore';
 import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY } from './settingsStore';
 import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, type MappingKind } from './twists';
 import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from './words';
+import algorithmFlow from '../../docs/algorithm-flow.md?raw';
+
+const BITS_PER_ENGLISH_LETTER = 2.3;
 
 const code = (s: string) => `\`${s}\``;
 const list = (items: readonly string[]) => items.map((i) => `- ${i}`).join('\n');
@@ -113,8 +116,9 @@ You are building a password generator web app called **Elegant Passwords**. It c
 
 ## 3. Pages
 
-1. **Elegant Passwords** (main page, ${code('#/')}): requirements form, swaps panel, two modes (Make up a sentence / Use my sentence) as an accessible tab list, suggestion cards, strength panel, difficulty rubric, and "My list" (the user's saved passwords).
-2. **Fun** (${code('#/fun')}): shows this prompt, generated from the live constants, with Copy and Download buttons.
+1. **Elegant Passwords** (main page, ${code('#/')}): three columns, 1380 px wide at most. Left (300 px): the requirements form and the swaps panel. Middle (takes the rest): the two modes (Make up a sentence / Use my sentence) as an accessible tab list, an order toggle ("Easiest first", the default, or "Strongest first"; a two-button group, remembered in localStorage), the suggestion cards in that order, and the strength panel. Right (340 px): "Test a password" (section 18) above "My list" (the user's saved passwords). Below 1100 px the right column drops under the others; below 860 px everything is one column.
+2. **Scoring** (${code('#/scoring')}): how strength in bits is counted (the exact plan, cold scoring of a password from its hint, your own sentence, choosing a favourite, time to guess per preset at the three attacker speeds) and the full difficulty rubric.
+3. **Fun** (${code('#/fun')}): shows this prompt, generated from the live constants and rendered from markdown as formatted text, with Copy and Download buttons for the raw markdown.
 
 Hash routing; a top nav links both pages.
 
@@ -123,7 +127,7 @@ Hash routing; a top nav links both pages.
 ${requirementsTable()}
 
 - Each "must contain" row is a checkbox plus an "at least N" number input; checking sets 1, unchecking sets 0. All three are on by default.
-- **Drafts and Apply**: every edit to the rules, swaps, sentence or sentence options is a draft. A floating bar ("Changes not applied yet." with Discard and Apply changes; Ctrl+Enter or ⌘+Enter applies) appears while the draft differs from what is applied and disappears when it does not. Applying saves the settings and regenerates. "New passwords" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
+- **Drafts and Submit**: every edit to the rules, swaps, sentence or sentence options is a draft. Two buttons float over the page, with no backdrop and no message, while the draft differs from what is applied: Discard and Submit changes (Ctrl+Enter or ⌘+Enter also submits). They disappear when nothing differs. Applying saves the settings and regenerates. "New passwords" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
 - Number inputs can be typed through: the text stays as typed ("1" on the way to "10" is not snapped to the minimum); only whole numbers in range are committed as you type, and leaving the field clamps into range or restores the last value. Clearing an "at least" field never unticks its box.
 - Validation errors are shown in place of suggestions as a readable message, never thrown at the user. Any other render error is caught by an error boundary that shows the message and a reload button.
 - Separator choices that the site does not allow are disabled; stretchy ones are labelled "(pinky stretch)" while the pinky toggle is on.
@@ -180,7 +184,7 @@ ${mappingSection()}
 
 ## 8. Use my sentence
 
-The user types a sentence (never stored, never put in the URL). Options: shrink words of ${DEFAULT_SENTENCE_OPTIONS.shrinkFrom}+ letters in a style (keep; drop vowels, the default; or first + last consonant, ${code('jupiter → jr')}); small words become capital initials (default on); short targets may drop words entirely (default on); compress toward N characters (default: the site maximum). The symbol between words is optional (separator "None").
+The user types a sentence (never put in the URL; kept in sessionStorage only once applied). Options: shrink words of ${DEFAULT_SENTENCE_OPTIONS.shrinkFrom}+ letters in a style (keep; drop vowels, the default; or first + last consonant, ${code('jupiter → jr')}); small words become capital initials (default on); short targets may drop words entirely (default on); compress toward N characters (default: the site maximum); pad a sentence under the minimum (default on) with a length tag last (default ${code('%total')}; or ${code('@factor')}; or none). The symbol between words is optional (separator "None").
 
 1. Normalise: strip accents, lowercase, remove apostrophes, split on anything not a-z0-9.
 2. Small words (${[...SMALL_WORDS].slice(0, 12).join(', ')}, …) become one capital letter. Then the "initials" option turns that many random other words into initials; enumerate distinct outcomes and count log2 as bits.
@@ -188,6 +192,7 @@ The user types a sentence (never stored, never put in the URL). Options: shrink 
 4. **Compression ladder**, one small change per step: drop vowels from the longest word; trim its second-to-last letter until two letters remain (${code('jptr → jpr → jr')}); shorten long numbers to their leading digits; drop small words (if allowed); reduce the longest word to an initial; finally drop the shortest piece (if allowed; prefer spare numbers), keeping at least two pieces. No step may leave fewer letters than the uppercase rule needs.
 5. **Exact fitting by binary search**: every ladder step shortens the bare text, so the states are ordered. Binary-search them for the least-compressed state whose finished password fits [min, target or max]; each state is finished at most once and the result reused, so a long sentence costs log2(states) finishes instead of one per state. States whose bare length is clearly too long are skipped first; the ladder is cached per sentence; spellings are memoised per mapping list. If even the starting state is under the minimum, back off: keep the longest words whole one at a time, then use fewer random initials.
 6. Finishing a state: capitalise first (so swaps can never remove the capitals the rule needs); required digits come from digit swaps, else a comfortable number of the needed length is appended; required symbols come from separators, then symbol swaps, then repeated closing marks; then the user's random swaps, kept within the length limits and the target; then glue, separator and closing marks.
+7. **Padding**: if the sentence is still under the minimum after the back-off (every word whole, the chosen initials kept), pad it. The plan is arithmetic, never trial and error: a tag goes last and states a number about the finished password, so its length is known first; the gap before it is filled exactly, in order of preference, with a whole word from the comfortable adjective and noun pools (only when more than 3 characters short, only if one fits exactly), a digit or symbol that a swap put inside a word repeated up to 3 times (${code('$t33l → $t33333l')}), a memorable run of digits (${code('123')}, ${code('4321')}; a single digit only when no mark is available), then closing marks (${code('!')} if allowed and comfortable, else the closing symbol). Tags: ${code('%N')} (or ${code('$N')}, ${code('#N')}, whichever the site allows) states the whole length, N being the only number with N = length + 1 + digits(N): 47 characters get ${code('%50')}, 48 get ${code('%51')}, never 53. ${code('@N')} states the smallest divisor (≥ 2) of the length of everything to its left, trying a one-digit then a two-digit N. If the gap is smaller than the tag, the tag alone is added with the true total, unless that would pass the maximum, in which case marks fill the gap. Padding words and digit runs are tokens (chips labelled "padding"); words, digit runs and the tag are appended to the hint so it stays a complete memory aid. Nothing is ever padded that the sentence could supply by keeping a word whole.
 
 **Guarantee**: any sentence with at least one letter can be reduced to 12 characters that pass every rule (with up to 2 uppercase, 2 digits and 2 symbols required), with dropping allowed. Property tests check this on hundreds of random messy sentences across all separators, shrink styles, initials, glue and swap settings.
 
@@ -197,10 +202,10 @@ Strength in this mode: the sentence's guessability cannot be measured. The card'
 
 ## 9. Suggestion cards
 
-Each card shows the password, its bits and difficulty (both from the cold score, section 14), Copy, "Add to my list", and an expandable "Why?" with:
+Cards are ordered easiest first (difficulty ascending, more bits first on ties) or strongest first (bits descending, lower difficulty first on ties), stable for exact ties. Each card shows the password, its bits and difficulty (both from the cold score, section 14), Copy, "Add to my list", and an expandable "Why?" with:
 - **Easy to remember**: the hint (the sentence to remember); word chips labelled by part of speech, "made-up noun" or "your word"; twisted and initial words marked with the original; the twists or change steps listed; the number of ways the twists could land.
 - **Fast to type**: Shift presses and why (and how often capital initials flip the case), share of same-row moves, average reach, same-finger pairs, rows used, separator note, and a keyboard heat map of the keys used.
-- **Difficulty score** table (below).
+- **Difficulty score** table (the rubric lives on the Scoring page).
 - **Meets the requirements**: every rule with ✓/✗ and how it was met.
 
 ## 10. Strength panel
@@ -215,7 +220,7 @@ Each criterion lands on a level ${LEVELS.map((l, i) => `${i} ${l}`).join(', ')} 
 
 ${rubricTable()}
 
-Typing time model: ${SECONDS.keystroke} s per keystroke + ${SECONDS.perCost} s × transition cost + ${SECONDS.shift} s per Shift. Memory load counts words, the number and each twist. Show the full rubric in a collapsible panel.
+Typing time model: ${SECONDS.keystroke} s per keystroke + ${SECONDS.perCost} s × transition cost + ${SECONDS.shift} s per Shift. Memory load counts words, the number and each twist. Show the full rubric on the Scoring page.
 
 ## 14. Cold scoring
 
@@ -237,8 +242,19 @@ Left out on purpose: length limits (unknown cold), the user's own mapping list (
 - localStorage: applied requirements (${code(REQUIREMENTS_KEY)}), sentence options (${code(SENTENCE_OPTIONS_KEY)}), mode (${code(MODE_KEY)}), mappings (${code(STORAGE_KEY)}), the list (${code(SELECTED_KEY)}). sessionStorage: the current batch, round and applied sentence (${code(SESSION_KEY)}), kept through a refresh and gone when the tab closes. Unapplied drafts are never stored. Every value read back is parsed as untrusted and falls back to defaults field by field.
 - **My list**: add a suggestion one at a time (a password already listed is not added twice); each entry stores only the password, the hint and when it was added; it is displayed with its cold score, Copy and Remove; "Remove all" asks once.
 
+## 18. Test a password
+
+A panel at the top of the right column. A text field (switchable to a password field; ${code('autocomplete="off"')} and the ${code('data-bwignore')}, ${code('data-1p-ignore')}, ${code('data-lpignore')} and ${code('data-form-type="other"')} attributes so password managers leave it alone; never inside a form) records every key press with a timestamp as the user types (modifiers and navigation keys excluded). Enter ends a run: the field's text is the attempt, the field clears, and the result shows. The first run's text becomes the password under test, so the first run is scored like any other. Later runs are checked against it: "Typed correctly" or "Did not match". "Lock password" keeps the password under test unchanged even when Enter is pressed on a mistyped run; unlocked, each Enter makes the new text the target. Per run: seconds from the first keystroke to Enter, characters, words per minute (five characters a word), the rubric's expected seconds for comparison, corrections (Backspace and Delete presses), accuracy (keystrokes minus a wasted key and its removal, over keystrokes), and the last few runs in one line. The password under test is scored from its text alone (${code('scoreAlone')}): a letter run that is one of this tool's words counts as one pick from that list, other letters count ${BITS_PER_ENGLISH_LETTER} bits each as English-like text, digits count log2(10) each unless they are a memorable run or a repeat, symbols log2(32) each unless repeated; plus the difficulty rubric. Nothing is stored or sent.
+
+## 17. Algorithm flow (validation)
+
+The map below is ${code('docs/algorithm-flow.md')}, included verbatim so this prompt and the document can never disagree. Use it to validate an implementation: every criterion must be enforced at the step named for it, and the flowcharts are the order of operations.
+
+${algorithmFlow.replace(/^# .*\n/, '').replace(/^## /gm, '### ')}
+
 ## 16. Security and accessibility
 
+- The Fun page renders this prompt as formatted text (headings, tables, lists) from the markdown with the ${code('marked')} library; the content is generated by the app itself, never from user input. Copy and Download give the raw markdown.
 - The built page carries a Content-Security-Policy meta tag (first in head) allowing scripts, styles and the worker from the same origin only, no connections, no objects, no base URI, no form actions; the dev server does not (it needs inline scripts for hot reloading). ${code('referrer: no-referrer')} always.
 - Copy uses the clipboard API and, when it is unavailable or rejects (insecure context, page not focused), selects the text and says so in a status region instead of silently failing.
 - Downloads revoke their object URL after a delay, never synchronously, so the browser can start the download.
@@ -255,7 +271,8 @@ Left out on purpose: length limits (unknown cold), the user's own mapping list (
 - Sentence mode reproduces the examples above and explains what cannot be fitted.
 - Storage round-trips and tolerates bad data. Rubric weights sum to 100 with rising cut-points.
 - Every requirement combination (random fuzz) meets the uppercase rule, including with initials, two-letter words and letter-removing swaps; swaps never touch two-letter words; custom mappings reject capitals; a deletion never empties a word.
-- Cold scores are pure, serialisable, agree with the cards, read the documented examples, and find swapped words with a symbol at the start.
+- Cold scores are pure, serialisable, agree with the cards, read the documented examples, find swapped words with a symbol at the start, read a repeated digit as the same word, and read a length tag's digits.
+- Padding: tag numbers are solved (47 → %50, 48 → %51, 8 → %11, for every length up to 200); plans land exactly on the minimum, prefer marks to a lone digit, respect the maximum, use factor tags that divide the length before them, add words only when more than 3 short, and never pad what keeping a word whole could supply.
 - The provider restores a batch without regenerating, regenerates only when changes are applied or a new batch is asked for, discards drafts, persists applied settings and the list (never drafts), ignores superseded answers; the worker generator matches answers by id, is recreated after dispose, and falls back inline on failure or silence.
 - The app shows the apply bar only while a draft differs, applies on request in both modes, and keeps passwords and the list across a reload.
 - Components (jsdom): number fields can be typed through and clamp on blur; tabs follow the ARIA pattern; the error boundary shows the message; Copy reports failure and selects the text; the download revokes late; the app keeps passwords and the list across a remount.
