@@ -123,6 +123,7 @@ Hash routing; a top nav links both pages.
 ${requirementsTable()}
 
 - Each "must contain" row is a checkbox plus an "at least N" number input; checking sets 1, unchecking sets 0. All three are on by default.
+- **Drafts and Apply**: every edit to the rules, swaps, sentence or sentence options is a draft. A floating bar ("Changes not applied yet." with Discard and Apply changes; Ctrl+Enter or ⌘+Enter applies) appears while the draft differs from what is applied and disappears when it does not. Applying saves the settings and regenerates. "New passwords" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
 - Number inputs can be typed through: the text stays as typed ("1" on the way to "10" is not snapped to the minimum); only whole numbers in range are committed as you type, and leaving the field clamps into range or restores the last value. Clearing an "at least" field never unticks its box.
 - Validation errors are shown in place of suggestions as a readable message, never thrown at the user. Any other render error is caught by an error boundary that shows the message and a reload button.
 - Separator choices that the site does not allow are disabled; stretchy ones are labelled "(pinky stretch)" while the pinky toggle is on.
@@ -230,10 +231,10 @@ Left out on purpose: length limits (unknown cold), the user's own mapping list (
 
 ## 15. State, persistence and performance
 
-- One React provider owns the requirements, sentence options, mode, mappings, sentence, current batch and the user's list, and exposes them through a hook. Components never generate; they ask the provider.
-- Generation is one pure function ${code('runInputs(inputs) → outcome')} (never throws: requirement problems and bugs come back as messages). It runs in a Web Worker when the browser has one, inline otherwise, through one interface; answers are matched to requests by id and superseded answers are dropped. Changes are debounced; the old batch stays on screen, dimmed, until the new one is ready; a status says "Working…".
+- One React provider owns the draft and applied settings (requirements, sentence options, mappings, sentence), the mode, the current batch and the user's list, and exposes them through a hook. Forms edit the draft; generation and persistence use what is applied. Components never generate; they ask the provider.
+- Generation is one pure function ${code('runInputs(inputs) → outcome')} (never throws: requirement problems and bugs come back as messages). It runs in a Web Worker when the browser has one, inline otherwise, through one interface; answers are matched to requests by id and superseded answers are dropped. The worker is created on first use and again after dispose (so React StrictMode's extra cleanup in development cannot strand it); if it fails or stays silent for 10 s, outstanding and later requests run inline. The old batch stays on screen, dimmed, until the new one is ready; a status says "Working…".
 - A key of the inputs that matter (mode, requirements, mappings; the sentence and its options only in sentence mode) is stored with each batch. On reload the batch is shown again and nothing is regenerated unless an input differs. "New passwords" bumps a round counter stored alongside.
-- localStorage: requirements (${code(REQUIREMENTS_KEY)}), sentence options (${code(SENTENCE_OPTIONS_KEY)}), mode (${code(MODE_KEY)}), mappings (${code(STORAGE_KEY)}), the list (${code(SELECTED_KEY)}). sessionStorage: the current batch, round and sentence (${code(SESSION_KEY)}), kept through a refresh and gone when the tab closes. Every value read back is parsed as untrusted and falls back to defaults field by field.
+- localStorage: applied requirements (${code(REQUIREMENTS_KEY)}), sentence options (${code(SENTENCE_OPTIONS_KEY)}), mode (${code(MODE_KEY)}), mappings (${code(STORAGE_KEY)}), the list (${code(SELECTED_KEY)}). sessionStorage: the current batch, round and applied sentence (${code(SESSION_KEY)}), kept through a refresh and gone when the tab closes. Unapplied drafts are never stored. Every value read back is parsed as untrusted and falls back to defaults field by field.
 - **My list**: add a suggestion one at a time (a password already listed is not added twice); each entry stores only the password, the hint and when it was added; it is displayed with its cold score, Copy and Remove; "Remove all" asks once.
 
 ## 16. Security and accessibility
@@ -255,7 +256,8 @@ Left out on purpose: length limits (unknown cold), the user's own mapping list (
 - Storage round-trips and tolerates bad data. Rubric weights sum to 100 with rising cut-points.
 - Every requirement combination (random fuzz) meets the uppercase rule, including with initials, two-letter words and letter-removing swaps; swaps never touch two-letter words; custom mappings reject capitals; a deletion never empties a word.
 - Cold scores are pure, serialisable, agree with the cards, read the documented examples, and find swapped words with a symbol at the start.
-- The provider restores a batch without regenerating, regenerates on input change or request, persists settings and the list, ignores superseded answers; the worker generator matches answers by id and falls back inline on failure.
+- The provider restores a batch without regenerating, regenerates only when changes are applied or a new batch is asked for, discards drafts, persists applied settings and the list (never drafts), ignores superseded answers; the worker generator matches answers by id, is recreated after dispose, and falls back inline on failure or silence.
+- The app shows the apply bar only while a draft differs, applies on request in both modes, and keeps passwords and the list across a reload.
 - Components (jsdom): number fields can be typed through and clamp on blur; tabs follow the ARIA pattern; the error boundary shows the message; Copy reports failure and selects the text; the download revokes late; the app keeps passwords and the list across a remount.
 
 ## 13. Acceptance

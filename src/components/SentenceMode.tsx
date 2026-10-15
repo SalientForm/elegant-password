@@ -89,8 +89,9 @@ export function SentenceInput({ value, onChange, options, onOptionsChange }: Inp
         Your sentence is changed to fit the requirements on the left. Digits and symbols come from swaps where possible.
         To reach the length, the longest words lose vowels, then inner consonants (jupiter → jptr → jpr → jr), then small
         words drop, then words become initials, and finally words drop. A symbol between words is optional: pick “None”
-        under Style. Random initials and swaps add strength. The sentence stays in this tab until you close it and is
-        never sent anywhere; it is only kept longer if you add a password to your list, as that password’s hint.
+        under Style. Random initials and swaps add strength. Nothing happens until you apply the change. The applied
+        sentence stays in this tab until you close it and is never sent anywhere; it is only kept longer if you add a
+        password to your list, as that password’s hint.
       </p>
     </section>
   );

@@ -13,7 +13,7 @@ beforeEach(() => {
 const cards = () => screen.getAllByRole('article');
 
 describe('App', () => {
-  it('shows suggestions, lets one be added to the list, and keeps both across a reload', async () => {
+  it('shows suggestions, lets one be added to the list, and keeps both across a reload', { timeout: 30_000 }, async () => {
     const first = render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const card = cards()[0]!;
@@ -43,5 +43,49 @@ describe('App', () => {
     expect(tabs[1]!.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('tabpanel')).toBeTruthy();
     expect(screen.getByLabelText('Your sentence')).toBeTruthy();
+  });
+});
+
+describe('App: apply changes', () => {
+  const passwordsShown = () => cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent);
+
+  it('floats an apply bar only while there are unapplied changes, and applies on request', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull();
+    const before = passwordsShown();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Strict' }));
+    const bar = screen.getByRole('region', { name: 'Unapplied changes' });
+    expect(bar).toBeTruthy();
+    // Nothing applied yet: same passwords, nothing saved.
+    expect(passwordsShown()).toEqual(before);
+    expect(JSON.parse(window.localStorage.getItem('elegant-passwords:requirements:v1')!).comfort).toBe('balanced');
+
+    fireEvent.click(within(bar).getByRole('button', { name: 'Discard' }));
+    expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Strict' }).getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Strict' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull());
+    await waitFor(() => expect(passwordsShown()).not.toEqual(before), { timeout: 10_000 });
+    expect(JSON.parse(window.localStorage.getItem('elegant-passwords:requirements:v1')!).comfort).toBe('strict');
+  });
+
+  it('turns a typed sentence into passwords when applied, and keeps them across a reload', { timeout: 30_000 }, async () => {
+    const first = render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    fireEvent.keyDown(screen.getAllByRole('tab')[0]!, { key: 'ArrowRight' });
+    fireEvent.change(screen.getByLabelText('Your sentence'), { target: { value: 'Sally eats sweets on Sundays' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }));
+    // The first card's "Why?" is open and shows the hint: the sentence itself.
+    await waitFor(() => expect(within(cards()[0]!).getByText(/Sally eats sweets on Sundays/)).toBeTruthy(), { timeout: 10_000 });
+    const shown = passwordsShown();
+    first.unmount();
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBe(shown.length));
+    expect(passwordsShown()).toEqual(shown);
+    expect((screen.getByLabelText('Your sentence') as HTMLTextAreaElement).value).toBe('Sally eats sweets on Sundays');
   });
 });

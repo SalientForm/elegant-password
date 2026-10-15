@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ApplyBar } from './components/ApplyBar';
 import { RubricPanel } from './components/Difficulty';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FunPage } from './components/FunPage';
@@ -61,16 +62,17 @@ export function App() {
 
 export function ElegantPasswords() {
   const p = usePasswords();
-  const { outcome } = p;
+  const { outcome, draft, applied } = p;
   const context: CardContext | undefined =
-    outcome?.ok ? { separator: outcome.separator, minUppercase: p.req.minUppercase, source: outcome.source } : undefined;
-  const emptySentence = p.mode === 'sentence' && !p.sentence.trim();
+    outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
+  const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
+  const nothingToRun = p.mode === 'sentence' && !draft.sentence.trim();
 
   return (
     <main>
       <div className="sidebar">
-        <RequirementsForm value={p.req} onChange={p.setReq} />
-        <TwistsPanel req={p.req} onReqChange={p.setReq} settings={p.mappingSettings} onSettingsChange={p.setMappingSettings} />
+        <RequirementsForm value={draft.req} onChange={p.setReq} />
+        <TwistsPanel req={draft.req} onReqChange={p.setReq} settings={draft.mappingSettings} onSettingsChange={p.setMappingSettings} />
       </div>
 
       <div className="results" aria-busy={p.busy}>
@@ -80,7 +82,7 @@ export function ElegantPasswords() {
           <p className="hint">A random sentence from the word lists, fitted to the rules on the left.</p>
         </TabPanel>
         <TabPanel idPrefix="mode" id="sentence" active={p.mode === 'sentence'}>
-          <SentenceInput value={p.sentence} onChange={p.setSentence} options={p.sentenceOptions} onOptionsChange={p.setSentenceOptions} />
+          <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} />
         </TabPanel>
 
         <div className="results-head">
@@ -91,13 +93,13 @@ export function ElegantPasswords() {
                 Working…
               </span>
             )}
-            <button type="button" className="primary" onClick={p.regenerate} disabled={emptySentence}>
+            <button type="button" className="primary" onClick={p.regenerate} disabled={nothingToRun} title={p.dirty ? 'Applies your changes too' : undefined}>
               New passwords
             </button>
           </div>
         </div>
 
-        {emptySentence && !outcome?.ok && <p className="hint">Type a sentence to turn into a password.</p>}
+        {emptySentence && !outcome?.ok && <p className="hint">Type a sentence to turn into a password, then apply it.</p>}
         {outcome && !outcome.ok && !emptySentence && (
           <p className="error" role="alert">
             {outcome.unexpected ? `Unexpected error: ${outcome.error}` : outcome.error}
@@ -122,7 +124,7 @@ export function ElegantPasswords() {
               />
             ))}
             {outcome.plan ? (
-              <StrengthPanel plan={outcome.plan} target={p.req.targetBits} />
+              <StrengthPanel plan={outcome.plan} target={applied.req.targetBits} />
             ) : (
               <SentenceStrength suggestions={outcome.suggestions} />
             )}
@@ -132,6 +134,7 @@ export function ElegantPasswords() {
 
         <SelectedList />
       </div>
+      <ApplyBar />
     </main>
   );
 }

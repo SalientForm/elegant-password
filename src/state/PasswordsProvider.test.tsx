@@ -34,11 +34,16 @@ function Probe() {
     <div>
       <output data-testid="busy">{String(p.busy)}</output>
       <output data-testid="stale">{String(p.stale)}</output>
+      <output data-testid="dirty">{String(p.dirty)}</output>
+      <output data-testid="draft">{p.draft.req.twists}</output>
+      <output data-testid="applied">{p.applied.req.twists}</output>
       <output data-testid="first">{first?.password ?? ''}</output>
       <output data-testid="error">{p.outcome && !p.outcome.ok ? p.outcome.error : ''}</output>
       <output data-testid="selected">{p.selected.map((e) => e.password).join('|')}</output>
-      <button onClick={() => p.setReq({ ...p.req, twists: 3 })}>twists3</button>
-      <button onClick={() => p.setReq({ ...p.req, minLength: 40, maxLength: 20 })}>contradict</button>
+      <button onClick={() => p.setReq({ ...p.draft.req, twists: 3 })}>twists3</button>
+      <button onClick={() => p.setReq({ ...p.draft.req, minLength: 40, maxLength: 20 })}>contradict</button>
+      <button onClick={p.apply}>apply</button>
+      <button onClick={p.discard}>discard</button>
       <button onClick={p.regenerate}>again</button>
       <button onClick={() => first && p.addSelected(first)}>add</button>
       <button onClick={() => p.selected[0] && p.removeSelected(p.selected[0].password)}>remove</button>
@@ -57,71 +62,115 @@ const mount = (gen: Generator, local = memoryStore(), session = memoryStore()) =
   return { ...utils, local, session };
 };
 
+const text = (id: string) => screen.getByTestId(id).textContent;
 const settled = async () => {
-  await waitFor(() => expect(screen.getByTestId('busy').textContent).toBe('false'));
-  await waitFor(() => expect(screen.getByTestId('first').textContent).not.toBe(''));
+  await waitFor(() => expect(text('busy')).toBe('false'));
+  await waitFor(() => expect(text('first')).not.toBe(''));
 };
 
 describe('PasswordsProvider', () => {
-  it('generates on mount, regenerates when inputs change or on request, and ignores no-op changes', async () => {
+  it('generates on mount, and again only when changes are applied or a new batch is asked for', async () => {
     const gen = countingGenerator();
     mount(gen);
     await settled();
     expect(gen.runs).toHaveLength(1);
-    const before = screen.getByTestId('first').textContent;
+    expect(text('dirty')).toBe('false');
+
+    // Editing makes a draft; nothing runs and nothing is applied.
+    fireEvent.click(screen.getByText('twists3'));
+    expect(text('dirty')).toBe('true');
+    expect(text('draft')).toBe('3');
+    expect(text('applied')).toBe(String(DEFAULT_REQUIREMENTS.twists));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(gen.runs).toHaveLength(1);
+
+    // Applying regenerates with the draft.
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(gen.runs).toHaveLength(2));
+    expect(gen.runs[1]!.req.twists).toBe(3);
+    expect(text('dirty')).toBe('false');
+    expect(text('applied')).toBe('3');
+
+    // A new batch with the same inputs.
+    const before = text('first');
+    await settled();
+    fireEvent.click(screen.getByText('again'));
+    await waitFor(() => expect(gen.runs).toHaveLength(3));
+    await settled();
+    expect(text('first')).not.toBe(before);
+
+    // Typing a sentence while making one up is a draft that changes nothing, even when applied.
+    fireEvent.click(screen.getByText('type'));
+    fireEvent.click(screen.getByText('apply'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(gen.runs).toHaveLength(3);
+    expect(text('dirty')).toBe('false');
+  });
+
+  it('discards a draft, and "New passwords" applies one', async () => {
+    const gen = countingGenerator();
+    mount(gen);
+    await settled();
+    fireEvent.click(screen.getByText('twists3'));
+    fireEvent.click(screen.getByText('discard'));
+    expect(text('dirty')).toBe('false');
+    expect(text('draft')).toBe(String(DEFAULT_REQUIREMENTS.twists));
+    fireEvent.click(screen.getByText('twists3'));
     fireEvent.click(screen.getByText('again'));
     await waitFor(() => expect(gen.runs).toHaveLength(2));
-    await settled();
-    expect(screen.getByTestId('first').textContent).not.toBe(before);
-    fireEvent.click(screen.getByText('twists3'));
-    await waitFor(() => expect(gen.runs).toHaveLength(3));
-    expect(gen.runs[2]!.req.twists).toBe(3);
-    // Typing a sentence while making one up changes nothing.
-    fireEvent.click(screen.getByText('type'));
-    await settled();
-    expect(gen.runs).toHaveLength(3);
+    expect(gen.runs[1]!.req.twists).toBe(3);
+    expect(text('dirty')).toBe('false');
   });
 
   it('keeps the current passwords across a reload without rolling new ones', async () => {
     const gen = countingGenerator();
     const { local, session, unmount } = mount(gen);
     await settled();
-    const shown = screen.getByTestId('first').textContent;
+    const shown = text('first');
     expect(loadSession(session)?.outcome).toBeTruthy();
     unmount();
     // A fresh mount with the same stores is what a reload is.
     const gen2 = countingGenerator();
     mount(gen2, local, session);
     await settled();
-    expect(screen.getByTestId('first').textContent).toBe(shown);
+    expect(text('first')).toBe(shown);
     expect(gen2.runs).toHaveLength(0);
-    // The stored key really is the key of the restored inputs.
     const stored = loadSession(session)!;
     expect(stored.key).toBe(
       inputsKey({ mode: 'generated', req: DEFAULT_REQUIREMENTS, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: activeMappings(loadMappingSettings(local)) }),
     );
   });
 
-  it('persists settings, the mode, the sentence and the selected list', async () => {
+  it('persists applied settings, the mode, the applied sentence and the list; drafts are not persisted', async () => {
     const gen = countingGenerator();
     const { local, session, unmount } = mount(gen);
     await settled();
     fireEvent.click(screen.getByText('twists3'));
+    expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).twists).toBe(DEFAULT_REQUIREMENTS.twists);
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).twists).toBe(3));
+
     fireEvent.click(screen.getByText('add'));
-    const added = screen.getByTestId('first').textContent!;
-    expect(screen.getByTestId('selected').textContent).toBe(added);
+    const added = text('first')!;
+    expect(text('selected')).toBe(added);
     fireEvent.click(screen.getByText('add')); // adding twice keeps one
-    expect(screen.getByTestId('selected').textContent).toBe(added);
-    expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).twists).toBe(3);
+    expect(text('selected')).toBe(added);
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)).toEqual([expect.objectContaining({ password: added, hint: expect.any(String) })]);
+
     fireEvent.click(screen.getByText('sentence-mode'));
     fireEvent.click(screen.getByText('type'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(JSON.parse(session.getItem(SESSION_KEY)!).sentence).toBe('');
+    fireEvent.click(screen.getByText('apply'));
     await waitFor(() => expect(JSON.parse(session.getItem(SESSION_KEY)!).sentence).toBe('Sally eats sweets on Sundays'));
     unmount();
+
     mount(countingGenerator(), local, session);
-    expect(screen.getByTestId('selected').textContent).toBe(added);
+    expect(text('selected')).toBe(added);
+    expect(text('applied')).toBe('3');
+    expect(text('dirty')).toBe('false');
     fireEvent.click(screen.getByText('remove'));
-    await waitFor(() => expect(screen.getByTestId('selected').textContent).toBe(''));
+    await waitFor(() => expect(text('selected')).toBe(''));
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)).toEqual([]);
   });
 
@@ -130,9 +179,11 @@ describe('PasswordsProvider', () => {
     mount(gen);
     await settled();
     fireEvent.click(screen.getByText('contradict'));
-    expect(screen.getByTestId('stale').textContent).toBe('true');
-    await waitFor(() => expect(screen.getByTestId('error').textContent).toMatch(/Maximum length/));
-    expect(screen.getByTestId('stale').textContent).toBe('false');
+    expect(text('stale')).toBe('false'); // a draft is not pending input; it is not applied
+    fireEvent.click(screen.getByText('apply'));
+    expect(text('stale')).toBe('true');
+    await waitFor(() => expect(text('error')).toMatch(/Maximum length/));
+    expect(text('stale')).toBe('false');
   });
 
   it('drops answers to superseded requests', async () => {
@@ -154,6 +205,6 @@ describe('PasswordsProvider', () => {
     const fresh = runInputs(second);
     await act(async () => resolvers[1]!(fresh));
     await act(async () => resolvers[0]!(late));
-    expect(screen.getByTestId('first').textContent).toBe(fresh.ok ? fresh.suggestions[0]!.password : '');
+    expect(text('first')).toBe(fresh.ok ? fresh.suggestions[0]!.password : '');
   });
 });
