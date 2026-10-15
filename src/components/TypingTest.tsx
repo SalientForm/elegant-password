@@ -154,7 +154,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
             <p>
               <span className="field-label">Testing:</span> <code className="password">{shown ? target : '•'.repeat([...target].length)}</code>
             </p>
-            <button type="button" className="icon-button ghost" onClick={clear} aria-label="Clear" title="Clear the password under test">
+            <button type="button" className="icon-button" onClick={clear} aria-label="Clear" title="Clear the password under test">
               <CancelIcon />
             </button>
           </div>
