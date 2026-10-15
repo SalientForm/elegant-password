@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { syncGenerator } from '../lib/generator';
 import { scoreCold } from '../lib/score';
@@ -27,7 +27,7 @@ function mount(entries = ENTRIES) {
 }
 
 describe('SelectedList', () => {
-  it('shows each entry with its hint and its cold score, and keeps the date out of sight', () => {
+  it('shows each entry with its hint and its cold score, and keeps the date out of sight', async () => {
     const local = mount();
     const items = within(screen.getByRole('list', { name: 'My passwords' })).getAllByRole('listitem');
     expect(items).toHaveLength(2);
@@ -37,13 +37,13 @@ describe('SelectedList', () => {
     expect(code.getAttribute('role')).toBe('button'); // clicking the password copies it
     // The tip exists only for a password that is cut off; one that fits has no rollover (jsdom has no layout, so widths are faked).
     fireEvent.mouseEnter(code.parentElement!);
-    expect(first.queryByRole('tooltip')).toBeNull();
+    expect(screen.queryByRole('tooltip')).toBeNull();
     Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 400 });
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 120 });
     fireEvent.mouseEnter(code.parentElement!);
-    expect(first.getByRole('tooltip').textContent).toBe(ENTRIES[0]!.password); // immediate, real text that can be selected
+    expect(screen.getByRole('tooltip').textContent).toBe(ENTRIES[0]!.password); // immediate, real text that can be selected
     fireEvent.mouseLeave(code.parentElement!);
-    expect(first.queryByRole('tooltip')).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull()); // leaving waits a moment so the pointer can reach the tip
     delete (HTMLElement.prototype as { scrollWidth?: unknown }).scrollWidth;
     delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
@@ -51,14 +51,14 @@ describe('SelectedList', () => {
     const s = first.getByText(`S ${score.bits.toFixed(0)}`);
     expect(s.getAttribute('title')).toBeNull(); // the app's instant tip, not the browser's
     fireEvent.mouseEnter(s.parentElement!);
-    expect(first.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
+    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
     fireEvent.mouseLeave(s.parentElement!);
     const d = first.getByText(`D ${score.difficulty.score}`);
     fireEvent.mouseEnter(d.parentElement!);
-    expect(first.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading, at once
+    expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading, at once
     fireEvent.mouseLeave(d.parentElement!);
     fireEvent.mouseEnter(first.getByText(`M ${score.memorability.score}`).parentElement!);
-    expect(first.getByRole('tooltip').textContent).toMatch(/^Memorability \d+ of 100/);
+    expect(screen.getByRole('tooltip').textContent).toMatch(/^Memorability \d+ of 100/);
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
   });

@@ -316,3 +316,31 @@ test('the header scrolls away first, then each column scrolls on its own', async
   });
   expect(reach.bottom).toBeLessThanOrEqual(reach.box + 1);
 });
+
+test('badge tips are never clipped by a card and stay inside the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await settledPasswords(page);
+  const first = cards(page).first();
+  await first.getByRole('button', { name: 'Add', exact: true }).click();
+  // In the list, at the right edge of the screen.
+  await page.getByRole('list', { name: 'My passwords' }).locator('.badge.memorability').first().hover();
+  const tip = page.getByRole('tooltip');
+  await expect(tip).toBeVisible();
+  let box = (await tip.boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  await page.mouse.move(0, 0);
+  await expect(tip).toHaveCount(0);
+  // On a card: the tip sits outside the card's clipping box, fully visible.
+  await first.locator('.badge.strength').hover();
+  await expect(page.getByRole('tooltip')).toBeVisible();
+  box = (await page.getByRole('tooltip').boundingBox())!;
+  const card = (await first.boundingBox())!;
+  expect(box.width).toBeGreaterThan(100);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  // The tip is rendered outside the card element, so the card's overflow cannot cut it.
+  expect(await page.getByRole('tooltip').evaluate((el) => el.closest('article') === null)).toBe(true);
+  void card;
+});

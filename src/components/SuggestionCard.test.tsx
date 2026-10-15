@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fromSentence } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements, type Suggestion } from '../lib/generate';
@@ -16,7 +16,7 @@ const show = (s: Suggestion, context: CardContext, index = 0, extra: Partial<Rea
   render(<SuggestionCard suggestion={s} context={context} index={index} {...extra} />);
 
 describe('SuggestionCard', () => {
-  it('explains the opening capital, same-row moves and the separator, and lists every check', () => {
+  it('explains the opening capital, same-row moves and the separator, and lists every check', async () => {
     const { s, context } = first({ separator: ';' });
     show(s, context);
     expect(screen.queryByText('Fast to type')).toBeNull(); // closed until asked
@@ -56,7 +56,7 @@ describe('SuggestionCard', () => {
     expect(screen.getByText(/pinky stretch, kept because you chose it/)).toBeTruthy();
   });
 
-  it('shows the user\'s own sentence with its change steps and the random bits', () => {
+  it('shows the user\'s own sentence with its change steps and the random bits', async () => {
     const r = fromSentence('jupiter brings 5 leds for piece', { ...DEFAULT_REQUIREMENTS, separator: ';', glue: true, initials: 1, twists: 1, minLength: 8, count: 1 }, undefined, { rng: seeded(12) });
     const s = r.suggestions[0]!;
     show(s, { separator: ';', minUppercase: 1, source: 'sentence' });
@@ -67,12 +67,14 @@ describe('SuggestionCard', () => {
     fireEvent.mouseEnter(screen.getByText(`S ${s.bits.toFixed(0)}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, .*scored from the password and its hint alone$/); // the same wording as any password
     fireEvent.mouseLeave(screen.getByText(`S ${s.bits.toFixed(0)}`).parentElement!);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.queryByText(/random bits/)).toBeNull();
     fireEvent.mouseEnter(screen.getByText(s.password).parentElement!);
     expect(screen.queryByRole('tooltip')).toBeNull(); // it fits, so no tip
     fireEvent.mouseEnter(screen.getByText(`D ${s.difficulty.score}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()}`);
     fireEvent.mouseLeave(screen.getByText(`D ${s.difficulty.score}`).parentElement!);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.getByText(`M ${s.memorability}`)).toBeTruthy();
     fireEvent.mouseEnter(screen.getByText(`S ${s.bits.toFixed(0)}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak); scored from the password and its hint alone$/);
