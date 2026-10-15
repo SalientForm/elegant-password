@@ -207,6 +207,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .mode-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
 .sentence { display: grid; gap: 0.6rem; }
 .sentence .sentence-input { font-size: 1.05rem; padding: 0.55rem 0.7rem; }
+.generated-sentence { margin: 0; font-size: 1.15rem; line-height: 1.4; padding: 0.55rem 0.7rem; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; }
 .strength p { margin: 0.5rem 0 0; }
 .chip.initial { outline: 1.5px solid var(--accent); }
 .field-label { font-size: 0.85rem; }

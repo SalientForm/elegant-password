@@ -106,6 +106,17 @@ describe('App: order and pages', () => {
     expect(JSON.parse(window.localStorage.getItem('elegant-passwords:sort:v1')!)).toBe('strongest');
   });
 
+  it('shows the first suggestion\'s sentence under the mode tabs while making one up', async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const shown = screen.getByTestId('generated-sentence').textContent;
+    const firstHint = within(cards()[0]!).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
+    expect(shown).toBe(firstHint);
+    fireEvent.click(screen.getByRole('button', { name: 'Strongest first' }));
+    const newFirst = within(cards()[0]!).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
+    expect(screen.getByTestId('generated-sentence').textContent).toBe(newFirst); // follows the order
+  });
+
   it('has a Scoring page with the rubric and the bits explanation, and keeps the typing test and list in the right column', async () => {
     render(<App />);
     expect(screen.getByLabelText('Password to test')).toBeTruthy();

@@ -110,7 +110,18 @@ export function ElegantPasswords() {
         <Tabs tabs={MODE_TABS} value={p.mode} onChange={p.setMode} label="How to make the sentence" idPrefix="mode" />
 
         <TabPanel idPrefix="mode" id="generated" active={p.mode === 'generated'}>
-          <p className="hint">A random sentence from the word lists, fitted to the rules on the left.</p>
+          <section className="panel sentence" aria-labelledby="generated-sentence-label">
+            <span className="field-label" id="generated-sentence-label">
+              Generated sentence
+            </span>
+            <p className="generated-sentence" data-testid="generated-sentence" aria-live="polite">
+              {ordered[0]?.hint ?? '…'}
+            </p>
+            <p className="hint">
+              The sentence behind the first suggestion below, drawn at random from the word lists and fitted to the rules on
+              the left. Every card shows its own under Why?.
+            </p>
+          </section>
         </TabPanel>
         <TabPanel idPrefix="mode" id="sentence" active={p.mode === 'sentence'}>
           <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} onSubmit={p.apply} />
