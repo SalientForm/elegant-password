@@ -183,7 +183,7 @@ input[type='number'], input[type='text'], select {
   font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--bg);
   border: 1px solid var(--line); border-radius: 7px; padding: 0.4rem 0.55rem; width: 100%;
 }
-input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 input[type='checkbox'] { accent-color: var(--accent); width: 1rem; height: 1rem; }
 
 button {
@@ -201,6 +201,12 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .preset.active, .segmented .active { background: var(--accent-soft); border-color: var(--accent); }
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }
 .hint { color: var(--muted); font-size: 0.8rem; margin: 0.2rem 0 0; }
+.site-rules .preset { min-width: 0; overflow-wrap: anywhere; } /* six presets in two columns: a long label wraps inside its half rather than widen the form on a phone */
+.paste-toggle { justify-self: start; padding-left: 0; }
+.paste-rules { display: grid; gap: 0.4rem; }
+.paste-rules textarea { font: inherit; font-size: 0.85rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.4rem 0.55rem; width: 100%; min-width: 0; resize: vertical; } /* pasted rules wrap; only ever taller, never wider */
+.paste-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: start; } /* what was understood beside the button, wrapping as it needs */
+.paste-actions .hint, .paste-actions .field-error { margin: 0; overflow-wrap: anywhere; } /* a long symbol list breaks rather than push the button off */
 
 .results { display: grid; gap: 0.9rem; }
 .results-head { display: flex; justify-content: space-between; align-items: center; }

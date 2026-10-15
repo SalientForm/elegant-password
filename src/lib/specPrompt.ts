@@ -36,6 +36,7 @@ import { SELECTED_KEY } from './selectedStore';
 import { SESSION_KEY } from './sessionStore';
 import { DEFAULT_WORKER_TIMEOUT_MS } from './generator';
 import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY, SORT_KEY } from './settingsStore';
+import { RULE_KEYS, SITE_PRESETS } from './sitePresets';
 import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, type MappingKind } from './twists';
 import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from './words';
 import algorithmFlow from '../../docs/algorithm-flow.md?raw';
@@ -111,7 +112,7 @@ Build a client-only web app, **Elegant Passwords**, that makes passwords that ar
 
 ## 2. Stack
 
-TypeScript, React + Vite, Vitest, Playwright; Node 24, pnpm. Dev server 127.0.0.1:4270, preview 4271; Playwright serves the build on 4272 and the dev server on 4273. Pure logic in ${code('src/lib/')} (no React), UI in ${code('src/components/')}, one provider in ${code('src/state/')}, worker entry ${code('src/worker.ts')}, build-time CSP plugin ${code('build/csp.ts')}. Modules: ${['random', 'keyboard', 'words', 'grammar', 'lengthModel', 'twists', 'mappingStore', 'generate', 'fromSentence', 'fluff', 'text', 'score', 'difficulty', 'sort', 'typingTest', 'engine', 'generator', 'storage', 'settingsStore', 'sessionStore', 'selectedStore', 'specPrompt'].map(code).join(', ')}.
+TypeScript, React + Vite, Vitest, Playwright; Node 24, pnpm. Dev server 127.0.0.1:4270, preview 4271; Playwright serves the build on 4272 and the dev server on 4273. Pure logic in ${code('src/lib/')} (no React), UI in ${code('src/components/')}, one provider in ${code('src/state/')}, worker entry ${code('src/worker.ts')}, build-time CSP plugin ${code('build/csp.ts')}. Modules: ${['random', 'keyboard', 'words', 'grammar', 'lengthModel', 'twists', 'mappingStore', 'generate', 'fromSentence', 'fluff', 'text', 'score', 'difficulty', 'sort', 'typingTest', 'engine', 'generator', 'storage', 'settingsStore', 'sessionStore', 'selectedStore', 'sitePresets', 'ruleText', 'devStats', 'specPrompt'].map(code).join(', ')}.
 
 ## 3. Pages and layout
 
@@ -137,6 +138,8 @@ Headed "Requirement options". Fieldsets in order: Length (minimum, maximum); Mus
 
 ${requirementsTable()}
 
+- **Site rules** (first in the form): one-tap presets in the strength presets' two-column style, each a full set of the site-rule fields (${RULE_KEYS.map(code).join(', ')}) and nothing else, so strength, comfort, style and swaps are untouched: ${SITE_PRESETS.map((p) => `"${p.label}" (${p.rules.minLength}-${p.rules.maxLength}, uppercase ${p.rules.minUppercase}, digits ${p.rules.minDigits}, symbols ${p.rules.minSymbols} from ${p.rules.allowedSymbols ? code(p.rules.allowedSymbols) : 'none'}, spaces ${p.rules.allowSpaces ? 'allowed' : 'not allowed'})`).join('; ')}. The preset the rules match exactly (allowed symbols compared as a set) is shown pressed. When a preset or pasted rules rule out the chosen separator, the separator's problem shows under the presets, with "Pick another under Style".
+- **Paste the site's rules**: a disclosure under the presets opens a text box. A pure, deterministic parser (no network, no model) reads lengths ("8-20", "between 8 and 20", "at least 8", "8 or more", "no more than 20", "up to 20", "fewer than 17", "exactly 8"), uppercase, digit and symbol requirements with "at least N" counts, explicit symbol lists (as the allowed set; "such as" lists are only examples; "except" or "must not contain" lists are removed from the allowed set), "no spaces" / "spaces allowed", and "letters and numbers only" / "no special characters". It returns only what it found plus a line for each; typing shows "Understood: …" live, a paste or "Fill in" applies at once and says "Filled in: …"; anything not mentioned stays as it was. A new minimum above the maximum raises the maximum (and the reverse), counts are capped at the form's maximum, and each such fix is named. Text with no rules says "No password rules found in that text; nothing changed." Both presets and pasted rules are drafts like any other edit.
 - Each "must contain" row is a checkbox plus an "at least N" field; checking sets 1, unchecking 0; all three on by default.
 - **Drafts and Submit**: every edit to the rules, swaps, sentence or sentence options is a draft. While a draft differs from what is applied, Discard and Submit changes float (no backdrop, no text, strong shadow). Enter anywhere submits (not on a button, link or select, nor in the add-mapping form, where Enter adds the mapping; Ctrl+Enter and ⌘+Enter always do), Escape discards. In a number field Enter first commits the clamped value, so what is submitted is what the field shows. Submitting saves and regenerates; Refresh submits any draft, then rolls. Switching mode is immediate.
 - Number fields keep the text as typed; only whole numbers in range commit while typing ("1" on the way to "10" is not snapped); blur clamps into range or restores the last value. Clearing an "at least" field never unticks its box.
