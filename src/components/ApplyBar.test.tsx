@@ -50,11 +50,19 @@ describe('ApplyBar', () => {
     await waitFor(() => expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).twists).toBe(3));
   });
 
-  it('also submits on ⌘+Enter and ignores plain Enter', () => {
+  it('submits on plain Enter or ⌘+Enter, discards on Escape, and leaves buttons, links and selects to their own Enter', () => {
     mount();
     fireEvent.click(screen.getByText('edit'));
-    fireEvent.keyDown(window, { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Discard' }), { key: 'Enter' }); // the button handles its own Enter
     expect(bar()).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(bar()).toBeNull();
+    expect(screen.getByTestId('applied').textContent).not.toBe('3');
+    fireEvent.click(screen.getByText('edit'));
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(bar()).toBeNull();
+    expect(screen.getByTestId('applied').textContent).toBe('3');
+    fireEvent.click(screen.getByText('edit'));
     fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
     expect(bar()).toBeNull();
   });

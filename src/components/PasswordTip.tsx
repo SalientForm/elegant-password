@@ -27,7 +27,10 @@ export function PasswordTip({ password, children }: Props) {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') setOpen(false);
+        if (e.key === 'Escape' && open) {
+          e.stopPropagation(); // closing the tip is all Escape does here
+          setOpen(false);
+        }
       }}
     >
       {children}

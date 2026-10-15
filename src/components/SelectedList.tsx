@@ -2,10 +2,11 @@ import { useMemo, useRef, useState } from 'react';
 import { scoreCold } from '../lib/score';
 import type { SelectedEntry } from '../lib/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
+import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
 import { TrashIcon } from './icons';
 import { PasswordTip } from './PasswordTip';
-import { memorabilityLevel } from './SuggestionCard';
+import { DIFFICULTY_WORDS, memorabilityLevel, memorabilityWord } from './SuggestionCard';
 
 function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
   const score = useMemo(() => scoreCold(entry.password, entry.hint), [entry.password, entry.hint]);
@@ -15,9 +16,9 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
     <li className="entry">
       <div className="entry-main">
         <PasswordTip password={entry.password}>
-          <code className="password entry-password" ref={code}>
+          <ClickToCopy text={entry.password} className="password entry-password" ref={code}>
             {entry.password}
-          </code>
+          </ClickToCopy>
         </PasswordTip>
         <p className="entry-hint">
           <span className="field-label">Hint:</span> {entry.hint || <em>none</em>}
@@ -27,11 +28,11 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
         <span className="bits-label" title="Scored from the password and hint alone, so it is the same every time">
           ≈{score.bits.toFixed(0)} bits
         </span>
-        <span className={`badge difficulty level-${score.difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard">
-          Difficulty {score.difficulty.score} · {score.difficulty.label.toLowerCase()}
+        <span className={`badge difficulty level-${score.difficulty.level}`} title={`Difficulty ${score.difficulty.score} of 100: typing effort and memory load`}>
+          {DIFFICULTY_WORDS[score.difficulty.level]}
         </span>
-        <span className={`badge memorability memo-${memorabilityLevel(score.memorability.score)}`} title="Memorability, 0 to 100">
-          Memorability {score.memorability.score}
+        <span className={`badge memorability memo-${memorabilityLevel(score.memorability.score)}`} title={`Memorability ${score.memorability.score} of 100: how closely it still looks like its hint`}>
+          {memorabilityWord(score.memorability.score)}
         </span>
         <CopyButton text={entry.password} fallback={code} icon />
         <button type="button" className="icon-button ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`} title="Remove from my list">

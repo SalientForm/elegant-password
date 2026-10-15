@@ -38,6 +38,7 @@ import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY } from './settingsStor
 import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, type MappingKind } from './twists';
 import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from './words';
 import algorithmFlow from '../../docs/algorithm-flow.md?raw';
+import testTitles from './testTitles.json';
 
 const BITS_PER_ENGLISH_LETTER = 2.3;
 
@@ -128,7 +129,7 @@ Hash routing. Above the tabs, top left: the title "The Elegant Password" with th
 ${requirementsTable()}
 
 - Each "must contain" row is a checkbox plus an "at least N" number input; checking sets 1, unchecking sets 0. All three are on by default.
-- **Drafts and Submit**: every edit to the rules, swaps, sentence or sentence options is a draft. Two buttons float over the page, with no backdrop and no message, while the draft differs from what is applied: Discard and Submit changes (Ctrl+Enter or ⌘+Enter also submits). They disappear when nothing differs. Applying saves the settings and regenerates. "Refresh" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
+- **Drafts and Submit**: every edit to the rules, swaps, sentence or sentence options is a draft. Two buttons with a strong drop shadow float over the page, with no backdrop and no message, while the draft differs from what is applied: Discard and Submit changes. While they show, Enter anywhere submits (except on a button, link or select, where Enter keeps its own job; Ctrl+Enter and ⌘+Enter always submit) and Escape discards. They disappear when nothing differs. Applying saves the settings and regenerates. "Refresh" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
 - Number inputs can be typed through: the text stays as typed ("1" on the way to "10" is not snapped to the minimum); only whole numbers in range are committed as you type, and leaving the field clamps into range or restores the last value. Clearing an "at least" field never unticks its box.
 - Validation errors are shown in place of suggestions as a readable message, never thrown at the user. Any other render error is caught by an error boundary that shows the message and a reload button.
 - Separator choices that the site does not allow are disabled; stretchy ones are labelled "(pinky stretch)" while the pinky toggle is on.
@@ -203,15 +204,15 @@ Strength in this mode: the sentence's guessability cannot be measured. The card'
 
 ## 9. Suggestion cards
 
-Cards are ordered easiest first (difficulty ascending, more bits first on ties) or strongest first (bits descending, lower difficulty first on ties), stable for exact ties. Each card has two rows. Top row: the password on the left; right-justified, three icon buttons with accessible names and tooltips: "Why?" (an info icon; a chevron and "Hide why" when open), Copy (a copy icon; a check and "Copied" for a moment after), and "Add" (a plus icon; a check and "Added", disabled, once it is in the list). Second row: the bits, the difficulty badge and the memorability badge (all from the cold score, section 12). "Why?" expands to:
-- **Easy to remember**: the hint (the sentence to remember); word chips labelled by part of speech, "made-up noun" or "your word"; twisted and initial words marked with the original; the twists or change steps listed; the number of ways the twists could land.
+Cards are ordered easiest first (difficulty ascending, more bits first on ties) or strongest first (bits descending, lower difficulty first on ties), stable for exact ties. Each card has two rows. Top row: the password on the left (clicking it copies it, and a "Copied!" bubble appears next to the cursor for two seconds; it is also a keyboard-reachable control); right-justified, three icon buttons with accessible names and tooltips: "Why?" (an info icon; a chevron and "Hide why" when open), Copy (a copy icon; a check and "Copied" for a moment after), and "Add" (a plus icon; a check and "Added", disabled, once it is in the list). Second row: the bits, the difficulty badge and the memorability badge (all from the cold score, section 12). Every "Why?" starts closed, the first card included. "Why?" expands to:
+- **Easy to remember**: the hint (the sentence to remember); word chips labelled by part of speech or "made-up noun" (words from the user's own sentence carry no label, only what they were when they changed; padding chips say "padding"); twisted and initial words marked with the original; the twists or change steps listed; the number of ways the twists could land.
 - **Fast to type**: Shift presses and why (and how often capital initials flip the case), share of same-row moves, average reach, same-finger pairs, rows used, separator note, and a keyboard heat map of the keys used.
 - **Difficulty score** table (the rubric lives on the Scoring page).
 - **Meets the requirements**: every rule with ✓/✗ and how it was met.
 
 ## 10. Strength panel
 
-- Total bits against the target; a table of each slot's pool size and bits, plus the number position and any loss from length limits. This is the exact entropy of the current plan; each card's figure is scored from its own password and hint and may sit a little above it (it does not know the length limits).
+- Headed "Why this sentence is strong": total bits against the target; a table of each slot's pool size and bits, plus the number position and any loss from length limits. This is the exact entropy of the current plan; each card's figure is scored from its own password and hint and may sit a little above it (it does not know the length limits).
 - One static sentence on choice bias: seeing several suggestions, or pressing Refresh until you like one, leans the choice toward what you find likeable, and the figures do not discount for it. No count-based discount is shown: a score must not depend on how many were seen.
 - Average time to guess (half the space) at: ${ATTACK_SCENARIOS.map((a) => `${a.scenario} (${a.guessesPerSecond.toExponential(0)}/s)`).join('; ')}.
 
@@ -243,7 +244,7 @@ Left out on purpose: length limits (unknown cold), the user's own mapping list (
 - Generation is one pure function ${code('runInputs(inputs) → outcome')} (never throws: requirement problems and bugs come back as messages). It runs in a Web Worker when the browser has one, inline otherwise, through one interface; answers are matched to requests by id and superseded answers are dropped. The worker is created on first use and again after dispose (so React StrictMode's extra cleanup in development cannot strand it); if it fails or stays silent for 10 s, outstanding and later requests run inline. The old batch stays on screen, dimmed, until the new one is ready; a status says "Working…".
 - A key of the inputs that matter (mode, requirements, mappings; the sentence and its options only in sentence mode) is stored with each batch. On reload the batch is shown again and nothing is regenerated unless an input differs. "Refresh" bumps a round counter stored alongside.
 - localStorage: applied requirements (${code(REQUIREMENTS_KEY)}), sentence options (${code(SENTENCE_OPTIONS_KEY)}), mode (${code(MODE_KEY)}), mappings (${code(STORAGE_KEY)}), the list (${code(SELECTED_KEY)}). sessionStorage: the current batch, round and applied sentence (${code(SESSION_KEY)}), kept through a refresh and gone when the tab closes. Unapplied drafts are never stored. Every value read back is parsed as untrusted and falls back to defaults field by field.
-- **My list**: add a suggestion one at a time (a password already listed is not added twice); each entry stores only the password, the hint and when it was added (the date is kept but never displayed); it is displayed with its cold score and two icon buttons, Copy and Remove (a trash icon), each with an accessible name; "Remove all" asks once. The password is shown at 13 pt on one line; one wider than the column is cut with an ellipsis, and hovering or focusing it shows the full password at once in the app's own tip (not the browser's delayed tooltip), as selectable text that stays while the pointer is over it; Escape closes it. The list never scrolls sideways.
+- **My list**: add a suggestion one at a time (a password already listed is not added twice); each entry stores only the password, the hint and when it was added (the date is kept but never displayed); it is displayed with its bits and two word badges, difficulty as one of very easy / easy / medium / hard / very hard (levels 0-4) and memorability as memorable (80+), forgettable (60-79) or confusing (below 60), the numbers in their tooltips, and two icon buttons, Copy and Remove (a trash icon), each with an accessible name; clicking the password itself also copies it with the "Copied!" bubble; "Remove all" asks once. The password is shown at 13 pt on one line; one wider than the column is cut with an ellipsis, and hovering or focusing it shows the full password at once in the app's own tip (not the browser's delayed tooltip), as selectable text that stays while the pointer is over it; Escape closes it. The list never scrolls sideways.
 
 ## 14. Test a password
 
@@ -279,6 +280,12 @@ ${algorithmFlow.replace(/^# .*\n/, '').replace(/^## /gm, '### ')}
 - The provider restores a batch without regenerating, regenerates only when changes are applied or a new batch is asked for, discards drafts, persists applied settings and the list (never drafts), ignores superseded answers; the worker generator matches answers by id, is recreated after dispose, and falls back inline on failure or silence.
 - The app shows the apply bar only while a draft differs, applies on request in both modes, and keeps passwords and the list across a reload.
 - Components (jsdom): number fields can be typed through and clamp on blur; tabs follow the ARIA pattern; the error boundary shows the message; Copy reports failure and selects the text; the download revokes late; the app keeps passwords and the list across a remount.
+
+### Every test, by file
+
+Everything a test checks is part of this spec. The list below is generated from the test files (${code('pnpm test:titles')}) and a test fails if it is out of date. Indented lines are the tests inside a group.
+
+${testTitles.map((f) => `**${f.file}**\n${f.titles.map((t) => (t.kind === 'group' ? `- ${t.title}` : `  - ${t.title}`)).join('\n')}`).join('\n\n')}
 
 ## 18. Acceptance
 

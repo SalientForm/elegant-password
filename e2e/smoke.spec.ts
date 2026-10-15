@@ -28,9 +28,11 @@ const applyBar = (page: Page) => page.getByRole('region', { name: 'Unapplied cha
 /** The passwords on screen once a batch has settled: the same set a moment later and no "Working…". */
 async function settledPasswords(page: Page): Promise<string[]> {
   await expect(cards(page).first()).toBeVisible();
+  await expect(page.locator('.batch.stale')).toHaveCount(0); // the batch on screen was made from the applied inputs
   await expect(page.getByRole('status').filter({ hasText: 'Working' })).toHaveCount(0);
   return passwords(page);
 }
+const openWhy = (page: Page) => cards(page).first().getByRole('button', { name: 'Why?', exact: true }).click();
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -39,7 +41,9 @@ test.beforeEach(async ({ page }) => {
 test('loads a batch of passwords that pass their checks, and is never stuck working', async ({ page }, info) => {
   await expect(cards(page)).toHaveCount(5);
   await expect(page.getByRole('status').filter({ hasText: 'Working' })).toHaveCount(0);
-  // The first card's "Why?" is open; every rule is met.
+  // Every "Why?" starts closed; open the first: every rule is met.
+  await expect(page.getByText('Fast to type')).toHaveCount(0);
+  await openWhy(page);
   await expect(cards(page).first().locator('.checks li.unmet')).toHaveCount(0);
   await expect(cards(page).first().locator('.checks li.met').first()).toBeVisible();
   // The built page carries the Content-Security-Policy; the dev server cannot (hot reloading needs inline scripts).
@@ -53,17 +57,23 @@ test('edits are a draft until applied; applying saves, regenerates, and survives
   const before = await settledPasswords(page);
   await expect(applyBar(page)).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Strict' }).click();
+  await page.getByRole('button', { name: 'Strict', exact: true }).click();
   await expect(applyBar(page)).toBeVisible();
   expect(await passwords(page)).toEqual(before); // nothing regenerated
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elegant-passwords:requirements:v1') ?? '{}').comfort)).not.toBe('strict');
 
-  await applyBar(page).getByRole('button', { name: 'Discard' }).click();
+  await applyBar(page).getByRole('button', { name: 'Discard', exact: true }).click();
   await expect(applyBar(page)).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Strict' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Strict', exact: true })).toHaveAttribute('aria-pressed', 'false');
 
-  await page.getByRole('button', { name: 'Strict' }).click();
-  await applyBar(page).getByRole('button', { name: 'Submit changes' }).click();
+  // Escape discards too, and plain Enter submits.
+  await page.getByRole('button', { name: 'Strict', exact: true }).click();
+  await page.getByRole('heading', { name: 'Suggestions' }).click();
+  await page.keyboard.press('Escape');
+  await expect(applyBar(page)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Strict', exact: true }).click();
+  await page.getByRole('heading', { name: 'Suggestions' }).click();
+  await page.keyboard.press('Enter');
   await expect(applyBar(page)).toHaveCount(0);
   await expect.poll(async () => passwords(page)).not.toEqual(before);
   const applied = await settledPasswords(page);
@@ -71,14 +81,14 @@ test('edits are a draft until applied; applying saves, regenerates, and survives
 
   await page.reload();
   expect(await settledPasswords(page)).toEqual(applied);
-  await expect(page.getByRole('button', { name: 'Strict' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Strict', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(applyBar(page)).toHaveCount(0);
 });
 
 test('"Refresh" rolls a fresh batch and applies any draft', async ({ page }) => {
   const before = await settledPasswords(page);
-  await page.getByRole('button', { name: 'Relaxed' }).click();
-  await page.getByRole('button', { name: 'Refresh' }).click();
+  await page.getByRole('button', { name: 'Relaxed', exact: true }).click();
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await expect(applyBar(page)).toHaveCount(0);
   await expect.poll(async () => passwords(page)).not.toEqual(before);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elegant-passwords:requirements:v1') ?? '{}').comfort)).toBe('relaxed');
@@ -88,8 +98,8 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   const shown = await settledPasswords(page);
   const first = cards(page).first();
   const bits = (await first.locator('.bits-label').textContent())!.replace(/[^0-9]/g, '');
-  await first.getByRole('button', { name: 'Add' }).click();
-  await expect(first.getByRole('button', { name: 'Added' })).toBeDisabled();
+  await first.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(first.getByRole('button', { name: 'Added', exact: true })).toBeDisabled();
   const list = page.getByRole('list', { name: 'My passwords' });
   await expect(list.getByRole('listitem')).toHaveCount(1);
   await expect(list).toContainText(shown[0]!);
@@ -114,8 +124,9 @@ test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps t
   await expect(applyBar(page)).toBeVisible();
   await page.keyboard.press('Control+Enter');
   await expect(applyBar(page)).toHaveCount(0);
-  await expect(cards(page).first()).toContainText(SENTENCE);
   const mine = await settledPasswords(page);
+  await openWhy(page);
+  await expect(cards(page).first()).toContainText(SENTENCE);
   expect(mine.length).toBeGreaterThan(0);
 
   await page.reload();
@@ -124,12 +135,17 @@ test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps t
   await expect(page.getByRole('tab', { name: 'Use my sentence' })).toHaveAttribute('aria-selected', 'true');
 });
 
-test('copies a password to the clipboard', async ({ page, context }) => {
+test('copies a password with the Copy button or by clicking the password itself', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const shown = await settledPasswords(page);
-  await cards(page).first().getByRole('button', { name: 'Copy' }).click();
-  await expect(cards(page).first().getByRole('button', { name: 'Copied' })).toBeVisible();
+  await cards(page).first().getByRole('button', { name: 'Copy', exact: true }).click();
+  await expect(cards(page).first().getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shown[0]);
+  await page.evaluate(() => navigator.clipboard.writeText(''));
+  await cards(page).nth(1).locator('.password').click();
+  await expect(page.locator('.copy-bubble')).toHaveText('Copied!');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shown[1]);
+  await expect(page.locator('.copy-bubble')).toHaveCount(0, { timeout: 4000 }); // gone after two seconds
 });
 
 test('number fields can be typed through and apply as a draft', async ({ page }) => {
@@ -140,7 +156,7 @@ test('number fields can be typed through and apply as a draft', async ({ page })
   await count.pressSequentially('10');
   await expect(count).toHaveValue('10');
   await expect(applyBar(page)).toBeVisible();
-  await applyBar(page).getByRole('button', { name: 'Submit changes' }).click();
+  await applyBar(page).getByRole('button', { name: 'Submit changes', exact: true }).click();
   await expect(cards(page)).toHaveCount(10);
 });
 
@@ -148,7 +164,7 @@ test('the Fun page shows the spec and downloads it', async ({ page }) => {
   await page.getByRole('link', { name: 'Fun' }).click();
   await expect(page.getByText('Build "Elegant Passwords"')).toBeVisible();
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download .md' }).click();
+  await page.getByRole('button', { name: 'Download .md', exact: true }).click();
   expect((await download).suggestedFilename()).toBe('elegant-passwords-spec.md');
   await page.getByRole('link', { name: 'Passwords' }).click();
   await expect(cards(page).first()).toBeVisible(); // state survived the visit
@@ -159,8 +175,9 @@ test('pads a short sentence to the minimum with a length tag that states the len
   await page.getByRole('tab', { name: 'Use my sentence' }).click();
   await page.getByLabel('Your sentence').fill('Hi there');
   await page.keyboard.press('Enter'); // Enter in the sentence field submits at once
-  await expect(cards(page).first()).toContainText('padded to the 12-character minimum');
   const mine = await settledPasswords(page);
+  await openWhy(page);
+  await expect(cards(page).first()).toContainText('padded to the 12-character minimum');
   for (const p of mine) {
     expect(p.length).toBe(12);
     expect(p).toMatch(/%12$/);
@@ -193,12 +210,12 @@ test('orders suggestions easiest first by default and strongest first on request
   await expect(cards(page).first().locator('.badge.memorability')).toContainText('Memorability');
   const easy = await difficulties();
   expect([...easy].sort((a, b) => a - b)).toEqual(easy);
-  await page.getByRole('button', { name: 'Strongest first' }).click();
+  await page.getByRole('button', { name: 'Strongest first', exact: true }).click();
   const bits = (await page.locator('article.card .bits-label').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
   expect([...bits].sort((a, b) => b - a)).toEqual(bits);
   await page.reload();
   await settledPasswords(page);
-  await expect(page.getByRole('button', { name: 'Strongest first' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Strongest first', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('the Scoring page explains bits and shows the rubric', async ({ page }) => {

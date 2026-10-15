@@ -33,7 +33,8 @@ describe('SelectedList', () => {
     expect(items).toHaveLength(2);
     const first = within(items[0]!);
     const code = first.getByText(ENTRIES[0]!.password);
-    expect(code.getAttribute('title')).toBeNull(); // no browser tooltip: it is slow and cannot be copied
+    expect(code.getAttribute('title')).toBeNull(); // no browser tooltip at all: it is slow and cannot be copied
+    expect(code.getAttribute('role')).toBe('button'); // clicking the password copies it
     expect(first.queryByRole('tooltip')).toBeNull();
     fireEvent.mouseEnter(code.parentElement!);
     const tip = first.getByRole('tooltip');
@@ -47,7 +48,11 @@ describe('SelectedList', () => {
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     expect(first.getByText(`≈${score.bits.toFixed(0)} bits`)).toBeTruthy();
-    expect(first.getByText(new RegExp(`Difficulty ${score.difficulty.score}`))).toBeTruthy();
+    const words = ['very easy', 'easy', 'medium', 'hard', 'very hard'];
+    expect(first.getByText(words[score.difficulty.level]!)).toBeTruthy(); // difficulty as a word, lowest to highest
+    const memo = score.memorability.score >= 80 ? 'memorable' : score.memorability.score >= 60 ? 'forgettable' : 'confusing';
+    expect(first.getByText(memo)).toBeTruthy(); // memorability as a word, best to worst
+    expect(first.queryByText(/Difficulty \d+/)).toBeNull(); // the numbers live in the tooltips
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
   });

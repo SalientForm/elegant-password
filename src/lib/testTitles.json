@@ -1,0 +1,1205 @@
+[
+  {
+    "file": "e2e/smoke.spec.ts",
+    "titles": [
+      {
+        "kind": "test",
+        "title": "loads a batch of passwords that pass their checks, and is never stuck working"
+      },
+      {
+        "kind": "test",
+        "title": "edits are a draft until applied; applying saves, regenerates, and survives a reload"
+      },
+      {
+        "kind": "test",
+        "title": "\"Refresh\" rolls a fresh batch and applies any draft"
+      },
+      {
+        "kind": "test",
+        "title": "adds a password to my list, scores it the same, and keeps the list across a reload"
+      },
+      {
+        "kind": "test",
+        "title": "turns my own sentence into passwords, applied with Ctrl+Enter, and keeps them across a reload"
+      },
+      {
+        "kind": "test",
+        "title": "copies a password with the Copy button or by clicking the password itself"
+      },
+      {
+        "kind": "test",
+        "title": "number fields can be typed through and apply as a draft"
+      },
+      {
+        "kind": "test",
+        "title": "the Fun page shows the spec and downloads it"
+      },
+      {
+        "kind": "test",
+        "title": "pads a short sentence to the minimum with a length tag that states the length"
+      },
+      {
+        "kind": "test",
+        "title": "tests a typed password in the masthead: speed, corrections, strength, and the lock"
+      },
+      {
+        "kind": "test",
+        "title": "orders suggestions easiest first by default and strongest first on request"
+      },
+      {
+        "kind": "test",
+        "title": "the Scoring page explains bits and shows the rubric"
+      }
+    ]
+  },
+  {
+    "file": "src/App.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "App"
+      },
+      {
+        "kind": "test",
+        "title": "shows suggestions, lets one be added to the list, and keeps both across a reload"
+      },
+      {
+        "kind": "test",
+        "title": "has accessible mode tabs and a status while working"
+      },
+      {
+        "kind": "group",
+        "title": "App: apply changes"
+      },
+      {
+        "kind": "test",
+        "title": "floats an apply bar only while there are unapplied changes, and applies on request"
+      },
+      {
+        "kind": "test",
+        "title": "turns a typed sentence into passwords when applied, and keeps them across a reload"
+      },
+      {
+        "kind": "group",
+        "title": "App: order and pages"
+      },
+      {
+        "kind": "test",
+        "title": "shows suggestions easiest first by default and strongest first on request"
+      },
+      {
+        "kind": "test",
+        "title": "shows the first suggestion's sentence under the mode tabs while making one up"
+      },
+      {
+        "kind": "test",
+        "title": "has a Scoring page with the rubric and the bits explanation, and keeps the typing test and list in the right column"
+      },
+      {
+        "kind": "test",
+        "title": "shows the title above the tabs with the description beside it and the SalientForm credit"
+      }
+    ]
+  },
+  {
+    "file": "src/components/ApplyBar.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "ApplyBar"
+      },
+      {
+        "kind": "test",
+        "title": "appears only with a draft, submits on click or Ctrl+Enter, and discards"
+      },
+      {
+        "kind": "test",
+        "title": "submits on plain Enter or ⌘+Enter, discards on Escape, and leaves buttons, links and selects to their own Enter"
+      }
+    ]
+  },
+  {
+    "file": "src/components/ClickToCopy.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "ClickToCopy"
+      },
+      {
+        "kind": "test",
+        "title": "copies on click and shows \"Copied!\" next to the cursor for two seconds"
+      },
+      {
+        "kind": "test",
+        "title": "works from the keyboard and explains itself when the clipboard is unavailable"
+      }
+    ]
+  },
+  {
+    "file": "src/components/CopyButton.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "CopyButton"
+      },
+      {
+        "kind": "test",
+        "title": "can be an icon with the label as its accessible name"
+      },
+      {
+        "kind": "test",
+        "title": "reports success when the clipboard works"
+      },
+      {
+        "kind": "test",
+        "title": "selects the text and says so when the clipboard is unavailable"
+      },
+      {
+        "kind": "test",
+        "title": "also handles a rejecting clipboard, as in an unfocused or insecure page"
+      }
+    ]
+  },
+  {
+    "file": "src/components/ErrorBoundary.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "ErrorBoundary"
+      },
+      {
+        "kind": "test",
+        "title": "shows the error and a way out instead of a blank page"
+      },
+      {
+        "kind": "test",
+        "title": "renders children when nothing throws"
+      }
+    ]
+  },
+  {
+    "file": "src/components/FunPage.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "Fun page download"
+      },
+      {
+        "kind": "test",
+        "title": "does not revoke the download URL until the browser has had time to start the download"
+      },
+      {
+        "kind": "test",
+        "title": "renders the spec with copy and download controls"
+      }
+    ]
+  },
+  {
+    "file": "src/components/NumberField.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "NumberField"
+      },
+      {
+        "kind": "test",
+        "title": "can be typed through: \"1\" on the way to \"10\" is not snapped to the minimum"
+      },
+      {
+        "kind": "test",
+        "title": "clamps into range on blur and restores the last value for nonsense"
+      },
+      {
+        "kind": "test",
+        "title": "commits null for an empty field when allowed, and follows outside changes"
+      }
+    ]
+  },
+  {
+    "file": "src/components/RequirementsForm.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "RequirementsForm"
+      },
+      {
+        "kind": "test",
+        "title": "edits lengths, counts, the allowed symbols and spaces"
+      },
+      {
+        "kind": "test",
+        "title": "turns \"must contain\" rules on and off and sets their counts"
+      },
+      {
+        "kind": "test",
+        "title": "sets the strength preset, comfort, the pinky rule and the shape options"
+      },
+      {
+        "kind": "test",
+        "title": "offers only separators the site allows and labels pinky stretches"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SelectedList.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SelectedList"
+      },
+      {
+        "kind": "test",
+        "title": "shows each entry with its hint and its cold score, and keeps the date out of sight"
+      },
+      {
+        "kind": "test",
+        "title": "removes one entry, and removes all only on a second click"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SentenceMode.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SentenceInput"
+      },
+      {
+        "kind": "test",
+        "title": "edits the sentence and every option"
+      },
+      {
+        "kind": "test",
+        "title": "submits on Enter in the sentence field"
+      },
+      {
+        "kind": "test",
+        "title": "controls padding and its length tag"
+      },
+      {
+        "kind": "test",
+        "title": "summarises the random bits across the batch"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SuggestionCard.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SuggestionCard"
+      },
+      {
+        "kind": "test",
+        "title": "explains the opening capital, same-row moves and the separator, and lists every check"
+      },
+      {
+        "kind": "test",
+        "title": "explains whole-word capitals, initials, spaces, no separator and a chosen stretch"
+      },
+      {
+        "kind": "test",
+        "title": "shows the user's own sentence with its change steps and the random bits"
+      },
+      {
+        "kind": "test",
+        "title": "toggles \"Why?\", marks unmet checks, and adds to the list"
+      }
+    ]
+  },
+  {
+    "file": "src/components/Tabs.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "Tabs"
+      },
+      {
+        "kind": "test",
+        "title": "follows the ARIA tabs pattern: one tab stop, tabs name their panels, panels name their tabs"
+      },
+      {
+        "kind": "test",
+        "title": "moves with the arrow keys, wraps, and jumps with Home and End"
+      }
+    ]
+  },
+  {
+    "file": "src/components/TwistsPanel.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "TwistsPanel"
+      },
+      {
+        "kind": "test",
+        "title": "switches built-in mappings off and on, and counts them"
+      },
+      {
+        "kind": "test",
+        "title": "adds, rejects and removes custom mappings, and resets to the defaults"
+      },
+      {
+        "kind": "test",
+        "title": "explains mappings the site rules block, and sets the minimum swaps"
+      },
+      {
+        "kind": "test",
+        "title": "disables mappings that cannot apply to the sentence"
+      }
+    ]
+  },
+  {
+    "file": "src/components/TypingTest.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "TypingTest"
+      },
+      {
+        "kind": "test",
+        "title": "scores the first run from the recorded keystrokes and sets it as the password under test"
+      },
+      {
+        "kind": "test",
+        "title": "checks later runs against the target, and the lock keeps the target through a mistyped Enter"
+      },
+      {
+        "kind": "test",
+        "title": "can hide the text as it is typed, and tells password managers to leave the field alone"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/csp.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "content security policy"
+      },
+      {
+        "kind": "test",
+        "title": "allows nothing but the app itself"
+      },
+      {
+        "kind": "test",
+        "title": "injects a meta tag into the built page only"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/difficulty.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "difficulty rubric"
+      },
+      {
+        "kind": "test",
+        "title": "has weights summing to 100 and rising cut-points"
+      },
+      {
+        "kind": "test",
+        "title": "maps values and totals onto levels"
+      },
+      {
+        "kind": "test",
+        "title": "measures the things it claims to"
+      },
+      {
+        "kind": "test",
+        "title": "rates rolls like \"asdf\" as easy and fast"
+      },
+      {
+        "kind": "test",
+        "title": "scores a smooth lowercase phrase easier than a twisted, shifted one"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/engine.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "engine"
+      },
+      {
+        "kind": "test",
+        "title": "runs both modes and returns plain data"
+      },
+      {
+        "kind": "test",
+        "title": "turns requirement problems into messages and bugs into flagged messages, never throws"
+      },
+      {
+        "kind": "test",
+        "title": "keys the inputs that matter and ignores the sentence while making one up"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/fluff.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "length tags are solved, not retried"
+      },
+      {
+        "kind": "test",
+        "title": "states the finished total: 47 characters get %50, never %50 on a 50-character password"
+      },
+      {
+        "kind": "test",
+        "title": "finds the smallest factor"
+      },
+      {
+        "kind": "group",
+        "title": "planFluff"
+      },
+      {
+        "kind": "test",
+        "title": "does nothing when nothing is missing"
+      },
+      {
+        "kind": "test",
+        "title": "lands exactly on the minimum with a total tag last"
+      },
+      {
+        "kind": "test",
+        "title": "lets the tag alone cover a gap smaller than itself, stating the true total, unless the maximum forbids it"
+      },
+      {
+        "kind": "test",
+        "title": "uses a factor tag whose number divides everything before it"
+      },
+      {
+        "kind": "test",
+        "title": "adds whole words only when more than 3 short, repeats before digits, marks last"
+      },
+      {
+        "kind": "test",
+        "title": "applies repeats inside the word and describes the plan"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/fromSentence.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "normalizing"
+      },
+      {
+        "kind": "test",
+        "title": "lowercases and strips accents and punctuation"
+      },
+      {
+        "kind": "test",
+        "title": "drops inner vowels but keeps the first letter"
+      },
+      {
+        "kind": "test",
+        "title": "trims interior letters, keeping the first and last"
+      },
+      {
+        "kind": "group",
+        "title": "fromSentence"
+      },
+      {
+        "kind": "test",
+        "title": "turns \"Sally eats sweets\" into a conforming password"
+      },
+      {
+        "kind": "test",
+        "title": "compresses \"jupiter brings 5 leds for piece\" toward 12 characters"
+      },
+      {
+        "kind": "test",
+        "title": "shrinks words to first and last consonant"
+      },
+      {
+        "kind": "test",
+        "title": "drops small words, then others, for very short targets"
+      },
+      {
+        "kind": "test",
+        "title": "meets \"at least N\" rules with twists before appending"
+      },
+      {
+        "kind": "test",
+        "title": "shortens long sentences to fit the maximum"
+      },
+      {
+        "kind": "test",
+        "title": "scores strength cold from the password and the sentence: only initials and twists count"
+      },
+      {
+        "kind": "test",
+        "title": "explains what cannot be fitted"
+      },
+      {
+        "kind": "group",
+        "title": "padding"
+      },
+      {
+        "kind": "test",
+        "title": "pads a short sentence to exactly the minimum, ending with a total-length tag that states that length"
+      },
+      {
+        "kind": "test",
+        "title": "adds a whole word only when more than 3 characters short, and uses repeats, digits and marks for the rest"
+      },
+      {
+        "kind": "test",
+        "title": "uses a factor tag when asked: the number divides the length of everything before it"
+      },
+      {
+        "kind": "test",
+        "title": "repeats a digit a swap put inside a word, and the cold scorer still reads the word"
+      },
+      {
+        "kind": "test",
+        "title": "respects the maximum and falls back to the sentence problem when padding is off"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the sentence's own material first: words are kept whole before any padding is added"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/generate.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "generate"
+      },
+      {
+        "kind": "test",
+        "title": "meets every requirement: %s"
+      },
+      {
+        "kind": "test",
+        "title": "meets \"at least N\" counts without alternating case"
+      },
+      {
+        "kind": "test",
+        "title": "types chosen words as capital initials and counts only the initial letters"
+      },
+      {
+        "kind": "test",
+        "title": "types chosen words as two letters, first and last consonant, counted exactly"
+      },
+      {
+        "kind": "test",
+        "title": "rejects counts out of range"
+      },
+      {
+        "kind": "test",
+        "title": "reaches the target strength when the length range allows it"
+      },
+      {
+        "kind": "test",
+        "title": "warns rather than failing when the limits cap the strength"
+      },
+      {
+        "kind": "test",
+        "title": "reads as a sentence: verbs follow nouns, numbers start a noun phrase anywhere"
+      },
+      {
+        "kind": "test",
+        "title": "keeps automatic symbols off pinky stretches when asked"
+      },
+      {
+        "kind": "test",
+        "title": "defaults to the home-row semicolon, honours an explicitly chosen dash, and falls back to a stretch only when nothing else is allowed"
+      },
+      {
+        "kind": "test",
+        "title": "rejects contradictory requirements"
+      },
+      {
+        "kind": "group",
+        "title": "crack estimates"
+      },
+      {
+        "kind": "test",
+        "title": "scales with entropy and formats readably"
+      },
+      {
+        "kind": "group",
+        "title": "made-up nouns"
+      },
+      {
+        "kind": "test",
+        "title": "are at most two key rolls, all lowercase or all caps, and counted exactly"
+      },
+      {
+        "kind": "group",
+        "title": "audit fixes"
+      },
+      {
+        "kind": "test",
+        "title": "always has enough letters for the uppercase rule, even with initials, two-letter words and letter-removing swaps"
+      },
+      {
+        "kind": "test",
+        "title": "meets every rule across random requirement combinations"
+      },
+      {
+        "kind": "test",
+        "title": "never twists two-letter words, initials, numbers or made-up nouns"
+      },
+      {
+        "kind": "test",
+        "title": "scores each suggestion cold from its password and hint, as plain data"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/generator.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "generators"
+      },
+      {
+        "kind": "test",
+        "title": "runs inline"
+      },
+      {
+        "kind": "test",
+        "title": "matches worker answers to requests by id, in any order"
+      },
+      {
+        "kind": "test",
+        "title": "ignores answers it did not ask for"
+      },
+      {
+        "kind": "test",
+        "title": "makes the worker on first use and again after dispose, so a StrictMode cleanup cannot strand it"
+      },
+      {
+        "kind": "test",
+        "title": "falls back to running inline when the worker fails"
+      },
+      {
+        "kind": "test",
+        "title": "falls back to running inline when the worker stays silent"
+      },
+      {
+        "kind": "test",
+        "title": "forgets outstanding requests on dispose and ignores a late answer from the old worker"
+      },
+      {
+        "kind": "test",
+        "title": "creates an inline generator where there are no workers"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/keyboard.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "keyboard model"
+      },
+      {
+        "kind": "test",
+        "title": "prefers neighbouring keys on one row over reaches across rows"
+      },
+      {
+        "kind": "test",
+        "title": "penalises one finger moving between rows"
+      },
+      {
+        "kind": "test",
+        "title": "makes rolls the cheapest move, including the index finger stepping sideways"
+      },
+      {
+        "kind": "test",
+        "title": "ranks row-friendly words as easier"
+      },
+      {
+        "kind": "test",
+        "title": "counts Shift presses and case flips"
+      },
+      {
+        "kind": "test",
+        "title": "flags symbols the pinky must stretch for"
+      },
+      {
+        "kind": "test",
+        "title": "rejects characters outside the model"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/lengthModel.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "LengthModel"
+      },
+      {
+        "kind": "test",
+        "title": "counts exactly the sequences in the length range"
+      },
+      {
+        "kind": "test",
+        "title": "computes the mean length of the valid set"
+      },
+      {
+        "kind": "test",
+        "title": "samples uniformly from the valid set only"
+      },
+      {
+        "kind": "test",
+        "title": "refuses an impossible range"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/mappingStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "mapping settings"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips through storage"
+      },
+      {
+        "kind": "test",
+        "title": "drops malformed data instead of failing"
+      },
+      {
+        "kind": "test",
+        "title": "survives blocked storage"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/random.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "randomInt"
+      },
+      {
+        "kind": "test",
+        "title": "stays in range and covers every value"
+      },
+      {
+        "kind": "test",
+        "title": "rejects invalid bounds"
+      },
+      {
+        "kind": "test",
+        "title": "works with the crypto source"
+      },
+      {
+        "kind": "group",
+        "title": "randomFloat"
+      },
+      {
+        "kind": "test",
+        "title": "is in [0, 1)"
+      },
+      {
+        "kind": "group",
+        "title": "weightedIndex"
+      },
+      {
+        "kind": "test",
+        "title": "never picks zero-weight entries and follows the weights"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/reduceTo12.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "any sentence reduces to 12 characters"
+      },
+      {
+        "kind": "test",
+        "title": "with the default settings"
+      },
+      {
+        "kind": "test",
+        "title": "with random rules, separators, shrink styles, initials, glue and twists"
+      },
+      {
+        "kind": "test",
+        "title": "when compressing toward 12 under the default 32-character maximum"
+      },
+      {
+        "kind": "test",
+        "title": "%s"
+      },
+      {
+        "kind": "test",
+        "title": "never compresses below the minimum when the sentence has enough material"
+      },
+      {
+        "kind": "test",
+        "title": "needs a letter or digit to work with"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/score.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "scoreCold"
+      },
+      {
+        "kind": "test",
+        "title": "is a pure function of the password and hint"
+      },
+      {
+        "kind": "test",
+        "title": "stays within the plan: never above the unconstrained sentence space"
+      },
+      {
+        "kind": "test",
+        "title": "reads the documented sentence-mode example"
+      },
+      {
+        "kind": "test",
+        "title": "finds twisted words, including a symbol at the start, and counts how the swaps could have landed"
+      },
+      {
+        "kind": "test",
+        "title": "handles whole words in capitals, made-up nouns and glue"
+      },
+      {
+        "kind": "test",
+        "title": "marks words it cannot find as dropped and keeps scoring"
+      },
+      {
+        "kind": "test",
+        "title": "agrees with sentence mode, which uses it for every card"
+      },
+      {
+        "kind": "test",
+        "title": "reads padding: repeated characters inside a word and a length tag after it"
+      },
+      {
+        "kind": "test",
+        "title": "is fast enough to score a whole list on every render"
+      },
+      {
+        "kind": "group",
+        "title": "scoreAlone"
+      },
+      {
+        "kind": "test",
+        "title": "is a pure function of the text and recognises this tool's own words"
+      },
+      {
+        "kind": "test",
+        "title": "counts unknown letters as English-like text and free digits and symbols as full choices"
+      },
+      {
+        "kind": "group",
+        "title": "memorability"
+      },
+      {
+        "kind": "test",
+        "title": "rewards words that keep their size and short passwords, and penalises swaps"
+      },
+      {
+        "kind": "test",
+        "title": "is on every suggestion as plain data and matches the cold score"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/selectedStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "selected passwords"
+      },
+      {
+        "kind": "test",
+        "title": "adds one at a time, never the same password twice, and removes by password"
+      },
+      {
+        "kind": "test",
+        "title": "stores only the password and hint (and when it was added)"
+      },
+      {
+        "kind": "test",
+        "title": "drops malformed entries and repeats"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/sessionStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "session store"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips a real outcome so the current passwords survive a reload"
+      },
+      {
+        "kind": "test",
+        "title": "keeps a stored error outcome and an empty outcome"
+      },
+      {
+        "kind": "test",
+        "title": "rejects anything malformed rather than trusting it"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/settingsStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "settings store"
+      },
+      {
+        "kind": "test",
+        "title": "keeps valid fields and falls back per field for odd ones"
+      },
+      {
+        "kind": "test",
+        "title": "returns the defaults for anything that does not validate"
+      },
+      {
+        "kind": "test",
+        "title": "parses sentence options and the mode"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips through a store and survives a missing store"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/sort.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "sortSuggestions"
+      },
+      {
+        "kind": "test",
+        "title": "orders easiest first by default, strongest first on request, with stable ties"
+      },
+      {
+        "kind": "test",
+        "title": "works on real suggestions"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/specPrompt.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "spec prompt"
+      },
+      {
+        "kind": "test",
+        "title": "covers every page, mode and option"
+      },
+      {
+        "kind": "test",
+        "title": "lists every mapping and rubric criterion from the live constants"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/storage.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "storage"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips JSON through a store"
+      },
+      {
+        "kind": "test",
+        "title": "treats missing, malformed and blocked storage as nothing stored"
+      },
+      {
+        "kind": "test",
+        "title": "reports no browser storage outside a browser"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/testTitles.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "test titles in the spec prompt"
+      },
+      {
+        "kind": "test",
+        "title": "lists every unit and smoke test; run `pnpm test:titles` when this fails"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/twists.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "built-in mappings"
+      },
+      {
+        "kind": "test",
+        "title": "has 64 distinct, valid mappings"
+      },
+      {
+        "kind": "group",
+        "title": "validateMapping"
+      },
+      {
+        "kind": "test",
+        "title": "rejects unusable mappings"
+      },
+      {
+        "kind": "group",
+        "title": "applyTwists"
+      },
+      {
+        "kind": "test",
+        "title": "counts every distinct placement and picks one of them"
+      },
+      {
+        "kind": "test",
+        "title": "never overlaps twists and dedupes identical results"
+      },
+      {
+        "kind": "test",
+        "title": "respects skip, first-letter protection and the length limits"
+      },
+      {
+        "kind": "test",
+        "title": "falls back to fewer twists when there is no room"
+      },
+      {
+        "kind": "test",
+        "title": "is uniform over the distinct results"
+      },
+      {
+        "kind": "group",
+        "title": "twists inside generate"
+      },
+      {
+        "kind": "test",
+        "title": "only uses symbols the site allows and keeps every requirement"
+      },
+      {
+        "kind": "test",
+        "title": "adds bits and stays fast at the maximum setting"
+      },
+      {
+        "kind": "group",
+        "title": "audit fixes"
+      },
+      {
+        "kind": "test",
+        "title": "rejects capital letters in a custom mapping output"
+      },
+      {
+        "kind": "test",
+        "title": "never lets a custom deletion empty a word"
+      },
+      {
+        "kind": "test",
+        "title": "keeps enough letters for the uppercase rule"
+      },
+      {
+        "kind": "test",
+        "title": "counts outcomes exactly the way it samples them"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/typingTest.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "typing test"
+      },
+      {
+        "kind": "test",
+        "title": "times from the first keystroke to Enter and counts corrections"
+      },
+      {
+        "kind": "test",
+        "title": "ignores modifiers and Enter, and copes with an empty run"
+      },
+      {
+        "kind": "test",
+        "title": "checks later runs against the target and reports mismatches"
+      },
+      {
+        "kind": "test",
+        "title": "locks the target when asked: a mistyped Enter does not replace it"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/words.test.ts",
+    "titles": [
+      {
+        "kind": "test",
+        "title": "contains only lowercase words of 3-8 letters"
+      },
+      {
+        "kind": "test",
+        "title": "has no duplicates"
+      }
+    ]
+  },
+  {
+    "file": "src/state/PasswordsProvider.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "PasswordsProvider"
+      },
+      {
+        "kind": "test",
+        "title": "generates on mount, and again only when changes are applied or a new batch is asked for"
+      },
+      {
+        "kind": "test",
+        "title": "discards a draft, and \"Refresh\" applies one"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the current passwords across a reload without rolling new ones"
+      },
+      {
+        "kind": "test",
+        "title": "persists applied settings, the mode, the applied sentence and the list; drafts are not persisted"
+      },
+      {
+        "kind": "test",
+        "title": "shows requirement problems as messages and marks a batch stale while new inputs are pending"
+      },
+      {
+        "kind": "test",
+        "title": "drops answers to superseded requests"
+      }
+    ]
+  }
+]

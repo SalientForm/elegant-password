@@ -3,6 +3,7 @@ import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
 import { MAPPING_KIND_LABELS } from '../lib/twists';
+import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
 import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
@@ -33,6 +34,13 @@ function separatorPhrase(sep: string): string {
 /** Colour band for a memorability score. */
 export const memorabilityLevel = (score: number) => (score >= 80 ? 'high' : score >= 60 ? 'mid' : 'low');
 
+/** Memorability in a word, best to worst. */
+export const MEMORABILITY_WORDS = { high: 'memorable', mid: 'forgettable', low: 'confusing' } as const;
+export const memorabilityWord = (score: number) => MEMORABILITY_WORDS[memorabilityLevel(score)];
+
+/** Difficulty level 0-4 in a word, lowest to highest. */
+export const DIFFICULTY_WORDS = ['very easy', 'easy', 'medium', 'hard', 'very hard'] as const;
+
 export interface CardContext {
   separator: string;
   minUppercase: number;
@@ -51,7 +59,7 @@ interface Props {
 
 export function SuggestionCard({ suggestion, context, index, selected = false, onAdd }: Props) {
   const mine = context.source === 'sentence';
-  const [open, setOpen] = useState(index === 0);
+  const [open, setOpen] = useState(false); // every "Why?" starts closed
   const code = useRef<HTMLElement>(null);
   const { password, hint, words, typing, checks, twists, difficulty } = suggestion;
   const whyId = `why-${index}`;
@@ -62,9 +70,9 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
     <article className="card" aria-label={`Suggestion ${index + 1}`}>
       <div className="card-head">
         <div className="card-row">
-          <code className="password" ref={code}>
+          <ClickToCopy text={password} className="password" ref={code}>
             {password}
-          </code>
+          </ClickToCopy>
           <div className="actions card-buttons">
             <button type="button" className="icon-button ghost" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={whyId} aria-label={open ? 'Hide why' : 'Why?'} title={open ? 'Hide why' : 'Why?'}>
               {open ? <ChevronUpIcon /> : <InfoIcon />}
@@ -115,12 +123,12 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
                   title={w.text !== w.original ? `changed from "${w.original}"` : undefined}
                 >
                   <span>{w.text}</span>
-                  <small>
-                    {(() => {
-                      const label = roleLabel(w, !mine && w.slot === 'noun' && isMadeUpNoun(w.original));
-                      return w.text !== w.original ? `${label}: ${w.original}` : label;
-                    })()}
-                  </small>
+                  {(() => {
+                    // Your own words need no part-of-speech label; only show what they were when they changed.
+                    const label = w.slot === 'yours' ? '' : roleLabel(w, !mine && w.slot === 'noun' && isMadeUpNoun(w.original));
+                    const text = w.text !== w.original ? (label ? `${label}: ${w.original}` : w.original) : label;
+                    return text ? <small>{text}</small> : null;
+                  })()}
                 </span>
               ))}
             </div>

@@ -270,7 +270,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 
 /* Floating submit / discard buttons: no backdrop, just the two buttons over the page */
 .apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 1.25rem; z-index: 20; display: flex; gap: 0.5rem; align-items: center; justify-content: center; pointer-events: none; }
-.apply-bar .floating { pointer-events: auto; border-radius: 999px; padding: 0.6rem 1.1rem; font-size: 0.9rem; box-shadow: 0 8px 24px rgb(0 0 0 / 0.22); }
+.apply-bar .floating { pointer-events: auto; border-radius: 999px; padding: 0.6rem 1.1rem; font-size: 0.9rem; box-shadow: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3); }
 .apply-bar .floating.ghost { background: var(--panel); border-color: var(--line); color: var(--ink); }
 @media (max-width: 600px) { .apply-bar { left: 0; right: 0; transform: none; } }
 .chip.fluff { background: var(--warn-soft); border: 1px dashed var(--warn); }
@@ -286,3 +286,10 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .typing-stats li::before { margin-right: 0.4rem; font-weight: 700; }
 .typing-stats .met::before { content: '✓'; color: var(--accent); }
 .typing-stats .unmet::before { content: '✗'; color: var(--bad); }
+
+/* Click a password to copy it; the bubble sits next to the cursor for two seconds. */
+.click-to-copy { cursor: copy; }
+.click-to-copy:hover { color: var(--accent); }
+.click-to-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.copy-bubble { position: fixed; z-index: 40; padding: 0.25rem 0.6rem; border-radius: 999px; background: var(--accent); color: var(--panel); font-size: 0.8rem; font-weight: 600; pointer-events: none; box-shadow: 0 4px 14px rgb(0 0 0 / 0.3); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

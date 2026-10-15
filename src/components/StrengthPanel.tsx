@@ -13,7 +13,7 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
     <section className="panel strength">
       <div className="strength-head">
         <div>
-          <h2>Why it is strong</h2>
+          <h2>Why this sentence is strong</h2>
           <p className="hint">
             The maths assumes an attacker knows this tool, its word lists and the sentence pattern. Strength comes only
             from the random choices.

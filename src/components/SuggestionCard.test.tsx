@@ -19,6 +19,8 @@ describe('SuggestionCard', () => {
   it('explains the opening capital, same-row moves and the separator, and lists every check', () => {
     const { s, context } = first({ separator: ';' });
     show(s, context);
+    expect(screen.queryByText('Fast to type')).toBeNull(); // closed until asked
+    fireEvent.click(screen.getByRole('button', { name: 'Why?' }));
     const why = screen.getByText('Fast to type').closest('section')!;
     expect(within(why).getByText(/the opening capital/)).toBeTruthy();
     expect(within(why).getByText(/same keyboard row/)).toBeTruthy();
@@ -29,19 +31,23 @@ describe('SuggestionCard', () => {
   });
 
   it('explains whole-word capitals, initials, spaces, no separator and a chosen stretch', () => {
+    const open = () => fireEvent.click(screen.getByRole('button', { name: 'Why?' }));
     const caps = first({ minUppercase: 3, separator: ' ' });
     show(caps.s, caps.context);
+    open();
     expect(screen.getByText(/held once for the word in capitals/)).toBeTruthy();
     expect(screen.getByText(/Spaces between words go to your thumb/)).toBeTruthy();
     cleanup();
     const initials = first({ initials: 2, separator: '', twists: 0 }, 21);
     show(initials.s, initials.context);
+    open();
     expect(screen.getByText(/2 capital initials/)).toBeTruthy();
     expect(screen.getByText(/Capital letters stand for whole words/)).toBeTruthy();
     expect(screen.getByText(/run together with no separator/)).toBeTruthy();
     cleanup();
     const dash = first({ separator: '-' });
     show(dash.s, dash.context);
+    open();
     expect(screen.getByText(/pinky stretch, kept because you chose it/)).toBeTruthy();
   });
 
@@ -49,7 +55,9 @@ describe('SuggestionCard', () => {
     const r = fromSentence('jupiter brings 5 leds for piece', { ...DEFAULT_REQUIREMENTS, separator: ';', glue: true, initials: 1, twists: 1, minLength: 8, count: 1 }, undefined, { rng: seeded(12) });
     const s = r.suggestions[0]!;
     show(s, { separator: ';', minUppercase: 1, source: 'sentence' });
+    fireEvent.click(screen.getByRole('button', { name: 'Why?' }));
     expect(screen.getByText(/It is your own sentence/)).toBeTruthy();
+    expect(screen.queryByText(/your word/)).toBeNull(); // chips carry no "your word" label
     for (const step of s.steps) expect(screen.getByText(step)).toBeTruthy();
     expect(screen.getByText(`+${s.bits.toFixed(0)} random bits`)).toBeTruthy();
   });
@@ -59,7 +67,7 @@ describe('SuggestionCard', () => {
     const onAdd = vi.fn();
     const broken: Suggestion = { ...s, checks: [...s.checks, { rule: 'Made-up rule', met: false, how: 'never' }] };
     show(broken, context, 1, { onAdd });
-    expect(screen.queryByText('Fast to type')).toBeNull(); // only the first card opens by default
+    expect(screen.queryByText('Fast to type')).toBeNull(); // closed by default
     fireEvent.click(screen.getByRole('button', { name: 'Why?' }));
     expect(screen.getByText('Fast to type')).toBeTruthy();
     expect(screen.getByText('Made-up rule').closest('li')!.className).toBe('unmet');

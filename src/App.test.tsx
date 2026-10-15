@@ -79,8 +79,13 @@ describe('App: apply changes', () => {
     fireEvent.keyDown(screen.getAllByRole('tab')[0]!, { key: 'ArrowRight' });
     fireEvent.change(screen.getByLabelText('Your sentence'), { target: { value: 'Sally eats sweets on Sundays' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
-    // The first card's "Why?" is open and shows the hint: the sentence itself.
-    await waitFor(() => expect(within(cards()[0]!).getByText(/Sally eats sweets on Sundays/)).toBeTruthy(), { timeout: 10_000 });
+    // Open the first card's "Why?": it shows the hint, the sentence itself.
+    await waitFor(() => {
+      const c = cards()[0]!;
+      const why = within(c).queryByRole('button', { name: 'Why?' });
+      if (why) fireEvent.click(why);
+      expect(within(c).getByText(/Sally eats sweets on Sundays/)).toBeTruthy();
+    }, { timeout: 10_000 });
     const shown = passwordsShown();
     first.unmount();
     render(<App />);
@@ -110,6 +115,8 @@ describe('App: order and pages', () => {
     render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const shown = screen.getByTestId('generated-sentence').textContent;
+    expect(screen.queryByText('Fast to type')).toBeNull(); // every "Why?" starts closed
+    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Why?' }));
     const firstHint = within(cards()[0]!).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
     expect(shown).toBe(firstHint);
     fireEvent.click(screen.getByRole('button', { name: 'Strongest first' }));
