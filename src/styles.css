@@ -1,7 +1,7 @@
 :root {
   --bg: #f6f4ef;
   --bg-top: color-mix(in srgb, var(--bg), black 20%); /* the top of the page gradient: 20% of brightness darker than the page colour */
-  --bar: color-mix(in srgb, var(--bg-top), white 10%); /* the header and the phone bar: opaque, slightly lighter than the top of the gradient they cover */
+  --bar: color-mix(in srgb, var(--bg-top), white 20%); /* the header and the phone bar: opaque, a fifth of the way to white from the top of the gradient they cover */
   --line-dark: color-mix(in srgb, var(--line), black 18%); /* the header's bottom line, a shade darker than the tabs' border above it */
   --panel: #ffffff;
   --ink: #1f2328;
