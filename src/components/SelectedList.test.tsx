@@ -32,7 +32,8 @@ describe('SelectedList', () => {
     const items = within(screen.getByRole('list', { name: 'My passwords' })).getAllByRole('listitem');
     expect(items).toHaveLength(2);
     const first = within(items[0]!);
-    expect(first.getByText(ENTRIES[0]!.password)).toBeTruthy();
+    const code = first.getByText(ENTRIES[0]!.password);
+    expect(code.getAttribute('title')).toBe(ENTRIES[0]!.password); // the full password shows on hover when it is cut short
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     expect(first.getByText(`≈${score.bits.toFixed(0)} bits`)).toBeTruthy();

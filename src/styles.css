@@ -236,7 +236,11 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 /* Saved list, copy status and busy state */
 .selected-list { list-style: none; padding: 0; margin: 0.6rem 0 0; display: grid; gap: 0.6rem; }
 .entry { display: grid; gap: 0.4rem; padding: 0.7rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
-.entry-main { display: grid; gap: 0.2rem; }
+.entry-main { display: grid; gap: 0.2rem; min-width: 0; }
+/* Never scroll sideways: a long password is cut with an ellipsis and shown in full on hover. */
+.entry .entry-password { font-size: 13pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; display: block; max-width: 100%; }
+.entry { min-width: 0; overflow: hidden; }
+.selected .selected-list { overflow-x: hidden; }
 .entry-hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
 .entry-date { color: var(--muted); font-size: 0.72rem; }
 .hint-line { margin: 0 0 0.5rem !important; }

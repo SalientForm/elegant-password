@@ -12,7 +12,7 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
   return (
     <li className="entry">
       <div className="entry-main">
-        <code className="password" ref={code}>
+        <code className="password entry-password" ref={code} title={entry.password}>
           {entry.password}
         </code>
         <p className="entry-hint">
