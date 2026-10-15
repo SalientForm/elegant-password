@@ -94,10 +94,11 @@ describe('TypingTest', () => {
     fireEvent.paste(input, { clipboardData: { getData: () => 'Pasted;secret;42\n' } });
     expect(input.value).toBe('');
     expect(screen.getByRole('status').textContent).toContain('Testing: Pasted;secret;42');
-    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('');
-    // A password that is in the list brings its hint along.
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe(''); // unknown: a hint may be typed in
+    // A password that is in the list brings its hint along, and that hint is not editable.
     fireEvent.paste(input, { clipboardData: { getData: () => 'jr;B;5ls;Fpc' } });
-    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('jupiter brings 5 leds for piece');
+    expect(screen.getByRole('status').textContent).toContain('Hint: jupiter brings 5 leds for piece');
+    expect(screen.queryByLabelText('Hint for the password under test')).toBeNull();
     expect(within(screen.getByRole('status')).getByText(/^M \d+$/)).toBeTruthy();
     // Typing it afterwards is checked against it.
     typeInto(input, 'jr;B;5ls;Fpc', clock);
@@ -135,13 +136,15 @@ describe('TypingTest', () => {
         <TypingTest now={() => clock.t} />
       </PasswordsProvider>,
     );
-    // On mount the latest list entry is under test, with its hint.
+    // On mount the latest list entry is under test, with its hint shown as text: not editable.
     expect(screen.getByRole('status').textContent).toContain('Testing: Old;one');
-    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('old one');
+    expect(screen.getByRole('status').textContent).toContain('Hint: old one');
+    expect(screen.queryByLabelText('Hint for the password under test')).toBeNull();
     fireEvent.click(screen.getByText('add'));
     const status = screen.getByRole('status');
     expect(status.textContent).toContain('Testing: 13;Worthy;storks;openly;pet;twisty;toys');
-    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('13 worthy storks openly pet twisty toys');
+    expect(status.textContent).toContain('Hint: 13 worthy storks openly pet twisty toys');
+    expect(screen.queryByLabelText('Hint for the password under test')).toBeNull();
     const cold = scoreCold('13;Worthy;storks;openly;pet;twisty;toys', '13 worthy storks openly pet twisty toys');
     expect(within(status).getByText(`S ${cold.bits.toFixed(0)}`)).toBeTruthy();
     expect(within(status).getByText(`D ${cold.difficulty.score}`)).toBeTruthy();
@@ -153,7 +156,7 @@ describe('TypingTest', () => {
     enter(input, clock);
     const after = screen.getByRole('status');
     expect(after.textContent).toContain('Testing: xyzzy-42');
-    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe(''); // editable: it arrived without one
     expect(within(after).getByText('M n/a')).toBeTruthy();
     expect(within(after).getByText(`S ${scoreAlone('xyzzy-42').bits.toFixed(0)}`)).toBeTruthy();
     expect(within(after).getByText(`D ${scoreAlone('xyzzy-42').difficulty.score}`)).toBeTruthy();

@@ -109,7 +109,8 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   // The password just added is now the one under test, hint and all three badges included.
   const practice = page.locator('.typing-result');
   await expect(practice).toContainText(`Testing: ${shown[0]}`);
-  await expect(page.getByLabel('Hint for the password under test', { exact: true })).not.toHaveValue('');
+  await expect(practice).toContainText('Hint:'); // shown as text: a known hint cannot be edited
+  await expect(page.getByLabel('Hint for the password under test', { exact: true })).toHaveCount(0);
   await expect(practice.locator('.badge.strength')).toHaveText(`S ${bits}`);
   await expect(practice.locator('.badge.memorability')).toHaveText(/^M \d+$/);
 

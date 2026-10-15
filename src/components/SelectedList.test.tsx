@@ -53,10 +53,12 @@ describe('SelectedList', () => {
     fireEvent.mouseEnter(s.parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
     fireEvent.mouseLeave(s.parentElement!);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     const d = first.getByText(`D ${score.difficulty.score}`);
     fireEvent.mouseEnter(d.parentElement!);
     expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading, at once
     fireEvent.mouseLeave(d.parentElement!);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     fireEvent.mouseEnter(first.getByText(`M ${score.memorability.score}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Memorability \d+ of 100/);
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed

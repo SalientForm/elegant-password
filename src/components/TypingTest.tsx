@@ -43,6 +43,8 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const [value, setValue] = useState('');
   const [target, setTarget] = useState<string | undefined>(latest?.password);
   const [hint, setHint] = useState<string | undefined>(latest?.hint);
+  /** A hint can only be typed in for a password that arrived without one (typed or pasted after a clear). */
+  const [hintEditable, setHintEditable] = useState(false);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [shown, setShown] = useState(true);
   const recording = useRef<Recording>(startRecording());
@@ -55,6 +57,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
     lastLatest.current = latest.password;
     setTarget(latest.password);
     setHint(latest.hint);
+    setHintEditable(false);
     setAttempts([]);
     recording.current = startRecording();
     setValue('');
@@ -70,6 +73,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const clear = () => {
     setTarget(undefined);
     setHint(undefined);
+    setHintEditable(false);
     setAttempts([]);
     recording.current = startRecording();
     setValue('');
@@ -80,8 +84,10 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
     const pasted = e.clipboardData.getData('text').split(/\r?\n/)[0]?.trim() ?? '';
     e.preventDefault();
     if (!pasted) return;
+    const known = hintFor(pasted);
     setTarget(pasted);
-    setHint(hintFor(pasted));
+    setHint(known);
+    setHintEditable(known === undefined); // a known password keeps its hint; an unknown one may be given one
     setAttempts([]);
     recording.current = startRecording();
     setValue('');
@@ -97,7 +103,10 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
       // The password under test stays until cleared: the first run sets it, later runs are checked against it.
       const checkAgainst = nextTarget(target, typed, true);
       const attempt = finishAttempt(recording.current, typed, checkAgainst, at);
-      if (target === undefined) setHint(undefined); // a password typed in by hand has no hint until one is added
+      if (target === undefined) {
+        setHint(undefined); // a password typed in by hand has no hint until one is added
+        setHintEditable(true);
+      }
       setTarget(checkAgainst);
       setAttempts((list) => [attempt, ...list].slice(0, keep));
       recording.current = startRecording();
@@ -146,25 +155,31 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
           <p>
             <span className="field-label">Testing:</span> <code className="password">{shown ? target : '•'.repeat([...target].length)}</code>
           </p>
-          <label className="field inline hint-field">
-            <span>Hint</span>
-            <input
-              type="text"
-              aria-label="Hint for the password under test"
-              placeholder="(hint n/a)"
-              autoComplete="off"
-              spellCheck={false}
-              value={hint ?? ''}
-              onChange={(e) => setHint(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  input.current?.focus();
-                }
-              }}
-            />
-          </label>
+          {hintEditable ? (
+            <label className="field inline hint-field">
+              <span>Hint</span>
+              <input
+                type="text"
+                aria-label="Hint for the password under test"
+                placeholder="(hint n/a)"
+                autoComplete="off"
+                spellCheck={false}
+                value={hint ?? ''}
+                onChange={(e) => setHint(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    input.current?.focus();
+                  }
+                }}
+              />
+            </label>
+          ) : (
+            <p className="hint entry-hint">
+              <span className="field-label">Hint:</span> {hintText ?? '(hint n/a)'}
+            </p>
+          )}
           <div className="actions">
             {cold ? (
               <ScoreBadges bits={cold.bits} difficulty={cold.difficulty} memorability={cold.memorability.score} />
