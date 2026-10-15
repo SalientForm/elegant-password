@@ -13,6 +13,7 @@ interface TabsProps<T extends string> {
   label: string;
   /** Prefix for the tab and panel element ids. */
   idPrefix: string;
+  className?: string;
 }
 
 export const tabId = (prefix: string, id: string) => `${prefix}-tab-${id}`;
@@ -23,7 +24,7 @@ export const panelId = (prefix: string, id: string) => `${prefix}-panel-${id}`;
  * (and Home/End) move between tabs and select them, each tab names the
  * panel it controls.
  */
-export function Tabs<T extends string>({ tabs, value, onChange, label, idPrefix }: TabsProps<T>) {
+export function Tabs<T extends string>({ tabs, value, onChange, label, idPrefix, className = 'mode-tabs' }: TabsProps<T>) {
   const buttons = useRef(new Map<T, HTMLButtonElement>());
 
   const move = (from: T, step: number | 'first' | 'last') => {
@@ -35,7 +36,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, idPrefix 
   };
 
   return (
-    <div className="mode-tabs" role="tablist" aria-label={label}>
+    <div className={className} role="tablist" aria-label={label}>
       {tabs.map((tab) => {
         const selected = tab.id === value;
         return (

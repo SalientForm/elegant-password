@@ -3,7 +3,7 @@ import { criterionOf, LEVELS, RUBRIC, type Criterion, type Difficulty } from '..
 /** One password scored against each rubric criterion. */
 export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
   return (
-    <table className="rubric">
+    <table className="rubric stack">
       <thead>
         <tr>
           <th>Criterion</th>
@@ -17,12 +17,12 @@ export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
           const criterion = criterionOf(id);
           return (
           <tr key={criterion.id} title={criterion.measures}>
-            <td>{criterion.name}</td>
-            <td>{criterion.format(value)}</td>
-            <td>
+            <td data-label="Criterion">{criterion.name}</td>
+            <td data-label="Measured">{criterion.format(value)}</td>
+            <td data-label="Level">
               <span className={`pip level-${level}`}>{LEVELS[level]}</span>
             </td>
-            <td>
+            <td data-label="Points">
               {points % 1 ? points.toFixed(1) : points} / {criterion.weight}
             </td>
           </tr>
@@ -46,7 +46,7 @@ export function RubricTable() {
   return (
     <>
       <div className="table-scroll">
-        <table className="rubric">
+        <table className="rubric stack">
           <thead>
             <tr>
               <th>Criterion</th>
@@ -59,13 +59,15 @@ export function RubricTable() {
           <tbody>
             {RUBRIC.map((c) => (
               <tr key={c.id}>
-                <td>
+                <td data-label="Criterion">
                   <strong>{c.name}</strong>
                   <small>{c.measures}</small>
                 </td>
-                <td>{c.weight}</td>
-                {LEVELS.map((_, level) => (
-                  <td key={level}>{band(c, level)}</td>
+                <td data-label="Weight">{c.weight}</td>
+                {LEVELS.map((l, level) => (
+                  <td key={level} data-label={l}>
+                    {band(c, level)}
+                  </td>
                 ))}
               </tr>
             ))}

@@ -44,7 +44,7 @@ export function ScoringPage() {
         <h3>Time to guess</h3>
         <p className="hint">Average time to find the password, half the space, at three attacker speeds.</p>
         <div className="table-scroll">
-          <table className="rubric">
+          <table className="rubric stack">
             <thead>
               <tr>
                 <th>Target</th>
@@ -56,14 +56,16 @@ export function ScoringPage() {
             <tbody>
               {STRENGTH_PRESETS.map((p) => (
                 <tr key={p.bits}>
-                  <td>
+                  <td data-label="Target">
                     <strong>
                       {p.label}, {p.bits} bits
                     </strong>
                     <small>{p.hint}</small>
                   </td>
                   {crackEstimates(p.bits).map((e) => (
-                    <td key={e.scenario}>{formatDuration(e.seconds)}</td>
+                    <td key={e.scenario} data-label={e.scenario}>
+                      {formatDuration(e.seconds)}
+                    </td>
                   ))}
                 </tr>
               ))}

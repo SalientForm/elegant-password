@@ -82,6 +82,11 @@ explanation for each:
   with the toggle above them; the choice is remembered), and on the right
   the password tester above your list. The outer columns are fixed and the
   middle one takes the rest.
+- **Phones.** Below 860 px the three columns become three tabs, Options,
+  Suggestions and My list, with every feature reachable and nothing
+  scrolling sideways: tables stack, the keyboard map scales, rows wrap. A
+  phone-sized Playwright project (`pnpm test:e2e`, project `phone`) fails
+  on any element past the right edge or any horizontal scroll.
 - **Scoring page** (`#/scoring`): how strength in bits, the difficulty
   score and memorability are worked out, with the full rubric and
   time-to-guess tables.

@@ -25,7 +25,7 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
         </div>
       </div>
 
-      <table>
+      <table className="stack">
         <thead>
           <tr>
             <th>Word</th>
@@ -36,16 +36,16 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
         <tbody>
           {counted.map((b, i) => (
             <tr key={i}>
-              <td>{b.label}</td>
-              <td>{b.poolSize.toLocaleString('en')} options</td>
-              <td>{b.bits.toFixed(1)} bits</td>
+              <td data-label="Word">{b.label}</td>
+              <td data-label="Chosen from">{b.poolSize.toLocaleString('en')} options</td>
+              <td data-label="Adds">{b.bits.toFixed(1)} bits</td>
             </tr>
           ))}
           {plan.lengthPenaltyBits > 0.05 && (
             <tr className="minus">
-              <td>Length limits</td>
-              <td>rule out some combinations</td>
-              <td>−{plan.lengthPenaltyBits.toFixed(1)} bits</td>
+              <td data-label="Word">Length limits</td>
+              <td data-label="Chosen from">rule out some combinations</td>
+              <td data-label="Adds">−{plan.lengthPenaltyBits.toFixed(1)} bits</td>
             </tr>
           )}
         </tbody>

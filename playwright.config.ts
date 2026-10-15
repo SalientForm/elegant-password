@@ -24,8 +24,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'built', use: { baseURL: `http://127.0.0.1:${E2E_PORTS.built}` } },
-    { name: 'dev', use: { baseURL: `http://127.0.0.1:${E2E_PORTS.dev}` } },
+    { name: 'built', testMatch: /smoke\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${E2E_PORTS.built}` } },
+    { name: 'dev', testMatch: /smoke\.spec\.ts/, use: { baseURL: `http://127.0.0.1:${E2E_PORTS.dev}` } },
+    // A phone against the built app: the three columns collapse into tabs and nothing may scroll sideways.
+    { name: 'phone', testMatch: /mobile\.spec\.ts/, use: { ...devices['Pixel 7'], baseURL: `http://127.0.0.1:${E2E_PORTS.built}` } },
   ],
   webServer: [
     {

@@ -1,5 +1,22 @@
 [
   {
+    "file": "e2e/mobile.spec.ts",
+    "titles": [
+      {
+        "kind": "test",
+        "title": "collapses into three tabs and keeps every feature reachable without sideways scrolling"
+      },
+      {
+        "kind": "test",
+        "title": "sentence mode and its keyboard map fit a phone"
+      },
+      {
+        "kind": "test",
+        "title": "the Scoring and Fun pages fit a phone"
+      }
+    ]
+  },
+  {
     "file": "e2e/smoke.spec.ts",
     "titles": [
       {
@@ -98,6 +115,14 @@
       {
         "kind": "test",
         "title": "shows the title above the tabs with the description beside it and the SalientForm credit"
+      },
+      {
+        "kind": "group",
+        "title": "App on a phone"
+      },
+      {
+        "kind": "test",
+        "title": "collapses the columns into Options, Suggestions and My list tabs with every feature reachable"
       }
     ]
   },

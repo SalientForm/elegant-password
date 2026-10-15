@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
+import { NARROW } from './components/useMediaQuery';
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -150,5 +151,42 @@ describe('App: order and pages', () => {
     expect(credit.textContent?.replace(/\s+/g, ' ').trim()).toBe('brought to you by SalientForm');
     expect(credit.querySelector('strong')?.textContent).toBe('SalientForm'); // only the name is bold
     expect(screen.getByText(/read like a sentence/)).toBeTruthy();
+  });
+});
+
+describe('App on a phone', () => {
+  const narrowScreen = () =>
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: query === NARROW, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }),
+    });
+  afterEach(() => {
+    delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+  });
+
+  it('collapses the columns into Options, Suggestions and My list tabs with every feature reachable', { timeout: 30_000 }, async () => {
+    narrowScreen();
+    render(<App />);
+    const sections = within(screen.getByRole('tablist', { name: 'Sections' })).getAllByRole('tab');
+    expect(sections.map((t) => t.textContent)).toEqual(['Options', 'Suggestions', 'My list']);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    expect(screen.queryByText('Site requirements')).toBeNull(); // options live in their own tab
+    expect(screen.queryByLabelText('Password to test')).toBeNull(); // so do the tester and the list
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Options' }));
+    expect(screen.getByText('Site requirements')).toBeTruthy();
+    expect(screen.getByText('Swaps')).toBeTruthy();
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Strict' }));
+    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'My list' }));
+    expect(screen.getByLabelText('Password to test')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'My list' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // the floating buttons follow every tab
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Suggestions' }));
+    expect(screen.getByRole('tablist', { name: 'How to make the sentence' })).toBeTruthy();
+    expect(cards().length).toBeGreaterThan(0);
   });
 });

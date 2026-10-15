@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NARROW, useMediaQuery } from './components/useMediaQuery';
 import { ApplyBar } from './components/ApplyBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FunPage } from './components/FunPage';
@@ -25,6 +26,13 @@ const DESCRIPTIONS: Record<Page, string> = {
   scoring: 'How difficulty, strength and memorability are scored.',
   fun: 'The whole app, described as one prompt.',
 };
+
+type Column = 'options' | 'suggestions' | 'list';
+const COLUMN_TABS: { id: Column; label: string }[] = [
+  { id: 'options', label: 'Options' },
+  { id: 'suggestions', label: 'Suggestions' },
+  { id: 'list', label: 'My list' },
+];
 
 const SORTS: { id: SortOrder; label: string }[] = [
   { id: 'easiest', label: 'Easiest first' },
@@ -83,6 +91,8 @@ export function App() {
 export function ElegantPasswords() {
   const p = usePasswords();
   const { outcome, draft, applied } = p;
+  const narrow = useMediaQuery(NARROW);
+  const [column, setColumn] = useState<Column>('suggestions');
   const context: CardContext | undefined =
     outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
   const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
@@ -99,14 +109,16 @@ export function ElegantPasswords() {
     return n ? `${s.password}#${n}` : s.password;
   });
 
-  return (
-    <main>
-      <div className="sidebar">
+  const options = (
+    <>
+
         <RequirementsForm value={draft.req} onChange={p.setReq} />
         <TwistsPanel req={draft.req} onReqChange={p.setReq} settings={draft.mappingSettings} onSettingsChange={p.setMappingSettings} relevant={relevant} />
-      </div>
+    </>
+  );
+  const centre = (
+    <>
 
-      <div className="results" aria-busy={p.busy}>
         <Tabs tabs={MODE_TABS} value={p.mode} onChange={p.setMode} label="How to make the sentence" idPrefix="mode" />
 
         <TabPanel idPrefix="mode" id="generated" active={p.mode === 'generated'}>
@@ -179,12 +191,44 @@ export function ElegantPasswords() {
             )}
           </div>
         )}
-      </div>
+    </>
+  );
+  const aside = (
+    <>
 
-      <div className="aside">
         <TypingTest />
         <SelectedList />
+    </>
+  );
+
+  // On a phone the three columns become three tabs, siblings of each other,
+  // so every option, suggestion and list entry stays reachable with nothing
+  // scrolling sideways.
+  if (narrow) {
+    return (
+      <main className="collapsed">
+        <Tabs tabs={COLUMN_TABS} value={column} onChange={setColumn} label="Sections" idPrefix="section" className="section-tabs" />
+        <TabPanel idPrefix="section" id="options" active={column === 'options'} className="sidebar">
+          {options}
+        </TabPanel>
+        <TabPanel idPrefix="section" id="suggestions" active={column === 'suggestions'} className="results">
+          {centre}
+        </TabPanel>
+        <TabPanel idPrefix="section" id="list" active={column === 'list'} className="aside">
+          {aside}
+        </TabPanel>
+        <ApplyBar />
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <div className="sidebar">{options}</div>
+      <div className="results" aria-busy={p.busy}>
+        {centre}
       </div>
+      <div className="aside">{aside}</div>
       <ApplyBar />
     </main>
   );
