@@ -35,16 +35,17 @@ describe('SelectedList', () => {
     const code = first.getByText(ENTRIES[0]!.password);
     expect(code.getAttribute('title')).toBeNull(); // no browser tooltip at all: it is slow and cannot be copied
     expect(code.getAttribute('role')).toBe('button'); // clicking the password copies it
-    expect(first.queryByRole('tooltip')).toBeNull();
+    // The tip exists only for a password that is cut off; one that fits has no rollover (jsdom has no layout, so widths are faked).
     fireEvent.mouseEnter(code.parentElement!);
-    const tip = first.getByRole('tooltip');
-    expect(tip.textContent).toBe(ENTRIES[0]!.password); // immediate, and real text that can be selected
+    expect(first.queryByRole('tooltip')).toBeNull();
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 400 });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 120 });
+    fireEvent.mouseEnter(code.parentElement!);
+    expect(first.getByRole('tooltip').textContent).toBe(ENTRIES[0]!.password); // immediate, real text that can be selected
     fireEvent.mouseLeave(code.parentElement!);
     expect(first.queryByRole('tooltip')).toBeNull();
-    fireEvent.focus(code.parentElement!);
-    expect(first.getByRole('tooltip')).toBeTruthy();
-    fireEvent.keyDown(code.parentElement!, { key: 'Escape' });
-    expect(first.queryByRole('tooltip')).toBeNull();
+    delete (HTMLElement.prototype as { scrollWidth?: unknown }).scrollWidth;
+    delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     expect(first.getByText(`≈${score.bits.toFixed(0)} bits`)).toBeTruthy();

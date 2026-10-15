@@ -140,7 +140,9 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .icon-button:hover { color: var(--accent); }
 .icon-button[aria-pressed='true'] { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
 .icon-button svg { display: block; }
-.password { font-size: 1.15rem; word-break: break-all; white-space: pre-wrap; }
+/* One line; cut with an ellipsis only when it does not fit (the tip then shows it in full). */
+.password { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; min-width: 0; }
+.card-row > .pw-tip-anchor { flex: 1 1 auto; min-width: 0; }
 .actions { display: flex; gap: 0.4rem; align-items: center; }
 .badge { font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 999px; white-space: nowrap; }
 .level-0, .level-1 { background: var(--accent-soft); color: var(--accent); }
@@ -247,7 +249,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .entry { display: grid; gap: 0.4rem; padding: 0.7rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .entry-main { display: grid; gap: 0.2rem; min-width: 0; }
 /* Never scroll sideways: a long password is cut with an ellipsis and shown in full on hover. */
-.entry .entry-password { font-size: 13pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; display: block; max-width: 100%; }
+.entry .entry-password { font-size: 13pt; }
 .entry { min-width: 0; }
 /* The full-password tip: immediate, selectable, and stays while hovered. */
 .pw-tip-anchor { position: relative; display: block; min-width: 0; outline: none; }

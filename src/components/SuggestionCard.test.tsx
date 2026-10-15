@@ -64,7 +64,10 @@ describe('SuggestionCard', () => {
     expect(screen.getByText(/It is your own sentence/)).toBeTruthy();
     expect(screen.queryByText(/your word/)).toBeNull(); // chips carry no "your word" label
     for (const step of s.steps) expect(screen.getByText(step)).toBeTruthy();
-    expect(screen.getByText(`+${s.bits.toFixed(0)} random bits`)).toBeTruthy();
+    expect(screen.getByText(`≈${s.bits.toFixed(0)} bits`)).toBeTruthy(); // "bits", never "random bits"
+    expect(screen.queryByText(/random bits/)).toBeNull();
+    fireEvent.mouseEnter(screen.getByText(s.password).parentElement!);
+    expect(screen.queryByRole('tooltip')).toBeNull(); // it fits, so no tip
     expect(screen.getByText(`D ${s.difficulty.score}`).getAttribute('title')).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()}`);
     expect(screen.getByText(`M ${s.memorability}`)).toBeTruthy();
   });

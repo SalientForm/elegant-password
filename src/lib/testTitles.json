@@ -241,6 +241,23 @@
     ]
   },
   {
+    "file": "src/components/PasswordTip.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "PasswordTip"
+      },
+      {
+        "kind": "test",
+        "title": "opens at once on hover or focus when the password is cut off, and closes on leave or Escape"
+      },
+      {
+        "kind": "test",
+        "title": "does nothing when the password fits"
+      }
+    ]
+  },
+  {
     "file": "src/components/RequirementsForm.test.tsx",
     "titles": [
       {

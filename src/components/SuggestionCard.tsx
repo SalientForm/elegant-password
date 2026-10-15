@@ -9,6 +9,7 @@ import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
 import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
+import { PasswordTip } from './PasswordTip';
 
 const ROW_NAMES = ['number row', 'top row', 'home row', 'bottom row', 'space bar'];
 
@@ -82,9 +83,11 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
     <article className="card" aria-label={`Suggestion ${index + 1}`}>
       <div className="card-head">
         <div className="card-row">
-          <ClickToCopy text={password} className="password" ref={code}>
-            {password}
-          </ClickToCopy>
+          <PasswordTip password={password}>
+            <ClickToCopy text={password} className="password" ref={code}>
+              {password}
+            </ClickToCopy>
+          </PasswordTip>
           <div className="actions card-buttons">
             <button type="button" className="icon-button ghost" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={whyId} aria-label={open ? 'Hide why' : 'Why?'} title={open ? 'Hide why' : 'Why?'}>
               {open ? <ChevronUpIcon /> : <InfoIcon />}
@@ -107,8 +110,8 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
         </div>
         <div className="card-row">
           <div className="actions">
-            <span className="bits-label" title="Scored from the password and its hint alone, so it is the same every time">
-              {mine ? `+${suggestion.bits.toFixed(0)} random bits` : `≈${suggestion.bits.toFixed(0)} bits`}
+            <span className="bits-label" title={mine ? 'Bits from the random initials and swaps, scored from the password and your sentence alone' : 'Scored from the password and its hint alone, so it is the same every time'}>
+              ≈{suggestion.bits.toFixed(0)} bits
             </span>
             <ScoreBadges difficulty={difficulty} memorability={suggestion.memorability} />
           </div>
