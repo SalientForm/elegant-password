@@ -113,7 +113,10 @@ describe('App: order and pages', () => {
     const firstHint = within(cards()[0]!).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
     expect(shown).toBe(firstHint);
     fireEvent.click(screen.getByRole('button', { name: 'Strongest first' }));
-    const newFirst = within(cards()[0]!).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
+    const top = within(cards()[0]!);
+    const why = top.queryByRole('button', { name: 'Why?' });
+    if (why) fireEvent.click(why); // a card keeps its own open state when the order changes
+    const newFirst = top.getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
     expect(screen.getByTestId('generated-sentence').textContent).toBe(newFirst); // follows the order
   });
 
