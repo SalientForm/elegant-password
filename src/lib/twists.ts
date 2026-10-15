@@ -4,10 +4,12 @@
 // A twist only adds strength because *where* it lands is random. For each
 // password we count every distinct way the chosen number of twists could have
 // been applied, pick one uniformly, and report log2 of that count as the bits
-// it added.
+// it added. The same table answers "how many ways were there" for a password
+// scored cold from its hint.
 
 import { lookupKey } from './keyboard';
 import { weightedIndex, type RandomSource } from './random';
+import { letterCount } from './text';
 
 export type MappingKind = 'symbol' | 'digit' | 'spelling' | 'custom';
 
@@ -47,13 +49,19 @@ export const BUILT_IN_MAPPINGS: readonly Mapping[] = [
 
 export const mappingKey = (m: Pick<Mapping, 'from' | 'to'>) => `${m.from}>${m.to}`;
 
-/** Reason a custom mapping is unusable, or undefined if it is fine. */
+/**
+ * Reason a custom mapping is unusable, or undefined if it is fine. The
+ * output may only use lowercase letters, digits and keyboard symbols: a
+ * capital in the middle of a word would make the case alternate, which the
+ * typing model never allows, and it would be silently skipped anyway.
+ */
 export function validateMapping(from: string, to: string): string | undefined {
   if (!/^[a-z]{1,8}$/.test(from)) return 'Replace: 1-8 lowercase letters.';
   if (to.length > 8) return 'With: at most 8 characters.';
   if (to === from) return 'Replace and With are the same.';
   for (const c of to) {
     if (c === ' ') return 'With: spaces are not allowed.';
+    if (/[A-Z]/.test(c)) return 'With: lowercase letters only, so the case never alternates inside a word.';
     if (!lookupKey(c)) return `With: "${c}" is not on a standard keyboard.`;
   }
   return undefined;
@@ -85,6 +93,11 @@ export interface TwistOptions {
   /** Allowed change in total length, so the result still fits the length limits. */
   minDelta: number;
   maxDelta: number;
+  /**
+   * The twisted words must keep at least this many letters between them, so
+   * an uppercase rule that needs N capitals can still be met afterwards.
+   */
+  minLetters?: number;
 }
 
 interface Candidate {
@@ -94,10 +107,16 @@ interface Candidate {
 }
 
 /** One distinct way to spell a word, with the fewest twists that produce it. */
-interface Variant {
+export interface Spelling {
   text: string;
   twists: number;
+  /** Change in length compared with the plain word. */
   delta: number;
+  /** Change in letter count compared with the plain word. */
+  letters: number;
+}
+
+interface Variant extends Spelling {
   used: Candidate[];
 }
 
@@ -124,15 +143,20 @@ function applyToWord(word: string, used: readonly Candidate[]): string {
   return out;
 }
 
-/** Every distinct spelling of a word using up to `max` non-overlapping twists. */
+/**
+ * Every distinct spelling of a word using up to `max` non-overlapping
+ * twists. A word never disappears entirely: a spelling that would leave
+ * nothing (a custom mapping deleting the whole word) is not an option.
+ */
 function variantsFor(word: string, candidates: readonly Candidate[], max: number): Variant[] {
   const byText = new Map<string, Variant>();
   const used: Candidate[] = [];
+  const base = letterCount(word);
   const walk = (from: number) => {
     const text = applyToWord(word, used);
     const existing = byText.get(text);
-    if (!existing || existing.twists > used.length) {
-      byText.set(text, { text, twists: used.length, delta: text.length - word.length, used: [...used] });
+    if (text !== '' && (!existing || existing.twists > used.length)) {
+      byText.set(text, { text, twists: used.length, delta: text.length - word.length, letters: letterCount(text) - base, used: [...used] });
     }
     if (used.length === max) return;
     for (let i = from; i < candidates.length; i++) {
@@ -147,7 +171,85 @@ function variantsFor(word: string, candidates: readonly Candidate[], max: number
   return [...byText.values()];
 }
 
-const stateKey = (twists: number, delta: number) => `${twists}:${delta}`;
+// Spellings are memoised per mapping list: sentence mode finishes the same
+// words many times, and the cold scorer asks about the same words again.
+const variantCache = new WeakMap<readonly Mapping[], Map<string, Variant[]>>();
+
+function cachedVariants(word: string, mappings: readonly Mapping[], max: number, protectStart: boolean): Variant[] {
+  let byKey = variantCache.get(mappings);
+  if (!byKey) {
+    byKey = new Map();
+    variantCache.set(mappings, byKey);
+  }
+  const key = `${max}:${protectStart ? 1 : 0}:${word}`;
+  let v = byKey.get(key);
+  if (!v) {
+    v = variantsFor(word, candidatesFor(word, mappings, protectStart), max);
+    byKey.set(key, v);
+  }
+  return v;
+}
+
+/** Every distinct spelling of a word reachable with up to `max` twists, including the plain word at 0. */
+export function spellingsOf(word: string, mappings: readonly Mapping[], max: number, protectStart = false): readonly Spelling[] {
+  return cachedVariants(word, mappings, max, protectStart);
+}
+
+const stateKey = (twists: number, delta: number, letters: number) => `${twists}:${delta}:${letters}`;
+const parseKey = (key: string) => key.split(':').map(Number) as [number, number, number];
+
+interface Table {
+  variants: Variant[][];
+  /** suffix[i] maps (twists, length change, letter change) to the number of ways words i.. can produce it. */
+  suffix: Map<string, number>[];
+  /** Letters in the twistable words before any twist. */
+  baseLetters: number;
+}
+
+function buildTable(words: readonly string[], opts: TwistOptions): Table {
+  const firstWord = words.findIndex((_, i) => !opts.skip(i));
+  const plain = (word: string): Variant => ({ text: word, twists: 0, delta: 0, letters: 0, used: [] });
+  const variants = words.map((word, i) =>
+    opts.skip(i) ? [plain(word)] : cachedVariants(word, opts.mappings, opts.count, opts.protectFirstLetter && i === firstWord),
+  );
+  const baseLetters = words.reduce((n, w, i) => (opts.skip(i) ? n : n + letterCount(w)), 0);
+
+  const suffix: Map<string, number>[] = new Array(words.length + 1);
+  suffix[words.length] = new Map([[stateKey(0, 0, 0), 1]]);
+  for (let i = words.length - 1; i >= 0; i--) {
+    const row = new Map<string, number>();
+    for (const [key, ways] of suffix[i + 1]!) {
+      const [t, d, l] = parseKey(key);
+      for (const v of variants[i]!) {
+        if (t + v.twists > opts.count) continue;
+        const k = stateKey(t + v.twists, d + v.delta, l + v.letters);
+        row.set(k, (row.get(k) ?? 0) + ways);
+      }
+    }
+    suffix[i] = row;
+  }
+  return { variants, suffix, baseLetters };
+}
+
+/** The end states that use exactly `k` twists and respect the length and letter limits. */
+function endStates(table: Table, opts: TwistOptions, k: number): [string, number][] {
+  const minLetters = opts.minLetters ?? 0;
+  return [...table.suffix[0]!].filter(([key]) => {
+    const [t, d, l] = parseKey(key);
+    return t === k && d >= opts.minDelta && d <= opts.maxDelta && table.baseLetters + l >= minLetters;
+  });
+}
+
+/**
+ * How many distinct results exactly `k` twists could produce on these words
+ * under the given limits. This is what a password's twist bits are counted
+ * from, whether at generation time or when scoring it cold from its hint.
+ */
+export function twistOutcomes(words: readonly string[], opts: TwistOptions, k: number): number {
+  if (k === 0) return 1;
+  const table = buildTable(words, { ...opts, count: k });
+  return endStates(table, opts, k).reduce((sum, [, n]) => sum + n, 0);
+}
 
 /**
  * Apply `count` twists, chosen uniformly from every distinct result that
@@ -157,47 +259,25 @@ const stateKey = (twists: number, delta: number) => `${twists}:${delta}`;
  * words leave no room.
  */
 export function applyTwists(words: readonly string[], opts: TwistOptions, rng: RandomSource): TwistResult {
-  const firstWord = words.findIndex((_, i) => !opts.skip(i));
-  const variants = words.map((word, i) =>
-    opts.skip(i)
-      ? [{ text: word, twists: 0, delta: 0, used: [] }]
-      : variantsFor(word, candidatesFor(word, opts.mappings, opts.protectFirstLetter && i === firstWord), opts.count),
-  );
-
-  // suffix[i] maps (twists, length change) to the number of ways words i.. can produce it.
-  const suffix: Map<string, number>[] = new Array(words.length + 1);
-  suffix[words.length] = new Map([[stateKey(0, 0), 1]]);
-  for (let i = words.length - 1; i >= 0; i--) {
-    const row = new Map<string, number>();
-    for (const [key, ways] of suffix[i + 1]!) {
-      const [t, d] = key.split(':').map(Number) as [number, number];
-      for (const v of variants[i]!) {
-        if (t + v.twists > opts.count) continue;
-        const k = stateKey(t + v.twists, d + v.delta);
-        row.set(k, (row.get(k) ?? 0) + ways);
-      }
-    }
-    suffix[i] = row;
-  }
+  const table = buildTable(words, opts);
+  const { variants, suffix } = table;
 
   for (let k = opts.count; k > 0; k--) {
-    const ends = [...suffix[0]!].filter(([key]) => {
-      const [t, d] = key.split(':').map(Number) as [number, number];
-      return t === k && d >= opts.minDelta && d <= opts.maxDelta;
-    });
+    const ends = endStates(table, opts, k);
     const options = ends.reduce((sum, [, n]) => sum + n, 0);
     if (options === 0) continue;
 
-    let [twistsLeft, deltaLeft] = ends[weightedIndex(ends.map(([, n]) => n), rng)]![0].split(':').map(Number) as [number, number];
+    let [twistsLeft, deltaLeft, lettersLeft] = parseKey(ends[weightedIndex(ends.map(([, n]) => n), rng)]![0]);
     const out: string[] = [];
     const applied: AppliedTwist[] = [];
     words.forEach((word, i) => {
       const next = suffix[i + 1]!;
       const vs = variants[i]!;
-      const weights = vs.map((v) => next.get(stateKey(twistsLeft - v.twists, deltaLeft - v.delta)) ?? 0);
+      const weights = vs.map((v) => next.get(stateKey(twistsLeft - v.twists, deltaLeft - v.delta, lettersLeft - v.letters)) ?? 0);
       const v = vs[weightedIndex(weights, rng)]!;
       twistsLeft -= v.twists;
       deltaLeft -= v.delta;
+      lettersLeft -= v.letters;
       out.push(v.text);
       for (const c of [...v.used].sort((a, b) => a.start - b.start)) {
         applied.push({ wordIndex: i, mapping: c.mapping, before: word, after: v.text });

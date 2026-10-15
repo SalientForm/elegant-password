@@ -1,4 +1,4 @@
-import { LEVELS, RUBRIC, type Criterion, type Difficulty } from '../lib/difficulty';
+import { criterionOf, LEVELS, RUBRIC, type Criterion, type Difficulty } from '../lib/difficulty';
 
 /** One password scored against each rubric criterion. */
 export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
@@ -13,7 +13,9 @@ export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
         </tr>
       </thead>
       <tbody>
-        {difficulty.criteria.map(({ criterion, value, level, points }) => (
+        {difficulty.criteria.map(({ id, value, level, points }) => {
+          const criterion = criterionOf(id);
+          return (
           <tr key={criterion.id} title={criterion.measures}>
             <td>{criterion.name}</td>
             <td>{criterion.format(value)}</td>
@@ -24,7 +26,8 @@ export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
               {points % 1 ? points.toFixed(1) : points} / {criterion.weight}
             </td>
           </tr>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );

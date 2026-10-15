@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, trimInterior } from './fromSentence';
 import { DEFAULT_REQUIREMENTS, RequirementsError, type Requirements } from './generate';
+import { scoreCold } from './score';
 import { seeded } from './testRandom';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, minLength: 8, ...over });
@@ -102,11 +103,18 @@ describe('fromSentence', () => {
     }
   });
 
-  it('reports only the random twists as strength', () => {
+  it('scores strength cold from the password and the sentence: only initials and twists count', () => {
+    // No random twists, no digit or symbol rule: nothing random happened, so nothing is counted.
+    const plain = fromSentence('four little words here', req({ twists: 0, minDigits: 0, minSymbols: 0, count: 1 }), undefined, { rng: seeded() });
+    expect(plain.suggestions[0]!.bits).toBe(0);
+    // A digit rule forces one digit twist; where it lands is random, so it counts.
     const none = fromSentence('four little words here', req({ twists: 0, count: 1 }), undefined, { rng: seeded() });
-    expect(none.suggestions[0]!.bits).toBe(0);
+    const forced = none.suggestions[0]!;
+    expect(forced.bits).toBe(scoreCold(forced.password, forced.hint).bits);
+    expect(forced.bits).toBeGreaterThan(0);
     const some = fromSentence('four little words here', req({ twists: 2, count: 1 }), undefined, { rng: seeded() });
     expect(some.suggestions[0]!.bits).toBeGreaterThan(3);
+    expect(some.suggestions[0]!.hint).toBe('four little words here');
   });
 
   it('explains what cannot be fitted', () => {

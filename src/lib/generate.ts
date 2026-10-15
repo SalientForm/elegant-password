@@ -1,7 +1,7 @@
 // Turns a set of site requirements into sentence passwords plus the
 // reasoning behind each one.
 
-import { scoreDifficulty, type Difficulty } from './difficulty';
+import type { Difficulty } from './difficulty';
 import {
   initialPositions,
   initialsOf,
@@ -19,9 +19,11 @@ import {
   type Slot,
   type Template,
 } from './grammar';
-import { isPinkyStretch, lookupKey, typingProfile, type TypingProfile } from './keyboard';
+import { isPinkyStretch, lookupKey, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
+import { scoreCold } from './score';
+import { letterCount } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
 
 export type Separator = 'auto' | ' ' | ';' | '-' | '.' | '_' | ',' | '';
@@ -77,7 +79,7 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
   minSymbols: 1,
   allowedSymbols: '!@#$%^&*-_.,?;',
   allowSpaces: true,
-  separator: '-',
+  separator: ';',
   includeNumber: true,
   targetBits: 40,
   comfort: 'balanced',
@@ -147,18 +149,26 @@ export interface RequirementCheck {
   how: string;
 }
 
+/**
+ * One password with everything the UI says about it. Plain data, so it can
+ * be stored and restored. The strength and difficulty figures come from
+ * `scoreCold(password, hint)` alone, so they are the same wherever the
+ * password appears and however it was arrived at.
+ */
 export interface Suggestion {
   password: string;
+  /** What to remember: the sentence the password came from. */
+  hint: string;
   /** Words as typed, after twists, with the word they came from. */
   words: { text: string; original: string; slot: WordRole }[];
   /** Plain-language log of changes made to fit the requirements (sentence mode). */
   steps: string[];
   twists: AppliedTwist[];
-  /** Bits added by where the twists landed; varies per password. */
+  /** Bits added by where the twists landed, scored cold from the hint. */
   twistBits: number;
   /** Number of distinct ways the twists could have landed on these words. */
   twistOptions: number;
-  /** Sentence bits plus twist bits. */
+  /** Total bits, scored cold from the password and hint. */
   bits: number;
   typing: TypingProfile;
   difficulty: Difficulty;
@@ -319,6 +329,32 @@ function shapeOf(template: Template, req: Requirements): Shape {
   return { slots: template.slots, initials, shorthand, madeUp, glue };
 }
 
+const shortestCache = new WeakMap<readonly string[], number>();
+function shortestIn(pool: readonly string[]): number {
+  let n = shortestCache.get(pool);
+  if (n === undefined) {
+    n = pool.reduce((min, w) => Math.min(min, letterCount(w)), Infinity);
+    shortestCache.set(pool, n);
+  }
+  return n;
+}
+
+/**
+ * The fewest letters any sentence of this shape can offer the uppercase
+ * rule: initials give 1, two-letter words 2, whole words the shortest in
+ * their pool. Numbers give none; made-up nouns are never recased, so they
+ * are not counted on either. A shape below the rule is never planned, so
+ * every password can meet it.
+ */
+export function minLettersOf(shape: Shape, comfort: Comfort, minDigits: number): number {
+  return shape.slots.reduce((sum, slot, i) => {
+    if (slot === 'num' || shape.madeUp.includes(i)) return sum;
+    if (shape.initials.includes(i)) return sum + 1;
+    if (shape.shorthand.includes(i)) return sum + 2;
+    return sum + shortestIn(pools(comfort, minDigits)[slot]);
+  }, 0);
+}
+
 /** Join tokens with the separator, except after glued tokens. */
 export function joinTokens(words: readonly string[], glue: readonly boolean[], separator: string): string {
   return words.map((w, i) => (i < words.length - 1 && !glue[i] ? w + separator : w)).join('');
@@ -332,6 +368,7 @@ export function plan(req: Requirements): Candidate {
 
   const withNumber = req.includeNumber || req.minDigits > 0;
   let best: Candidate | undefined;
+  let tooFewLetters = false;
   for (const template of templates()) {
     const shapes = (withNumber ? numberPlacements(template) : [template]).map((t) => shapeOf(t, req));
     const variants: Variant[] = [];
@@ -345,6 +382,10 @@ export function plan(req: Requirements): Candidate {
       const lo = req.minLength - overhead;
       const hi = req.maxLength - overhead;
       if (hi <= 0) continue;
+      if (minLettersOf(shape, req.comfort, req.minDigits) < req.minUppercase) {
+        tooFewLetters = true;
+        continue;
+      }
       const model = modelFor(shape, req.comfort, req.minDigits);
       const count = model.count(lo, hi);
       if (count > 0) variants.push({ shape, model, count, endSymbol, lo, hi });
@@ -397,7 +438,10 @@ export function plan(req: Requirements): Candidate {
   }
   if (!best) {
     throw new RequirementsError(
-      `No sentence fits between ${req.minLength} and ${req.maxLength} characters. Try widening the length range.`,
+      tooFewLetters
+        ? `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase} letters to capitalise. ` +
+          'Raise the maximum length or use fewer initials, two-letter words and made-up nouns.'
+        : `No sentence fits between ${req.minLength} and ${req.maxLength} characters. Try widening the length range.`,
     );
   }
   return best;
@@ -558,16 +602,27 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
     const { shape, model } = variant;
     const original = model.sample(variant.lo, variant.hi, rng);
     const length = render(original, variant, chosen).length;
+    // Twists never touch the number, initials, made-up nouns or two-letter
+    // words, so what the card says about those stays true.
+    const fixed = (j: number) =>
+      shape.slots[j] === 'num' || shape.initials.includes(j) || shape.madeUp.includes(j) || shape.shorthand.includes(j);
+    // Letters the uppercase rule can count on without touching the twisted words.
+    const fixedLetters = original.reduce((n, w, j) => {
+      if (!fixed(j) || shape.slots[j] === 'num') return n;
+      if (shape.madeUp.includes(j)) return n + (w === w.toUpperCase() ? letterCount(w) : 0);
+      return n + letterCount(w);
+    }, 0);
     const twisted = applyTwists(
       original,
       {
         count: req.twists,
         mappings: twistMappings,
-        skip: (j) => shape.slots[j] === 'num' || shape.initials.includes(j) || shape.madeUp.includes(j),
+        skip: fixed,
         // The opening capital goes on the first ordinary word (twists skip made-up nouns and initials).
         protectFirstLetter: chosen.minUppercase === 1 && shape.initials.length === 0,
         minDelta: req.minLength - length,
         maxDelta: req.maxLength - length,
+        minLetters: Math.max(0, req.minUppercase - fixedLetters),
       },
       rng,
     );
@@ -589,16 +644,19 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
       shape.shorthand.length ? `typed as two letters, first and last consonant: ${named(shape.shorthand)}` : '',
       shape.madeUp.length ? `made-up nouns from key rolls: ${shape.madeUp.map((j) => original[j]).join(', ')}` : '',
     ].filter(Boolean);
+    const hint = pictured.join(' ');
+    const score = scoreCold(password, hint);
     suggestions.push({
       password,
+      hint,
       words: twisted.words.map((text, j) => ({ text, original: pictured[j]!, slot: shape.slots[j]! })),
       steps: shapeSteps,
       twists: twisted.applied,
-      twistBits: twisted.bits,
-      twistOptions: twisted.options,
-      bits: chosen.bits + twisted.bits,
-      typing: typingProfile(password),
-      difficulty: scoreDifficulty(password, twisted.words.length + twisted.applied.length),
+      twistBits: score.twistBits,
+      twistOptions: score.twistOptions,
+      bits: score.bits,
+      typing: score.typing,
+      difficulty: score.difficulty,
       checks: checkRequirements(password, req, {
         separator: chosen.separator,
         endSymbol: variant.endSymbol,

@@ -125,11 +125,17 @@ export const RUBRIC: readonly Criterion[] = [
   },
 ];
 
+/** One criterion's result. Refers to the criterion by id so a score is plain data that can be stored. */
 export interface CriterionScore {
-  criterion: Criterion;
+  id: keyof Measurements;
   value: number;
   level: Level;
   points: number;
+}
+
+/** The rubric entry a score refers to. */
+export function criterionOf(id: keyof Measurements): Criterion {
+  return RUBRIC.find((c) => c.id === id)!;
 }
 
 export interface Difficulty {
@@ -210,7 +216,7 @@ export function scoreDifficulty(password: string, chunks: number): Difficulty {
   const criteria = RUBRIC.map((criterion) => {
     const value = measurements[criterion.id];
     const level = levelFor(value, criterion.cutPoints, criterion.higherIsEasier);
-    return { criterion, value, level, points: (criterion.weight * level) / 4 };
+    return { id: criterion.id, value, level, points: (criterion.weight * level) / 4 };
   });
   const score = Math.round(criteria.reduce((sum, c) => sum + c.points, 0));
   const level = overallLevel(score);

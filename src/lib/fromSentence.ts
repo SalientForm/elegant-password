@@ -11,7 +11,8 @@
 //      consonant ("jupiter" -> "jr"). If still over the target length, keep
 //      compressing the longest words: drop vowels, trim interior consonants
 //      ("jptr" -> "jpr" -> "jr"), drop small words, turn words into initials,
-//      and as a last resort drop words entirely.
+//      and as a last resort drop words entirely. The least-compressed state
+//      that fits is found by binary search over that ladder.
 //   4. Fill required digits and symbols with matching twists ("e" -> "3",
 //      "a" -> "@"); anything twists cannot supply is appended.
 //   5. Apply the user's random twists.
@@ -19,8 +20,9 @@
 //      glue onto the next word: "5ls", "Fpc"), add closing marks.
 //
 // Strength: the sentence is the user's secret and its guessability cannot be
-// measured here. We only report the bits from the random initials (step 2)
-// and random twists (step 5): a lower bound on what this tool adds.
+// measured here. The card's figure is scored cold from the password and the
+// sentence, so it counts only the random initials and twists: a lower bound
+// on what this tool adds.
 
 import {
   allowedSymbolSet,
@@ -39,11 +41,13 @@ import {
   type Requirements,
   type Suggestion,
 } from './generate';
-import { scoreDifficulty } from './difficulty';
 import { pools, twoLetter } from './grammar';
-import { typingProfile } from './keyboard';
 import { cryptoRandom, randomInt, type RandomSource } from './random';
+import { scoreCold } from './score';
+import { dropVowels, letterCount, normalizeSentence, SMALL_WORDS, trimInterior } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
+
+export { dropVowels, normalizeSentence, SMALL_WORDS, trimInterior } from './text';
 
 export type ShrinkStyle = 'none' | 'vowels' | 'ends';
 
@@ -68,11 +72,6 @@ export const DEFAULT_SENTENCE_OPTIONS: SentenceOptions = {
   targetLength: null,
 };
 
-export const SMALL_WORDS: ReadonlySet<string> = new Set(
-  `a an the of for to in on at by with from into onto over under up off out and or but nor so as than that
-   this these those my your his her its our their is are was were be am`.split(/\s+/),
-);
-
 export interface SentenceResult {
   words: string[];
   separator: string;
@@ -89,25 +88,27 @@ interface Token {
   small: boolean;
 }
 
-export function normalizeSentence(sentence: string): string[] {
-  return sentence
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/['’]/g, '')
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
+/** The usable mappings, and the subsets that supply a digit or a symbol. Built once per call. */
+interface MappingSets {
+  all: readonly Mapping[];
+  digit: readonly Mapping[];
+  symbol: readonly Mapping[];
 }
 
-/** "sweets" -> "swts": keep the first letter, drop the vowels after it. */
-export function dropVowels(word: string): string {
-  const short = word[0] + word.slice(1).replace(/[aeiou]/g, '');
-  return short.length >= 2 && short !== word ? short : word;
-}
-
-/** "jptr" -> "jpr", "lds" -> "ls": drop the second-to-last letter, keeping the first and last. */
-export function trimInterior(word: string): string {
-  return word.length > 2 ? word.slice(0, -2) + word.slice(-1) : word;
+/** Everything one call to fromSentence shares between its attempts. */
+interface Context {
+  /** The normalised sentence words. */
+  base: readonly string[];
+  /** The sentence to remember, as typed. */
+  hint: string;
+  req: Requirements;
+  opts: SentenceOptions;
+  separator: string;
+  closing: string | undefined;
+  mappings: MappingSets;
+  rng: RandomSource;
+  /** Compression ladders by starting state, shared across attempts. */
+  ladderCache: Map<string, Token[][]>;
 }
 
 const toInitial = (t: Token): Token => ({ ...t, text: t.original[0]!.toUpperCase(), kind: 'initial' });
@@ -115,6 +116,7 @@ const toInitial = (t: Token): Token => ({ ...t, text: t.original[0]!.toUpperCase
 const digitCount = (words: readonly string[]) => words.join('').replace(/[^0-9]/g, '').length;
 const symbolCount = (words: readonly string[]) => [...words.join('')].filter(isSymbol).length;
 const describeTwist = (t: AppliedTwist) => `${t.mapping.from} → ${t.mapping.to || '–'} in “${t.before}”`;
+const tokenLetters = (ts: readonly Token[]) => ts.reduce((n, t) => n + letterCount(t.text), 0);
 
 /**
  * Every distinct way to turn `count` of the eligible words into initials,
@@ -130,7 +132,7 @@ function randomInitials(tokens: Token[], count: number, minLetters: number, rng:
     if (pick.length === k) {
       const texts = tokens.map((t, i) => (pick.includes(i) ? t.original[0]!.toUpperCase() : t.text));
       const key = texts.join(' ');
-      if (!outcomes.has(key) && texts.join('').replace(/[^a-z]/gi, '').length >= minLetters) outcomes.set(key, [...pick]);
+      if (!outcomes.has(key) && letterCount(texts.join('')) >= minLetters) outcomes.set(key, [...pick]);
       return;
     }
     for (let j = from; j < eligible.length; j++) {
@@ -154,14 +156,12 @@ interface Attempt {
   tooShort?: boolean;
 }
 
-const letterCount = (ts: readonly Token[]) => ts.reduce((n, t) => n + t.text.replace(/[^a-z]/gi, '').length, 0);
-
 /**
  * The compression ladder, one small change at a time, from least to most
  * compressed. Each state is a full token list. Stops when nothing more can
  * be done. Never removes the last letters the uppercase rule needs.
  */
-function* compressions(start: Token[], req: Requirements, opts: SentenceOptions): Generator<Token[]> {
+export function* compressions(start: Token[], req: Requirements, opts: SentenceOptions): Generator<Token[]> {
   const minLetters = Math.max(1, req.minUppercase);
   let tokens = start;
   const longestWords = () =>
@@ -171,7 +171,7 @@ function* compressions(start: Token[], req: Requirements, opts: SentenceOptions)
       .sort((a, b) => b[0].text.length - a[0].text.length);
   const replace = (i: number, t: Token) => tokens.map((x, j) => (j === i ? t : x));
   const without = (i: number) => tokens.filter((_, j) => j !== i);
-  const lettersOk = (ts: Token[]) => letterCount(ts) >= minLetters;
+  const lettersOk = (ts: Token[]) => tokenLetters(ts) >= minLetters;
 
   const actions: (() => Token[] | undefined)[] = [
     // Drop vowels from the longest word.
@@ -238,16 +238,8 @@ function* compressions(start: Token[], req: Requirements, opts: SentenceOptions)
   }
 }
 
-function attempt(
-  base: readonly string[],
-  req: Requirements,
-  opts: SentenceOptions,
-  separator: string,
-  closing: string | undefined,
-  mappings: readonly Mapping[],
-  rng: RandomSource,
-  ladderCache: Map<string, Token[][]>,
-): Attempt {
+function attempt(ctx: Context): Attempt {
+  const { base, req, opts, rng } = ctx;
   // 1-2. Tokens and initials.
   let start: Token[] = base.map((w) => ({
     text: w,
@@ -273,7 +265,7 @@ function attempt(
     const shrunk = (keepWhole: number) =>
       whole.map((t, i) => (shrinkable.indexOf(i) >= keepWhole && shrink ? { ...t, text: shrink(t.text) } : t));
     for (let keepWhole = 0; keepWhole <= shrinkable.length; keepWhole++) {
-      result = fitLength(shrunk(keepWhole), base, initials.bits, req, opts, separator, closing, mappings, rng, ladderCache);
+      result = fitLength(shrunk(keepWhole), initials.bits, ctx);
       if (result.suggestion && keepWhole > 0) result.suggestion.steps.push('kept some long words whole to reach the minimum length');
       if (result.suggestion && count < req.initials) result.suggestion.steps.push('used fewer random initials to reach the minimum length');
       if (!result.tooShort) return result;
@@ -282,23 +274,25 @@ function attempt(
   return result;
 }
 
-function fitLength(
-  start: Token[],
-  base: readonly string[],
-  initialBits: number,
-  req: Requirements,
-  opts: SentenceOptions,
-  separator: string,
-  closing: string | undefined,
-  mappings: readonly Mapping[],
-  rng: RandomSource,
-  ladderCache: Map<string, Token[][]>,
-): Attempt {
+interface Finished {
+  suggestion: Suggestion;
+  length: number;
+}
+
+interface Problem {
+  problem: string;
+  /** The state was already under the minimum length; more compression cannot help. */
+  tooShort?: boolean;
+}
+
+/** How many ladder states a fit finished; exposed for tests of the search. */
+export const searchStats = { finishes: 0, states: 0 };
+
+function fitLength(start: Token[], initialBits: number, ctx: Context): Attempt {
+  const { req, opts, separator, ladderCache } = ctx;
   // Compress one step at a time and keep the least-compressed state whose
   // finished password fits. Finishing is exact, so there is no guessing.
   const limit = Math.max(req.minLength, Math.min(req.maxLength, opts.targetLength ?? req.maxLength));
-  let best: Finished | undefined;
-  let lastProblem: string | undefined;
   // Finishing is the costly part, so skip states whose bare joined length is
   // still clearly too long. Finishing can shorten by at most a few
   // characters (digit twists like "for" -> "4"), hence the slack.
@@ -317,20 +311,51 @@ function fitLength(
   const candidates = states.filter((st) => bare(st) <= limit + slack);
   // If every state is far too long, finish the most compressed one for an exact message.
   if (candidates.length === 0) candidates.push(states.at(-1)!);
-  for (const state of candidates) {
-    const done = finish(state, base, initialBits, req, separator, closing, mappings, limit, rng);
-    if ('problem' in done) {
-      lastProblem = done.problem;
-      if (done.tooShort) {
-        if (!best) return { problem: done.problem, tooShort: true };
-        break; // further compression only makes it shorter
-      }
-      continue;
+  searchStats.states += candidates.length;
+
+  // Binary search for the least-compressed state that fits. Each state is
+  // finished at most once (finishing places swaps at random, so the result
+  // is kept and reused). Along the ladder a state is either still too long,
+  // or short enough: it fits, or it is already under the minimum. The
+  // boundary between the two is what we want, and whatever is returned
+  // always fits.
+  const finished = new Map<number, Finished | Problem>();
+  const fin = (i: number): Finished | Problem => {
+    let f = finished.get(i);
+    if (!f) {
+      searchStats.finishes++;
+      f = finish(candidates[i]!, initialBits, limit, ctx);
+      finished.set(i, f);
     }
-    best = done;
-    if (done.length <= limit) break;
+    return f;
+  };
+  const fits = (f: Finished | Problem): f is Finished => !('problem' in f) && f.length <= limit;
+  const shortEnough = (f: Finished | Problem) => fits(f) || ('problem' in f && !!f.tooShort);
+
+  let best: Finished;
+  let lo = 0;
+  let hi = candidates.length - 1;
+  const last = fin(hi);
+  if (!shortEnough(last)) {
+    // Even fully compressed it is over the target: the best is what we have.
+    if ('problem' in last) return { problem: last.problem };
+    best = last;
+  } else {
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (shortEnough(fin(mid))) hi = mid;
+      else lo = mid + 1;
+    }
+    const found = fin(hi);
+    if (fits(found)) best = found;
+    else if (hi === 0) return { problem: (found as Problem).problem, tooShort: true };
+    else {
+      // This state is under the minimum and the one before it is over the target.
+      const before = fin(hi - 1);
+      if ('problem' in before) return { problem: before.problem };
+      best = before;
+    }
   }
-  if (!best) return { problem: lastProblem ?? 'Could not fit this sentence to the requirements.' };
   if (best.length > req.maxLength) {
     return {
       problem: `Even compressed, your sentence makes ${best.length} characters, over the ${req.maxLength} maximum. Use fewer words or raise the maximum.`,
@@ -339,23 +364,10 @@ function fitLength(
   return { suggestion: best.suggestion, missedTarget: opts.targetLength !== null && best.length > limit };
 }
 
-interface Finished {
-  suggestion: Suggestion;
-  length: number;
-}
-
 /** Steps 4-6 on one compression state: required digits and symbols, random twists, case and joining. */
-function finish(
-  state: readonly Token[],
-  base: readonly string[],
-  initialBits: number,
-  req: Requirements,
-  separator: string,
-  closing: string | undefined,
-  mappings: readonly Mapping[],
-  limit: number,
-  rng: RandomSource,
-): Finished | { problem: string; tooShort?: boolean } {
+function finish(state: readonly Token[], initialBits: number, limit: number, ctx: Context): Finished | Problem {
+  const { base, hint, req, separator, closing, mappings, rng } = ctx;
+  void initialBits; // the initial choice is scored cold from the hint; kept for the explanation
   // Capitalise first: twists only match lowercase letters, so the capitals
   // the uppercase rule needs can never be swapped away.
   const capitalised = applyUppercase(state.map((t) => t.text), req.minUppercase);
@@ -378,7 +390,7 @@ function finish(
   let digitTwists: AppliedTwist[] = [];
   if (req.minDigits > digitCount(texts())) {
     const need = req.minDigits - digitCount(texts());
-    const r = applyTwists(texts(), { ...twistOpts, count: need, mappings: mappings.filter((m) => /[0-9]/.test(m.to)) }, rng);
+    const r = applyTwists(texts(), { ...twistOpts, count: need, mappings: mappings.digit }, rng);
     setTexts(r.words);
     digitTwists = r.applied;
     const missing = Math.max(0, req.minDigits - digitCount(texts()));
@@ -397,7 +409,7 @@ function finish(
   let symbolTwists: AppliedTwist[] = [];
   if (req.minSymbols > sepSymbols + symbolCount(texts())) {
     const need = req.minSymbols - sepSymbols - symbolCount(texts());
-    const r = applyTwists(texts(), { ...twistOpts, count: need, mappings: mappings.filter((m) => [...m.to].some(isSymbol)) }, rng);
+    const r = applyTwists(texts(), { ...twistOpts, count: need, mappings: mappings.symbol }, rng);
     setTexts(r.words);
     symbolTwists = r.applied;
   }
@@ -409,7 +421,7 @@ function finish(
   const current = joinTokens(texts(), glue, separator).length + endSymbol.length;
   const random = applyTwists(
     texts(),
-    { ...twistOpts, count: req.twists, mappings, minDelta: req.minLength - current, maxDelta: Math.max(limit, current) - current },
+    { ...twistOpts, count: req.twists, mappings: mappings.all, minDelta: req.minLength - current, maxDelta: Math.max(limit, current) - current },
     rng,
   );
   setTexts(random.words);
@@ -443,18 +455,20 @@ function finish(
   }
   if (endSymbol) steps.push(`ended with “${endSymbol}” for the symbol rule`);
 
+  const score = scoreCold(password, hint);
   return {
     length,
     suggestion: {
       password,
+      hint,
       words: tokens.map((t) => ({ text: t.text, original: t.original, slot: 'yours' as const })),
       steps,
       twists: random.applied,
-      twistBits: random.bits,
-      twistOptions: random.options,
-      bits: initialBits + random.bits,
-      typing: typingProfile(password),
-      difficulty: scoreDifficulty(password, tokens.length + forced.length + random.applied.length),
+      twistBits: score.twistBits,
+      twistOptions: score.twistOptions,
+      bits: score.bits,
+      typing: score.typing,
+      difficulty: score.difficulty,
       checks: checkRequirements(password, req, {
         separator,
         endSymbol,
@@ -465,6 +479,9 @@ function finish(
     },
   };
 }
+
+/** The sentence as the user typed it, with whitespace tidied: what they should remember. */
+export const hintOf = (sentence: string) => sentence.trim().replace(/\s+/g, ' ');
 
 export function fromSentence(
   sentence: string,
@@ -481,6 +498,21 @@ export function fromSentence(
   const separator = resolveSeparator(req, allowed);
   const closing = closingSymbol(req, allowed);
   const usable = usableMappings(mappings, req);
+  const ctx: Context = {
+    base: words,
+    hint: hintOf(sentence),
+    req,
+    opts,
+    separator,
+    closing,
+    mappings: {
+      all: usable,
+      digit: usable.filter((m) => /[0-9]/.test(m.to)),
+      symbol: usable.filter((m) => [...m.to].some(isSymbol)),
+    },
+    rng,
+    ladderCache: new Map(),
+  };
 
   const warnings: string[] = [];
   if (words.length < 4) {
@@ -489,11 +521,10 @@ export function fromSentence(
 
   const suggestions: Suggestion[] = [];
   const seen = new Set<string>();
-  const ladderCache = new Map<string, Token[][]>();
   let problem: string | undefined;
   let missedTarget = false;
   for (let tries = 0; suggestions.length < req.count && tries < req.count * 10; tries++) {
-    const a = attempt(words, req, opts, separator, closing, usable, rng, ladderCache);
+    const a = attempt(ctx);
     if (a.problem) problem = a.problem;
     if (!a.suggestion || seen.has(a.suggestion.password)) continue;
     missedTarget ||= !!a.missedTarget;

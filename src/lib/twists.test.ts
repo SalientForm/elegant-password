@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTwists, BUILT_IN_MAPPINGS, mappingKey, validateMapping, type Mapping, type TwistOptions } from './twists';
+import { applyTwists, BUILT_IN_MAPPINGS, mappingKey, spellingsOf, twistOutcomes, validateMapping, type Mapping, type TwistOptions } from './twists';
 import { seeded } from './testRandom';
 import { DEFAULT_REQUIREMENTS, generate } from './generate';
 
@@ -100,5 +100,47 @@ describe('twists inside generate', () => {
     console.log(`3 twists x 20: ${ms.toFixed(0)} ms, twist bits ${result.suggestions.map((s) => s.twistBits.toFixed(1)).join(' ')}`);
     console.log(result.suggestions.slice(0, 5).map((s) => s.password).join('\n'));
     expect(ms).toBeLessThan(500);
+  });
+});
+
+describe('audit fixes', () => {
+  it('rejects capital letters in a custom mapping output', () => {
+    // A capital inside a word would make the case alternate, and the mapping was silently skipped anyway.
+    expect(validateMapping('a', 'A')).toMatch(/lowercase/);
+    expect(validateMapping('a', 'Ab')).toMatch(/lowercase/);
+    expect(validateMapping('a', '@')).toBeUndefined();
+    expect(validateMapping('e', '3')).toBeUndefined();
+    expect(validateMapping('a', 'é')).toMatch(/keyboard/);
+  });
+
+  it('never lets a custom deletion empty a word', () => {
+    const r = applyTwists(['cats', 'dogs'], opts({ count: 2, mappings: [m('cats', ''), m('dogs', 'd')] }), seeded());
+    expect(r.words.every((w) => w !== '')).toBe(true);
+    expect(r.words).toEqual(['cats', 'd']);
+    expect(r.options).toBe(1);
+    expect(spellingsOf('cats', [m('cats', '')], 3).map((s) => s.text)).toEqual(['cats']);
+  });
+
+  it('keeps enough letters for the uppercase rule', () => {
+    // "and" -> "&" would leave no letter to capitalise.
+    const strict = applyTwists(['and'], opts({ mappings: [m('and', '&')], minLetters: 1 }), seeded());
+    expect(strict).toMatchObject({ words: ['and'], options: 1, applied: [] });
+    const loose = applyTwists(['and'], opts({ mappings: [m('and', '&')] }), seeded());
+    expect(loose.words).toEqual(['&']);
+    // Six letters, five needed: only one of the two letter-removing swaps can land.
+    const r = applyTwists(['cat', 'dog'], opts({ count: 2, mappings: [m('c', '('), m('d', '|')], minLetters: 5 }), seeded());
+    expect(r.applied).toHaveLength(1);
+    expect(r.options).toBe(2);
+  });
+
+  it('counts outcomes exactly the way it samples them', () => {
+    const o = opts({ count: 2, mappings: [m('a', '@'), m('l', '!'), m('s', '5')] });
+    const r = applyTwists(['salad', 'bowls'], o, seeded());
+    expect(r.applied).toHaveLength(2);
+    expect(twistOutcomes(['salad', 'bowls'], o, 2)).toBe(r.options);
+    expect(twistOutcomes(['salad', 'bowls'], o, 0)).toBe(1);
+    expect(spellingsOf('salad', o.mappings, 1).map((s) => s.text).sort()).toEqual(['5alad', 's@lad', 'sa!ad', 'sal@d', 'salad']);
+    // Spellings are memoised per mapping list: the same array gives the same objects back.
+    expect(spellingsOf('salad', o.mappings, 1)).toBe(spellingsOf('salad', o.mappings, 1));
   });
 });

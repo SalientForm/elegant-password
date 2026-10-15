@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'vitest';
+import { inputsKey, runInputs, type GenerateInputs } from './engine';
+import { DEFAULT_SENTENCE_OPTIONS } from './fromSentence';
+import { DEFAULT_REQUIREMENTS } from './generate';
+import { clearSession, isOutcome, isSuggestion, loadSession, parseSession, saveSession } from './sessionStore';
+import { memoryStore } from './storage';
+import { BUILT_IN_MAPPINGS } from './twists';
+
+const inputs: GenerateInputs = { mode: 'generated', req: DEFAULT_REQUIREMENTS, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: BUILT_IN_MAPPINGS };
+
+describe('session store', () => {
+  it('round-trips a real outcome so the current passwords survive a reload', () => {
+    const outcome = runInputs(inputs);
+    expect(outcome.ok).toBe(true);
+    const store = memoryStore();
+    const session = { key: inputsKey(inputs), round: 2, sentence: 'my secret sentence', outcome };
+    saveSession(store, session);
+    const back = loadSession(store);
+    expect(back).toEqual(JSON.parse(JSON.stringify(session)));
+    expect(back?.outcome && back.outcome.ok && back.outcome.suggestions[0]!.password).toBe(outcome.ok ? outcome.suggestions[0]!.password : '');
+    clearSession(store);
+    expect(loadSession(store)).toBeUndefined();
+  });
+
+  it('keeps a stored error outcome and an empty outcome', () => {
+    const bad = runInputs({ ...inputs, req: { ...DEFAULT_REQUIREMENTS, minLength: 30, maxLength: 20 } });
+    expect(bad.ok).toBe(false);
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: bad })).toEqual({ key: 'k', round: 0, sentence: '', outcome: bad });
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null })?.outcome).toBeNull();
+  });
+
+  it('rejects anything malformed rather than trusting it', () => {
+    expect(parseSession(null)).toBeUndefined();
+    expect(parseSession({ key: 'k' })).toBeUndefined();
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: { ok: true } })).toBeUndefined();
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: { ok: true, source: 'generated', separator: ';', suggestions: [{ password: 1 }], warnings: [] } })).toBeUndefined();
+    expect(isSuggestion({ password: 'x' })).toBe(false);
+    expect(isOutcome({ ok: false })).toBe(false);
+    expect(isOutcome({ ok: false, error: 'why' })).toBe(true);
+  });
+});

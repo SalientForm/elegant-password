@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, type Requirements } from './generate';
 import { seeded } from './testRandom';
-import { twoLetter } from './grammar';
+import { isMadeUpNoun, twoLetter } from './grammar';
+import { scoreCold } from './score';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, ...over });
 
@@ -9,7 +10,7 @@ describe('generate', () => {
   const cases: [string, Partial<Requirements>][] = [
     ['defaults', {}],
     ['every rule, short limit', { minUppercase: 1, minDigits: 1, minSymbols: 1, maxLength: 24 }],
-    ['symbols only via separator', { allowSpaces: false, minSymbols: 1, allowedSymbols: '-' }],
+    ['symbols only via separator', { allowSpaces: false, minSymbols: 1, allowedSymbols: '-', separator: '-' }],
     ['no spaces or symbols', { allowSpaces: false, allowedSymbols: '', separator: 'auto', minSymbols: 0 }],
     ['strict comfort, high target', { comfort: 'strict', targetBits: 60, maxLength: 80 }],
     ['long minimum', { minLength: 40, maxLength: 50 }],
@@ -124,8 +125,12 @@ describe('generate', () => {
     expect(loose).toMatch(stretch);
   });
 
-  it('honours an explicitly chosen dash and falls back to a stretch only when nothing else is allowed', () => {
-    expect(generate(req({}), { rng: seeded() }).plan.separator).toBe('-');
+  it('defaults to the home-row semicolon, honours an explicitly chosen dash, and falls back to a stretch only when nothing else is allowed', () => {
+    // The default separator must not be a pinky stretch while the pinky rule is on by default.
+    expect(DEFAULT_REQUIREMENTS.separator).toBe(';');
+    expect(DEFAULT_REQUIREMENTS.avoidPinkyStretch).toBe(true);
+    expect(generate(req({}), { rng: seeded() }).plan.separator).toBe(';');
+    expect(generate(req({ separator: '-' }), { rng: seeded() }).plan.separator).toBe('-');
     const onlyBang = generate(req({ separator: ' ', minSymbols: 1, allowedSymbols: '!' }), { rng: seeded() });
     expect(onlyBang.plan.endSymbol).toBe('!');
     expect(onlyBang.warnings.join(' ')).toMatch(/pinky stretch/);
@@ -184,6 +189,93 @@ describe('made-up nouns', () => {
           expect(piece === piece.toLowerCase() || piece === piece.toUpperCase(), s.password).toBe(true);
         }
       }
+    }
+  });
+});
+
+describe('audit fixes', () => {
+  it('always has enough letters for the uppercase rule, even with initials, two-letter words and letter-removing swaps', () => {
+    const all = (r: ReturnType<typeof generate>) => {
+      for (const s of r.suggestions) for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+    };
+    all(generate(req({ minUppercase: 8, initials: 3, shorthand: 3, minLength: 6, maxLength: 24, targetBits: 10, count: 20, twists: 0 }), { rng: seeded(5) }));
+    // The exact combination the audit fuzz found: 8 symbols, 2 digits and 8 capitals cannot all fit in 20
+    // characters once the initial and two-letter words shrink the words, so it is refused rather than failed.
+    const audit = req({ minLength: 4, maxLength: 20, minUppercase: 8, minDigits: 2, minSymbols: 8, allowSpaces: false, separator: ',', includeNumber: true, targetBits: 50, comfort: 'strict', twists: 1, initials: 1, shorthand: 3, glue: true, avoidPinkyStretch: false, count: 20 });
+    expect(() => generate(audit, { rng: seeded(1) })).toThrow(/letters to capitalise/);
+    all(generate({ ...audit, maxLength: 28 }, { rng: seeded(1) }));
+    // Swaps like "and" -> "&" remove letters; they may never push the password under the rule.
+    all(generate(req({ minUppercase: 8, twists: 3, minLength: 8, maxLength: 16, targetBits: 10, count: 20, avoidPinkyStretch: false }), { rng: seeded(2) }));
+    // When no shape can supply the letters, the error says what to change.
+    expect(() => generate(req({ minUppercase: 8, initials: 3, shorthand: 3, minLength: 1, maxLength: 8 }))).toThrow(/letters to capitalise/);
+  });
+
+  it('meets every rule across random requirement combinations', { timeout: 60_000 }, () => {
+    const rng = seeded(1234);
+    const pick = <T,>(xs: readonly T[]) => xs[rng.uint32() % xs.length]!;
+    let generated = 0;
+    for (let i = 0; i < 150; i++) {
+      const minLength = pick([1, 4, 8, 10, 12, 16, 20, 30]);
+      const r = req({
+        minLength,
+        maxLength: minLength + pick([0, 1, 2, 4, 8, 16, 40]),
+        minUppercase: pick([0, 1, 2, 3, 8]),
+        minDigits: pick([0, 1, 2, 4]),
+        minSymbols: pick([0, 1, 2, 3, 8]),
+        allowedSymbols: pick(['', '!', '-', '!@#$%^&*-_.,?;', '.', ';', '#', '"\'<>', '\\|`~']),
+        allowSpaces: pick([true, false]),
+        separator: pick(['auto', ' ', ';', '-', '.', '_', ',', '']),
+        includeNumber: pick([true, false]),
+        targetBits: pick([0, 20, 40, 50, 72]),
+        comfort: pick(['strict', 'balanced', 'relaxed']),
+        twists: pick([0, 1, 2, 3]),
+        initials: pick([0, 1, 2, 3]),
+        shorthand: pick([0, 1, 2, 3]),
+        madeUp: pick([0, 1, 2]),
+        glue: pick([true, false]),
+        avoidPinkyStretch: pick([true, false]),
+        count: 5,
+      });
+      try {
+        const g = generate(r, { rng });
+        generated++;
+        for (const s of g.suggestions) {
+          for (const c of s.checks) expect(c.met, `${JSON.stringify(r)} => ${s.password}: ${c.rule}`).toBe(true);
+          if (r.initials === 0 && r.madeUp === 0) expect(s.typing.caseChanges, s.password).toBeLessThanOrEqual(1);
+        }
+      } catch (e) {
+        if (!(e instanceof RequirementsError)) throw e;
+      }
+    }
+    expect(generated).toBeGreaterThan(20);
+  });
+
+  it('never twists two-letter words, initials, numbers or made-up nouns', () => {
+    const r = generate(req({ shorthand: 3, initials: 1, madeUp: 1, twists: 3, count: 20, targetBits: 60, maxLength: 60, separator: ' ' }), {
+      rng: seeded(44),
+    });
+    let shorthandWords = 0;
+    for (const s of r.suggestions) {
+      shorthandWords += s.words.filter((w) => w.slot !== 'num' && w.text.length === 2 && w.text === twoLetter(w.original)).length;
+      for (const t of s.twists) {
+        expect(t.before, s.password).toMatch(/^[a-z]{3,}$/); // whole lowercase words only
+        expect(isMadeUpNoun(t.before), s.password).toBe(false);
+      }
+    }
+    expect(shorthandWords).toBe(3 * r.suggestions.length);
+  });
+
+  it('scores each suggestion cold from its password and hint, as plain data', () => {
+    const r = generate(req({ twists: 2, initials: 1, count: 10 }), { rng: seeded(3) });
+    for (const s of r.suggestions) {
+      const cold = scoreCold(s.password, s.hint);
+      expect(s.bits).toBe(cold.bits);
+      expect(s.twistBits).toBe(cold.twistBits);
+      expect(s.difficulty).toEqual(cold.difficulty);
+      expect(cold.aligned, `${s.password} / ${s.hint}`).toBe(true);
+      expect(cold.template).toBeDefined();
+      expect(s.hint.split(' ')).toHaveLength(s.words.length);
+      expect(JSON.parse(JSON.stringify(s))).toEqual(s);
     }
   });
 });
