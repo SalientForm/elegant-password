@@ -1,10 +1,14 @@
-// Word pools for the sentence grammar: 2,239 words in total. Every word is
+// Word pools for the sentence grammar: 2,242 words in total. Every word is
 // lowercase a-z, 3-8 letters, easy to remember, and fits its slot. The
 // lists were hand-written and spell-checked against the dwyl english-words
 // list. A 2026-10-15 review swapped 169 hard-to-type, uncommon words for
 // easier ones ("tweedy", "fjords", "squirt"); memorable words were then
 // added back on top ("unicorns", "narwhals", "zap"), since any easy-to-
-// remember word is valid (see TODO.md on deliberate swaps for typing ease).
+// remember word is valid. 107 of the 169 came back that way. Of the other
+// 62, three were restored once deliberate swaps for typing ease existed
+// (ease.ts), as their swap puts them inside the balanced comfort share:
+// "blazing" (blasing), "bleak" (bleek) and "seize" (seise). No swap helps
+// the rest enough, so they stay out.
 //   ADJECTIVES   describe a plural noun     ("sleepy")
 //   NOUNS        plural, subject or object  ("otters")
 //   VERBS        transitive, plural present ("paint")
@@ -17,9 +21,10 @@ const list = (words: string): readonly string[] => words.trim().split(/\s+/);
 export const ADJECTIVES = list(`
   active adult aged agile airy alert alien alpine amazing amber ample
   ancient annual anxious apt arctic arid assorted atomic avid awful awkward
-  azure baked bald bare barren basic beige big bitter black blank blessed
-  blind blue blunt bold boring bouncy brave breezy brief bright brisk broad
-  broken bronze brown bubbly bulky bumpy busy buttery calm candid careful
+  azure baked bald bare barren basic beige big bitter black blank blazing
+  bleak blessed blind blue blunt bold boring bouncy brave breezy brief
+  bright brisk broad broken bronze brown bubbly bulky bumpy busy buttery
+  calm candid careful
   casual catchy central charming chatty cheap cheeky cheerful cheery chewy
   chic chief chilly chirpy choppy chubby chunky civil classic clean clear
   clever close cloudy coastal cobalt cold comfy comic common compact complex
@@ -193,7 +198,8 @@ export const VERBS = list(`
   resell reset restore retrieve reuse rev reward rewrite ride rinse rip
   roast rock roll rope rotate row rub ruffle rule sack sadden salt salute
   sand save saw scan scare scatter scoop scorch scratch screw scrub seal
-  sell send serenade serve set sew shade shake shape share sharpen shear
+  seize sell send serenade serve set sew shade shake shape share sharpen
+  shear
   shell shield shine ship shoo shovel show shower shred shrink shuffle sign
   sink sip sketch skip slice sling slurp smash smell smooth snap snare
   snatch sniff snip soak sort spice spill spin splash split spoil spook spot

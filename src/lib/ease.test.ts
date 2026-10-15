@@ -127,5 +127,10 @@ describe('typing comfort with deliberate swaps', () => {
     for (const slot of ['adj', 'noun', 'verb', 'adv', 'end', 'prep'] as const) expect(eased[slot].length, slot).toBe(plain[slot].length);
     expect(eased.adj).toContain('wide');
     expect(plain.adj).not.toContain('wide');
+    // The three words restored from the 2026-10-15 review are inside the balanced share only with their swaps.
+    for (const [word, slot] of [['blazing', 'adj'], ['bleak', 'adj'], ['seize', 'verb']] as const) {
+      expect(eased[slot], word).toContain(word);
+      expect(plain[slot], word).not.toContain(word);
+    }
   });
 });
