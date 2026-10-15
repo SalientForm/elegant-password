@@ -38,7 +38,7 @@ describe('generate', () => {
       expect(s.password.replace(/[^A-Z]/g, '').length).toBeGreaterThanOrEqual(3);
       expect(s.typing.caseChanges).toBeLessThanOrEqual(1);
       expect(s.password).toMatch(/(^| )\d{3} /);
-      expect(s.password).toMatch(/\.\.\.$/);
+      expect(s.password).toMatch(/([^a-zA-Z0-9 ])\1\1$/) // three closing marks of one symbol, drawn for the password;
     }
     // Separators count toward symbols, so no closing marks are needed here.
     const dashed = generate(req({ minSymbols: 3 }), { rng: seeded() });
@@ -349,5 +349,32 @@ describe('generate: the separator is never a closing mark or a swap output', () 
       expect([...s.password].length).toBeGreaterThanOrEqual(DEFAULT_REQUIREMENTS.minLength);
       expect(s.password.includes(';;')).toBe(false);
     }
+  });
+});
+
+describe('variety across a batch', () => {
+  it('draws the closing symbol per password, so a batch ends in different marks, all allowed and never the separator', () => {
+    const r = generate({ ...DEFAULT_REQUIREMENTS, allowSpaces: true, separator: ' ', allowedSymbols: '!?.$#', minSymbols: 2, count: 20 }, { rng: seeded(5) });
+    const endings = new Set(r.suggestions.map((s) => s.password.slice(-2)));
+    expect(endings.size).toBeGreaterThanOrEqual(3);
+    for (const s of r.suggestions) {
+      expect(s.password).toMatch(/[!?.$#]{2}$/);
+      expect(s.checks.every((c) => c.met)).toBe(true);
+    }
+  });
+
+  it('keeps the opening capital on the first word: a generated batch varies in its words, and the sentence-like start types fastest', () => {
+    const r = generate({ ...DEFAULT_REQUIREMENTS, initials: 0, madeUp: 0, count: 20 }, { rng: seeded(6) });
+    for (const s of r.suggestions) {
+      expect(s.password.split(';').find((w) => /[a-zA-Z]/.test(w))).toMatch(/^[0-9]*[A-Z]/); // the first word with letters, after any glued number
+      expect(s.typing.caseChanges).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('applies the minimum number of swaps or one more, at random', () => {
+    const r = generate({ ...DEFAULT_REQUIREMENTS, twists: 1, count: 20 }, { rng: seeded(7) });
+    const counts = new Set(r.suggestions.map((s) => s.twists.length));
+    expect(counts.has(1) && counts.has(2)).toBe(true);
+    for (const s of r.suggestions) expect(s.twists.length).toBeGreaterThanOrEqual(1);
   });
 });

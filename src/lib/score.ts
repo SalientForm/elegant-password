@@ -172,6 +172,11 @@ function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): Sc
   };
   for (const { base, form } of forms) {
     if (startsWithFold(rest, base)) consider({ word, form, base, text: rest.slice(0, base.length), twists: 0 });
+    else {
+      // Padding may have repeated a digit or symbol the word itself contains ("st33l" typed as "st33333l"): the longer run is the same word.
+      const n = expandedLength(rest, base);
+      if (n !== undefined) consider({ word, form, base, text: rest.slice(0, n), twists: 0 });
+    }
   }
   const initial = word[0]!.toUpperCase();
   if (/[A-Z]/.test(initial) && rest[0] === initial) consider({ word, form: 'initial', base: initial, text: initial, twists: 0 });

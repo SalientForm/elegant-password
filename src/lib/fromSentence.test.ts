@@ -32,8 +32,8 @@ describe('fromSentence', () => {
     for (const s of r.suggestions) {
       for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
       expect(s.steps.join(' ')).toContain('“sweets” → “swts”');
-      expect(s.password).toMatch(/^S/);
-      expect(s.typing.caseChanges).toBeLessThanOrEqual(1);
+      expect(s.password).toMatch(/[A-Z]/); // the capital goes on a random word, for variety across the batch
+      expect(s.typing.caseChanges).toBeLessThanOrEqual(2);
     }
     expect(r.warnings.join(' ')).toMatch(/Short sentences/);
     console.log(r.suggestions.map((s) => s.password).join('  '));
@@ -88,14 +88,19 @@ describe('fromSentence', () => {
     ).toThrow(/over the 12 maximum/);
   });
 
-  it('meets "at least N" rules with twists before appending', () => {
-    const r = fromSentence('the otters eat their salad at noon', req({ minDigits: 2, minSymbols: 3, minUppercase: 3, separator: ' ', count: 5 }), undefined, {
+  it('meets "at least N" rules by swaps, a number of its own, or closing marks, and says which', () => {
+    const r = fromSentence('the otters eat their salad at noon', req({ minDigits: 2, minSymbols: 3, minUppercase: 3, separator: ' ', count: 10 }), undefined, {
       rng: seeded(6),
     });
+    const hows = new Set<string>();
     for (const s of r.suggestions) {
       for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
-      expect(s.steps.join(' ')).toMatch(/for the digit and symbol rule/);
+      const steps = s.steps.join(' ');
+      expect(steps).toMatch(/digit/); // swaps for the digit rule, or a number added in front or at the end
+      expect(steps).toMatch(/symbol/); // swaps for the symbol rule, or closing marks
+      hows.add(`${/added [0-9]+ in front/.test(steps) ? 'front' : /added [0-9]+ at the end/.test(steps) ? 'end' : 'swap'}`);
     }
+    expect(hows.size).toBeGreaterThanOrEqual(2); // not the same way every time
   });
 
   it('shortens long sentences to fit the maximum', () => {
@@ -144,7 +149,7 @@ describe('padding', () => {
       expect(s.password).toMatch(/%20$/);
       for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
       expect(s.steps.join(' ')).toMatch(/padded to the 20-character minimum/);
-      expect(s.hint).toMatch(/^hi there .*%20$/);
+      expect(s.hint).toMatch(/^([0-9]+ )?hi there .*%20$/); // a number for the digit rule may lead the hint
       expect(scoreCold(s.password, s.hint).aligned).toBe(true);
     }
   });
@@ -177,14 +182,13 @@ describe('padding', () => {
     }
   });
 
-  it('repeats a digit a swap put inside a word, and the cold scorer still reads the word', () => {
-    // A two-character gap with no tag symbols and no marks allowed: the repeat is the only exact filler.
-    const base = short({ minLength: 1, maxLength: 40, allowedSymbols: ';', separator: ';' }, {}, 'sweet steel beams').suggestions[0]!;
-    const digit = base.password.match(/[0-9]/);
-    expect(digit, base.password).toBeTruthy();
-    const padded = short({ minLength: base.password.length + 2, maxLength: 40, allowedSymbols: ';', separator: ';' }, { lengthTag: 'none' }, 'sweet steel beams').suggestions[0]!;
+  it('repeats a digit inside a word to pad, and the cold scorer still reads the word', () => {
+    // A two-character gap with no tag symbols and no marks allowed: the repeat is the only exact filler. The digit is in the word already.
+    const base = short({ minLength: 1, maxLength: 40, allowedSymbols: ';', separator: ';' }, {}, 'sweet st33l beams').suggestions[0]!;
+    expect(base.password).toMatch(/33/);
+    const padded = short({ minLength: base.password.length + 2, maxLength: 40, allowedSymbols: ';', separator: ';' }, { lengthTag: 'none' }, 'sweet st33l beams').suggestions[0]!;
     expect(padded.password).toHaveLength(base.password.length + 2);
-    expect(padded.password).toMatch(/([0-9])\1\1/); // the digit the swap placed, repeated twice more
+    expect(padded.password).toMatch(/3333/); // the digit in the word, repeated twice more
     expect(padded.steps.join(' ')).toMatch(/repeated 2 more times/);
     const cold = scoreCold(padded.password, padded.hint);
     expect(cold.aligned).toBe(true);
@@ -197,11 +201,11 @@ describe('padding', () => {
     expect(() => short({ minLength: 20 }, { padding: false })).toThrow(/under the 20 minimum/);
   });
 
-  it('keeps the sentence\'s own material first: words are kept whole before any padding is added', () => {
+  it('keeps the sentence\'s own material first: words are kept whole, or a number for the digit rule added, before any padding', () => {
     const r = short({ minLength: 17, maxLength: 32 }, {}, 'Sally eats sweets');
     for (const s of r.suggestions) {
       expect(s.password.length).toBeGreaterThanOrEqual(17);
-      expect(s.steps.join(' ')).not.toMatch(/shortened|padded/); // "sweets" kept whole did the job
+      expect(s.steps.join(' ')).not.toMatch(/padded/); // "sweets" kept whole, or the digit rule's number, did the job
     }
   });
 });
@@ -253,8 +257,9 @@ describe('fromSentence: fits found by review', () => {
   });
 
   it('refuses closing marks that would be the separator, naming it, instead of a password that fails the symbol rule', () => {
-    expect(() => fromSentence('tiny cats', req({ separator: '$', allowedSymbols: '$', minSymbols: 2 }))).toThrow(/only allowed symbol is the separator/);
-    expect(() => fromSentence('cats sit', req({ separator: '(', allowedSymbols: '(', minUppercase: 0, minSymbols: 2 }))).toThrow(/only allowed symbol is the separator/);
+    // No digit rule here: a number of its own would bring a separator of its own, which may legitimately meet the rule.
+    expect(() => fromSentence('tiny cats', req({ separator: '$', allowedSymbols: '$', minSymbols: 2, minDigits: 0 }))).toThrow(/only allowed symbol is the separator/);
+    expect(() => fromSentence('cats sit', req({ separator: '(', allowedSymbols: '(', minUppercase: 0, minSymbols: 2, minDigits: 0 }))).toThrow(/only allowed symbol is the separator/);
     const ok = fromSentence('tiny cats sit', req({ separator: '$', allowedSymbols: '$', minSymbols: 2 }), undefined, { rng: seeded(1) });
     for (const sg of ok.suggestions) {
       expect(sg.checks.every((c) => c.met)).toBe(true);
@@ -287,5 +292,29 @@ describe('fromSentence: fits found by review', () => {
     const r = fromSentence('supercalifragilisticexpialidocious antidisestablishmentarianism', req({ minSymbols: 8, maxLength: 64 }), undefined, { rng: seeded(1) });
     expect(performance.now() - started).toBeLessThan(1500);
     for (const sg of r.suggestions) expect(sg.checks.every((c) => c.met)).toBe(true);
+  });
+});
+
+describe('variety across a batch of one sentence', () => {
+  it('ends passwords in different closing symbols, meets the digit rule by a swap or a number at either end, and varies the swaps', () => {
+    const r = fromSentence(
+      'my dog runs fast',
+      req({ allowSpaces: true, separator: ' ', allowedSymbols: '!?.$#', minSymbols: 2, minDigits: 1, twists: 1, count: 20 }),
+      undefined,
+      { rng: seeded(8) },
+    );
+    expect(new Set(r.suggestions.map((s) => s.password)).size).toBeGreaterThanOrEqual(8); // not the same password over and over
+    const endings = new Set(r.suggestions.map((s) => s.password.match(/[!?.$#]+$/)?.[0] ?? ''));
+    expect(endings.size).toBeGreaterThanOrEqual(2);
+    const inFront = r.suggestions.filter((s) => /^[0-9]/.test(s.hint)).length;
+    const atEnd = r.suggestions.filter((s) => /[0-9]$/.test(s.hint)).length;
+    const bySwap = r.suggestions.filter((s) => !/^[0-9]|[0-9]$/.test(s.hint)).length;
+    expect(inFront).toBeGreaterThan(0);
+    expect(atEnd).toBeGreaterThan(0);
+    expect(bySwap).toBeGreaterThan(0);
+    for (const s of r.suggestions) {
+      expect(s.checks.every((c) => c.met)).toBe(true);
+      expect(scoreCold(s.password, s.hint).bits).toBeGreaterThan(0); // the hint says where the number went
+    }
   });
 });

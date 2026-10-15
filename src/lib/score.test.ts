@@ -109,7 +109,7 @@ describe('scoreCold', () => {
     const r = fromSentence('the otters eat their salad at noon', req({ minDigits: 2, minSymbols: 3, twists: 2, count: 5 }), undefined, { rng: seeded(6) });
     for (const s of r.suggestions) {
       const cold = scoreCold(s.password, s.hint);
-      expect(s.hint).toBe('the otters eat their salad at noon');
+      expect(s.hint.replace(/^[0-9]+ | [0-9]+$/, '')).toBe('the otters eat their salad at noon'); // a number for the digit rule may join the hint at either end
       expect(s.bits).toBe(cold.bits);
       expect(cold.template).toBeUndefined();
       expect(cold.twistCount).toBeGreaterThanOrEqual(2);

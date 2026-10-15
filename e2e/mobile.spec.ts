@@ -96,10 +96,14 @@ async function barLaidOut(page: Page, where: string) {
   const bar = (await page.locator('.phone-bar').boundingBox())!;
   const menu = (await page.getByRole('button', { name: 'Pages', exact: true }).boundingBox())!;
   const tabs = (await page.getByRole('tablist', { name: 'Sections' }).boundingBox())!;
-  const { width, scrolled } = await page.evaluate(() => ({ width: window.innerWidth, scrolled: window.scrollY > 400 }));
+  const { width, scrolled, barPadding } = await page.evaluate(() => ({
+    width: window.innerWidth,
+    scrolled: window.scrollY > 400,
+    barPadding: parseFloat(getComputedStyle(document.querySelector('.phone-bar')!).paddingLeft) || 0, // the bar may run full width with its content inset
+  }));
   expect(bar.y, `${where}: bar never above the top`).toBeGreaterThanOrEqual(-0.5);
   if (scrolled) expect(bar.y, `${where}: bar stuck to the top once the title has scrolled away`).toBeLessThanOrEqual(0.5);
-  expect(menu.x, `${where}: hamburger at the left`).toBeLessThanOrEqual(bar.x + 1);
+  expect(menu.x, `${where}: hamburger at the left`).toBeLessThanOrEqual(bar.x + barPadding + 1);
   expect(Math.abs(tabs.x + tabs.width / 2 - width / 2), `${where}: tabs centred`).toBeLessThanOrEqual(1);
   expect(menu.x + menu.width, `${where}: hamburger clear of the tabs`).toBeLessThanOrEqual(tabs.x);
   // Opaque, slightly lighter than the top of the page gradient it covers, with a drop shadow.

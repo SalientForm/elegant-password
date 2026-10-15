@@ -238,11 +238,20 @@ export function resolveSeparator(req: Requirements, allowed: string[]): string {
  * the other allowed symbols whenever there is one.
  */
 export function closingSymbol(req: Requirements, allowed: string[], separator = ''): string | undefined {
-  // If every allowed symbol is a pinky stretch, a stretch beats failing the rule.
-  const comfortable = comfortableSymbols(req);
-  const pool = comfortable.length ? comfortable : allowed;
-  const other = pool.filter((s) => s !== separator);
+  const other = closingChoices(req, allowed, separator);
   return END_PREFERENCE.find((s) => other.includes(s)) ?? other[0];
+}
+
+/**
+ * The symbols a password's closing mark is drawn from: the comfortable
+ * allowed ones other than the separator (if every allowed symbol is a pinky
+ * stretch, a stretch beats failing the rule). Each password draws its own,
+ * so a batch does not all end in the same mark.
+ */
+export function closingChoices(req: Requirements, allowed: readonly string[], separator = ''): string[] {
+  const comfortable = comfortableSymbols(req);
+  const pool = comfortable.length ? comfortable : [...allowed];
+  return pool.filter((s) => s !== separator);
 }
 
 /** Why closing marks are needed but none can be used, for the error message. */
@@ -500,27 +509,34 @@ function better(a: Plan, b: Plan): boolean {
 export const countUpper = (text: string) => text.replace(/[^A-Z]/g, '').length;
 
 /**
- * One capital goes on the first letter, like a sentence. More than one puts
- * whole words in capitals from the start ("SLEEPY-otters ..."), so Shift is
- * held once instead of the case flipping back and forth.
+ * One capital goes on the first letter of a word, like a sentence. More than
+ * one puts whole words in capitals ("SLEEPY-otters ..."), so Shift is held
+ * once instead of the case flipping back and forth. With a random source the
+ * word is chosen at random (and whole-word capitals start from a random word
+ * and wrap round), so a batch does not all capitalise the same word; without
+ * one it is the first eligible word. Neither choice is counted as bits.
  */
 export function applyUppercase(
   words: readonly string[],
   minUppercase: number,
   /** Words whose case is part of what was chosen (made-up nouns); never recased. */
   fixedCase: (i: number) => boolean = () => false,
+  rng?: RandomSource,
 ): string[] {
   const out = [...words];
   // Capital initials and ALL-CAPS made-up nouns already count toward the rule.
   const existing = countUpper(out.join(''));
   if (existing >= minUppercase) return out;
+  const eligible = out.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
+  if (eligible.length === 0) return out;
+  const start = rng ? randomInt(eligible.length, rng) : 0;
   if (minUppercase === 1) {
-    const i = out.findIndex((w, j) => !fixedCase(j) && /[a-z]/.test(w));
-    if (i >= 0) out[i] = out[i]!.replace(/[a-z]/, (c) => c.toUpperCase());
+    const i = eligible[start]!;
+    out[i] = out[i]!.replace(/[a-z]/, (c) => c.toUpperCase());
   } else {
     let upper = existing;
-    for (let i = 0; i < out.length && upper < minUppercase; i++) {
-      if (fixedCase(i) || !/[a-z]/.test(out[i]!)) continue;
+    for (let k = 0; k < eligible.length && upper < minUppercase; k++) {
+      const i = eligible[(start + k) % eligible.length]!;
       upper -= countUpper(out[i]!);
       out[i] = out[i]!.toUpperCase();
       upper += countUpper(out[i]!);
@@ -529,9 +545,9 @@ export function applyUppercase(
   return out;
 }
 
-function render(words: string[], variant: Variant, plan: Plan): string {
-  const cased = applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i));
-  return trimSeparators(joinTokens(cased, variant.shape.glue, plan.separator) + variant.endSymbol, plan.separator);
+function render(words: string[], variant: Variant, plan: Plan, rng?: RandomSource, endSymbol = variant.endSymbol): string {
+  const cased = applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i), rng);
+  return trimSeparators(joinTokens(cased, variant.shape.glue, plan.separator) + endSymbol, plan.separator);
 }
 
 export interface CheckContext {
@@ -568,8 +584,8 @@ export function checkRequirements(password: string, req: Requirements, ctx?: Che
       how:
         ctx?.uppercaseHow ??
         (req.minUppercase === 1
-          ? 'the first word is capitalised, one Shift press, like the start of a sentence'
-          : `${n} capitals from writing the opening word${n > 8 ? 's' : ''} in capitals: hold Shift once, no back-and-forth`),
+          ? 'one word starts with a capital, one Shift press, like the start of a sentence'
+          : `${n} capitals from writing ${n > 8 ? 'whole words' : 'a whole word'} in capitals: hold Shift once, no back-and-forth`),
     });
   }
   if (req.minDigits > 0) {
@@ -642,9 +658,12 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
     warnings.push('No separator is available, so the words run together. Spaces or a symbol make it easier to read.');
   }
 
+  // Each password draws its own closing symbol, so a batch does not all end in the same mark.
+  const closings = closingChoices(req, allowedSymbolSet(req), chosen.separator);
   const suggestions: Suggestion[] = [];
   for (let i = 0; i < req.count; i++) {
     const variant = variants[weightedIndex(variants.map((v) => v.count), rng)]!;
+    const endSymbol = variant.endSymbol ? closings[randomInt(closings.length, rng)]!.repeat(variant.endSymbol.length) : '';
     const { shape, model } = variant;
     const original = model.sample(variant.lo, variant.hi, rng);
     const length = render(original, variant, chosen).length;
@@ -661,7 +680,8 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
     const twisted = applyTwists(
       original,
       {
-        count: req.twists,
+        // The minimum, or half the time one more (never above the setting's maximum): variety across a batch at no cost to the rules.
+        count: Math.min(MAX_TWISTS, req.twists + (req.twists > 0 ? randomInt(2, rng) : 0)),
         mappings: twistMappings,
         skip: fixed,
         // The opening capital goes on the first ordinary word (twists skip made-up nouns and initials).
@@ -672,7 +692,7 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
       },
       rng,
     );
-    const password = render(twisted.words, variant, chosen);
+    const password = render(twisted.words, variant, chosen, undefined, endSymbol); // the opening capital stays: a sentence-like start
     // Initials and two-letter forms only fix some letters; offer a word to picture so they are easy to remember.
     const pictured = original.map((w, j) => {
       const matches = shape.initials.includes(j)
@@ -706,7 +726,7 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
       memorability: score.memorability.score,
       checks: checkRequirements(password, req, {
         separator: chosen.separator,
-        endSymbol: variant.endSymbol,
+        endSymbol,
         uppercaseHow:
           shape.initials.length && countUpper(original.join('')) >= req.minUppercase
             ? `capital initials: ${shape.initials.map((j) => original[j]).join(' ')}`

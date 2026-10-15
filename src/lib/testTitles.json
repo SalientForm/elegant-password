@@ -778,7 +778,7 @@
       },
       {
         "kind": "test",
-        "title": "meets \"at least N\" rules with twists before appending"
+        "title": "meets \"at least N\" rules by swaps, a number of its own, or closing marks, and says which"
       },
       {
         "kind": "test",
@@ -810,7 +810,7 @@
       },
       {
         "kind": "test",
-        "title": "repeats a digit a swap put inside a word, and the cold scorer still reads the word"
+        "title": "repeats a digit inside a word to pad, and the cold scorer still reads the word"
       },
       {
         "kind": "test",
@@ -818,7 +818,7 @@
       },
       {
         "kind": "test",
-        "title": "keeps the sentence's own material first: words are kept whole before any padding is added"
+        "title": "keeps the sentence's own material first: words are kept whole, or a number for the digit rule added, before any padding"
       },
       {
         "kind": "group",
@@ -863,6 +863,14 @@
       {
         "kind": "test",
         "title": "meets a symbol rule of 8 on long words quickly: at most three swaps per rule, closing marks for the rest"
+      },
+      {
+        "kind": "group",
+        "title": "variety across a batch of one sentence"
+      },
+      {
+        "kind": "test",
+        "title": "ends passwords in different closing symbols, meets the digit rule by a swap or a number at either end, and varies the swaps"
       }
     ]
   },
@@ -980,6 +988,22 @@
       {
         "kind": "test",
         "title": "never draws a swap whose output is the separator, which the edge trim would remove and leave the password short"
+      },
+      {
+        "kind": "group",
+        "title": "variety across a batch"
+      },
+      {
+        "kind": "test",
+        "title": "draws the closing symbol per password, so a batch ends in different marks, all allowed and never the separator"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the opening capital on the first word: a generated batch varies in its words, and the sentence-like start types fastest"
+      },
+      {
+        "kind": "test",
+        "title": "applies the minimum number of swaps or one more, at random"
       }
     ]
   },

@@ -188,8 +188,11 @@ test('pads a short sentence to the minimum with a length tag that states the len
   await openWhy(page);
   await expect(cards(page).first()).toContainText('padded to the 12-character minimum');
   for (const p of mine) {
-    expect(p.length).toBe(12);
-    expect(p).toMatch(/%12$/);
+    // Exactly 12 when the pieces allow; when the gap is smaller than the tag (a number of its own met the digit rule),
+    // the tag alone covers it and states the true total.
+    expect(p.length).toBeGreaterThanOrEqual(12);
+    expect(p.length).toBeLessThanOrEqual(13);
+    expect(p).toMatch(new RegExp(`%${p.length}$`));
   }
 });
 

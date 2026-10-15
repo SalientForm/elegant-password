@@ -33,7 +33,9 @@ import {
   allowedSymbolSet,
   applyUppercase,
   checkRequirements,
+  closingChoices,
   closingSymbol,
+  MAX_TWISTS,
   noClosingProblem,
   comfortableSymbols,
   countUpper,
@@ -119,6 +121,8 @@ interface Context {
   opts: SentenceOptions;
   separator: string;
   closing: string | undefined;
+  /** The symbols a password's closing mark is drawn from. */
+  closingChoices: string[];
   /** The message when closing marks are needed but none can be used. */
   closingProblem: string;
   mappings: MappingSets;
@@ -399,11 +403,13 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
 
 /** Steps 4-7 on one compression state: required digits and symbols, random twists, case and joining, and padding when asked. */
 function finish(state: readonly Token[], limit: number, ctx: Context, pad = false): Finished | Problem {
-  const { base, req, opts, separator, closing, mappings, rng } = ctx;
+  const { base, req, opts, separator, mappings, rng } = ctx;
+  // This password's own closing mark, drawn from the allowed comfortable symbols other than the separator.
+  const closing = ctx.closingChoices.length ? ctx.closingChoices[randomInt(ctx.closingChoices.length, rng)] : undefined;
   let { hint } = ctx;
   // Capitalise first: twists only match lowercase letters, so the capitals
   // the uppercase rule needs can never be swapped away.
-  const capitalised = applyUppercase(state.map((t) => t.text), req.minUppercase);
+  const capitalised = applyUppercase(state.map((t) => t.text), req.minUppercase, undefined, rng); // a random word, for variety
   let tokens = state.map((t, i) => ({ ...t, text: capitalised[i]! }));
   const texts = () => tokens.map((t) => t.text);
   const glueOf = (ts: readonly Token[]) =>
@@ -419,20 +425,26 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   };
   const steps: string[] = [];
 
-  // 4a. Required digits: digit twists first, then append a random number.
+  // 4a. Required digits: half the time digit twists first, then a random number, at the start or the end.
   let digitTwists: AppliedTwist[] = [];
   if (req.minDigits > digitCount(texts())) {
     const need = req.minDigits - digitCount(texts());
-    const r = applyTwists(texts(), { ...twistOpts, count: Math.min(need, MAX_RULE_TWISTS), mappings: mappings.digit }, rng);
-    setTexts(r.words);
-    digitTwists = r.applied;
+    if (randomInt(2, rng) === 0) {
+      const r = applyTwists(texts(), { ...twistOpts, count: Math.min(need, MAX_RULE_TWISTS), mappings: mappings.digit }, rng);
+      setTexts(r.words);
+      digitTwists = r.applied;
+    }
     const missing = Math.max(0, req.minDigits - digitCount(texts()));
     if (missing > 0) {
-      // A comfortable number of exactly the missing length: close-together digits.
+      // A comfortable number of exactly the missing length: close-together digits. It goes in front or at the end,
+      // and into the hint at the same place, since it is part of what there is to remember.
       const options = pools(req.comfort, missing).num.filter((x) => x.length === missing);
       const n = options[randomInt(options.length, rng)]!;
-      setTexts([...texts(), n]);
-      steps.push(`added ${n} for the digit rule`);
+      const token: Token = { text: n, original: n, kind: 'number', small: false };
+      const inFront = randomInt(2, rng) === 0;
+      tokens = inFront ? [token, ...tokens] : [...tokens, token];
+      hint = inFront ? `${n} ${hint}` : `${hint} ${n}`;
+      steps.push(`added ${n} ${inFront ? 'in front' : 'at the end'} for the digit rule`);
     }
   }
 
@@ -442,9 +454,13 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   let symbolTwists: AppliedTwist[] = [];
   if (req.minSymbols > sepSymbols + symbolCount(texts())) {
     const need = req.minSymbols - sepSymbols - symbolCount(texts());
-    const r = applyTwists(texts(), { ...twistOpts, count: Math.min(need, MAX_RULE_TWISTS), mappings: mappings.symbol }, rng);
-    setTexts(r.words);
-    symbolTwists = r.applied;
+    // Some of the rule by swaps, the rest by closing marks: how many swaps is drawn at random, up to the cap.
+    const count = randomInt(Math.min(need, MAX_RULE_TWISTS) + 1, rng);
+    if (count > 0) {
+      const r = applyTwists(texts(), { ...twistOpts, count, mappings: mappings.symbol }, rng);
+      setTexts(r.words);
+      symbolTwists = r.applied;
+    }
   }
   const stillNeeded = Math.max(0, req.minSymbols - sepSymbols - symbolCount(texts()));
   if (stillNeeded > 0 && !closing) return { problem: ctx.closingProblem };
@@ -454,7 +470,13 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   const current = joinTokens(texts(), glue, separator).length + endSymbol.length;
   const random = applyTwists(
     texts(),
-    { ...twistOpts, count: req.twists, mappings: mappings.all, minDelta: req.minLength - current, maxDelta: Math.max(limit, current) - current },
+    {
+      ...twistOpts,
+      count: Math.min(MAX_TWISTS, req.twists + (req.twists > 0 ? randomInt(2, rng) : 0)), // the minimum, or half the time one more, never above the maximum
+      mappings: mappings.all,
+      minDelta: req.minLength - current,
+      maxDelta: Math.max(limit, current) - current,
+    },
     rng,
   );
   setTexts(random.words);
@@ -582,6 +604,7 @@ export function fromSentence(
     opts,
     separator,
     closing,
+    closingChoices: closingChoices(req, allowed, separator),
     closingProblem: noClosingProblem([...allowed], separator),
     mappings: {
       all: usable,

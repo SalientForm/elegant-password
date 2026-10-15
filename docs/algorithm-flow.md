@@ -14,7 +14,7 @@ two-letter words, made-up nouns, glue, swaps) each have their own step.
 | Length between min and max | generic (range) | Planning: the length model counts only word sequences whose letters plus separators and closing marks fit. Swaps are limited to a length window. Sentence mode compresses to the target; a sentence under the minimum is padded (section 3) and anything still outside the range is refused. |
 | At least N uppercase letters | generic (class count) | Planning never picks a shape with fewer letters than N; swaps keep at least N letters; rendering capitalises the first letter (N = 1) or whole words (N ≥ 2). Capital initials and ALL-CAPS made-up nouns count first. |
 | At least N digits | generic (class count) | Generated: the number has N digits. Sentence: digit swaps first (`e→3`, `for→4`), then a comfortable N-digit number is appended. |
-| At least N symbols | generic (class count) | Symbol separators count; the shortfall is symbol swaps (sentence mode) or repeated closing marks (`.`, `!`, `?`). |
+| At least N symbols | generic (class count) | Symbol separators count; the shortfall is symbol swaps (sentence mode, a random number of them up to three) or a closing symbol drawn at random for each password from the allowed comfortable set (never the separator), repeated. |
 | Only these symbols, spaces or not | generic (alphabet) | Every symbol the tool picks on its own (separator, closing mark, swap output) is filtered by the allowed set; closing marks and swap outputs are never the separator character, since a password never starts or ends with its separator (when the separator is the only allowed symbol and marks are needed, the request is refused). A separator chosen by hand must be allowed or the request is rejected. |
 | Separator | specific | `auto` → space if allowed, else the first allowed and comfortable of `; . - , _`, else none. A chosen separator is honoured even if it is a stretch. |
 | Avoid pinky stretches | specific | Symbols more than one key from a pinky's home are removed from the set the tool may pick from (swap outputs, closing marks, automatic separator). If every allowed symbol is a stretch, one is used and a warning says so. |
@@ -64,7 +64,7 @@ flowchart TD
   D --> E[shrink long words: drop vowels or first + last]
   E --> F[compression ladder: one small change per step\nvowels → interior letters → long numbers → drop small words\n→ longest word to initial → drop shortest piece]
   F --> G[binary search the ladder for the least-compressed\nstate whose finished password fits the target]
-  G --> H[finish a state: capitalise first;\ndigits by swaps then an appended number;\nsymbols by separators, swaps, closing marks;\nrandom swaps in the length window; glue and join]
+  G --> H[finish a state: capitalise a random word first;\ndigits by swaps or a number in front or at the end;\nsymbols by separators, some swaps, a closing symbol drawn per password;\nrandom swaps in the length window; glue and join]
   H --> I{fits min…target?}
   I -- too long even when fully compressed --> J[explain: use fewer words or raise the maximum]
   I -- too short at the start --> K[back off: keep long words whole,\nthen fewer random initials]
