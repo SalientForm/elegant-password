@@ -291,6 +291,6 @@ ${testTitles.map((f) => `**${f.file}**\n${f.titles.map((t) => (t.kind === 'group
 
 - Default settings (max ${DEFAULT_REQUIREMENTS.maxLength} characters, target ${DEFAULT_REQUIREMENTS.targetBits} bits, ${DEFAULT_REQUIREMENTS.twists} swaps, separator ${code(DEFAULT_REQUIREMENTS.separator)}) produce five sentence passwords that meet the target and pass every rule.
 - Submitting a change regenerates well under 100 ms for 20 suggestions with 3 swaps, off the main thread, with the previous batch kept on screen until the new one is ready.
-- Light and dark themes. The layout and scrolling of section 3 hold on desktop; on a phone the open column fills the width under the bar of tabs, up to 800 px the other columns are buttons in strips, up to 1100 px two columns stay open, every feature is reachable, and nothing is clipped or scrolls sideways at any width down to 360 px.
+- Light and dark themes. In the dark theme raised surfaces step up from the panel colour toward white (header 8 %, phone bar 5 %, unselected toggles 4 %), and the darker line goes 18 % toward white instead of black so it stays visible. The layout and scrolling of section 3 hold on desktop; on a phone the open column fills the width under the bar of tabs, up to 800 px the other columns are buttons in strips, up to 1100 px two columns stay open, every feature is reachable, and nothing is clipped or scrolls sideways at any width down to 360 px.
 `;
 }
