@@ -3,6 +3,7 @@
   --bg-top: color-mix(in srgb, var(--bg), black 20%); /* the top of the page gradient: 20% of brightness darker than the page colour */
   --bar: color-mix(in srgb, var(--bg-top), white 20%); /* the header and the phone bar: opaque, a fifth of the way to white from the top of the gradient they cover */
   --line-dark: color-mix(in srgb, var(--line), black 18%); /* the header's bottom line, a shade darker than the tabs' border above it */
+  --toggle: color-mix(in srgb, var(--panel), var(--bg) 30%); /* an unselected toggle button: near white, just off the panel colour */
   --panel: #ffffff;
   --ink: #1f2328;
   --muted: #646a73;
@@ -111,7 +112,7 @@ main.columns > .strip { position: sticky; top: 0; height: 100vh; height: 100dvh;
  * centred in it.
  */
 main.columns.phone { display: block; }
-.phone-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.3rem 0; margin: 0 0 0.9rem; background: var(--bar); border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgb(0 0 0 / 0.12); }
+.phone-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.6rem; align-items: center; gap: 0.4rem; min-height: 3rem; padding: 0.3rem max(0.9rem, env(safe-area-inset-right, 0px)) 0.3rem max(0.9rem, env(safe-area-inset-left, 0px)); margin: 0 calc(50% - 50vw) 0.9rem; background: var(--bar); border-bottom: 1px solid var(--line); box-shadow: 0 2px 10px rgb(0 0 0 / 0.12); } /* full width, its content lined up with the page's */
 .phone-menu { position: relative; grid-column: 1; justify-self: start; } /* the empty track at the right mirrors it, so the tabs are centred in the bar */
 .phone-menu nav[hidden] { display: none; } /* the menu is always in the document, so the hamburger's aria-controls has a target */
 .phone-menu nav { position: absolute; top: calc(100% + 0.3rem); left: 0; z-index: 6; display: grid; min-width: 10rem; padding: 0.3rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); }
@@ -122,7 +123,7 @@ main.columns.phone { display: block; }
 .phone-bar .section-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
 .phone-page { grid-column: 2; justify-self: center; font-weight: 700; }
 @media (max-width: 400px) { .phone-bar .section-tabs button { font-size: 0.7rem; padding: 0.4rem 0.45rem; } } /* the narrowest phones: the three tabs still clear the hamburger */
-@media (max-width: 600px) { main.columns.narrow { gap: 0.6rem; } main.columns > .strip { width: 2rem; } .strip-button { font-size: 0.8rem; padding: 0.8rem 0.25rem; } .results-tools .segmented.sort { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); } /* the three order labels wrap into rows when they cannot share one */ .segmented > button { min-width: 0; padding-inline: 0.3rem; font-size: 0.8rem; } }
+@media (max-width: 600px) { main.columns.narrow { gap: 0.6rem; } main.columns > .strip { width: 2rem; } .strip-button { font-size: 0.8rem; padding: 0.8rem 0.25rem; } .results-tools .segmented.sort { display: flex; flex-wrap: wrap; } .results-tools .segmented.sort > button { flex: 1 1 0; min-width: max-content; } /* the three order labels share a row at equal widths, and wrap only when one no longer fits */ .segmented > button { min-width: 0; padding-inline: 0.3rem; font-size: 0.8rem; } }
 .segmented.sort { grid-template-columns: repeat(3, 1fr); }
 .scoring { display: grid; gap: 1rem; margin-bottom: 1rem; }
 .scoring h3 { margin-top: 1rem; }
@@ -281,7 +282,16 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .mode-tabs button[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
 .sentence { display: grid; gap: 0.6rem; }
 .sentence-card { display: grid; gap: 0.8rem; }
-.sentence-card .mode-tabs { background: var(--bg); } /* the tabs sit inside the card, so the pill takes the page background */
+/*
+ * The two toggle groups, the sentence mode tabs and the suggestion order, look
+ * the same: a pill on the page background with a darker border, each choice a
+ * near-white button with the same darker border, the active one filled.
+ */
+.sentence-card .mode-tabs, .results-tools .segmented.sort { gap: 0.3rem; padding: 0.3rem; background: var(--bg); border: 1px solid var(--line-dark); border-radius: var(--radius); }
+.sentence-card .mode-tabs button, .results-tools .segmented.sort button { border: 1px solid var(--line-dark); background: var(--toggle); padding: 0.5rem; border-radius: 7px; font-weight: 600; color: var(--muted); box-shadow: none; }
+.sentence-card .mode-tabs button[aria-selected='true'], .results-tools .segmented.sort button[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.results-tools .segmented.sort button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 600px) { .results-tools .segmented.sort button { padding: 0.45rem 0.25rem; font-size: 0.75rem; } } /* on a phone the order labels are smaller and tighter, so all three fit on one row */
 .panel.suggestions { display: grid; gap: 0.9rem; }
 .panel.suggestions > h2 { margin: 0; }
 .panel.suggestions .card { background: var(--bg); } /* a card inside the suggestions card */
@@ -299,6 +309,8 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
  */
 .app-header { margin: -0.75rem calc(50% - 50vw) 1.25rem; padding-top: 0.75rem; background: var(--bar); border-bottom: 1px solid var(--line-dark); box-shadow: 0 2px 10px rgb(0 0 0 / 0.1); }
 .app-header .header-inner { max-width: 1380px; margin: 0 auto; padding: 0 1.25rem; }
+/* On a phone the bar below meets the header with no gap, and the header (with its shadow) is drawn over it, so the bar reads as running out from underneath. */
+@media (max-width: 600px) { .app-header { position: relative; z-index: 6; margin-bottom: 0; } }
 .topnav { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--line); }
 .topnav a { padding: 0.5rem 0.9rem; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .topnav a.active { color: var(--accent); border-bottom-color: var(--accent); }
