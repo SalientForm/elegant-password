@@ -64,6 +64,17 @@ explanation for each:
   (`a>@`, `e>3`, `ph>f`, ...), each switchable, plus your own. Mapping
   choices are saved in localStorage. Twist strength is counted exactly from
   the number of distinct ways the twists could land.
+- **Deliberate swaps for typing ease** (off by default): instead of being
+  filtered out, a word with a same-finger jump (`e-d`) or a long reach (six
+  key widths or more, `w-i`) can be typed with one fixed sound-alike
+  misspelling that removes it: `wise` -> `wyse`, `cool` -> `cul`, `bricks`
+  -> `brix`. It is a function of the word alone, so it adds no bits; the
+  cold scorer works it out from the hint and never counts it as a random
+  swap, and typing comfort then ranks words as typed. The rule and its
+  table are in `src/lib/ease.ts`. Measured on 600 suggestions at the
+  defaults it helps only a little (mean difficulty 41.4 -> 41.3, same-finger
+  pairs per 10 keys 0.65 -> 0.62, memorability 73.4 -> 72.6), so it stays
+  off by default and the comfort filter is unchanged.
 - **Avoid pinky stretches** (on by default): the tool never picks a symbol
   more than one key from where a pinky rests (`! - _ = + ) |` ...). A
   separator you choose yourself, like `-`, is still used.
@@ -157,6 +168,7 @@ Fun page download, and fails on any console error. First time only:
 
 - `src/lib/words.ts`: word pools per part of speech
 - `src/lib/keyboard.ts`: QWERTY model and typing cost
+- `src/lib/ease.ts`: deliberate swaps for typing ease
 - `src/lib/grammar.ts`: sentence templates and comfort-filtered pools
 - `src/lib/lengthModel.ts`: exact counting and uniform sampling under length limits
 - `src/lib/generate.ts`: requirements, plan selection, explanations
