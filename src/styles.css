@@ -56,7 +56,7 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .topbar .brand { flex: none; font-size: 0.78rem; font-weight: 400; font-style: italic; opacity: 0.3; white-space: nowrap; }
 .topbar .brand strong { font-weight: 700; }
 
-main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 2rem; align-items: start; }
+main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
 /*
  * Desktop: once the header and tabs have scrolled away, each column sticks to
  * the top of the viewport, fills its height, and scrolls on its own, never
