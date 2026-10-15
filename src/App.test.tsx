@@ -147,7 +147,7 @@ describe('App: order and pages', () => {
   it('shows the title above the tabs with the description beside it and the SalientForm credit', () => {
     render(<App />);
     const title = screen.getByRole('heading', { level: 1 });
-    expect(title.textContent).toBe('The Elegant Password');
+    expect(title.textContent).toBe('Thuh Eleg@nt Pa$$word!');
     const nav = screen.getByRole('navigation', { name: 'Pages' });
     expect(title.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // title first, tabs after
     const credit = screen.getByText((_, el) => el?.classList.contains('brand') === true);

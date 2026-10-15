@@ -21,7 +21,7 @@ import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
 type Page = 'main' | 'scoring' | 'fun';
 const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : window.location.hash === '#/scoring' ? 'scoring' : 'main');
 
-const TITLE = 'The Elegant Password';
+const TITLE = 'Thuh Eleg@nt Pa$$word!';
 const DESCRIPTIONS: Record<Page, string> = {
   main: 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.',
   scoring: 'How difficulty, strength and memorability are scored.',

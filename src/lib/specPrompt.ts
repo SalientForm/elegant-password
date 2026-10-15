@@ -122,7 +122,7 @@ You are building a password generator web app called **Elegant Passwords**. It c
 2. **Scoring** (${code('#/scoring')}): how strength in bits is counted (the exact plan, cold scoring of a password from its hint, your own sentence, choosing a favourite, time to guess per preset at the three attacker speeds) and the full difficulty rubric.
 3. **Fun** (${code('#/fun')}): shows this prompt, generated from the live constants and rendered from markdown as formatted text, with Copy and Download buttons for the raw markdown.
 
-Hash routing. Above the tabs, top left: the title "The Elegant Password" with the page's one-line description (13 pt) on the line beneath it, both left-justified. "brought to you by SalientForm" sits at the right end of the same row, scrolling with the page, in small, italic, 30 %-opaque text, with only "SalientForm" in bold. The tab labels are Passwords, Scoring and Fun.
+Hash routing. Above the tabs, top left: the title "Thuh Eleg@nt Pa$$word!" (the app's own kind of spelling) with the page's one-line description (13 pt) on the line beneath it, both left-justified. "brought to you by SalientForm" sits at the right end of the same row, scrolling with the page, in small, italic, 30 %-opaque text, with only "SalientForm" in bold. The tab labels are Passwords, Scoring and Fun.
 
 ## 4. Requirements form (left column)
 
@@ -292,7 +292,7 @@ ${testTitles.map((f) => `**${f.file}**\n${f.titles.map((t) => (t.kind === 'group
 
 - Default settings (max ${DEFAULT_REQUIREMENTS.maxLength} characters, target ${DEFAULT_REQUIREMENTS.targetBits} bits, ${DEFAULT_REQUIREMENTS.twists} swaps, separator ${code(DEFAULT_REQUIREMENTS.separator)} so the default never needs a pinky stretch) produce five sentence passwords that meet the target and pass all rules.
 - Changing an option is a draft; submitting it regenerates well under 100 ms for 20 suggestions with 3 swaps, off the main thread, with the previous batch kept on screen until the new one is ready.
-- The title "The Elegant Password" sits at the top left with the description beneath it and the SalientForm credit at the right end of that row; the right column stays in view while the middle scrolls.
+- The title "Thuh Eleg@nt Pa$$word!" sits at the top left with the description beneath it and the SalientForm credit at the right end of that row; the right column stays in view while the middle scrolls.
 - Light and dark themes. On a phone the three columns are three tabs, every feature is reachable, and nothing scrolls sideways.
 `;
 }
