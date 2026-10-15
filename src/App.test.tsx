@@ -142,6 +142,7 @@ describe('App: order and pages', () => {
     expect(screen.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeTruthy();
     expect(screen.getByText('Finger rolls')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Scoring' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByText(/read like a sentence/)).toBeTruthy(); // the one app description, on every page
   });
 
   it('shows the title above the tabs with the description beside it and the SalientForm credit', () => {

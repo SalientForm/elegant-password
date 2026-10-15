@@ -22,11 +22,8 @@ type Page = 'main' | 'scoring' | 'fun';
 const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : window.location.hash === '#/scoring' ? 'scoring' : 'main');
 
 const TITLE = 'Thuh Eleg@nt Pa$$word!';
-const DESCRIPTIONS: Record<Page, string> = {
-  main: 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.',
-  scoring: 'How difficulty, strength and memorability are scored.',
-  fun: 'The whole app, described as one prompt.',
-};
+/** One line for the whole app, the same on every page. */
+const DESCRIPTION = 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.';
 
 type Column = 'options' | 'suggestions' | 'list';
 const COLUMN_TABS: { id: Column; label: string }[] = [
@@ -60,7 +57,7 @@ export function App() {
         <header className="topbar">
           <div className="topbar-text">
             <h1>{TITLE}</h1>
-            <p className="tagline">{DESCRIPTIONS[page]}</p>
+            <p className="tagline">{DESCRIPTION}</p>
           </div>
           <span className="brand">
             brought to you by <strong>SalientForm</strong>

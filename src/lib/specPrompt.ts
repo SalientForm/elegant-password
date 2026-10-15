@@ -122,7 +122,7 @@ You are building a password generator web app called **Elegant Passwords**. It c
 2. **Scoring** (${code('#/scoring')}): how strength in bits is counted (the exact plan, cold scoring of a password from its hint, your own sentence, choosing a favourite, time to guess per preset at the three attacker speeds) and the full difficulty rubric.
 3. **Fun** (${code('#/fun')}): shows this prompt, generated from the live constants and rendered from markdown as formatted text, with Copy and Download buttons for the raw markdown.
 
-Hash routing. Above the tabs, top left: the title "Thuh Eleg@nt Pa$$word!" (the app's own kind of spelling) with the page's one-line description (13 pt) on the line beneath it, both left-justified. "brought to you by SalientForm" sits at the right end of the same row, scrolling with the page, in small, italic, 30 %-opaque text, with only "SalientForm" in bold. The tab labels are Passwords, Scoring and Fun.
+Hash routing. Above the tabs, top left: the title "Thuh Eleg@nt Pa$$word!" (the app's own kind of spelling) with the app's one-line description (13 pt, the same on every page: "Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.") on the line beneath it, both left-justified. "brought to you by SalientForm" sits at the right end of the same row, scrolling with the page, in small, italic, 30 %-opaque text, with only "SalientForm" in bold. The tab labels are Passwords, Scoring and Fun.
 
 ## 4. Requirements form (left column)
 
