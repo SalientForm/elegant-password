@@ -245,11 +245,16 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .entry-main { display: grid; gap: 0.2rem; min-width: 0; }
 /* Never scroll sideways: a long password is cut with an ellipsis and shown in full on hover. */
 .entry .entry-password { font-size: 13pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; display: block; max-width: 100%; }
-.entry { min-width: 0; overflow: hidden; }
+.entry { min-width: 0; }
+/* The full-password tip: immediate, selectable, and stays while hovered. */
+.pw-tip-anchor { position: relative; display: block; min-width: 0; outline: none; }
+.pw-tip-anchor:focus-visible .entry-password { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+.pw-tip { position: absolute; left: 0; top: 100%; z-index: 30; margin-top: 0.25rem; padding: 0.5rem 0.65rem; background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.2); max-width: min(60ch, 80vw); white-space: pre-wrap; word-break: break-all; user-select: text; cursor: text; font-size: 0.95rem; }
+.pw-tip code { background: transparent; }
 /* Badges, bits and buttons in an entry wrap onto new lines rather than widen the column. */
 .entry .actions { flex-wrap: wrap; min-width: 0; }
 .entry .badge, .entry .bits-label, .entry .copy-status { white-space: normal; }
-.selected .selected-list { overflow-x: hidden; }
+.selected .selected-list { overflow-x: clip; }
 .entry-hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
 .entry-date { color: var(--muted); font-size: 0.72rem; }
 .hint-line { margin: 0 0 0.5rem !important; }

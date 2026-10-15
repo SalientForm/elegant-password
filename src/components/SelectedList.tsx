@@ -4,6 +4,7 @@ import type { SelectedEntry } from '../lib/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
 import { CopyButton } from './CopyButton';
 import { TrashIcon } from './icons';
+import { PasswordTip } from './PasswordTip';
 import { memorabilityLevel } from './SuggestionCard';
 
 function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
@@ -13,9 +14,11 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
   return (
     <li className="entry">
       <div className="entry-main">
-        <code className="password entry-password" ref={code} title={entry.password}>
-          {entry.password}
-        </code>
+        <PasswordTip password={entry.password}>
+          <code className="password entry-password" ref={code}>
+            {entry.password}
+          </code>
+        </PasswordTip>
         <p className="entry-hint">
           <span className="field-label">Hint:</span> {entry.hint || <em>none</em>}
         </p>

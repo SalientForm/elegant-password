@@ -33,7 +33,17 @@ describe('SelectedList', () => {
     expect(items).toHaveLength(2);
     const first = within(items[0]!);
     const code = first.getByText(ENTRIES[0]!.password);
-    expect(code.getAttribute('title')).toBe(ENTRIES[0]!.password); // the full password shows on hover when it is cut short
+    expect(code.getAttribute('title')).toBeNull(); // no browser tooltip: it is slow and cannot be copied
+    expect(first.queryByRole('tooltip')).toBeNull();
+    fireEvent.mouseEnter(code.parentElement!);
+    const tip = first.getByRole('tooltip');
+    expect(tip.textContent).toBe(ENTRIES[0]!.password); // immediate, and real text that can be selected
+    fireEvent.mouseLeave(code.parentElement!);
+    expect(first.queryByRole('tooltip')).toBeNull();
+    fireEvent.focus(code.parentElement!);
+    expect(first.getByRole('tooltip')).toBeTruthy();
+    fireEvent.keyDown(code.parentElement!, { key: 'Escape' });
+    expect(first.queryByRole('tooltip')).toBeNull();
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     expect(first.getByText(`≈${score.bits.toFixed(0)} bits`)).toBeTruthy();
