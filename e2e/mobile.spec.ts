@@ -76,7 +76,7 @@ test('collapses into three tabs and keeps every feature reachable without sidewa
   await cards(page).first().getByRole('button', { name: 'Add', exact: true }).click();
 
   await section(page, 'My list').click();
-  await expect(page.getByLabel('Password to test', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Test and practice', { exact: true })).toBeVisible();
   const list = page.getByRole('list', { name: 'My passwords' });
   await expect(list.getByRole('listitem')).toHaveCount(1);
   await expect(list).toContainText(first);

@@ -149,6 +149,7 @@ describe('PasswordsProvider', () => {
     expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).twists).toBe(DEFAULT_REQUIREMENTS.twists);
     fireEvent.click(screen.getByText('apply'));
     await waitFor(() => expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).twists).toBe(3));
+    await settled(); // let the regenerated batch land before adding from it
 
     fireEvent.click(screen.getByText('add'));
     const added = text('first')!;

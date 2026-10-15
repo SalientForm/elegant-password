@@ -222,6 +222,11 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;
 }
 
+/** The context when inside a provider, null otherwise (the typing test works on its own too). */
+export function usePasswordsOptional(): PasswordsContextValue | null {
+  return useContext(PasswordsContext);
+}
+
 export function usePasswords(): PasswordsContextValue {
   const ctx = useContext(PasswordsContext);
   if (!ctx) throw new Error('usePasswords must be used inside PasswordsProvider');

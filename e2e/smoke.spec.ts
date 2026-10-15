@@ -106,6 +106,12 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   await expect(list).toContainText(shown[0]!);
   await expect(list).toContainText('Hint:');
   await expect(list.locator('.badge.strength')).toHaveText(`S ${bits}`);
+  // The password just added is now the one under test, hint and all three badges included.
+  const practice = page.locator('.typing-result');
+  await expect(practice).toContainText(`Testing: ${shown[0]}`);
+  await expect(practice).toContainText('Hint:');
+  await expect(practice.locator('.badge.strength')).toHaveText(`S ${bits}`);
+  await expect(practice.locator('.badge.memorability')).toHaveText(/^M \d+$/);
 
   await page.reload();
   expect(await settledPasswords(page)).toEqual(shown);
@@ -186,7 +192,7 @@ test('pads a short sentence to the minimum with a length tag that states the len
 });
 
 test('tests a typed password in the masthead: speed, corrections, strength, and the lock', async ({ page }) => {
-  const field = page.getByLabel('Password to test', { exact: true });
+  const field = page.getByLabel('Test and practice', { exact: true });
   await field.click();
   await field.pressSequentially('Sleepy;otterx', { delay: 20 });
   await page.keyboard.press('Backspace');
@@ -196,8 +202,10 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
   await expect(status).toContainText('Testing: Sleepy;otters');
   await expect(status).toContainText('Typed correctly');
   await expect(status).toContainText('1 correction');
-  await expect(status).toContainText('bits');
-  await expect(status).toContainText('Difficulty');
+  await expect(status).toContainText('Hint: (hint n/a)'); // typed by hand: no hint
+  await expect(status.locator('.badge.strength')).toHaveText(/^S \d+$/);
+  await expect(status.locator('.badge.difficulty')).toHaveText(/^D \d+$/);
+  await expect(status.locator('.badge.memorability')).toHaveText('M n/a');
   await page.getByLabel('Lock password', { exact: true }).check();
   await field.pressSequentially('Sleepy;otter', { delay: 10 });
   await page.keyboard.press('Enter');

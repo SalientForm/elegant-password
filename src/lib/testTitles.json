@@ -424,7 +424,11 @@
       },
       {
         "kind": "test",
-        "title": "can hide the text as it is typed, and tells password managers to leave the field alone"
+        "title": "can hide the text as it is typed, and gives password managers nothing to latch on to"
+      },
+      {
+        "kind": "test",
+        "title": "takes the password last added to the list, with its hint, and scores all three badges; a typed one has no hint"
       }
     ]
   },

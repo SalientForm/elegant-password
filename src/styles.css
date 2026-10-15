@@ -153,6 +153,7 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .memo-high { background: var(--accent-soft); color: var(--accent); }
 .memo-mid { background: var(--warn-soft); color: var(--warn); }
 .memo-low { background: var(--bad-soft); color: var(--bad); }
+.memo-none { background: var(--key); color: var(--muted); }
 .pip { font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.45rem; border-radius: 999px; }
 table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .rubric th, .rubric td { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -285,7 +286,8 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 
 /* Test a password, top of the right column */
 .typing-test { display: grid; gap: 0.55rem; }
-.typing-test input[type='text'], .typing-test input[type='password'] { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.5rem 0.65rem; width: 100%; }
+.typing-test input.masked { -webkit-text-security: disc; } /* hidden without being a password field */
+.typing-test input[type='text'] { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 1rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.5rem 0.65rem; width: 100%; }
 .typing-test-controls { display: flex; gap: 1rem; flex-wrap: wrap; }
 .typing-result { display: grid; gap: 0.4rem; font-size: 0.85rem; }
 .typing-result p { margin: 0; }

@@ -133,7 +133,7 @@ describe('App: order and pages', () => {
 
   it('has a Scoring page with the rubric and the bits explanation, and keeps the typing test and list in the right column', async () => {
     render(<App />);
-    expect(screen.getByLabelText('Password to test')).toBeTruthy();
+    expect(screen.getByLabelText('Test and practice')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'My list' })).toBeTruthy();
     expect(screen.queryByText('How difficulty is scored')).toBeNull();
     window.location.hash = '#/scoring';
@@ -174,7 +174,7 @@ describe('App on a phone', () => {
     expect(sections.map((t) => t.textContent)).toEqual(['Options', 'Suggestions', 'My list']);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     expect(screen.queryByText('Site requirements')).toBeNull(); // options live in their own tab
-    expect(screen.queryByLabelText('Password to test')).toBeNull(); // so do the tester and the list
+    expect(screen.queryByLabelText('Test and practice')).toBeNull(); // so do the tester and the list
 
     fireEvent.click(screen.getByRole('tab', { name: 'Options' }));
     expect(screen.getByText('Site requirements')).toBeTruthy();
@@ -184,7 +184,7 @@ describe('App on a phone', () => {
     expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('tab', { name: 'My list' }));
-    expect(screen.getByLabelText('Password to test')).toBeTruthy();
+    expect(screen.getByLabelText('Test and practice')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'My list' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // the floating buttons follow every tab
 

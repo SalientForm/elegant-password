@@ -46,7 +46,8 @@ export const strengthWord = (bits: number) => [...STRENGTH_PRESETS].reverse().fi
 interface BadgeProps {
   bits: number;
   difficulty: { score: number; level: number; label: string };
-  memorability: number;
+  /** Undefined when there is no hint to compare with (a password typed in by hand). */
+  memorability?: number;
   /** From the user's own sentence: the bits count only the random parts. */
   mine?: boolean;
 }
@@ -56,7 +57,10 @@ export function ScoreBadges({ bits, difficulty, memorability, mine = false }: Ba
   void mine; // the same rule scores every password; nothing about its origin goes in
   const strength = `Strength ${bits.toFixed(0)} bits, ${strengthWord(bits)}; scored from the password and its hint alone`;
   const diff = `Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`;
-  const memo = `Memorability ${memorability} of 100: how closely it still looks like its hint`;
+  const memo =
+    memorability === undefined
+      ? 'Memorability needs a hint: it measures how closely the password still looks like its sentence'
+      : `Memorability ${memorability} of 100: how closely it still looks like its hint`;
   // Each badge opens the app's instant tip with its full reading; no browser tooltip.
   return (
     <>
@@ -71,8 +75,8 @@ export function ScoreBadges({ bits, difficulty, memorability, mine = false }: Ba
         </span>
       </InstantTip>
       <InstantTip content={memo} className="badge-tip">
-        <span className={`badge memorability memo-${memorabilityLevel(memorability)}`} aria-label={memo}>
-          M {memorability}
+        <span className={`badge memorability memo-${memorability === undefined ? 'none' : memorabilityLevel(memorability)}`} aria-label={memo}>
+          M {memorability ?? 'n/a'}
         </span>
       </InstantTip>
     </>
