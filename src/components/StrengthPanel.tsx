@@ -52,8 +52,8 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
       </table>
 
       <p className="hint">
-        Capitalisation, separators and the closing symbol follow fixed rules, so they add nothing here. Swaps add more
-        on top. Each card scores its own password from the password and its hint alone, so a password reads the same
+        Capitalisation, separators, the closing symbol{plan.easeSwaps ? ' and the deliberate swaps that ease awkward words' : ''}{' '}
+        follow fixed rules, so they add nothing here. Random swaps add more on top. Each card scores its own password from the password and its hint alone, so a password reads the same
         wherever it appears; that figure does not know about the length limits, so it can sit a little above this one.
       </p>
       <p className="hint">

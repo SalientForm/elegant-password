@@ -444,6 +444,10 @@
         "title": "toggles \"Why?\", marks unmet checks, and adds to the list"
       },
       {
+        "kind": "test",
+        "title": "lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits"
+      },
+      {
         "kind": "group",
         "title": "SuggestionCard rows"
       },

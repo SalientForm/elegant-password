@@ -98,6 +98,30 @@ describe('SuggestionCard', () => {
     show(s, context, 0, { onAdd, selected: true });
     expect((screen.getByRole('button', { name: 'Added' }) as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it('lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits', () => {
+    const { s, context } = first({});
+    const hint = '13 wise kids openly pet twisty toys';
+    const password = '13;Wyse;kyd$;openly;pet;twysty;toys';
+    const swapped: Suggestion = {
+      ...s,
+      password,
+      hint,
+      twists: [{ wordIndex: 2, mapping: { from: 's', to: '$', kind: 'symbol' }, before: 'kyds', after: 'kyd$' }],
+    };
+    show(swapped, context);
+    fireEvent.click(screen.getByRole('button', { name: 'Why?' }));
+    expect(screen.getByText(/Deliberate swaps make awkward words easier to type\. They follow a fixed rule, so they add no/)).toBeTruthy();
+    const deliberate = document.querySelector('.eased-list')!;
+    expect([...deliberate.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+      'i → y in “wise” (wyse) removes the long reach w-i (deliberate swap)',
+      'i → y in “kids” (kyds) removes the same-finger jump k-i (deliberate swap)',
+      'i → y in “twisty” (twysty) removes the long reach w-i (deliberate swap)',
+    ]);
+    // The random swap is listed on its own, on the word as typed.
+    const random = [...document.querySelectorAll('.twist-list:not(.eased-list) li')].map((li) => li.textContent);
+    expect(random).toContain('s → $ in “kyds” (symbol swap)');
+  });
 });
 
 describe('SuggestionCard rows', () => {

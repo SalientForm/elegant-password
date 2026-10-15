@@ -145,6 +145,15 @@ export function RequirementsForm({ value, onChange }: Props) {
           Skips symbols more than one key from where your pinkies rest, like <code>! - _ = + ) |</code>, in twists and
           closing marks.
         </p>
+        <label className="check">
+          <input type="checkbox" checked={value.easeSwaps} onChange={(e) => set('easeSwaps', e.target.checked)} />
+          Ease awkward words with deliberate swaps
+        </label>
+        <p className="hint">
+          A word with a same-finger jump or a long reach gets one fixed misspelling that removes it: “wise” → wyse,
+          “cool” → cul. Comfort then ranks words as typed. A fixed rule, so it adds no strength, and the hint keeps the
+          word as written.
+        </p>
       </fieldset>
 
       <fieldset>

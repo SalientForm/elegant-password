@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { describeRemoved, easeOf } from '../lib/ease';
 import { roleLabel, STRENGTH_PRESETS, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
@@ -146,6 +147,11 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   const cold = useMemo(() => scoreCold(password, hint), [password, hint]);
   const memo = cold.memorability;
   const changedWords = cold.words.filter((w) => w.form === 'dropped' || [...w.text].length < [...w.word].length);
+  // Deliberate swaps are read from the password and hint, like everything else the card says.
+  const eased = cold.words.flatMap((w) => {
+    const e = w.form === 'eased' ? easeOf(w.word) : undefined;
+    return e ? [e] : [];
+  });
 
   const letterRows = typing.rowsUsed.filter((r) => r > 0 && r < 4);
 
@@ -245,6 +251,22 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
                     ))}
                   </ul>
                 )}
+              </>
+            )}
+            {eased.length > 0 && (
+              <>
+                <p>
+                  Deliberate swaps make awkward words easier to type. They follow a fixed rule, so they add no
+                  strength; remember them with the sentence:
+                </p>
+                <ul className="twist-list eased-list">
+                  {eased.map((e) => (
+                    <li key={e.word}>
+                      <code>{e.rule.from}</code> → <code>{e.rule.to}</code> in “{e.word}” ({e.text}) removes {describeRemoved(e)}
+                      <small> (deliberate swap)</small>
+                    </li>
+                  ))}
+                </ul>
               </>
             )}
             {twists.length > 0 && (

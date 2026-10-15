@@ -66,6 +66,9 @@ describe('RequirementsForm', () => {
     expect(screen.getByText(/Only the easiest 40%/)).toBeTruthy();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Avoid pinky stretches' }));
     expect(req().avoidPinkyStretch).toBe(false);
+    expect(req().easeSwaps).toBe(false);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ease awkward words with deliberate swaps' }));
+    expect(req().easeSwaps).toBe(true);
     const twos = screen.getAllByRole('button', { name: '2' });
     fireEvent.click(twos[0]!); // initials
     fireEvent.click(twos[1]!); // two-letter words
