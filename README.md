@@ -33,10 +33,15 @@ explanation for each:
   sentence is kept in this tab only (sessionStorage) so a refresh does not
   lose it, and is never sent anywhere; it is only kept longer if you add a
   password to your list, as that password's hint.
-- **Survives a refresh.** The current passwords and the sentence live in
-  sessionStorage (gone when the tab closes); the settings, mode, mappings
-  and your list live in localStorage. On reload the same passwords come
-  back; nothing is rolled again until an input changes.
+- **Apply, then it sticks.** Edits to the rules, swaps or sentence are a
+  draft: a floating "Apply changes" bar appears (Ctrl+Enter also applies)
+  and disappears once there is nothing to apply. Applying saves the
+  settings and regenerates; "New passwords" applies any draft too.
+- **Survives a refresh.** The current passwords and the applied sentence
+  live in sessionStorage (gone when the tab closes); the applied settings,
+  mode, mappings and your list live in localStorage. On reload the same
+  passwords come back; nothing is rolled again until something is applied.
+  Unapplied drafts are not kept.
 - **My list.** Add a suggestion one at a time; each entry stores only the
   password and its hint, scored cold on display. Copy, remove, or clear.
 - **"At least N" rules** for uppercase, digits and symbols (all on by
@@ -94,8 +99,15 @@ cold scoring.
 
     pnpm install
     pnpm dev        # http://127.0.0.1:4270
-    pnpm test
+    pnpm test       # unit tests (Vitest)
+    pnpm test:e2e   # browser smoke tests (Playwright) against the build on 4272 and the dev server on 4273
     pnpm build && pnpm preview   # http://127.0.0.1:4271
+
+Run `pnpm test:e2e` after each iteration: it builds, starts its own servers
+on this project's spare ports, drives a real Chromium through loading,
+drafting and applying changes, the saved list, sentence mode, copy, the
+Fun page download, and fails on any console error. First time only:
+`pnpm exec playwright install chromium-headless-shell`.
 
 ## Layout
 
