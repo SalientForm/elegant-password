@@ -1,0 +1,35 @@
+{
+  "asOf": "2026-10-15T23:38:41.816Z",
+  "firstPrompt": "2026-10-15T02:27:33.540Z",
+  "lastCommit": "2026-10-15T23:33:46.000Z",
+  "activeMinutes": 445,
+  "commits": 67,
+  "lines": {
+    "app": 7559,
+    "tests": 4684,
+    "files": 101
+  },
+  "tests": 281,
+  "prompts": 62,
+  "toolCalls": 950,
+  "sessions": 3,
+  "subagents": 8,
+  "models": [
+    {
+      "model": "claude-fable-5-1",
+      "calls": 363,
+      "input": 8676,
+      "cacheWrite": 3415180,
+      "cacheRead": 157395586,
+      "output": 1228875
+    },
+    {
+      "model": "claude-opus-5-5",
+      "calls": 420,
+      "input": 844,
+      "cacheWrite": 2001036,
+      "cacheRead": 74966910,
+      "output": 619912
+    }
+  ]
+}

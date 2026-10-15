@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { downloadText, FunPage, REVOKE_DELAY_MS } from './FunPage';
 
@@ -35,5 +35,16 @@ describe('Fun page download', () => {
     fireEvent.click(screen.getByRole('button', { name: /Download/ }));
     expect(click).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Copy prompt' })).toBeTruthy();
+  });
+});
+
+describe('Fun page development stats', () => {
+  it('shows tokens, models, lines of code, time in development and commits', () => {
+    render(<FunPage />);
+    const stats = screen.getByRole('region', { name: 'How this app was made' });
+    for (const label of ['Estimated tokens used', /LLM models? used/, 'Lines of code', 'Time in development', 'Commits']) {
+      expect(within(stats).getByText(label)).toBeTruthy();
+    }
+    expect(within(stats).getByText(/Claude/, { selector: 'dd:not(.hint)' })).toBeTruthy();
   });
 });

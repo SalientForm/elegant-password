@@ -1,5 +1,6 @@
 import { marked } from 'marked';
 import { useMemo, useRef } from 'react';
+import { DEV_STATS, devStatList } from '../lib/devStats';
 import { buildSpecPrompt } from '../lib/specPrompt';
 import { CopyButton } from './CopyButton';
 
@@ -47,7 +48,28 @@ export function FunPage() {
           </button>
         </div>
       </div>
+      <DevStatsPanel />
       <div className="prompt prose" ref={pre} dangerouslySetInnerHTML={{ __html: html }} />
+    </section>
+  );
+}
+
+/** How the app itself was built: tokens, models, code, time and commits, as of the last `pnpm stats`. */
+function DevStatsPanel() {
+  const asOf = new Date(DEV_STATS.asOf).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' });
+  return (
+    <section className="dev-stats" aria-labelledby="dev-stats-heading">
+      <h3 id="dev-stats-heading">How this app was made</h3>
+      <dl>
+        {devStatList().map((s) => (
+          <div key={s.label}>
+            <dt>{s.label}</dt>
+            <dd>{s.value}</dd>
+            <dd className="hint">{s.detail}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="hint">As of {asOf}, from this project’s AI coding transcripts and git history.</p>
     </section>
   );
 }

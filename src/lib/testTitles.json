@@ -320,6 +320,14 @@
       {
         "kind": "test",
         "title": "renders the spec with copy and download controls"
+      },
+      {
+        "kind": "group",
+        "title": "Fun page development stats"
+      },
+      {
+        "kind": "test",
+        "title": "shows tokens, models, lines of code, time in development and commits"
       }
     ]
   },
@@ -651,6 +659,27 @@
       {
         "kind": "test",
         "title": "injects a meta tag into the built page only"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/devStats.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "development stats"
+      },
+      {
+        "kind": "test",
+        "title": "names models from their ids"
+      },
+      {
+        "kind": "test",
+        "title": "shortens large counts and formats durations"
+      },
+      {
+        "kind": "test",
+        "title": "adds the tokens of every model, and every share rounds to the whole"
       }
     ]
   },

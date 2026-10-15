@@ -336,6 +336,14 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .fun { display: grid; gap: 1rem; margin-bottom: 1rem; }
 .fun-head { display: flex; justify-content: space-between; gap: 1rem; align-items: start; flex-wrap: wrap; }
 .fun-head > div:first-child { max-width: 60ch; }
+.dev-stats { display: grid; gap: 0.6rem; }
+.dev-stats h3 { margin: 0; }
+.dev-stats dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 0.6rem; margin: 0; } /* tiles wrap to fit; one per row on a phone */
+.dev-stats dl > div { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.7rem 0.9rem; min-width: 0; }
+.dev-stats dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.dev-stats dd { margin: 0.15rem 0 0; font-size: 1.25rem; font-weight: 700; overflow-wrap: anywhere; }
+.dev-stats dd.hint { font-size: 0.78rem; font-weight: 400; } /* the breakdown under each figure */
+.dev-stats > p.hint { margin: 0; }
 .prompt {
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.5rem;
   font-size: 0.92rem; line-height: 1.6; margin: 0; max-width: 100%; overflow-x: auto;
