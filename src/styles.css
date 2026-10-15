@@ -272,7 +272,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .actions .status { font-size: 0.75rem; }
 
 /* Floating submit / discard buttons: no backdrop, just the two buttons over the page */
-.apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 1.25rem; z-index: 20; display: flex; gap: 0.5rem; align-items: center; justify-content: center; pointer-events: none; }
+.apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; gap: 0.5rem; align-items: center; justify-content: center; pointer-events: none; }
 .apply-bar .floating { pointer-events: auto; border-radius: 999px; padding: 0.6rem 1.1rem; font-size: 0.9rem; box-shadow: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3); }
 .apply-bar .floating.ghost { background: var(--panel); border-color: var(--line); color: var(--ink); }
 @media (max-width: 600px) { .apply-bar { left: 0; right: 0; transform: none; } }
@@ -321,7 +321,7 @@ main.collapsed .selected .selected-list { max-height: none; overflow: visible; }
   .prose th, .prose td { overflow-wrap: anywhere; padding: 0.25rem 0.3rem; font-size: 0.78rem; }
   .prose pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; }
   .crack { grid-template-columns: 1fr; }
-  .app { padding: 0.75rem 0.9rem 5rem; }
+  .app { padding: 0.75rem max(0.9rem, env(safe-area-inset-right, 0px)) calc(5rem + env(safe-area-inset-bottom, 0px)) max(0.9rem, env(safe-area-inset-left, 0px)); }
 }
 @media (pointer: coarse) {
   .icon-button { width: 2.6rem; height: 2.6rem; }
