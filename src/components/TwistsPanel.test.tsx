@@ -83,6 +83,15 @@ describe('TwistsPanel', () => {
     expect(state().twists).toBe(0);
   });
 
+  it('explains that a mapping whose output is the separator is skipped: a swap never produces it', () => {
+    render(<Harness req={{ ...DEFAULT_REQUIREMENTS, separator: '$', allowedSymbols: '!@#$' }} />);
+    expect(screen.getByRole('button', { name: 's→$' }).title).toMatch(/is the separator/);
+    expect(screen.getByRole('button', { name: 'a→@' }).title).toMatch(/On: click to skip/);
+    cleanup();
+    render(<Harness req={{ ...DEFAULT_REQUIREMENTS, separator: 'auto', allowedSymbols: '!@#$;' }} />); // auto resolves to a space here, which no swap makes anyway
+    expect(screen.getByRole('button', { name: 's→$' }).title).toMatch(/On: click to skip/);
+  });
+
   it('disables mappings that cannot apply to the sentence', () => {
     const relevant = relevantTo(['sally', 'eats', 'sweets']);
     expect(relevant({ from: 'ee' })).toBe(true);

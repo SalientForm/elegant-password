@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MAX_TWISTS, type Requirements } from '../lib/generate';
+import { MAX_TWISTS, type Requirements, allowedSymbolSet, resolveSeparator } from '../lib/generate';
 import { isPinkyStretch } from '../lib/keyboard';
 import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingStore';
 import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, validateMapping, type Mapping, type MappingKind } from '../lib/twists';
@@ -22,6 +22,16 @@ export const relevantTo = (words: readonly string[]) => (m: Pick<Mapping, 'from'
 
 const show = (to: string) => (to === '' ? '–' : to);
 
+/** The separator the requirements resolve to, or undefined while they are invalid or the separator is a space. */
+function separatorInUse(req: Requirements): string | undefined {
+  try {
+    const s = resolveSeparator(req, allowedSymbolSet(req));
+    return s.trim() ? s : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, relevant }: Props) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -29,12 +39,14 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
 
   const disabled = new Set(settings.disabled);
   const allowed = new Set(req.allowedSymbols);
+  const separator = separatorInUse(req);
 
   /** Why a mapping cannot be used with the current requirements, if it cannot. */
   const blocked = (m: Pick<Mapping, 'to'>): string | undefined => {
     for (const c of m.to) {
       if (/[a-z0-9]/.test(c)) continue;
       if (!allowed.has(c)) return `"${c}" is not an allowed symbol`;
+      if (c === separator) return `"${c}" is the separator, which never comes from a swap`;
       if (req.avoidPinkyStretch && isPinkyStretch(c)) return `"${c}" needs a pinky stretch`;
     }
     return undefined;

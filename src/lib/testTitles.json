@@ -535,6 +535,10 @@
       },
       {
         "kind": "test",
+        "title": "explains that a mapping whose output is the separator is skipped: a swap never produces it"
+      },
+      {
+        "kind": "test",
         "title": "disables mappings that cannot apply to the sentence"
       }
     ]
