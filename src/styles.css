@@ -53,7 +53,8 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .topbar h1 { white-space: nowrap; }
 .topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 13pt; }
 /* Pinned to the top-right corner of the screen, the same distance from the top and the right edge. */
-.topbar .brand { position: fixed; top: 0.75rem; right: 0.75rem; z-index: 5; font-size: 0.78rem; font-weight: 700; font-style: italic; opacity: 0.3; white-space: nowrap; }
+.topbar .brand { position: fixed; top: 0.75rem; right: 0.75rem; z-index: 5; font-size: 0.78rem; font-weight: 400; font-style: italic; opacity: 0.3; white-space: nowrap; }
+.topbar .brand strong { font-weight: 700; }
 
 main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
 /* The right column stays in view; the list takes whatever height is left and scrolls inside itself. */

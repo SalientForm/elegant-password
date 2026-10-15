@@ -52,7 +52,9 @@ export function App() {
             <h1>{TITLE}</h1>
             <p className="tagline">{DESCRIPTIONS[page]}</p>
           </div>
-          <span className="brand">brought to you by SalientForm</span>
+          <span className="brand">
+            brought to you by <strong>SalientForm</strong>
+          </span>
         </header>
         <nav className="topnav" aria-label="Pages">
           <a href="#/" className={page === 'main' ? 'active' : ''} aria-current={page === 'main' ? 'page' : undefined}>

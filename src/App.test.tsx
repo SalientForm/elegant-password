@@ -125,7 +125,9 @@ describe('App: order and pages', () => {
     expect(title.textContent).toBe('The Elegant Password');
     const nav = screen.getByRole('navigation', { name: 'Pages' });
     expect(title.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // title first, tabs after
-    expect(screen.getByText('brought to you by SalientForm')).toBeTruthy();
+    const credit = screen.getByText((_, el) => el?.classList.contains('brand') === true);
+    expect(credit.textContent?.replace(/\s+/g, ' ').trim()).toBe('brought to you by SalientForm');
+    expect(credit.querySelector('strong')?.textContent).toBe('SalientForm'); // only the name is bold
     expect(screen.getByText(/read like a sentence/)).toBeTruthy();
   });
 });
