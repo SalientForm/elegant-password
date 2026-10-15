@@ -74,6 +74,7 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange }: Pr
               type="button"
               key={n}
               className={req.twists === n ? 'active' : ''}
+              aria-pressed={req.twists === n}
               onClick={() => onReqChange({ ...req, twists: n })}
             >
               {n === 0 ? 'None' : n}

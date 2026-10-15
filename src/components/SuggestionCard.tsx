@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
 import { MAPPING_KIND_LABELS } from '../lib/twists';
+import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
 import { KeyboardMap } from './KeyboardMap';
 
@@ -35,47 +36,56 @@ export interface CardContext {
   source: 'generated' | 'sentence';
 }
 
-export function SuggestionCard({ suggestion, context, index }: { suggestion: Suggestion; context: CardContext; index: number }) {
-  const mine = context.source === 'sentence';
-  const [copied, setCopied] = useState(false);
-  const [open, setOpen] = useState(index === 0);
-  const { password, words, typing, checks, twists, difficulty } = suggestion;
+interface Props {
+  suggestion: Suggestion;
+  context: CardContext;
+  index: number;
+  /** Whether this password is already in the user's list. */
+  selected?: boolean;
+  onAdd?: (s: Suggestion) => void;
+}
 
-  const copy = async () => {
-    await navigator.clipboard.writeText(password);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+export function SuggestionCard({ suggestion, context, index, selected = false, onAdd }: Props) {
+  const mine = context.source === 'sentence';
+  const [open, setOpen] = useState(index === 0);
+  const code = useRef<HTMLElement>(null);
+  const { password, hint, words, typing, checks, twists, difficulty } = suggestion;
+  const whyId = `why-${index}`;
 
   const letterRows = typing.rowsUsed.filter((r) => r > 0 && r < 4);
 
   return (
-    <article className="card">
+    <article className="card" aria-label={`Suggestion ${index + 1}`}>
       <div className="card-head">
-        <code className="password">{password}</code>
+        <code className="password" ref={code}>
+          {password}
+        </code>
         <div className="actions">
-          <span
-            className="bits-label"
-            title={mine ? 'Random bits added by twists; your sentence adds an unknown amount' : 'Sentence plus twists'}
-          >
-            {mine ? `+${suggestion.bits.toFixed(0)} random bits` : `${suggestion.bits.toFixed(0)} bits`}
+          <span className="bits-label" title="Scored from the password and its hint alone, so it is the same every time">
+            {mine ? `+${suggestion.bits.toFixed(0)} random bits` : `≈${suggestion.bits.toFixed(0)} bits`}
           </span>
           <span className={`badge level-${difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard">
             Difficulty {difficulty.score} · {difficulty.label.toLowerCase()}
           </span>
-          <button type="button" onClick={copy}>
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-          <button type="button" className="ghost" onClick={() => setOpen(!open)} aria-expanded={open}>
+          <CopyButton text={password} fallback={code} />
+          {onAdd && (
+            <button type="button" onClick={() => onAdd(suggestion)} disabled={selected} aria-pressed={selected}>
+              {selected ? 'In my list' : 'Add to my list'}
+            </button>
+          )}
+          <button type="button" className="ghost" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={whyId}>
             {open ? 'Hide why' : 'Why?'}
           </button>
         </div>
       </div>
 
       {open && (
-        <div className="why">
+        <div className="why" id={whyId}>
           <section>
             <h3>Easy to remember</h3>
+            <p className="hint-line">
+              <span className="field-label">Hint:</span> {hint}
+            </p>
             <div className="chips">
               {words.map((w, i) => (
                 <span
@@ -122,24 +132,30 @@ export function SuggestionCard({ suggestion, context, index }: { suggestion: Sug
                     . Any word with that letter works.
                   </p>
                 )}
+                {suggestion.steps.length > 0 && (
+                  <ul className="twist-list">
+                    {suggestion.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                )}
               </>
             )}
             {twists.length > 0 && (
-              <>
-                <ul className="twist-list">
-                  {twists.map((t, i) => (
-                    <li key={i}>
-                      <code>{t.mapping.from}</code> → <code>{t.mapping.to || '–'}</code> in “{t.before}”
-                      <small> ({MAPPING_KIND_LABELS[t.mapping.kind].toLowerCase().replace(/s$/, '')})</small>
-                    </li>
-                  ))}
-                </ul>
-                <p>
-                  Remember the sentence first, then the {twists.length === 1 ? 'random twist' : `${twists.length} random twists`}.
-                  This was one of {suggestion.twistOptions.toLocaleString('en')} ways to twist these words, which adds{' '}
-                  {suggestion.twistBits.toFixed(1)} bits.
-                </p>
-              </>
+              <ul className="twist-list">
+                {twists.map((t, i) => (
+                  <li key={i}>
+                    <code>{t.mapping.from}</code> → <code>{t.mapping.to || '–'}</code> in “{t.before}”
+                    <small> ({MAPPING_KIND_LABELS[t.mapping.kind].toLowerCase().replace(/s$/, '')})</small>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {suggestion.twistOptions > 1 && (
+              <p>
+                Remember the sentence first, then the swaps. Where they landed was one of{' '}
+                {suggestion.twistOptions.toLocaleString('en')} possibilities, which adds {suggestion.twistBits.toFixed(1)} bits.
+              </p>
             )}
           </section>
 

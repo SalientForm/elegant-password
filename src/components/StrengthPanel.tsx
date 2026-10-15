@@ -1,8 +1,12 @@
 import { crackEstimates, formatDuration, type Plan } from '../lib/generate';
 
-export function StrengthPanel({ plan, count, target }: { plan: Plan; count: number; target: number }) {
-  const pickPenalty = count > 1 ? Math.log2(count) : 0;
-  const effective = plan.bits - pickPenalty;
+/**
+ * Why a generated password is strong: the exact entropy of the current plan.
+ * This is the generator's figure for these settings. Each card's figure is
+ * scored from its own password and hint alone (see src/lib/score.ts), so it
+ * can differ a little; the card is what travels with the password.
+ */
+export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) {
   const counted = plan.breakdown.filter((b) => b.poolSize > 1);
 
   return (
@@ -48,11 +52,14 @@ export function StrengthPanel({ plan, count, target }: { plan: Plan; count: numb
       </table>
 
       <p className="hint">
-        Capitalisation, separators and the closing symbol follow fixed rules, so they add nothing here. Twists add
-        more on top; the amount depends on the words, so each card shows its own total and these figures are the
-        floor.
-        {pickPenalty > 0 &&
-          ` If you pick your favourite of these ${count}, count it as about ${effective.toFixed(1)} bits (choosing costs ${pickPenalty.toFixed(1)}).`}
+        Capitalisation, separators and the closing symbol follow fixed rules, so they add nothing here. Swaps add more
+        on top. Each card scores its own password from the password and its hint alone, so a password reads the same
+        wherever it appears; that figure does not know about the length limits, so it can sit a little above this one.
+      </p>
+      <p className="hint">
+        Choosing a favourite is a bias the figures here do not discount: seeing several suggestions, or pressing New
+        passwords until you like one, leans your choice toward what you find likeable. Take the first one you can live
+        with rather than the one you love.
       </p>
 
       <dl className="crack">

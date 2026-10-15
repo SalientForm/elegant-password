@@ -1,22 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { buildSpecPrompt } from '../lib/specPrompt';
+import { CopyButton } from './CopyButton';
+
+/** How long a download link's blob URL stays valid after the click. Some browsers start the download asynchronously. */
+export const REVOKE_DELAY_MS = 10_000;
+
+/** Offer `text` as a file download. The object URL is revoked later, not synchronously, so the download is never cancelled. */
+export function downloadText(text: string, filename: string, type = 'text/markdown'): void {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
+}
 
 export function FunPage() {
   const prompt = useMemo(() => buildSpecPrompt(), []);
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(prompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const download = () => {
-    const url = URL.createObjectURL(new Blob([prompt], { type: 'text/markdown' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: 'elegant-passwords-spec.md' });
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const pre = useRef<HTMLPreElement>(null);
 
   return (
     <section className="fun">
@@ -32,15 +33,15 @@ export function FunPage() {
           <span className="bits-label">
             {prompt.split(/\s+/).length.toLocaleString('en')} words
           </span>
-          <button type="button" onClick={copy}>
-            {copied ? 'Copied' : 'Copy prompt'}
-          </button>
-          <button type="button" onClick={download}>
+          <CopyButton text={prompt} fallback={pre} label="Copy prompt" />
+          <button type="button" onClick={() => downloadText(prompt, 'elegant-passwords-spec.md')}>
             Download .md
           </button>
         </div>
       </div>
-      <pre className="prompt">{prompt}</pre>
+      <pre className="prompt" ref={pre}>
+        {prompt}
+      </pre>
     </section>
   );
 }

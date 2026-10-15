@@ -1,6 +1,7 @@
 import type { Comfort } from '../lib/grammar';
 import { MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, STRENGTH_PRESETS, type Requirements, type Separator } from '../lib/generate';
 import { isPinkyStretch } from '../lib/keyboard';
+import { NumberField } from './NumberField';
 
 interface Props {
   value: Requirements;
@@ -32,9 +33,11 @@ const COMFORT: { value: Comfort; label: string; hint: string }[] = [
 
 export function RequirementsForm({ value, onChange }: Props) {
   const set = <K extends keyof Requirements>(key: K, v: Requirements[K]) => onChange({ ...value, [key]: v });
-  const num = (key: 'minLength' | 'maxLength' | 'targetBits' | 'count') => ({
-    value: Number.isFinite(value[key]) ? value[key] : '',
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => set(key, e.target.value === '' ? NaN : Number(e.target.value)),
+  const num = (key: 'minLength' | 'maxLength' | 'targetBits' | 'count', min: number, max: number) => ({
+    value: value[key],
+    min,
+    max,
+    onCommit: (n: number | null) => n !== null && set(key, n),
   });
   const sepAllowed = (s: Separator) =>
     s === 'auto' || s === '' || (s === ' ' ? value.allowSpaces : value.allowedSymbols.includes(s));
@@ -48,11 +51,11 @@ export function RequirementsForm({ value, onChange }: Props) {
         <div className="row">
           <label className="field">
             <span>Minimum</span>
-            <input type="number" min={1} {...num('minLength')} />
+            <NumberField {...num('minLength', 1, 256)} />
           </label>
           <label className="field">
             <span>Maximum</span>
-            <input type="number" min={1} {...num('maxLength')} />
+            <NumberField {...num('maxLength', 1, 256)} />
           </label>
         </div>
       </fieldset>
@@ -67,14 +70,13 @@ export function RequirementsForm({ value, onChange }: Props) {
             </label>
             <label className="at-least">
               <span>at least</span>
-              <input
-                type="number"
+              <NumberField
                 min={1}
                 max={max}
                 disabled={value[key] === 0}
                 aria-label={`Minimum ${label.toLowerCase()}`}
-                value={value[key] > 0 ? value[key] : ''}
-                onChange={(e) => set(key, e.target.value === '' ? NaN : Number(e.target.value))}
+                value={value[key] > 0 ? value[key] : null}
+                onCommit={(n) => n !== null && set(key, n)}
               />
             </label>
           </div>
@@ -107,6 +109,7 @@ export function RequirementsForm({ value, onChange }: Props) {
               type="button"
               key={p.bits}
               className={value.targetBits === p.bits ? 'preset active' : 'preset'}
+              aria-pressed={value.targetBits === p.bits}
               onClick={() => set('targetBits', p.bits)}
               title={p.hint}
             >
@@ -117,7 +120,7 @@ export function RequirementsForm({ value, onChange }: Props) {
         </div>
         <label className="field inline">
           <span>Custom target (bits)</span>
-          <input type="number" min={0} max={128} {...num('targetBits')} />
+          <NumberField {...num('targetBits', 0, 256)} />
         </label>
       </fieldset>
 
@@ -129,6 +132,7 @@ export function RequirementsForm({ value, onChange }: Props) {
               type="button"
               key={c.value}
               className={value.comfort === c.value ? 'active' : ''}
+              aria-pressed={value.comfort === c.value}
               onClick={() => set('comfort', c.value)}
             >
               {c.label}
@@ -175,7 +179,7 @@ export function RequirementsForm({ value, onChange }: Props) {
         <span className="field-label">Capital initials</span>
         <div className="segmented four">
           {Array.from({ length: MAX_INITIALS + 1 }, (_, n) => (
-            <button type="button" key={n} className={value.initials === n ? 'active' : ''} onClick={() => set('initials', n)}>
+            <button type="button" key={n} className={value.initials === n ? 'active' : ''} aria-pressed={value.initials === n} onClick={() => set('initials', n)}>
               {n === 0 ? 'None' : n}
             </button>
           ))}
@@ -184,7 +188,7 @@ export function RequirementsForm({ value, onChange }: Props) {
         <span className="field-label">Two-letter words</span>
         <div className="segmented four">
           {Array.from({ length: MAX_SHORTHAND + 1 }, (_, n) => (
-            <button type="button" key={n} className={value.shorthand === n ? 'active' : ''} onClick={() => set('shorthand', n)}>
+            <button type="button" key={n} className={value.shorthand === n ? 'active' : ''} aria-pressed={value.shorthand === n} onClick={() => set('shorthand', n)}>
               {n === 0 ? 'None' : n}
             </button>
           ))}
@@ -193,7 +197,7 @@ export function RequirementsForm({ value, onChange }: Props) {
         <span className="field-label">Made-up nouns</span>
         <div className="segmented four">
           {Array.from({ length: MAX_MADE_UP + 1 }, (_, n) => (
-            <button type="button" key={n} className={value.madeUp === n ? 'active' : ''} onClick={() => set('madeUp', n)}>
+            <button type="button" key={n} className={value.madeUp === n ? 'active' : ''} aria-pressed={value.madeUp === n} onClick={() => set('madeUp', n)}>
               {n === 0 ? 'None' : n}
             </button>
           ))}
@@ -208,7 +212,7 @@ export function RequirementsForm({ value, onChange }: Props) {
         </label>
         <label className="field inline">
           <span>Suggestions</span>
-          <input type="number" min={1} max={20} {...num('count')} />
+          <NumberField {...num('count', 1, 20)} />
         </label>
       </fieldset>
     </form>

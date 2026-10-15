@@ -1,23 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RubricPanel } from './components/Difficulty';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { FunPage } from './components/FunPage';
 import { RequirementsForm } from './components/RequirementsForm';
+import { SelectedList } from './components/SelectedList';
 import { SentenceInput, SentenceStrength } from './components/SentenceMode';
 import { StrengthPanel } from './components/StrengthPanel';
 import { SuggestionCard, type CardContext } from './components/SuggestionCard';
+import { TabPanel, Tabs } from './components/Tabs';
 import { TwistsPanel } from './components/TwistsPanel';
-import { DEFAULT_SENTENCE_OPTIONS, fromSentence, type SentenceOptions } from './lib/fromSentence';
-import { DEFAULT_REQUIREMENTS, generate, RequirementsError, type GenerateResult, type Requirements, type Suggestion } from './lib/generate';
-import { activeMappings, loadMappingSettings, saveMappingSettings, type MappingSettings } from './lib/mappingStore';
-
-type Mode = 'generated' | 'sentence';
-
-type Outcome =
-  | { ok: true; suggestions: Suggestion[]; warnings: string[]; context: CardContext; generated?: GenerateResult }
-  | { ok: false; error: string };
+import type { Mode } from './lib/engine';
+import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
 
 type Page = 'main' | 'fun';
 const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : 'main');
+
+const MODE_TABS: { id: Mode; label: string }[] = [
+  { id: 'generated', label: 'Make up a sentence' },
+  { id: 'sentence', label: 'Use my sentence' },
+];
 
 export function App() {
   const [page, setPage] = useState<Page>(pageFromHash);
@@ -28,118 +29,109 @@ export function App() {
   }, []);
 
   return (
-    <div className="app">
-      <nav className="topnav">
-        <a href="#/" className={page === 'main' ? 'active' : ''}>
-          Elegant Passwords
-        </a>
-        <a href="#/fun" className={page === 'fun' ? 'active' : ''}>
-          Fun
-        </a>
-      </nav>
-      <header>
-        <h1>{page === 'fun' ? 'Fun' : 'Elegant Passwords'}</h1>
-        <p>
-          {page === 'fun'
-            ? 'The whole app, described as one prompt.'
-            : 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.'}
-        </p>
-      </header>
-      {/* Kept mounted so settings and the sentence survive a visit to Fun. */}
-      <div hidden={page !== 'main'}>
-        <ElegantPasswords />
+    <ErrorBoundary>
+      <div className="app">
+        <nav className="topnav" aria-label="Pages">
+          <a href="#/" className={page === 'main' ? 'active' : ''} aria-current={page === 'main' ? 'page' : undefined}>
+            Elegant Passwords
+          </a>
+          <a href="#/fun" className={page === 'fun' ? 'active' : ''} aria-current={page === 'fun' ? 'page' : undefined}>
+            Fun
+          </a>
+        </nav>
+        <header>
+          <h1>{page === 'fun' ? 'Fun' : 'Elegant Passwords'}</h1>
+          <p>
+            {page === 'fun'
+              ? 'The whole app, described as one prompt.'
+              : 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.'}
+          </p>
+        </header>
+        <PasswordsProvider>
+          {/* Kept mounted so settings and the sentence survive a visit to Fun. */}
+          <div hidden={page !== 'main'}>
+            <ElegantPasswords />
+          </div>
+        </PasswordsProvider>
+        {page === 'fun' && <FunPage />}
       </div>
-      {page === 'fun' && <FunPage />}
-    </div>
+    </ErrorBoundary>
   );
 }
 
-function ElegantPasswords() {
-  const [req, setReq] = useState<Requirements>(DEFAULT_REQUIREMENTS);
-  const [round, setRound] = useState(0);
-  const [mode, setMode] = useState<Mode>('generated');
-  // The sentence is the secret, so it lives only in memory, never in storage.
-  const [sentence, setSentence] = useState('');
-  const [sentenceOptions, setSentenceOptions] = useState<SentenceOptions>(DEFAULT_SENTENCE_OPTIONS);
-  const [mappingSettings, setMappingSettings] = useState<MappingSettings>(() => loadMappingSettings());
-  useEffect(() => saveMappingSettings(mappingSettings), [mappingSettings]);
-  const mappings = useMemo(() => activeMappings(mappingSettings), [mappingSettings]);
-
-  const outcome = useMemo<Outcome>(() => {
-    try {
-      if (mode === 'sentence') {
-        const r = fromSentence(sentence, req, sentenceOptions, { mappings });
-        return {
-          ok: true,
-          suggestions: r.suggestions,
-          warnings: r.warnings,
-          context: { separator: r.separator, minUppercase: req.minUppercase, source: 'sentence' },
-        };
-      }
-      const r = generate(req, { mappings });
-      return {
-        ok: true,
-        suggestions: r.suggestions,
-        warnings: r.warnings,
-        context: { separator: r.plan.separator, minUppercase: req.minUppercase, source: 'generated' },
-        generated: r,
-      };
-    } catch (e) {
-      if (e instanceof RequirementsError) return { ok: false, error: e.message };
-      throw e;
-    }
-    // `round` forces a fresh draw when the user asks for new passwords.
-  }, [mode, sentence, sentenceOptions, req, mappings, round]);
+export function ElegantPasswords() {
+  const p = usePasswords();
+  const { outcome } = p;
+  const context: CardContext | undefined =
+    outcome?.ok ? { separator: outcome.separator, minUppercase: p.req.minUppercase, source: outcome.source } : undefined;
+  const emptySentence = p.mode === 'sentence' && !p.sentence.trim();
 
   return (
-      <main>
-        <div className="sidebar">
-          <RequirementsForm value={req} onChange={setReq} />
-          <TwistsPanel req={req} onReqChange={setReq} settings={mappingSettings} onSettingsChange={setMappingSettings} />
-        </div>
+    <main>
+      <div className="sidebar">
+        <RequirementsForm value={p.req} onChange={p.setReq} />
+        <TwistsPanel req={p.req} onReqChange={p.setReq} settings={p.mappingSettings} onSettingsChange={p.setMappingSettings} />
+      </div>
 
-        <div className="results">
-          <div className="mode-tabs" role="tablist">
-            <button type="button" role="tab" aria-selected={mode === 'generated'} onClick={() => setMode('generated')}>
-              Make up a sentence
-            </button>
-            <button type="button" role="tab" aria-selected={mode === 'sentence'} onClick={() => setMode('sentence')}>
-              Use my sentence
-            </button>
-          </div>
+      <div className="results" aria-busy={p.busy}>
+        <Tabs tabs={MODE_TABS} value={p.mode} onChange={p.setMode} label="How to make the sentence" idPrefix="mode" />
 
-          {mode === 'sentence' && (
-            <SentenceInput value={sentence} onChange={setSentence} options={sentenceOptions} onOptionsChange={setSentenceOptions} />
-          )}
+        <TabPanel idPrefix="mode" id="generated" active={p.mode === 'generated'}>
+          <p className="hint">A random sentence from the word lists, fitted to the rules on the left.</p>
+        </TabPanel>
+        <TabPanel idPrefix="mode" id="sentence" active={p.mode === 'sentence'}>
+          <SentenceInput value={p.sentence} onChange={p.setSentence} options={p.sentenceOptions} onOptionsChange={p.setSentenceOptions} />
+        </TabPanel>
 
-          <div className="results-head">
-            <h2>Suggestions</h2>
-            <button type="button" className="primary" onClick={() => setRound((r) => r + 1)} disabled={!outcome.ok}>
+        <div className="results-head">
+          <h2>Suggestions</h2>
+          <div className="actions">
+            {p.busy && (
+              <span className="working" role="status">
+                Working…
+              </span>
+            )}
+            <button type="button" className="primary" onClick={p.regenerate} disabled={emptySentence}>
               New passwords
             </button>
           </div>
-
-          {!outcome.ok && <p className={mode === 'sentence' && !sentence.trim() ? 'hint' : 'error'}>{outcome.error}</p>}
-
-          {outcome.ok && (
-            <>
-              {outcome.warnings.map((w) => (
-                <p className="warning" key={w}>
-                  {w}
-                </p>
-              ))}
-              {outcome.suggestions.map((s, i) => (
-                <SuggestionCard key={`${round}-${i}-${s.password}`} suggestion={s} context={outcome.context} index={i} />
-              ))}
-              {outcome.generated ? (
-                <StrengthPanel plan={outcome.generated.plan} count={req.count} target={req.targetBits} />
-              ) : (
-                <SentenceStrength suggestions={outcome.suggestions} />
-              )}
-              <RubricPanel />
-            </>
-          )}
         </div>
-      </main>
+
+        {emptySentence && !outcome?.ok && <p className="hint">Type a sentence to turn into a password.</p>}
+        {outcome && !outcome.ok && !emptySentence && (
+          <p className="error" role="alert">
+            {outcome.unexpected ? `Unexpected error: ${outcome.error}` : outcome.error}
+          </p>
+        )}
+
+        {outcome?.ok && context && (
+          <div className={p.stale ? 'batch stale' : 'batch'}>
+            {outcome.warnings.map((w) => (
+              <p className="warning" key={w}>
+                {w}
+              </p>
+            ))}
+            {outcome.suggestions.map((s, i) => (
+              <SuggestionCard
+                key={`${i}-${s.password}`}
+                suggestion={s}
+                context={context}
+                index={i}
+                selected={p.isSelected(s.password)}
+                onAdd={p.addSelected}
+              />
+            ))}
+            {outcome.plan ? (
+              <StrengthPanel plan={outcome.plan} target={p.req.targetBits} />
+            ) : (
+              <SentenceStrength suggestions={outcome.suggestions} />
+            )}
+            <RubricPanel />
+          </div>
+        )}
+
+        <SelectedList />
+      </div>
+    </main>
   );
 }

@@ -1,5 +1,6 @@
 import type { SentenceOptions, ShrinkStyle } from '../lib/fromSentence';
 import type { Suggestion } from '../lib/generate';
+import { NumberField } from './NumberField';
 
 interface InputProps {
   value: string;
@@ -23,20 +24,22 @@ export function SentenceInput({ value, onChange, options, onOptionsChange }: Inp
           rows={2}
           spellCheck={false}
           autoComplete="off"
+          autoCapitalize="off"
           placeholder="Sally eats sweets on Sundays"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
       </label>
       <div className="shrink">
-        <span className="field-label">Shrink words of</span>
-        <input
-          type="number"
+        <label className="field-label" htmlFor="shrink-from">
+          Shrink words of
+        </label>
+        <NumberField
+          id="shrink-from"
+          value={options.shrinkFrom}
           min={2}
           max={20}
-          aria-label="Shrink words of this many letters or more"
-          value={options.shrinkFrom}
-          onChange={(e) => onOptionsChange({ ...options, shrinkFrom: Math.max(2, Number(e.target.value) || 2) })}
+          onCommit={(n) => n !== null && onOptionsChange({ ...options, shrinkFrom: n })}
         />
         <span className="field-label">+ letters</span>
         <div className="segmented">
@@ -45,6 +48,7 @@ export function SentenceInput({ value, onChange, options, onOptionsChange }: Inp
               type="button"
               key={s.value}
               className={options.shrink === s.value ? 'active' : ''}
+              aria-pressed={options.shrink === s.value}
               onClick={() => onOptionsChange({ ...options, shrink: s.value })}
               title={s.example}
             >
@@ -72,19 +76,21 @@ export function SentenceInput({ value, onChange, options, onOptionsChange }: Inp
       </label>
       <label className="field inline">
         <span>Compress toward (characters)</span>
-        <input
-          type="number"
+        <NumberField
+          value={options.targetLength}
           min={1}
+          max={256}
+          allowEmpty
           placeholder="max"
-          value={options.targetLength ?? ''}
-          onChange={(e) => onOptionsChange({ ...options, targetLength: e.target.value === '' ? null : Number(e.target.value) })}
+          onCommit={(n) => onOptionsChange({ ...options, targetLength: n })}
         />
       </label>
       <p className="hint">
-        Your sentence is changed to fit the requirements on the left. Digits and symbols come from twists where possible.
+        Your sentence is changed to fit the requirements on the left. Digits and symbols come from swaps where possible.
         To reach the length, the longest words lose vowels, then inner consonants (jupiter → jptr → jpr → jr), then small
         words drop, then words become initials, and finally words drop. A symbol between words is optional: pick “None”
-        under Style. Random initials and twists add strength. It is never saved.
+        under Style. Random initials and swaps add strength. The sentence stays in this tab until you close it and is
+        never sent anywhere; it is only kept longer if you add a password to your list, as that password’s hint.
       </p>
     </section>
   );
@@ -103,9 +109,10 @@ export function SentenceStrength({ suggestions }: { suggestions: Suggestion[] })
         weak, because attackers try them first, along with the usual swaps like <code>a → @</code>.
       </p>
       <p className="hint">
-        The random initials and twists add at least {lo === hi ? lo.toFixed(1) : `${lo.toFixed(1)}–${hi.toFixed(1)}`} bits on top,
-        counted the same strict way as in “Make up a sentence”. Add more twists for more. Changes made to meet the
-        rules (like the digit and symbol) are not counted, so the real figure is a little higher.
+        The random initials and swaps add about {lo === hi ? lo.toFixed(1) : `${lo.toFixed(1)}–${hi.toFixed(1)}`} bits on
+        top, scored from each password and your sentence alone, the same way as in “Make up a sentence”. Add more swaps
+        for more. Your own choice of sentence is the one bias that cannot be counted, and it is already in the sentence
+        you typed.
       </p>
     </section>
   );

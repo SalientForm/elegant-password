@@ -200,3 +200,20 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .shrink { display: grid; grid-template-columns: auto 4rem auto 1fr; gap: 0.5rem; align-items: center; }
 .shrink input { width: 100%; font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.35rem 0.5rem; }
 @media (max-width: 600px) { .shrink { grid-template-columns: auto 4rem auto; } .shrink .segmented { grid-column: 1 / -1; } }
+
+/* Saved list, copy status and busy state */
+.selected-list { list-style: none; padding: 0; margin: 0.6rem 0 0; display: grid; gap: 0.6rem; }
+.entry { display: grid; gap: 0.4rem; padding: 0.7rem 0.8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.entry-main { display: grid; gap: 0.2rem; }
+.entry-hint { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.entry-date { color: var(--muted); font-size: 0.72rem; }
+.hint-line { margin: 0 0 0.5rem !important; }
+.copy-status { font-size: 0.75rem; color: var(--muted); }
+.copy-status:empty { display: none; }
+.copy-status.failed { color: var(--warn); }
+.working { font-size: 0.8rem; color: var(--muted); }
+.batch.stale { opacity: 0.6; transition: opacity 0.2s; }
+.batch { display: grid; gap: 0.9rem; }
+.mode-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+[role='tabpanel'][hidden] { display: none; }
+.actions .status { font-size: 0.75rem; }
