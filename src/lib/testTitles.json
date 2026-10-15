@@ -134,6 +134,10 @@
       },
       {
         "kind": "test",
+        "title": "treats a site preset and pasted rules as a draft: nothing is saved until submitted, and Discard undoes them"
+      },
+      {
+        "kind": "test",
         "title": "turns a typed sentence into passwords when applied, and keeps them across a reload"
       },
       {
@@ -363,6 +367,26 @@
       {
         "kind": "test",
         "title": "sets the strength preset, comfort, the pinky rule and the shape options"
+      },
+      {
+        "kind": "test",
+        "title": "sets the site rules from a preset, leaving strength, comfort, style and swaps alone, and marks the preset that matches"
+      },
+      {
+        "kind": "test",
+        "title": "warns beside the presets when one rules out the chosen separator"
+      },
+      {
+        "kind": "test",
+        "title": "fills in the rules from pasted text, says what it understood, and leaves the rest alone"
+      },
+      {
+        "kind": "test",
+        "title": "fills in at once when text is pasted"
+      },
+      {
+        "kind": "test",
+        "title": "says so plainly and changes nothing when the text holds no rules"
       },
       {
         "kind": "test",
@@ -1210,6 +1234,59 @@
     ]
   },
   {
+    "file": "src/lib/ruleText.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "parseRuleText"
+      },
+      {
+        "kind": "test",
+        "title": "reads $name"
+      },
+      {
+        "kind": "test",
+        "title": "is deterministic: the same text always reads the same"
+      },
+      {
+        "kind": "test",
+        "title": "never returns a field outside the site rules"
+      },
+      {
+        "kind": "group",
+        "title": "applyParsedRules"
+      },
+      {
+        "kind": "test",
+        "title": "fills in only what was understood and keeps every other setting"
+      },
+      {
+        "kind": "test",
+        "title": "changes nothing for text with no rules"
+      },
+      {
+        "kind": "test",
+        "title": "raises the maximum to a new minimum above it, and says so"
+      },
+      {
+        "kind": "test",
+        "title": "lowers the minimum to a new maximum below it, and says so"
+      },
+      {
+        "kind": "test",
+        "title": "caps counts at what the form allows"
+      },
+      {
+        "kind": "test",
+        "title": "takes ruled-out symbols away from the ones allowed now"
+      },
+      {
+        "kind": "test",
+        "title": "brings back the usual symbols when one is required and none are allowed"
+      }
+    ]
+  },
+  {
     "file": "src/lib/score.test.ts",
     "titles": [
       {
@@ -1394,6 +1471,39 @@
       {
         "kind": "test",
         "title": "treats prototype keys as odd data: a stored \"toString\" is neither a comfort level nor an order"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/sitePresets.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "site rule presets"
+      },
+      {
+        "kind": "test",
+        "title": "are each a full, valid set of site rules and nothing else"
+      },
+      {
+        "kind": "test",
+        "title": "have distinct labels and distinct rules, so at most one matches"
+      },
+      {
+        "kind": "test",
+        "title": "start with \"Typical site\", which is the defaults"
+      },
+      {
+        "kind": "test",
+        "title": "leave strength, comfort, style, swaps and count as they were"
+      },
+      {
+        "kind": "test",
+        "title": "match exactly, reading the allowed symbols as a set"
+      },
+      {
+        "kind": "test",
+        "title": "each make passwords that meet their rules (with the automatic separator)"
       }
     ]
   },

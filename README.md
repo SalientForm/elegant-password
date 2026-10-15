@@ -37,6 +37,22 @@ explanation for each:
   draft: "Discard" and "Submit changes" float over the page (Ctrl+Enter
   also submits) and disappear once there is nothing to submit. Submitting
   saves the settings and regenerates; "Refresh" submits any draft too.
+- **Site presets.** One tap sets the site's rules, and only those (length,
+  required classes, allowed symbols, spaces): *Typical site* (the
+  defaults), *No spaces*, *No symbols* (letters and digits), *Short max
+  (16)* (8-16, `!@#$%&*`, as many banks), *8-20, few symbols*
+  (`!@#$%^&*`) and *NIST passphrase* (15-64, anything goes, nothing
+  required). Strength, comfort, style and swaps stay yours. The preset the
+  rules match exactly shows pressed; one that rules out your separator
+  says so beside the presets.
+- **Paste the site's rules.** Paste the sign-up form's wording ("Must be
+  8-20 characters and include at least one number and one of !@#$%") and
+  the form fills in, saying what it understood: "8-20 characters, a digit,
+  a symbol from !@#$%". The parser (`src/lib/ruleText.ts`) is plain
+  patterns, no network and no model: lengths, "at least N" counts,
+  symbol lists, spaces, "letters and numbers only". Whatever the text
+  does not mention stays as it was; text with no rules says so and
+  changes nothing. Presets and pasted rules are drafts like any edit.
 - **Padding.** A sentence that is under the site's minimum even with every
   word kept whole is padded, planned once with no retry: a word when more
   than 3 short, a swapped digit or symbol repeated (`$t33l` -> `$t33333l`),
@@ -163,6 +179,7 @@ Fun page download, and fails on any console error. First time only:
 - `src/lib/twists.ts`: the 64 mappings and exact twist counting
 - `src/lib/mappingStore.ts`: localStorage persistence for mappings
 - `src/lib/fromSentence.ts`: "Use my sentence" mode
+- `src/lib/sitePresets.ts`, `ruleText.ts`: site rule presets and the pasted-rules parser
 - `src/lib/difficulty.ts`: the difficulty rubric
 - `src/lib/score.ts`: cold scoring of a password from its hint
 - `src/lib/engine.ts`, `src/lib/generator.ts`, `src/worker.ts`: generation as one pure function, in a worker or inline

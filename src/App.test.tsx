@@ -75,6 +75,28 @@ describe('App: apply changes', () => {
     expect(JSON.parse(window.localStorage.getItem('elegant-passwords:requirements:v1')!).comfort).toBe('strict');
   });
 
+  it('treats a site preset and pasted rules as a draft: nothing is saved until submitted, and Discard undoes them', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const saved = () => JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!) as { minLength: number; maxLength: number; allowSpaces: boolean; minDigits: number };
+
+    fireEvent.click(screen.getByRole('button', { name: /No spaces/ }));
+    const bar = screen.getByRole('region', { name: 'Unapplied changes' });
+    expect(saved().allowSpaces).toBe(true);
+    fireEvent.click(within(bar).getByRole('button', { name: 'Discard' }));
+    expect(screen.getByRole('button', { name: /Typical site/ }).getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(screen.getByRole('button', { name: "Paste the site's rules" }));
+    const box = screen.getByRole('textbox', { name: "The site's password rules" });
+    fireEvent.paste(box);
+    fireEvent.change(box, { target: { value: 'Password must be 14-40 characters and contain at least 2 numbers.' } });
+    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy();
+    expect(saved()).toMatchObject({ minLength: 12, maxLength: 32, minDigits: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
+    await waitFor(() => expect(saved()).toMatchObject({ minLength: 14, maxLength: 40, minDigits: 2 }));
+    expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull();
+  });
+
   it('turns a typed sentence into passwords when applied, and keeps them across a reload', { timeout: 30_000 }, async () => {
     const first = render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });

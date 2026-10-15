@@ -3,6 +3,7 @@ import { MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_
 import { useState } from 'react';
 import { isPinkyStretch } from '../lib/keyboard';
 import { NumberField } from './NumberField';
+import { SiteRules } from './SiteRules';
 
 interface Props {
   value: Requirements;
@@ -38,6 +39,8 @@ export function RequirementsForm({ value, onChange }: Props) {
   return (
     <form className="panel form" onSubmit={(e) => e.preventDefault()}>
       <h2>Requirement options</h2>
+
+      <SiteRules value={value} onChange={onChange} />
 
       <fieldset>
         <legend>Length</legend>
