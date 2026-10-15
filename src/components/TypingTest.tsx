@@ -34,6 +34,10 @@ export const MANAGER_OPT_OUT = { 'data-bwignore': 'true', 'data-1p-ignore': 'tru
 export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const passwords = usePasswordsOptional();
   const latest = passwords?.selected.at(-1);
+  /** The hint for a password we know about: from the list, or from the suggestions on screen. */
+  const hintFor = (password: string): string | undefined =>
+    passwords?.selected.find((e) => e.password === password)?.hint ??
+    (passwords?.outcome?.ok ? passwords.outcome.suggestions.find((s) => s.password === password)?.hint : undefined);
   const [value, setValue] = useState('');
   const [target, setTarget] = useState<string | undefined>(latest?.password);
   const [hint, setHint] = useState<string | undefined>(latest?.hint);
@@ -60,6 +64,18 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const difficulty = cold?.difficulty ?? alone?.difficulty;
   const last = attempts[0];
 
+  /** Pasting selects a password to test, as adding one from the list does; it is not typed into the field. */
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text').split(/\r?\n/)[0]?.trim() ?? '';
+    e.preventDefault();
+    if (!pasted) return;
+    setTarget(pasted);
+    setHint(hintFor(pasted));
+    setAttempts([]);
+    recording.current = startRecording();
+    setValue('');
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const at = now();
     if (e.key === 'Enter') {
@@ -83,8 +99,8 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
     <section className="panel typing-test" aria-labelledby="typing-test-heading">
       <h2 id="typing-test-heading">Test a password</h2>
       <p className="hint">
-        Type it and press Enter. Speed and corrections are measured as you type; the first run, or the password you
-        last added to your list, sets the one under test. Nothing is saved.
+        Type it and press Enter. Speed and corrections are measured as you type; the first run, the password you last
+        added to your list, or one you paste here sets the one under test. Nothing is saved.
       </p>
       <input
         ref={input}
@@ -102,6 +118,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={onKeyDown}
+        onPaste={onPaste}
       />
       <div className="typing-test-controls">
         <label className="check">

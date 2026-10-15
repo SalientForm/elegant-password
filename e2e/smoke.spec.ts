@@ -191,7 +191,7 @@ test('pads a short sentence to the minimum with a length tag that states the len
   }
 });
 
-test('tests a typed password in the masthead: speed, corrections, strength, and the lock', async ({ page }) => {
+test('tests a typed password in the masthead: speed, corrections, strength, and the lock', async ({ page, context }) => {
   const field = page.getByLabel('Test and practice', { exact: true });
   await field.click();
   await field.pressSequentially('Sleepy;otterx', { delay: 20 });
@@ -206,6 +206,16 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
   await expect(status.locator('.badge.strength')).toHaveText(/^S \d+$/);
   await expect(status.locator('.badge.difficulty')).toHaveText(/^D \d+$/);
   await expect(status.locator('.badge.memorability')).toHaveText('M n/a');
+  // Pasting into the field chooses that password to test instead of typing it.
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => navigator.clipboard.writeText('Pasted;words;77'));
+  await field.click();
+  await page.keyboard.press('Control+V');
+  await expect(status).toContainText('Testing: Pasted;words;77');
+  await expect(field).toHaveValue('');
+  await field.pressSequentially('Sleepy;otters', { delay: 10 });
+  await page.keyboard.press('Enter');
+  await expect(status).toContainText('Testing: Sleepy;otters'); // unlocked: a typed run becomes the target again
   await page.getByLabel('Lock password', { exact: true }).check();
   await field.pressSequentially('Sleepy;otter', { delay: 10 });
   await page.keyboard.press('Enter');

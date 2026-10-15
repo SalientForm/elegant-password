@@ -73,6 +73,34 @@ describe('TypingTest', () => {
     expect(screen.getByRole('status').textContent).toContain('Testing: abd');
   });
 
+  it('treats a paste as choosing the password to test, with its hint when it is a known one', () => {
+    const local = memoryStore();
+    local.setItem(SELECTED_KEY, JSON.stringify([{ password: 'jr;B;5ls;Fpc', hint: 'jupiter brings 5 leds for piece', addedAt: '2026-10-15T00:00:00.000Z' }]));
+    const clock = { t: 0 };
+    render(
+      <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+        <TypingTest now={() => clock.t} />
+      </PasswordsProvider>,
+    );
+    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    // An unknown password: it becomes the target, with no hint, and nothing lands in the field.
+    fireEvent.paste(input, { clipboardData: { getData: () => 'Pasted;secret;42\n' } });
+    expect(input.value).toBe('');
+    expect(screen.getByRole('status').textContent).toContain('Testing: Pasted;secret;42');
+    expect(screen.getByRole('status').textContent).toContain('Hint: (hint n/a)');
+    // A password that is in the list brings its hint along.
+    fireEvent.paste(input, { clipboardData: { getData: () => 'jr;B;5ls;Fpc' } });
+    expect(screen.getByRole('status').textContent).toContain('Hint: jupiter brings 5 leds for piece');
+    expect(within(screen.getByRole('status')).getByText(/^M \d+$/)).toBeTruthy();
+    // Typing it afterwards is checked against it.
+    typeInto(input, 'jr;B;5ls;Fpc', clock);
+    enter(input, clock);
+    expect(screen.getByRole('status').textContent).toMatch(/Typed correctly/);
+    // An empty paste changes nothing.
+    fireEvent.paste(input, { clipboardData: { getData: () => '  ' } });
+    expect(screen.getByRole('status').textContent).toContain('Testing: jr;B;5ls;Fpc');
+  });
+
   it('can hide the text as it is typed, and gives password managers nothing to latch on to', () => {
     render(<TypingTest />);
     const input = screen.getByLabelText('Test and practice') as HTMLInputElement;

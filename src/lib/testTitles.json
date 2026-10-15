@@ -428,6 +428,10 @@
       },
       {
         "kind": "test",
+        "title": "treats a paste as choosing the password to test, with its hint when it is a known one"
+      },
+      {
+        "kind": "test",
         "title": "can hide the text as it is typed, and gives password managers nothing to latch on to"
       },
       {
