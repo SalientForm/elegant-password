@@ -97,7 +97,7 @@ describe('App: apply changes', () => {
 });
 
 describe('App: order and pages', () => {
-  const scores = () => cards().map((c) => Number(within(c).getByText(/^Difficulty \d+/).textContent!.match(/\d+/)![0]));
+  const scores = () => cards().map((c) => Number(within(c).getByText(/^D \d+$/).textContent!.match(/\d+/)![0]));
   const bits = () => cards().map((c) => Number(within(c).getByText(/bits$/).textContent!.match(/\d+/)![0]));
 
   it('shows suggestions easiest first by default and strongest first on request', { timeout: 30_000 }, async () => {

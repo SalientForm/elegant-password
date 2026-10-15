@@ -207,7 +207,8 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
 test('orders suggestions easiest first by default and strongest first on request', async ({ page }) => {
   await settledPasswords(page);
   const difficulties = async () => (await page.locator('article.card .badge.difficulty').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
-  await expect(cards(page).first().locator('.badge.memorability')).toContainText('Memorability');
+  await expect(cards(page).first().locator('.badge.memorability')).toHaveText(/^M \d+$/);
+  await expect(cards(page).first().locator('.badge.difficulty')).toHaveAttribute('title', /^Difficulty \d+, /);
   const easy = await difficulties();
   expect([...easy].sort((a, b) => a - b)).toEqual(easy);
   await page.getByRole('button', { name: 'Strongest first', exact: true }).click();

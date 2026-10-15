@@ -6,7 +6,7 @@ import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
 import { TrashIcon } from './icons';
 import { PasswordTip } from './PasswordTip';
-import { DIFFICULTY_WORDS, memorabilityLevel, memorabilityWord } from './SuggestionCard';
+import { ScoreBadges } from './SuggestionCard';
 
 function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
   const score = useMemo(() => scoreCold(entry.password, entry.hint), [entry.password, entry.hint]);
@@ -28,12 +28,7 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
         <span className="bits-label" title="Scored from the password and hint alone, so it is the same every time">
           ≈{score.bits.toFixed(0)} bits
         </span>
-        <span className={`badge difficulty level-${score.difficulty.level}`} title={`Difficulty ${score.difficulty.score} of 100: typing effort and memory load`}>
-          {DIFFICULTY_WORDS[score.difficulty.level]}
-        </span>
-        <span className={`badge memorability memo-${memorabilityLevel(score.memorability.score)}`} title={`Memorability ${score.memorability.score} of 100: how closely it still looks like its hint`}>
-          {memorabilityWord(score.memorability.score)}
-        </span>
+        <ScoreBadges difficulty={score.difficulty} memorability={score.memorability.score} />
         <CopyButton text={entry.password} fallback={code} icon />
         <button type="button" className="icon-button ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`} title="Remove from my list">
           <TrashIcon />

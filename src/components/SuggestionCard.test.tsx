@@ -60,6 +60,8 @@ describe('SuggestionCard', () => {
     expect(screen.queryByText(/your word/)).toBeNull(); // chips carry no "your word" label
     for (const step of s.steps) expect(screen.getByText(step)).toBeTruthy();
     expect(screen.getByText(`+${s.bits.toFixed(0)} random bits`)).toBeTruthy();
+    expect(screen.getByText(`D ${s.difficulty.score}`).getAttribute('title')).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()}`);
+    expect(screen.getByText(`M ${s.memorability}`)).toBeTruthy();
   });
 
   it('toggles "Why?", marks unmet checks, and adds to the list', () => {

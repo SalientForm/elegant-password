@@ -48,11 +48,9 @@ describe('SelectedList', () => {
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     expect(first.getByText(`≈${score.bits.toFixed(0)} bits`)).toBeTruthy();
-    const words = ['very easy', 'easy', 'medium', 'hard', 'very hard'];
-    expect(first.getByText(words[score.difficulty.level]!)).toBeTruthy(); // difficulty as a word, lowest to highest
-    const memo = score.memorability.score >= 80 ? 'memorable' : score.memorability.score >= 60 ? 'forgettable' : 'confusing';
-    expect(first.getByText(memo)).toBeTruthy(); // memorability as a word, best to worst
-    expect(first.queryByText(/Difficulty \d+/)).toBeNull(); // the numbers live in the tooltips
+    const d = first.getByText(`D ${score.difficulty.score}`);
+    expect(d.getAttribute('title')).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading on hover
+    expect(first.getByText(`M ${score.memorability.score}`).getAttribute('title')).toMatch(/^Memorability \d+ of 100/);
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
   });

@@ -34,12 +34,19 @@ function separatorPhrase(sep: string): string {
 /** Colour band for a memorability score. */
 export const memorabilityLevel = (score: number) => (score >= 80 ? 'high' : score >= 60 ? 'mid' : 'low');
 
-/** Memorability in a word, best to worst. */
-export const MEMORABILITY_WORDS = { high: 'memorable', mid: 'forgettable', low: 'confusing' } as const;
-export const memorabilityWord = (score: number) => MEMORABILITY_WORDS[memorabilityLevel(score)];
-
-/** Difficulty level 0-4 in a word, lowest to highest. */
-export const DIFFICULTY_WORDS = ['very easy', 'easy', 'medium', 'hard', 'very hard'] as const;
+/** The two score badges: "D 44" and "M 71", with the full reading in the tooltip. */
+export function ScoreBadges({ difficulty, memorability }: { difficulty: { score: number; level: number; label: string }; memorability: number }) {
+  return (
+    <>
+      <span className={`badge difficulty level-${difficulty.level}`} title={`Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`} aria-label={`Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`}>
+        D {difficulty.score}
+      </span>
+      <span className={`badge memorability memo-${memorabilityLevel(memorability)}`} title={`Memorability ${memorability} of 100: how closely it still looks like its hint`} aria-label={`Memorability ${memorability}`}>
+        M {memorability}
+      </span>
+    </>
+  );
+}
 
 export interface CardContext {
   separator: string;
@@ -98,12 +105,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
             <span className="bits-label" title="Scored from the password and its hint alone, so it is the same every time">
               {mine ? `+${suggestion.bits.toFixed(0)} random bits` : `≈${suggestion.bits.toFixed(0)} bits`}
             </span>
-            <span className={`badge difficulty level-${difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard: typing effort and memory load">
-              Difficulty {difficulty.score} · {difficulty.label.toLowerCase()}
-            </span>
-            <span className={`badge memorability memo-${memorabilityLevel(suggestion.memorability)}`} title="Memorability, 0 to 100: how closely it still looks like its hint, and how short it is">
-              Memorability {suggestion.memorability}
-            </span>
+            <ScoreBadges difficulty={difficulty} memorability={suggestion.memorability} />
           </div>
         </div>
       </div>
