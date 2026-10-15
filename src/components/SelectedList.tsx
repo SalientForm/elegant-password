@@ -3,6 +3,7 @@ import { scoreCold } from '../lib/score';
 import type { SelectedEntry } from '../lib/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
 import { CopyButton } from './CopyButton';
+import { TrashIcon } from './icons';
 import { memorabilityLevel } from './SuggestionCard';
 
 function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
@@ -29,9 +30,9 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
         <span className={`badge memorability memo-${memorabilityLevel(score.memorability.score)}`} title="Memorability, 0 to 100">
           Memorability {score.memorability.score}
         </span>
-        <CopyButton text={entry.password} fallback={code} />
-        <button type="button" className="ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`}>
-          Remove
+        <CopyButton text={entry.password} fallback={code} icon />
+        <button type="button" className="icon-button ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`} title="Remove from my list">
+          <TrashIcon />
         </button>
       </div>
     </li>

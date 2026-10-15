@@ -5,6 +5,7 @@ import { isPinkyStretch } from '../lib/keyboard';
 import { MAPPING_KIND_LABELS } from '../lib/twists';
 import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
+import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
 
 const ROW_NAMES = ['number row', 'top row', 'home row', 'bottom row', 'space bar'];
@@ -65,10 +66,21 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
             {password}
           </code>
           <div className="actions card-buttons">
-            <CopyButton text={password} fallback={code} />
+            <button type="button" className="icon-button ghost" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={whyId} aria-label={open ? 'Hide why' : 'Why?'} title={open ? 'Hide why' : 'Why?'}>
+              {open ? <ChevronUpIcon /> : <InfoIcon />}
+            </button>
+            <CopyButton text={password} fallback={code} icon />
             {onAdd && (
-              <button type="button" onClick={() => onAdd(suggestion)} disabled={selected} aria-pressed={selected} title={selected ? 'Already in my list' : 'Add to my list'}>
-                {selected ? 'Added' : 'Add'}
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => onAdd(suggestion)}
+                disabled={selected}
+                aria-pressed={selected}
+                aria-label={selected ? 'Added' : 'Add'}
+                title={selected ? 'Already in my list' : 'Add to my list'}
+              >
+                {selected ? <CheckIcon /> : <PlusIcon />}
               </button>
             )}
           </div>
@@ -85,9 +97,6 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
               Memorability {suggestion.memorability}
             </span>
           </div>
-          <button type="button" className="ghost" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={whyId}>
-            {open ? 'Hide why' : 'Why?'}
-          </button>
         </div>
       </div>
 

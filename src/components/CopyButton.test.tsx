@@ -23,6 +23,18 @@ const setClipboard = (impl: (() => Promise<void>) | undefined) =>
   Object.defineProperty(navigator, 'clipboard', { value: impl ? { writeText: impl } : undefined, configurable: true });
 
 describe('CopyButton', () => {
+  it('can be an icon with the label as its accessible name', async () => {
+    setClipboard(vi.fn().mockResolvedValue(undefined));
+    render(<CopyButton text="x" icon />);
+    const button = screen.getByRole('button', { name: 'Copy' });
+    expect(button.textContent).toBe(''); // icon only
+    expect(button.querySelector('svg')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
+  });
+
   it('reports success when the clipboard works', async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     setClipboard(write);
@@ -31,7 +43,7 @@ describe('CopyButton', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
     });
     expect(write).toHaveBeenCalledWith('secret-pw');
-    expect(screen.getByRole('button').textContent).toBe('Copied');
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toBe('');
   });
 
