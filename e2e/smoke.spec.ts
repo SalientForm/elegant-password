@@ -267,13 +267,18 @@ test('the header scrolls away first, then each column scrolls on its own', async
       const top = (sel: string) => document.querySelector<HTMLElement>(sel)!.scrollTop;
       const main = document.querySelector('main')!;
       const stickyTop = parseFloat(getComputedStyle(main.firstElementChild!).top) || 0;
-      return { pageY: window.scrollY, left: top('main > .sidebar'), middle: top('main > .results'), right: top('main > .aside'), stop: main.getBoundingClientRect().top + window.scrollY - stickyTop };
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      return { pageY: window.scrollY, left: top('main > .sidebar'), middle: top('main > .results'), right: top('main > .aside'), stop: Math.min(main.getBoundingClientRect().top + window.scrollY - stickyTop, maxScroll) };
     });
   const start = await state();
   expect(start.pageY).toBe(0);
-  // Wheel over the middle column: the page moves first, the header scrolls up, the columns do not scroll yet.
-  const middle = page.locator('main > .results');
-  await middle.hover();
+  // Wheel over the middle column (moving the pointer by coordinates: hover() would scroll it into view first):
+  // the page moves first, the header scrolls up, the columns do not scroll yet.
+  const over = async (selector: string) => {
+    const box = (await page.locator(selector).boundingBox())!;
+    await page.mouse.move(box.x + Math.min(60, box.width / 2), Math.max(10, box.y + 40));
+  };
+  await over('main > .results');
   await page.mouse.wheel(0, 60);
   await page.waitForTimeout(150);
   const afterOne = await state();
@@ -289,7 +294,7 @@ test('the header scrolls away first, then each column scrolls on its own', async
   expect(afterMany.left).toBe(0);
   expect(afterMany.right).toBe(0);
   // Scrolling the left column moves only the left column, and never past its own content.
-  await page.locator('main > .sidebar').hover();
+  await over('main > .sidebar');
   for (let i = 0; i < 30; i++) await page.mouse.wheel(0, 300);
   await page.waitForTimeout(200);
   const left = await state();

@@ -7,6 +7,8 @@ describe('page-first wheel routing', () => {
     expect(pageScrollFor(100, 180, 120)).toBe(60); // only what is left of the header
     expect(pageScrollFor(100, 180, 180)).toBeUndefined(); // header gone: the column scrolls
     expect(pageScrollFor(100, 180, 400)).toBeUndefined();
+    expect(pageScrollFor(100, 180.6, 180)).toBeUndefined(); // the page stops on whole pixels: a fraction left is "arrived"
+    expect(pageScrollFor(100, 181, 180)).toBe(1);
   });
 
   it('never intercepts scrolling up', () => {
