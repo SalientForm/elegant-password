@@ -98,18 +98,21 @@ describe('App: apply changes', () => {
 
 describe('App: order and pages', () => {
   const scores = () => cards().map((c) => Number(within(c).getByText(/^D \d+$/).textContent!.match(/\d+/)![0]));
-  const bits = () => cards().map((c) => Number(within(c).getByText(/bits$/).textContent!.match(/\d+/)![0]));
+  const bits = () => cards().map((c) => Number(within(c).getByText(/^S \d+$/).textContent!.match(/\d+/)![0]));
 
-  it('shows suggestions easiest first by default and strongest first on request', { timeout: 30_000 }, async () => {
+  it('orders by difficulty by default, and by strength or memorability on request', { timeout: 30_000 }, async () => {
     render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const easy = scores();
     expect([...easy].sort((a, b) => a - b)).toEqual(easy);
-    expect(screen.getByRole('button', { name: 'Easiest first' }).getAttribute('aria-pressed')).toBe('true');
-    fireEvent.click(screen.getByRole('button', { name: 'Strongest first' }));
+    expect(screen.getByRole('button', { name: 'Difficulty' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Strength' }));
     const strong = bits();
     expect([...strong].sort((a, b) => b - a)).toEqual(strong);
-    expect(JSON.parse(window.localStorage.getItem('elegant-passwords:sort:v1')!)).toBe('strongest');
+    expect(JSON.parse(window.localStorage.getItem('elegant-passwords:sort:v1')!)).toBe('strength');
+    fireEvent.click(screen.getByRole('button', { name: 'Memorability' }));
+    const memo = cards().map((c) => Number(within(c).getByText(/^M \d+$/).textContent!.match(/\d+/)![0]));
+    expect([...memo].sort((a, b) => b - a)).toEqual(memo);
   });
 
   it('shows the first suggestion\'s sentence under the mode tabs while making one up', async () => {
@@ -120,7 +123,7 @@ describe('App: order and pages', () => {
     fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Why?' }));
     const firstHint = within(cards()[0]!).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
     expect(shown).toBe(firstHint);
-    fireEvent.click(screen.getByRole('button', { name: 'Strongest first' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Strength' }));
     const top = within(cards()[0]!);
     const why = top.queryByRole('button', { name: 'Why?' });
     if (why) fireEvent.click(why); // a card keeps its own open state when the order changes

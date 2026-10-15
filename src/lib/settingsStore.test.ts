@@ -53,12 +53,15 @@ describe('settings store', () => {
     expect(parseMode('sentence')).toBe('sentence');
     expect(parseMode('other')).toBe('generated');
     expect(parseMode(undefined)).toBe('generated');
-    expect(parseSort('strongest')).toBe('strongest');
-    expect(parseSort('weakest')).toBe('easiest');
+    expect(parseSort('strength')).toBe('strength');
+    expect(parseSort('memorability')).toBe('memorability');
+    expect(parseSort('strongest')).toBe('strength'); // what an earlier version stored
+    expect(parseSort('easiest')).toBe('difficulty');
+    expect(parseSort('weakest')).toBe('difficulty');
     const store = memoryStore();
-    saveSort(store, 'strongest');
-    expect(loadSort(store)).toBe('strongest');
-    expect(loadSort(undefined)).toBe('easiest');
+    saveSort(store, 'strength');
+    expect(loadSort(store)).toBe('strength');
+    expect(loadSort(undefined)).toBe('difficulty');
   });
 
   it('round-trips through a store and survives a missing store', () => {

@@ -61,7 +61,7 @@
       },
       {
         "kind": "test",
-        "title": "orders suggestions easiest first by default and strongest first on request"
+        "title": "orders suggestions by difficulty by default, and by strength or memorability on request"
       },
       {
         "kind": "test",
@@ -102,7 +102,7 @@
       },
       {
         "kind": "test",
-        "title": "shows suggestions easiest first by default and strongest first on request"
+        "title": "orders by difficulty by default, and by strength or memorability on request"
       },
       {
         "kind": "test",
@@ -354,6 +354,14 @@
       {
         "kind": "test",
         "title": "is green above 75, yellow above 45, red at or below 45"
+      },
+      {
+        "kind": "group",
+        "title": "strength badge"
+      },
+      {
+        "kind": "test",
+        "title": "is green from 50 bits, yellow from 40, red below, and names the preset reached"
       }
     ]
   },
@@ -1045,7 +1053,7 @@
       },
       {
         "kind": "test",
-        "title": "orders easiest first by default, strongest first on request, with stable ties"
+        "title": "orders most memorable, easiest or strongest first, with stable tie-breaks"
       },
       {
         "kind": "test",

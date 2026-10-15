@@ -13,7 +13,8 @@ export function ScoringPage() {
           way. The maths assumes the attacker knows this tool, its word lists, the sentence patterns and every rule, so
           only the random choices count. Which words were drawn, where the number went, which spellings the swaps
           chose: those add bits. Fixed rules add nothing: capitalising the first letter, the separator, the closing
-          marks, which words become initials. 40 bits means about a trillion equally likely passwords.
+          marks, which words become initials. 40 bits means about a trillion equally likely passwords. The "S" badge on
+          each card is green from the Strong preset at 50 bits, yellow from Everyday at 40, and red below.
         </p>
         <h3>The plan: exact</h3>
         <p>

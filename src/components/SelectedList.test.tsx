@@ -48,7 +48,8 @@ describe('SelectedList', () => {
     delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
-    expect(first.getByText(`≈${score.bits.toFixed(0)} bits`)).toBeTruthy();
+    const s = first.getByText(`S ${score.bits.toFixed(0)}`);
+    expect(s.getAttribute('title')).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
     const d = first.getByText(`D ${score.difficulty.score}`);
     expect(d.getAttribute('title')).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading on hover
     expect(first.getByText(`M ${score.memorability.score}`).getAttribute('title')).toMatch(/^Memorability \d+ of 100/);

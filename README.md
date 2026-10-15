@@ -78,8 +78,9 @@ explanation for each:
   least-compressed one that fits is kept. Property tests prove any sentence
   reduces to 12 characters that pass every rule (`src/lib/reduceTo12.test.ts`).
 - **Layout.** Three columns: the rules and swaps on the left, suggestions in
-  the middle (ordered easiest to type first by default, or strongest first
-  with the toggle above them; the choice is remembered), and on the right
+  the middle (ordered by Difficulty, easiest to type first, by default, or by
+  Memorability or Strength with the toggle above them; the choice is
+  remembered), and on the right
   the password tester above your list. The outer columns are fixed and the
   middle one takes the rest.
 - **Phones.** Below 860 px the three columns become three tabs, Options,

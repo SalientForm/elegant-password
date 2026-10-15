@@ -1,18 +1,29 @@
-// How suggestions are ordered on screen. Easiest to type first is the
-// default; strongest first is the other way round. Pure, and stable for ties.
+// How suggestions are ordered on screen: most memorable first, easiest to
+// type first (the default), or strongest first. Pure, and stable for ties.
 
 import type { Suggestion } from './generate';
 
-export type SortOrder = 'easiest' | 'strongest';
-export const SORT_ORDERS: readonly SortOrder[] = ['easiest', 'strongest'];
+export type SortOrder = 'memorability' | 'difficulty' | 'strength';
+export const SORT_ORDERS: readonly SortOrder[] = ['memorability', 'difficulty', 'strength'];
+export const DEFAULT_SORT: SortOrder = 'difficulty';
 
-export function sortSuggestions<T extends Pick<Suggestion, 'bits' | 'difficulty'>>(suggestions: readonly T[], order: SortOrder): T[] {
+type Sortable = Pick<Suggestion, 'bits' | 'difficulty' | 'memorability'>;
+
+/** The comparisons for an order, first the main key, then the tie-breakers. */
+const KEYS: Record<SortOrder, ((a: Sortable, b: Sortable) => number)[]> = {
+  memorability: [(a, b) => b.memorability - a.memorability, (a, b) => a.difficulty.score - b.difficulty.score, (a, b) => b.bits - a.bits],
+  difficulty: [(a, b) => a.difficulty.score - b.difficulty.score, (a, b) => b.bits - a.bits, (a, b) => b.memorability - a.memorability],
+  strength: [(a, b) => b.bits - a.bits, (a, b) => a.difficulty.score - b.difficulty.score, (a, b) => b.memorability - a.memorability],
+};
+
+export function sortSuggestions<T extends Sortable>(suggestions: readonly T[], order: SortOrder): T[] {
   const indexed = suggestions.map((s, i) => ({ s, i }));
   indexed.sort((a, b) => {
-    const primary = order === 'easiest' ? a.s.difficulty.score - b.s.difficulty.score : b.s.bits - a.s.bits;
-    if (primary !== 0) return primary;
-    const secondary = order === 'easiest' ? b.s.bits - a.s.bits : a.s.difficulty.score - b.s.difficulty.score;
-    return secondary !== 0 ? secondary : a.i - b.i;
+    for (const key of KEYS[order]) {
+      const d = key(a.s, b.s);
+      if (d !== 0) return d;
+    }
+    return a.i - b.i;
   });
   return indexed.map((x) => x.s);
 }

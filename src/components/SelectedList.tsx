@@ -25,10 +25,7 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
         </p>
       </div>
       <div className="actions">
-        <span className="bits-label" title="Scored from the password and hint alone, so it is the same every time">
-          ≈{score.bits.toFixed(0)} bits
-        </span>
-        <ScoreBadges difficulty={score.difficulty} memorability={score.memorability.score} />
+        <ScoreBadges bits={score.bits} difficulty={score.difficulty} memorability={score.memorability.score} />
         <CopyButton text={entry.password} fallback={code} icon />
         <button type="button" className="icon-button ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`} title="Remove from my list">
           <TrashIcon />

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { roleLabel, type Suggestion } from '../lib/generate';
+import { roleLabel, STRENGTH_PRESETS, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
 import { MEMORABILITY, scoreCold } from '../lib/score';
@@ -37,10 +37,28 @@ function separatorPhrase(sep: string): string {
 export const MEMORABILITY_BANDS = { green: 75, yellow: 45 } as const;
 export const memorabilityLevel = (score: number) => (score > MEMORABILITY_BANDS.green ? 'high' : score > MEMORABILITY_BANDS.yellow ? 'mid' : 'low');
 
-/** The two score badges: "D 44" and "M 71", with the full reading in the tooltip. */
-export function ScoreBadges({ difficulty, memorability }: { difficulty: { score: number; level: number; label: string }; memorability: number }) {
+/** Colour band for strength in bits: green from the "Strong" preset up, yellow from "Everyday", red below. */
+export const STRENGTH_BANDS = { green: 50, yellow: 40 } as const;
+export const strengthLevel = (bits: number) => (bits >= STRENGTH_BANDS.green ? 'high' : bits >= STRENGTH_BANDS.yellow ? 'mid' : 'low');
+/** The preset a strength reaches, for the tooltip: "master password", "very strong", "strong", "everyday", or "weak". */
+export const strengthWord = (bits: number) => [...STRENGTH_PRESETS].reverse().find((p) => bits >= p.bits)?.label.toLowerCase() ?? 'weak';
+
+interface BadgeProps {
+  bits: number;
+  difficulty: { score: number; level: number; label: string };
+  memorability: number;
+  /** From the user's own sentence: the bits count only the random parts. */
+  mine?: boolean;
+}
+
+/** The three score badges: "S 48", "D 44" and "M 71", with the full reading in each tooltip. */
+export function ScoreBadges({ bits, difficulty, memorability, mine = false }: BadgeProps) {
+  const strength = `Strength ${bits.toFixed(0)} bits, ${strengthWord(bits)}${mine ? '; counts only the random initials and swaps, scored from the password and your sentence alone' : '; scored from the password and its hint alone'}`;
   return (
     <>
+      <span className={`badge strength memo-${strengthLevel(bits)}`} title={strength} aria-label={strength}>
+        S {bits.toFixed(0)}
+      </span>
       <span className={`badge difficulty level-${difficulty.level}`} title={`Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`} aria-label={`Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`}>
         D {difficulty.score}
       </span>
@@ -111,10 +129,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
         </div>
         <div className="card-row">
           <div className="actions">
-            <span className="bits-label" title={mine ? 'Bits from the random initials and swaps, scored from the password and your sentence alone' : 'Scored from the password and its hint alone, so it is the same every time'}>
-              ≈{suggestion.bits.toFixed(0)} bits
-            </span>
-            <ScoreBadges difficulty={difficulty} memorability={suggestion.memorability} />
+            <ScoreBadges bits={suggestion.bits} difficulty={difficulty} memorability={suggestion.memorability} mine={mine} />
           </div>
         </div>
       </div>

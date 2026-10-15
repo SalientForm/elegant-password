@@ -7,7 +7,7 @@ import type { LengthTag } from './fluff';
 import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from './fromSentence';
 import { DEFAULT_REQUIREMENTS, separatorProblem, validate, type Requirements } from './generate';
 import { COMFORT_SHARE, type Comfort } from './grammar';
-import { SORT_ORDERS, type SortOrder } from './sort';
+import { DEFAULT_SORT, SORT_ORDERS, type SortOrder } from './sort';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, writeJson, type KeyValueStore } from './storage';
 
 export const REQUIREMENTS_KEY = 'elegant-passwords:requirements:v1';
@@ -72,7 +72,10 @@ export const saveRequirements = (store: KeyValueStore | undefined, req: Requirem
 export const loadSentenceOptions = (store: KeyValueStore | undefined) => parseSentenceOptions(readJson(store, SENTENCE_OPTIONS_KEY));
 export const saveSentenceOptions = (store: KeyValueStore | undefined, opts: SentenceOptions) => writeJson(store, SENTENCE_OPTIONS_KEY, opts);
 export function parseSort(raw: unknown): SortOrder {
-  return isString(raw) && SORT_ORDERS.includes(raw as SortOrder) ? (raw as SortOrder) : 'easiest';
+  // Earlier versions stored 'easiest' and 'strongest'.
+  const legacy: Record<string, SortOrder> = { easiest: 'difficulty', strongest: 'strength' };
+  if (isString(raw) && raw in legacy) return legacy[raw]!;
+  return isString(raw) && SORT_ORDERS.includes(raw as SortOrder) ? (raw as SortOrder) : DEFAULT_SORT;
 }
 
 export const loadSort = (store: KeyValueStore | undefined) => parseSort(readJson(store, SORT_KEY));

@@ -98,14 +98,14 @@ test('"Refresh" rolls a fresh batch and applies any draft', async ({ page }) => 
 test('adds a password to my list, scores it the same, and keeps the list across a reload', async ({ page }) => {
   const shown = await settledPasswords(page);
   const first = cards(page).first();
-  const bits = (await first.locator('.bits-label').textContent())!.replace(/[^0-9]/g, '');
+  const bits = (await first.locator('.badge.strength').textContent())!.replace(/[^0-9]/g, '');
   await first.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(first.getByRole('button', { name: 'Added', exact: true })).toBeDisabled();
   const list = page.getByRole('list', { name: 'My passwords' });
   await expect(list.getByRole('listitem')).toHaveCount(1);
   await expect(list).toContainText(shown[0]!);
   await expect(list).toContainText('Hint:');
-  await expect(list.locator('.bits-label')).toContainText(bits);
+  await expect(list.locator('.badge.strength')).toHaveText(`S ${bits}`);
 
   await page.reload();
   expect(await settledPasswords(page)).toEqual(shown);
@@ -121,7 +121,7 @@ test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps t
   await expect(page.getByRole('tab', { name: 'Use my sentence' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('Type a sentence to turn into a password, then apply it.')).toBeVisible();
 
-  await page.getByLabel('Your sentence').fill(SENTENCE);
+  await page.getByLabel('Your sentence', { exact: true }).fill(SENTENCE);
   await expect(applyBar(page)).toBeVisible();
   await page.keyboard.press('Control+Enter');
   await expect(applyBar(page)).toHaveCount(0);
@@ -132,7 +132,7 @@ test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps t
 
   await page.reload();
   expect(await settledPasswords(page)).toEqual(mine);
-  await expect(page.getByLabel('Your sentence')).toHaveValue(SENTENCE);
+  await expect(page.getByLabel('Your sentence', { exact: true })).toHaveValue(SENTENCE);
   await expect(page.getByRole('tab', { name: 'Use my sentence' })).toHaveAttribute('aria-selected', 'true');
 });
 
@@ -151,7 +151,7 @@ test('copies a password with the Copy button or by clicking the password itself'
 
 test('number fields can be typed through and apply as a draft', async ({ page }) => {
   await settledPasswords(page);
-  const count = page.getByLabel('Suggestions');
+  const count = page.getByLabel('Suggestions', { exact: true });
   await count.click();
   await count.fill('');
   await count.pressSequentially('10');
@@ -174,7 +174,7 @@ test('the Fun page shows the spec and downloads it', async ({ page }) => {
 test('pads a short sentence to the minimum with a length tag that states the length', async ({ page }) => {
   await settledPasswords(page);
   await page.getByRole('tab', { name: 'Use my sentence' }).click();
-  await page.getByLabel('Your sentence').fill('Hi there');
+  await page.getByLabel('Your sentence', { exact: true }).fill('Hi there');
   await page.keyboard.press('Enter'); // Enter in the sentence field submits at once
   const mine = await settledPasswords(page);
   await openWhy(page);
@@ -186,7 +186,7 @@ test('pads a short sentence to the minimum with a length tag that states the len
 });
 
 test('tests a typed password in the masthead: speed, corrections, strength, and the lock', async ({ page }) => {
-  const field = page.getByLabel('Password to test');
+  const field = page.getByLabel('Password to test', { exact: true });
   await field.click();
   await field.pressSequentially('Sleepy;otterx', { delay: 20 });
   await page.keyboard.press('Backspace');
@@ -198,26 +198,29 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
   await expect(status).toContainText('1 correction');
   await expect(status).toContainText('bits');
   await expect(status).toContainText('Difficulty');
-  await page.getByLabel('Lock password').check();
+  await page.getByLabel('Lock password', { exact: true }).check();
   await field.pressSequentially('Sleepy;otter', { delay: 10 });
   await page.keyboard.press('Enter');
   await expect(status).toContainText('Did not match');
   await expect(status).toContainText('Testing: Sleepy;otters');
 });
 
-test('orders suggestions easiest first by default and strongest first on request', async ({ page }) => {
+test('orders suggestions by difficulty by default, and by strength or memorability on request', async ({ page }) => {
   await settledPasswords(page);
-  const difficulties = async () => (await page.locator('article.card .badge.difficulty').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
+  const numbers = async (badge: string) => (await page.locator(`article.card .badge.${badge}`).allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
   await expect(cards(page).first().locator('.badge.memorability')).toHaveText(/^M \d+$/);
   await expect(cards(page).first().locator('.badge.difficulty')).toHaveAttribute('title', /^Difficulty \d+, /);
-  const easy = await difficulties();
+  const easy = await numbers('difficulty');
   expect([...easy].sort((a, b) => a - b)).toEqual(easy);
-  await page.getByRole('button', { name: 'Strongest first', exact: true }).click();
-  const bits = (await page.locator('article.card .bits-label').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
+  await page.getByRole('button', { name: 'Strength', exact: true }).click();
+  const bits = await numbers('strength');
   expect([...bits].sort((a, b) => b - a)).toEqual(bits);
+  await page.getByRole('button', { name: 'Memorability', exact: true }).click();
+  const memo = await numbers('memorability');
+  expect([...memo].sort((a, b) => b - a)).toEqual(memo);
   await page.reload();
   await settledPasswords(page);
-  await expect(page.getByRole('button', { name: 'Strongest first', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Memorability', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('the Scoring page explains bits and shows the rubric', async ({ page }) => {

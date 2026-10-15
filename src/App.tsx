@@ -34,9 +34,10 @@ const COLUMN_TABS: { id: Column; label: string }[] = [
   { id: 'list', label: 'My list' },
 ];
 
-const SORTS: { id: SortOrder; label: string }[] = [
-  { id: 'easiest', label: 'Easiest first' },
-  { id: 'strongest', label: 'Strongest first' },
+const SORTS: { id: SortOrder; label: string; title: string }[] = [
+  { id: 'memorability', label: 'Memorability', title: 'Most memorable first' },
+  { id: 'difficulty', label: 'Difficulty', title: 'Easiest to type first' },
+  { id: 'strength', label: 'Strength', title: 'Strongest first' },
 ];
 
 const MODE_TABS: { id: Mode; label: string }[] = [
@@ -143,7 +144,7 @@ export function ElegantPasswords() {
         <div className="results-tools">
           <div className="segmented sort" role="group" aria-label="Order">
             {SORTS.map((s) => (
-              <button type="button" key={s.id} className={p.sort === s.id ? 'active' : ''} aria-pressed={p.sort === s.id} onClick={() => p.setSort(s.id)}>
+              <button type="button" key={s.id} className={p.sort === s.id ? 'active' : ''} aria-pressed={p.sort === s.id} title={s.title} onClick={() => p.setSort(s.id)}>
                 {s.label}
               </button>
             ))}

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fromSentence } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements, type Suggestion } from '../lib/generate';
 import { seeded } from '../lib/testRandom';
-import { memorabilityLevel, SuggestionCard, type CardContext } from './SuggestionCard';
+import { memorabilityLevel, strengthLevel, strengthWord, SuggestionCard, type CardContext } from './SuggestionCard';
 
 afterEach(cleanup);
 
@@ -64,12 +64,13 @@ describe('SuggestionCard', () => {
     expect(screen.getByText(/It is your own sentence/)).toBeTruthy();
     expect(screen.queryByText(/your word/)).toBeNull(); // chips carry no "your word" label
     for (const step of s.steps) expect(screen.getByText(step)).toBeTruthy();
-    expect(screen.getByText(`≈${s.bits.toFixed(0)} bits`)).toBeTruthy(); // "bits", never "random bits"
+    expect(screen.getByText(`S ${s.bits.toFixed(0)}`).getAttribute('title')).toMatch(/^Strength \d+ bits, .*only the random initials and swaps/);
     expect(screen.queryByText(/random bits/)).toBeNull();
     fireEvent.mouseEnter(screen.getByText(s.password).parentElement!);
     expect(screen.queryByRole('tooltip')).toBeNull(); // it fits, so no tip
     expect(screen.getByText(`D ${s.difficulty.score}`).getAttribute('title')).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()}`);
     expect(screen.getByText(`M ${s.memorability}`)).toBeTruthy();
+    expect(screen.getByText(`S ${s.bits.toFixed(0)}`).getAttribute('title')).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak); counts only the random initials and swaps/);
   });
 
   it('toggles "Why?", marks unmet checks, and adds to the list', () => {
@@ -99,5 +100,20 @@ describe('memorability badge colours', () => {
     expect(memorabilityLevel(46)).toBe('mid');
     expect(memorabilityLevel(45)).toBe('low');
     expect(memorabilityLevel(0)).toBe('low');
+  });
+});
+
+describe('strength badge', () => {
+  it('is green from 50 bits, yellow from 40, red below, and names the preset reached', () => {
+    expect(strengthLevel(72)).toBe('high');
+    expect(strengthLevel(50)).toBe('high');
+    expect(strengthLevel(49)).toBe('mid');
+    expect(strengthLevel(40)).toBe('mid');
+    expect(strengthLevel(39)).toBe('low');
+    expect(strengthWord(80)).toBe('master password');
+    expect(strengthWord(65)).toBe('very strong');
+    expect(strengthWord(55)).toBe('strong');
+    expect(strengthWord(41)).toBe('everyday');
+    expect(strengthWord(12)).toBe('weak');
   });
 });

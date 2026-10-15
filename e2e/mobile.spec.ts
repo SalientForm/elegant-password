@@ -76,7 +76,7 @@ test('collapses into three tabs and keeps every feature reachable without sidewa
   await cards(page).first().getByRole('button', { name: 'Add', exact: true }).click();
 
   await section(page, 'My list').click();
-  await expect(page.getByLabel('Password to test')).toBeVisible();
+  await expect(page.getByLabel('Password to test', { exact: true })).toBeVisible();
   const list = page.getByRole('list', { name: 'My passwords' });
   await expect(list.getByRole('listitem')).toHaveCount(1);
   await expect(list).toContainText(first);
@@ -86,7 +86,7 @@ test('collapses into three tabs and keeps every feature reachable without sidewa
 test('sentence mode and its keyboard map fit a phone', async ({ page }) => {
   await settled(page);
   await page.getByRole('tab', { name: 'Use my sentence', exact: true }).click();
-  await page.getByLabel('Your sentence').fill('Sally eats sweets on Sundays');
+  await page.getByLabel('Your sentence', { exact: true }).fill('Sally eats sweets on Sundays');
   await page.keyboard.press('Enter');
   await settled(page);
   await cards(page).first().getByRole('button', { name: 'Why?', exact: true }).click();
