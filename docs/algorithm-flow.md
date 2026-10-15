@@ -110,7 +110,7 @@ do not discount; the strength panel says so in one sentence.
 ## 5. When the flow runs
 
 Edits are a draft. The flow above runs when the draft is applied (the
-floating "Submit changes" bar, Ctrl+Enter, or "New passwords", which applies
+floating "Submit changes" bar, Ctrl+Enter, or "Refresh", which applies
 and rolls), and once on load if the stored batch was not made from the
 applied inputs. Applied inputs are persisted; drafts are not.
 

@@ -119,6 +119,17 @@ describe('generators', () => {
     expect(worker.terminated).toBe(true);
   });
 
+  it('forgets outstanding requests on dispose and ignores a late answer from the old worker', async () => {
+    const worker = fakeWorker();
+    const gen = workerGenerator(() => worker, { timeoutMs: 30 });
+    let settled = false;
+    void gen.run(request(1)).then(() => (settled = true));
+    gen.dispose();
+    worker.flush(); // the old worker answers after it was told to stop
+    await new Promise((r) => setTimeout(r, 60));
+    expect(settled).toBe(false); // nobody is waiting for that answer, and no timeout fired either
+  });
+
   it('creates an inline generator where there are no workers', async () => {
     const gen = createGenerator();
     expect((await gen.run(request(1))).ok).toBe(true);

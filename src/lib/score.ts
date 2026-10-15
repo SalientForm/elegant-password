@@ -1,7 +1,7 @@
 // Cold scoring: everything a card or a saved entry says about a password's
 // strength and difficulty comes from this one function of the password and
 // its hint. Nothing else goes in: not the settings that made it, not how
-// many suggestions were shown, not how many times "New passwords" was
+// many suggestions were shown, not how many times "Refresh" was
 // pressed. So a password scores the same every time, wherever it appears.
 //
 // The model: an attacker who knows this tool. Each hint word is found in the
@@ -48,6 +48,41 @@ export interface ScoredWord {
   poolSize?: number;
 }
 
+/**
+ * How closely the password still looks like its sentence, 0-100. Words that
+ * keep their full length score 1, shortened words the fraction kept,
+ * dropped words 0 (fidelity, 60 %); shorter passwords score higher
+ * (brevity, 40 %: 1 at 16 characters or fewer, 0 at 48 or more); each
+ * swapped word costs 5 points, up to 20.
+ */
+export interface Memorability {
+  score: number;
+  /** Mean size credit over the hint words, 0-1. */
+  fidelity: number;
+  /** 0-1 from the password's length. */
+  brevity: number;
+  /** Hint words that kept their full length. */
+  sameSize: number;
+  swappedWords: number;
+}
+
+export const MEMORABILITY = { fidelityWeight: 0.6, brevityWeight: 0.4, shortAt: 16, longAt: 48, swapPenalty: 5, maxSwapPenalty: 20 } as const;
+
+export function memorabilityOf(password: string, words: readonly ScoredWord[]): Memorability {
+  const credits = words.map((w) => {
+    if (w.form === 'dropped') return 0;
+    const kept = [...w.text].length / Math.max(1, [...w.word].length);
+    return Math.min(1, kept);
+  });
+  const fidelity = credits.length ? credits.reduce((a, b) => a + b, 0) / credits.length : 0;
+  const length = [...password].length;
+  const brevity = Math.min(1, Math.max(0, 1 - (length - MEMORABILITY.shortAt) / (MEMORABILITY.longAt - MEMORABILITY.shortAt)));
+  const swappedWords = words.filter((w) => w.twists > 0).length;
+  const penalty = Math.min(MEMORABILITY.maxSwapPenalty, swappedWords * MEMORABILITY.swapPenalty);
+  const score = Math.max(0, Math.round(100 * (MEMORABILITY.fidelityWeight * fidelity + MEMORABILITY.brevityWeight * brevity) - penalty));
+  return { score, fidelity, brevity, sameSize: credits.filter((c) => c >= 1).length, swappedWords };
+}
+
 export interface ColdScore {
   /** Sentence bits plus twist bits plus initial-choice bits. */
   bits: number;
@@ -67,6 +102,7 @@ export interface ColdScore {
   words: ScoredWord[];
   difficulty: Difficulty;
   typing: TypingProfile;
+  memorability: Memorability;
 }
 
 const MAX_TWISTS_PER_WORD = 3;
@@ -320,6 +356,7 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
     words: scored,
     difficulty: scoreDifficulty(password, words.length + twistCount),
     typing: typingProfile(password),
+    memorability: memorabilityOf(password, scored),
   };
   if (cacheable) {
     if (cache.size >= CACHE_LIMIT) cache.clear();

@@ -3,6 +3,7 @@ import { scoreCold } from '../lib/score';
 import type { SelectedEntry } from '../lib/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
 import { CopyButton } from './CopyButton';
+import { memorabilityLevel } from './SuggestionCard';
 
 function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
   const score = useMemo(() => scoreCold(entry.password, entry.hint), [entry.password, entry.hint]);
@@ -22,8 +23,11 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
         <span className="bits-label" title="Scored from the password and hint alone, so it is the same every time">
           ≈{score.bits.toFixed(0)} bits
         </span>
-        <span className={`badge level-${score.difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard">
+        <span className={`badge difficulty level-${score.difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard">
           Difficulty {score.difficulty.score} · {score.difficulty.label.toLowerCase()}
+        </span>
+        <span className={`badge memorability memo-${memorabilityLevel(score.memorability.score)}`} title="Memorability, 0 to 100">
+          Memorability {score.memorability.score}
         </span>
         <CopyButton text={entry.password} fallback={code} />
         <button type="button" className="ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`}>

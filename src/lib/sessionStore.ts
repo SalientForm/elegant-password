@@ -13,7 +13,7 @@ export const SESSION_KEY = 'elegant-passwords:session:v1';
 export interface StoredSession {
   /** inputsKey() of the inputs the outcome was made from. */
   key: string;
-  /** How many times "New passwords" had been pressed for these inputs. */
+  /** How many times "Refresh" had been pressed for these inputs. */
   round: number;
   sentence: string;
   outcome: Outcome | null;
@@ -36,6 +36,7 @@ export function isSuggestion(x: unknown): x is Suggestion {
     isRecord(x.typing) &&
     isRecord(x.difficulty) &&
     isFiniteNumber(x.difficulty.score) &&
+    isFiniteNumber(x.memorability) &&
     Array.isArray(x.difficulty.criteria) &&
     isRecord(x.difficulty.measurements) &&
     Array.isArray(x.checks) &&

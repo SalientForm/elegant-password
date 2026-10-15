@@ -37,6 +37,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
     const at = now();
     if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation(); // Ctrl+Enter here is a run, not "Submit changes"
       const typed = value;
       if (!typed) return;
       const checkAgainst = nextTarget(target, typed, locked);

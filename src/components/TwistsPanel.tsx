@@ -9,11 +9,20 @@ interface Props {
   onReqChange: (next: Requirements) => void;
   settings: MappingSettings;
   onSettingsChange: (next: MappingSettings) => void;
+  /**
+   * Whether a mapping can apply at all to what is being made (its "replace"
+   * letters occur somewhere). Mappings that cannot are shown disabled. Omit
+   * when any word could come up, as when a sentence is made up.
+   */
+  relevant?: (m: Pick<Mapping, 'from'>) => boolean;
 }
+
+/** Whether a mapping's letters occur in any of these words. */
+export const relevantTo = (words: readonly string[]) => (m: Pick<Mapping, 'from'>) => words.some((w) => w.includes(m.from));
 
 const show = (to: string) => (to === '' ? '–' : to);
 
-export function TwistsPanel({ req, onReqChange, settings, onSettingsChange }: Props) {
+export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, relevant }: Props) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [error, setError] = useState<string>();
@@ -94,13 +103,15 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange }: Pr
               {g.mappings.map((m) => {
                 const key = mappingKey(m);
                 const why = blocked(m);
+                const applies = relevant ? relevant(m) : true;
                 return (
                   <button
                     type="button"
                     key={key}
-                    className={`mapping${disabled.has(key) ? '' : ' on'}${why ? ' blocked' : ''}`}
+                    className={`mapping${disabled.has(key) ? '' : ' on'}${why ? ' blocked' : ''}${applies ? '' : ' irrelevant'}`}
                     aria-pressed={!disabled.has(key)}
-                    title={why ? `Skipped: ${why}` : disabled.has(key) ? 'Off: click to use' : 'On: click to skip'}
+                    disabled={!applies}
+                    title={!applies ? `“${m.from}” is not in your sentence` : why ? `Skipped: ${why}` : disabled.has(key) ? 'Off: click to use' : 'On: click to skip'}
                     onClick={() => toggle(key)}
                   >
                     {m.from}→{show(m.to)}
@@ -117,8 +128,9 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange }: Pr
             <div className="mappings">
               {settings.custom.map((m) => {
                 const why = blocked(m);
+                const applies = relevant ? relevant(m) : true;
                 return (
-                  <span key={mappingKey(m)} className={`mapping on custom${why ? ' blocked' : ''}`} title={why && `Skipped: ${why}`}>
+                  <span key={mappingKey(m)} className={`mapping on custom${why ? ' blocked' : ''}${applies ? '' : ' irrelevant'}`} title={!applies ? `“${m.from}” is not in your sentence` : why && `Skipped: ${why}`}>
                     {m.from}→{show(m.to)}
                     <button
                       type="button"

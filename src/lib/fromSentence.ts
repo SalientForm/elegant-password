@@ -534,6 +534,7 @@ function finish(state: readonly Token[], initialBits: number, limit: number, ctx
       bits: score.bits,
       typing: score.typing,
       difficulty: score.difficulty,
+      memorability: score.memorability.score,
       checks: checkRequirements(password, req, {
         separator,
         endSymbol: ending,

@@ -47,8 +47,10 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .mono, code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 
 .app { max-width: 1380px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
-header { margin-bottom: 1.75rem; }
-header p { color: var(--muted); max-width: 62ch; margin: 0.4rem 0 0; }
+.topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.5rem 1.25rem; align-items: baseline; margin-bottom: 0.75rem; }
+.topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 0.95rem; }
+.topbar .brand { justify-self: end; font-size: 0.78rem; font-weight: 700; font-style: italic; opacity: 0.75; white-space: nowrap; }
+@media (max-width: 860px) { .topbar { grid-template-columns: 1fr auto; } .topbar .tagline { grid-column: 1 / -1; } }
 
 main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
 .aside { display: grid; gap: 1rem; }
@@ -73,6 +75,7 @@ main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.
 }
 .mapping.on { color: var(--ink); background: var(--accent-soft); border: 1px solid transparent; }
 .mapping.blocked { opacity: 0.45; text-decoration: line-through; }
+.mapping.irrelevant, .mapping:disabled { opacity: 0.35; cursor: not-allowed; }
 .mapping.custom button { border: 0; padding: 0 0.15rem; background: transparent; color: var(--muted); font-size: 0.9rem; line-height: 1; }
 .add-mapping { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 0.35rem; align-items: center; margin-top: 0.5rem; }
 .add-mapping input { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.85rem; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 0.35rem 0.5rem; width: 100%; }
@@ -114,6 +117,8 @@ button.ghost { border-color: transparent; color: var(--muted); }
 
 .results { display: grid; gap: 0.9rem; }
 .results-head { display: flex; justify-content: space-between; align-items: center; }
+.results-tools { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.results-tools .segmented.sort { min-width: 260px; }
 .error, .warning { margin: 0; padding: 0.7rem 0.9rem; border-radius: var(--radius); font-size: 0.9rem; }
 .error { background: var(--bad-soft); color: var(--bad); }
 .warning { background: var(--warn-soft); color: var(--warn); }
@@ -126,6 +131,9 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .level-0, .level-1 { background: var(--accent-soft); color: var(--accent); }
 .level-2 { background: var(--warn-soft); color: var(--warn); }
 .level-3, .level-4 { background: var(--bad-soft); color: var(--bad); }
+.memo-high { background: var(--accent-soft); color: var(--accent); }
+.memo-mid { background: var(--warn-soft); color: var(--warn); }
+.memo-low { background: var(--bad-soft); color: var(--bad); }
 .pip { font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.45rem; border-radius: 999px; }
 table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .rubric th, .rubric td { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--line); vertical-align: top; }

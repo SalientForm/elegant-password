@@ -172,6 +172,8 @@ export interface Suggestion {
   bits: number;
   typing: TypingProfile;
   difficulty: Difficulty;
+  /** 0-100: how closely the password still looks like its hint; see score.ts. */
+  memorability: number;
   checks: RequirementCheck[];
 }
 
@@ -657,6 +659,7 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
       bits: score.bits,
       typing: score.typing,
       difficulty: score.difficulty,
+      memorability: score.memorability.score,
       checks: checkRequirements(password, req, {
         separator: chosen.separator,
         endSymbol: variant.endSymbol,

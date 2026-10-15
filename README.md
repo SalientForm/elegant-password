@@ -36,7 +36,7 @@ explanation for each:
 - **Submit, then it sticks.** Edits to the rules, swaps or sentence are a
   draft: "Discard" and "Submit changes" float over the page (Ctrl+Enter
   also submits) and disappear once there is nothing to submit. Submitting
-  saves the settings and regenerates; "New passwords" submits any draft too.
+  saves the settings and regenerates; "Refresh" submits any draft too.
 - **Padding.** A sentence that is under the site's minimum even with every
   word kept whole is padded, planned once with no retry: a word when more
   than 3 short, a swapped digit or symbol repeated (`$t33l` -> `$t33333l`),
@@ -82,8 +82,13 @@ explanation for each:
   with the toggle above them; the choice is remembered), and on the right
   the password tester above your list. The outer columns are fixed and the
   middle one takes the rest.
-- **Scoring page** (`#/scoring`): how strength in bits and the difficulty
-  score are worked out, with the full rubric and time-to-guess tables.
+- **Scoring page** (`#/scoring`): how strength in bits, the difficulty
+  score and memorability are worked out, with the full rubric and
+  time-to-guess tables.
+- **Memorability** (0-100, on every card and list entry): how closely the
+  password still looks like its hint. Words that keep their full length
+  score in full, shortened words the fraction kept, dropped words nothing;
+  shorter passwords score higher; each swapped word costs a little.
 - **Test a password** (top of the right column): type any password and
   press Enter. Every keystroke is timed as you type, so the first run is
   scored too and becomes the password under test; corrections (Backspace,

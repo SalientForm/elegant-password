@@ -75,10 +75,10 @@ test('edits are a draft until applied; applying saves, regenerates, and survives
   await expect(applyBar(page)).toHaveCount(0);
 });
 
-test('"New passwords" rolls a fresh batch and applies any draft', async ({ page }) => {
+test('"Refresh" rolls a fresh batch and applies any draft', async ({ page }) => {
   const before = await settledPasswords(page);
   await page.getByRole('button', { name: 'Relaxed' }).click();
-  await page.getByRole('button', { name: 'New passwords' }).click();
+  await page.getByRole('button', { name: 'Refresh' }).click();
   await expect(applyBar(page)).toHaveCount(0);
   await expect.poll(async () => passwords(page)).not.toEqual(before);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elegant-passwords:requirements:v1') ?? '{}').comfort)).toBe('relaxed');
@@ -150,7 +150,7 @@ test('the Fun page shows the spec and downloads it', async ({ page }) => {
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download .md' }).click();
   expect((await download).suggestedFilename()).toBe('elegant-passwords-spec.md');
-  await page.getByRole('link', { name: 'Elegant Passwords' }).click();
+  await page.getByRole('link', { name: 'Passwords' }).click();
   await expect(cards(page).first()).toBeVisible(); // state survived the visit
 });
 
@@ -189,7 +189,8 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
 
 test('orders suggestions easiest first by default and strongest first on request', async ({ page }) => {
   await settledPasswords(page);
-  const difficulties = async () => (await page.locator('article.card .badge').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
+  const difficulties = async () => (await page.locator('article.card .badge.difficulty').allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
+  await expect(cards(page).first().locator('.badge.memorability')).toContainText('Memorability');
   const easy = await difficulties();
   expect([...easy].sort((a, b) => a - b)).toEqual(easy);
   await page.getByRole('button', { name: 'Strongest first' }).click();
@@ -205,6 +206,6 @@ test('the Scoring page explains bits and shows the rubric', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Strength, in bits' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeVisible();
   await expect(page.getByText('Finger rolls')).toBeVisible();
-  await page.getByRole('link', { name: 'Elegant Passwords' }).click();
+  await page.getByRole('link', { name: 'Passwords' }).click();
   await expect(cards(page).first()).toBeVisible();
 });

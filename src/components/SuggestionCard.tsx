@@ -29,6 +29,9 @@ function separatorPhrase(sep: string): string {
   return `Words are joined with "${sep}", the same key every time, so it becomes a rhythm.${stretch}`;
 }
 
+/** Colour band for a memorability score. */
+export const memorabilityLevel = (score: number) => (score >= 80 ? 'high' : score >= 60 ? 'mid' : 'low');
+
 export interface CardContext {
   separator: string;
   minUppercase: number;
@@ -64,8 +67,11 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
           <span className="bits-label" title="Scored from the password and its hint alone, so it is the same every time">
             {mine ? `+${suggestion.bits.toFixed(0)} random bits` : `≈${suggestion.bits.toFixed(0)} bits`}
           </span>
-          <span className={`badge level-${difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard">
+          <span className={`badge difficulty level-${difficulty.level}`} title="Difficulty score, 0 effortless to 100 hard: typing effort and memory load">
             Difficulty {difficulty.score} · {difficulty.label.toLowerCase()}
+          </span>
+          <span className={`badge memorability memo-${memorabilityLevel(suggestion.memorability)}`} title="Memorability, 0 to 100: how closely it still looks like its hint, and how short it is">
+            Memorability {suggestion.memorability}
           </span>
           <CopyButton text={password} fallback={code} />
           {onAdd && (

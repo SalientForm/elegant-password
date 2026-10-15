@@ -31,6 +31,7 @@ import {
 } from './grammar';
 import { COST, PINKY_REACH } from './keyboard';
 import { STORAGE_KEY } from './mappingStore';
+import { MEMORABILITY } from './score';
 import { SELECTED_KEY } from './selectedStore';
 import { SESSION_KEY } from './sessionStore';
 import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY } from './settingsStore';
@@ -116,18 +117,18 @@ You are building a password generator web app called **Elegant Passwords**. It c
 
 ## 3. Pages
 
-1. **Elegant Passwords** (main page, ${code('#/')}): three columns, 1380 px wide at most. Left (300 px): the requirements form and the swaps panel. Middle (takes the rest): the two modes (Make up a sentence / Use my sentence) as an accessible tab list, an order toggle ("Easiest first", the default, or "Strongest first"; a two-button group, remembered in localStorage), the suggestion cards in that order, and the strength panel. Right (340 px): "Test a password" (section 18) above "My list" (the user's saved passwords). Below 1100 px the right column drops under the others; below 860 px everything is one column.
+1. **Elegant Passwords** (main page, ${code('#/')}): three columns, 1380 px wide at most. Left (300 px): the requirements form and the swaps panel. Middle (takes the rest): the two modes (Make up a sentence / Use my sentence) as an accessible tab list, the "Suggestions" heading, then a row with the order toggle ("Easiest first", the default, or "Strongest first"; a two-button group, remembered in localStorage) on the left and the Refresh button on the right, the suggestion cards in that order, and the strength panel. Right (340 px): "Test a password" (section 18) above "My list" (the user's saved passwords). Below 1100 px the right column drops under the others; below 860 px everything is one column.
 2. **Scoring** (${code('#/scoring')}): how strength in bits is counted (the exact plan, cold scoring of a password from its hint, your own sentence, choosing a favourite, time to guess per preset at the three attacker speeds) and the full difficulty rubric.
 3. **Fun** (${code('#/fun')}): shows this prompt, generated from the live constants and rendered from markdown as formatted text, with Copy and Download buttons for the raw markdown.
 
-Hash routing; a top nav links both pages.
+Hash routing. Above the tabs: the page title ("Passwords", "Scoring" or "Fun") with the one-line description to its right, and "brought to you by SalientForm" top right in small, bold, italic, 75 %-opaque text. The tab labels are Passwords, Scoring and Fun.
 
 ## 4. Requirements form (left column)
 
 ${requirementsTable()}
 
 - Each "must contain" row is a checkbox plus an "at least N" number input; checking sets 1, unchecking sets 0. All three are on by default.
-- **Drafts and Submit**: every edit to the rules, swaps, sentence or sentence options is a draft. Two buttons float over the page, with no backdrop and no message, while the draft differs from what is applied: Discard and Submit changes (Ctrl+Enter or ⌘+Enter also submits). They disappear when nothing differs. Applying saves the settings and regenerates. "New passwords" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
+- **Drafts and Submit**: every edit to the rules, swaps, sentence or sentence options is a draft. Two buttons float over the page, with no backdrop and no message, while the draft differs from what is applied: Discard and Submit changes (Ctrl+Enter or ⌘+Enter also submits). They disappear when nothing differs. Applying saves the settings and regenerates. "Refresh" applies any draft and then rolls. Switching mode is navigation and takes effect at once.
 - Number inputs can be typed through: the text stays as typed ("1" on the way to "10" is not snapped to the minimum); only whole numbers in range are committed as you type, and leaving the field clamps into range or restores the last value. Clearing an "at least" field never unticks its box.
 - Validation errors are shown in place of suggestions as a readable message, never thrown at the user. Any other render error is caught by an error boundary that shows the message and a reload button.
 - Separator choices that the site does not allow are disabled; stretchy ones are labelled "(pinky stretch)" while the pinky toggle is on.
@@ -178,7 +179,7 @@ Random swaps and misspellings applied after the sentence is chosen. "Minimum swa
 ${mappingSection()}
 
 - Users can switch any built-in mapping off and add their own (replace = 1-8 lowercase letters; with = up to 8 characters from lowercase letters, digits and keyboard symbols, empty means delete; capitals are rejected with a message, since a capital inside a word would make the case alternate). Saved to localStorage under ${code(STORAGE_KEY)} as ${code('{ disabled: string[], custom: {from,to}[] }')}; malformed data is dropped, blocked storage is tolerated. A reset button restores defaults.
-- Mappings whose output uses a symbol the site disallows, or a pinky stretch while the toggle is on, are skipped (shown struck through).
+- Mappings whose output uses a symbol the site disallows, or a pinky stretch while the toggle is on, are skipped (shown struck through). In "Use my sentence", mappings whose "replace" letters occur nowhere in the sentence are shown disabled, since they cannot apply.
 - Twists never touch the number, initials, made-up nouns or two-letter words, only match lowercase letters, never overlap, keep the first letter a letter when it will be capitalised, and never make a word vanish (a deletion that would leave nothing is not an option).
 - **Counting**: per word, enumerate every distinct spelling reachable with up to N non-overlapping twists, at the fewest twists that make it. Combine words with a DP over (twists used, length change, letter change) so results stay within the length limits and keep enough letters for the uppercase rule. Pick uniformly among distinct results; bits = log2(count). Fall back to fewer twists if none fit. The same table answers "how many outcomes were there" when a password is scored cold.
 
@@ -198,7 +199,7 @@ The user types a sentence (never put in the URL; kept in sessionStorage only onc
 
 Example: "jupiter brings 5 leds for piece", ${code(';')} separator, glue on, 1 initial, target 12 → ${code('jr;B;5ls;Fpc')}.
 
-Strength in this mode: the sentence's guessability cannot be measured. The card's figure is the cold score (section 14) of the password against the sentence, which counts only the random initials and swaps; warn that quotes, lyrics and personal facts are weak.
+Strength in this mode: the sentence's guessability cannot be measured. The card's figure is the cold score (section 14) of the password against the sentence, which counts only the random initials and swaps; the strength panel says that quotes, lyrics and personal facts are weak, and a sentence under four words gets a warning that short sentences are easier to guess.
 
 ## 9. Suggestion cards
 
@@ -211,7 +212,7 @@ Cards are ordered easiest first (difficulty ascending, more bits first on ties) 
 ## 10. Strength panel
 
 - Total bits against the target; a table of each slot's pool size and bits, plus the number position and any loss from length limits. This is the exact entropy of the current plan; each card's figure is scored from its own password and hint and may sit a little above it (it does not know the length limits).
-- One static sentence on choice bias: seeing several suggestions, or pressing New passwords until you like one, leans the choice toward what you find likeable, and the figures do not discount for it. No count-based discount is shown: a score must not depend on how many were seen.
+- One static sentence on choice bias: seeing several suggestions, or pressing Refresh until you like one, leans the choice toward what you find likeable, and the figures do not discount for it. No count-based discount is shown: a score must not depend on how many were seen.
 - Average time to guess (half the space) at: ${ATTACK_SCENARIOS.map((a) => `${a.scenario} (${a.guessesPerSecond.toExponential(0)}/s)`).join('; ')}.
 
 ## 11. Difficulty rubric (0-100)
@@ -224,7 +225,7 @@ Typing time model: ${SECONDS.keystroke} s per keystroke + ${SECONDS.perCost} s �
 
 ## 14. Cold scoring
 
-Everything a card or a saved entry says about a password's strength and difficulty comes from one pure function of two strings: ${code('scoreCold(password, hint)')}. Nothing else goes in (not the settings, not how many suggestions were shown, not how many times New passwords was pressed), so a password scores the same wherever and whenever it appears.
+Everything a card or a saved entry says about a password's strength and difficulty comes from one pure function of two strings: ${code('scoreCold(password, hint)')}. Nothing else goes in (not the settings, not how many suggestions were shown, not how many times Refresh was pressed), so a password scores the same wherever and whenever it appears.
 
 1. Normalise the hint into words (as in section 8, step 1).
 2. Align each word in the password, in order: as the whole word, a shortened form (vowels dropped, interior letters trimmed, first + last consonant, a number's leading digits), a capital initial, or a swapped spelling of any of those (up to 3 swaps, built-in mappings). Longest match wins, then fewest swaps. Look in place first, then one character on (past a separator); never skip symbols blindly, since a swap can put one at the start of a word. A word found nowhere is "dropped".
@@ -232,13 +233,15 @@ Everything a card or a saved entry says about a password's strength and difficul
 4. Swap bits = log2 of the number of distinct outcomes for exactly the swaps found, from the same DP as section 7, over the aligned base forms, with the first letter protected when the first word is sentence-cased.
 5. Difficulty = the rubric on the password with memory load = hint words + swaps.
 
+6. **Memorability**, 0-100, from the same alignment: each hint word gets a size credit (1 when the matched text has the word's full length, swapped or not; the fraction of the length kept when shortened; 0 when dropped); fidelity = the mean credit, weight ${MEMORABILITY.fidelityWeight}; brevity = 1 at ${MEMORABILITY.shortAt} characters or fewer, 0 at ${MEMORABILITY.longAt} or more, linear between, weight ${MEMORABILITY.brevityWeight}; minus ${MEMORABILITY.swapPenalty} per swapped word, at most ${MEMORABILITY.maxSwapPenalty}; rounded, never below 0. Shown as a badge on every card and list entry (80+ easy, 60-79 fair, below 60 hard) and explained on the Scoring page.
+
 Left out on purpose: length limits (unknown cold), the user's own mapping list (always the built-in 64), any selection bias. The result is memoised and plain data.
 
 ## 15. State, persistence and performance
 
 - One React provider owns the draft and applied settings (requirements, sentence options, mappings, sentence), the mode, the current batch and the user's list, and exposes them through a hook. Forms edit the draft; generation and persistence use what is applied. Components never generate; they ask the provider.
 - Generation is one pure function ${code('runInputs(inputs) → outcome')} (never throws: requirement problems and bugs come back as messages). It runs in a Web Worker when the browser has one, inline otherwise, through one interface; answers are matched to requests by id and superseded answers are dropped. The worker is created on first use and again after dispose (so React StrictMode's extra cleanup in development cannot strand it); if it fails or stays silent for 10 s, outstanding and later requests run inline. The old batch stays on screen, dimmed, until the new one is ready; a status says "Working…".
-- A key of the inputs that matter (mode, requirements, mappings; the sentence and its options only in sentence mode) is stored with each batch. On reload the batch is shown again and nothing is regenerated unless an input differs. "New passwords" bumps a round counter stored alongside.
+- A key of the inputs that matter (mode, requirements, mappings; the sentence and its options only in sentence mode) is stored with each batch. On reload the batch is shown again and nothing is regenerated unless an input differs. "Refresh" bumps a round counter stored alongside.
 - localStorage: applied requirements (${code(REQUIREMENTS_KEY)}), sentence options (${code(SENTENCE_OPTIONS_KEY)}), mode (${code(MODE_KEY)}), mappings (${code(STORAGE_KEY)}), the list (${code(SELECTED_KEY)}). sessionStorage: the current batch, round and applied sentence (${code(SESSION_KEY)}), kept through a refresh and gone when the tab closes. Unapplied drafts are never stored. Every value read back is parsed as untrusted and falls back to defaults field by field.
 - **My list**: add a suggestion one at a time (a password already listed is not added twice); each entry stores only the password, the hint and when it was added; it is displayed with its cold score, Copy and Remove; "Remove all" asks once.
 

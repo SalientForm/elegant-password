@@ -136,3 +136,30 @@ describe('scoreAlone', () => {
     expect(scoreAlone('').bits).toBe(0);
   });
 });
+
+describe('memorability', () => {
+  it('rewards words that keep their size and short passwords, and penalises swaps', () => {
+    const whole = scoreCold('Sally;eats;sweets', 'Sally eats sweets').memorability;
+    expect(whole).toMatchObject({ sameSize: 3, swappedWords: 0, fidelity: 1 });
+    expect(whole.score).toBeGreaterThanOrEqual(90);
+    const swapped = scoreCold('Sally;e4ts;sw33ts', 'Sally eats sweets').memorability;
+    expect(swapped.fidelity).toBe(1); // same lengths, just spelled differently
+    expect(swapped.swappedWords).toBe(2);
+    expect(swapped.score).toBe(whole.score - 10);
+    const shortened = scoreCold('jr;B;5ls;Fpc', 'jupiter brings 5 leds for piece').memorability;
+    expect(shortened.sameSize).toBe(1); // only "5" kept its length
+    expect(shortened.fidelity).toBeLessThan(0.5);
+    expect(shortened.score).toBeLessThan(whole.score);
+    const dropped = scoreCold('Cats;dogs', 'cats and dogs and owls').memorability;
+    expect(dropped.fidelity).toBeCloseTo(2 / 5);
+    const long = scoreCold('Sally;eats;sweets;on;sundays;with;friends;and;family;every;week', 'Sally eats sweets on sundays with friends and family every week').memorability;
+    expect(long.fidelity).toBe(1);
+    expect(long.brevity).toBe(0);
+    expect(long.score).toBe(60);
+  });
+
+  it('is on every suggestion as plain data and matches the cold score', () => {
+    const r = generate(req({ count: 3 }), { rng: seeded(2) });
+    for (const s of r.suggestions) expect(s.memorability).toBe(scoreCold(s.password, s.hint).memorability.score);
+  });
+});

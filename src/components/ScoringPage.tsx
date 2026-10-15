@@ -1,4 +1,5 @@
 import { ATTACK_SCENARIOS, crackEstimates, formatDuration, STRENGTH_PRESETS } from '../lib/generate';
+import { MEMORABILITY } from '../lib/score';
 import { RubricTable } from './Difficulty';
 
 /** The Scoring page: how difficulty and strength are scored, in one place. */
@@ -37,7 +38,7 @@ export function ScoringPage() {
         </p>
         <h3>Choosing a favourite</h3>
         <p>
-          Seeing several suggestions, or pressing New passwords until you like one, leans your choice toward what you
+          Seeing several suggestions, or pressing Refresh until you like one, leans your choice toward what you
           find likeable. The figures do not discount for that. Take the first one you can live with.
         </p>
         <h3>Time to guess</h3>
@@ -80,6 +81,20 @@ export function ScoringPage() {
           81–100 hard. Each card shows its own table; this is the whole rubric.
         </p>
         <RubricTable />
+      </section>
+
+      <section className="panel">
+        <h2>Memorability, 0 to 100</h2>
+        <p>
+          How closely the password still looks like the sentence it came from, scored from the password and its hint
+          alone. Each hint word is found in the password and given a size credit: 1 when it kept its full length (a
+          swapped spelling of the same length still counts in full), the fraction kept when it was shortened (a capital
+          initial for a six-letter word keeps one sixth), 0 when it was dropped. The mean of those credits is fidelity,
+          worth {MEMORABILITY.fidelityWeight * 100}% of the score. Brevity is worth the other{' '}
+          {MEMORABILITY.brevityWeight * 100}%: 1 at {MEMORABILITY.shortAt} characters or fewer, falling to 0 at{' '}
+          {MEMORABILITY.longAt} or more. Each swapped word then costs {MEMORABILITY.swapPenalty} points, up to{' '}
+          {MEMORABILITY.maxSwapPenalty}. 80 and above reads as easy to remember, 60 to 79 as fair, below 60 as hard.
+        </p>
       </section>
     </div>
   );

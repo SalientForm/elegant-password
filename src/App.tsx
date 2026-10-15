@@ -9,17 +9,18 @@ import { SentenceInput, SentenceStrength } from './components/SentenceMode';
 import { StrengthPanel } from './components/StrengthPanel';
 import { SuggestionCard, type CardContext } from './components/SuggestionCard';
 import { TabPanel, Tabs } from './components/Tabs';
-import { TwistsPanel } from './components/TwistsPanel';
+import { relevantTo, TwistsPanel } from './components/TwistsPanel';
 import { TypingTest } from './components/TypingTest';
 import type { Mode } from './lib/engine';
 import { sortSuggestions, type SortOrder } from './lib/sort';
+import { normalizeSentence } from './lib/text';
 import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
 
 type Page = 'main' | 'scoring' | 'fun';
 const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : window.location.hash === '#/scoring' ? 'scoring' : 'main');
 
 const TITLES: Record<Page, [string, string]> = {
-  main: ['Elegant Passwords', 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.'],
+  main: ['Passwords', 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess. Everything is generated in this browser tab; nothing is sent anywhere.'],
   scoring: ['Scoring', 'How difficulty and strength are scored.'],
   fun: ['Fun', 'The whole app, described as one prompt.'],
 };
@@ -45,9 +46,14 @@ export function App() {
   return (
     <ErrorBoundary>
       <div className="app">
+        <header className="topbar">
+          <h1>{TITLES[page][0]}</h1>
+          <p className="tagline">{TITLES[page][1]}</p>
+          <span className="brand">brought to you by SalientForm</span>
+        </header>
         <nav className="topnav" aria-label="Pages">
           <a href="#/" className={page === 'main' ? 'active' : ''} aria-current={page === 'main' ? 'page' : undefined}>
-            Elegant Passwords
+            Passwords
           </a>
           <a href="#/scoring" className={page === 'scoring' ? 'active' : ''} aria-current={page === 'scoring' ? 'page' : undefined}>
             Scoring
@@ -56,10 +62,6 @@ export function App() {
             Fun
           </a>
         </nav>
-        <header>
-          <h1>{TITLES[page][0]}</h1>
-          <p>{TITLES[page][1]}</p>
-        </header>
         <PasswordsProvider>
           {/* Kept mounted so settings, the sentence and the typing test survive a visit to the other pages. */}
           <div hidden={page !== 'main'}>
@@ -81,12 +83,22 @@ export function ElegantPasswords() {
   const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
   const nothingToRun = p.mode === 'sentence' && !draft.sentence.trim();
   const ordered = outcome?.ok ? sortSuggestions(outcome.suggestions, p.sort) : [];
+  // In sentence mode, swaps whose letters are not in the sentence cannot apply; show them disabled.
+  const sentenceWords = p.mode === 'sentence' ? normalizeSentence(draft.sentence) : [];
+  const relevant = sentenceWords.length ? relevantTo(sentenceWords) : undefined;
+  // Keys follow the password so a card keeps its open "Why?" when the order changes; a repeated password gets a suffix.
+  const seen = new Map<string, number>();
+  const keys = ordered.map((s) => {
+    const n = seen.get(s.password) ?? 0;
+    seen.set(s.password, n + 1);
+    return n ? `${s.password}#${n}` : s.password;
+  });
 
   return (
     <main>
       <div className="sidebar">
         <RequirementsForm value={draft.req} onChange={p.setReq} />
-        <TwistsPanel req={draft.req} onReqChange={p.setReq} settings={draft.mappingSettings} onSettingsChange={p.setMappingSettings} />
+        <TwistsPanel req={draft.req} onReqChange={p.setReq} settings={draft.mappingSettings} onSettingsChange={p.setMappingSettings} relevant={relevant} />
       </div>
 
       <div className="results" aria-busy={p.busy}>
@@ -99,23 +111,23 @@ export function ElegantPasswords() {
           <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} />
         </TabPanel>
 
-        <div className="results-head">
-          <h2>Suggestions</h2>
+        <h2>Suggestions</h2>
+        <div className="results-tools">
+          <div className="segmented sort" role="group" aria-label="Order">
+            {SORTS.map((s) => (
+              <button type="button" key={s.id} className={p.sort === s.id ? 'active' : ''} aria-pressed={p.sort === s.id} onClick={() => p.setSort(s.id)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
           <div className="actions">
-            <div className="segmented sort" role="group" aria-label="Order">
-              {SORTS.map((s) => (
-                <button type="button" key={s.id} className={p.sort === s.id ? 'active' : ''} aria-pressed={p.sort === s.id} onClick={() => p.setSort(s.id)}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
             {p.busy && (
               <span className="working" role="status">
                 Working…
               </span>
             )}
-            <button type="button" className="primary" onClick={p.regenerate} disabled={nothingToRun} title={p.dirty ? 'Applies your changes too' : undefined}>
-              New passwords
+            <button type="button" className="primary" onClick={p.regenerate} disabled={nothingToRun} title={p.dirty ? 'Submits your changes too' : undefined}>
+              Refresh
             </button>
           </div>
         </div>
@@ -136,7 +148,7 @@ export function ElegantPasswords() {
             ))}
             {ordered.map((s, i) => (
               <SuggestionCard
-                key={s.password}
+                key={keys[i]}
                 suggestion={s}
                 context={context}
                 index={i}

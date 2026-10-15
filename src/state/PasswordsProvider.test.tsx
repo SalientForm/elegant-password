@@ -107,7 +107,7 @@ describe('PasswordsProvider', () => {
     expect(text('dirty')).toBe('false');
   });
 
-  it('discards a draft, and "New passwords" applies one', async () => {
+  it('discards a draft, and "Refresh" applies one', async () => {
     const gen = countingGenerator();
     mount(gen);
     await settled();
