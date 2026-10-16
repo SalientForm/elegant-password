@@ -197,6 +197,16 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
     if (medium) setOuter(id);
     else onColumn(id);
   };
+  // From the floating bar: open the options and put focus on the field the first problem is shown beside.
+  const showProblems = () => {
+    open('options');
+    const field = p.problems[0]?.fields[0];
+    requestAnimationFrame(() => {
+      const form = columns.current?.querySelector(`#${columnId('options')}`);
+      (form?.querySelector<HTMLElement>(`[data-field="${field}"]`) ?? form?.querySelector<HTMLElement>('[aria-invalid="true"]'))?.focus();
+    });
+  };
+  const blocked = p.problems.length > 0;
   /** A shrunken column is a button in a strip, except on a phone, where the tabs in the bar stand in. */
   const strips = fewer && !phone;
   const columnProps = (id: Column) => ({
@@ -233,7 +243,11 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
 
   const options = (
     <>
-
+        {p.notice && (
+          <p className="warning" role="status">
+            {p.notice}
+          </p>
+        )}
         <RequirementsForm value={draft.req} onChange={p.setReq} />
         <TwistsPanel req={draft.req} onReqChange={p.setReq} settings={draft.mappingSettings} onSettingsChange={p.setMappingSettings} relevant={relevant} />
     </>
@@ -256,7 +270,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
           </div>
         </TabPanel>
         <TabPanel idPrefix="mode" id="sentence" active={p.mode === 'sentence'}>
-          <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} onSubmit={p.apply} />
+          <SentenceInput value={draft.sentence} onChange={p.setSentence} options={draft.sentenceOptions} onOptionsChange={p.setSentenceOptions} onSubmit={p.apply} req={draft.req} />
         </TabPanel>
       </section>
 
@@ -277,7 +291,13 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
                 Working…
               </span>
             )}
-            <button type="button" className="primary" onClick={p.regenerate} disabled={nothingToRun} title={p.dirty ? 'Submits your changes too' : undefined}>
+            <button
+              type="button"
+              className="primary"
+              onClick={p.regenerate}
+              disabled={nothingToRun || blocked}
+              title={blocked ? 'Fix the problems in the options first' : p.dirty ? 'Submits your changes too' : undefined}
+            >
               Refresh
             </button>
           </div>
@@ -352,7 +372,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
       <div className="aside" {...columnProps('list')}>
         {aside}
       </div>
-      <ApplyBar />
+      <ApplyBar onShowProblems={showProblems} />
     </main>
   );
 }

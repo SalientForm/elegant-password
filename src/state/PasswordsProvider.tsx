@@ -13,10 +13,11 @@ import { createGenerator, type Generator } from '../lib/generator';
 import { activeMappings, loadMappingSettings, saveMappingSettings, type MappingSettings } from '../lib/mappingStore';
 import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from '../lib/selectedStore';
 import { loadSession, saveSession } from '../lib/sessionStore';
-import { loadMode, loadRequirements, loadSentenceOptions, loadSort, saveMode, saveRequirements, saveSentenceOptions, saveSort } from '../lib/settingsStore';
+import { loadMode, loadRequirementsReport, loadSentenceOptions, loadSort, resetNotice, saveMode, saveRequirements, saveSentenceOptions, saveSort } from '../lib/settingsStore';
 import type { SortOrder } from '../lib/sort';
 import { browserStore, type KeyValueStore } from '../lib/storage';
 import type { Mapping } from '../lib/twists';
+import { ruleProblems, type RuleProblem } from '../lib/validation';
 
 /** The inputs the user edits. A draft until applied. */
 export interface Settings {
@@ -33,8 +34,12 @@ export interface PasswordsContextValue {
   applied: Settings;
   /** True when the draft differs from what is applied. */
   dirty: boolean;
-  /** Make the draft the applied settings: persist it and regenerate. */
-  apply: () => void;
+  /** What contradicts itself in the draft's rules. While there is anything, nothing can be applied. */
+  problems: RuleProblem[];
+  /** Saved settings that had to be reset on load, said once until the next submit; else null. */
+  notice: string | null;
+  /** Make the draft the applied settings: persist it and regenerate. Refused (false) while the draft has problems. */
+  apply: () => boolean;
   /** Throw the draft away. */
   discard: () => void;
   setReq: (next: Requirements) => void;
@@ -55,7 +60,7 @@ export interface PasswordsContextValue {
   busy: boolean;
   /** True when the batch on screen was made from different inputs than the applied ones. */
   stale: boolean;
-  /** Apply any draft and ask for a fresh batch. */
+  /** Apply any draft and ask for a fresh batch. Refused while the draft has problems. */
   regenerate: () => void;
   selected: SelectedEntry[];
   addSelected: (s: Pick<Suggestion, 'password' | 'hint'>) => void;
@@ -91,8 +96,10 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const [sessionStore] = useState(() => session ?? browserStore('session'));
   const [restored] = useState(() => loadSession(sessionStore));
 
+  const [loaded] = useState(() => loadRequirementsReport(localStore));
+  const [notice, setNotice] = useState(() => resetNotice(loaded.reset));
   const [applied, setApplied] = useState<Settings>(() => ({
-    req: loadRequirements(localStore),
+    req: loaded.req,
     sentenceOptions: loadSentenceOptions(localStore),
     mappingSettings: loadMappingSettings(localStore),
     sentence: restored?.sentence ?? '',
@@ -116,9 +123,17 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   }, [generator, given]);
 
   const dirty = useMemo(() => !sameSettings(draft, applied), [draft, applied]);
+  const problems = useMemo(() => ruleProblems(draft.req), [draft.req]);
   const draftRef = useRef(draft);
   draftRef.current = draft;
-  const apply = useCallback(() => setApplied((current) => (sameSettings(current, draftRef.current) ? current : draftRef.current)), []);
+  // The applied settings never hold a contradiction: a draft with one stays a draft, and the form says why.
+  const apply = useCallback(() => {
+    const next = draftRef.current;
+    if (ruleProblems(next.req).length) return false;
+    setApplied((current) => (sameSettings(current, next) ? current : next));
+    setNotice(null);
+    return true;
+  }, []);
   const discard = useCallback(() => setDraft(applied), [applied]);
   const edit = useCallback(<K extends keyof Settings>(key: K, value: Settings[K]) => setDraft((d) => ({ ...d, [key]: value })), []);
   const setReq = useCallback((next: Requirements) => edit('req', next), [edit]);
@@ -178,8 +193,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   }, [sessionStore, result, applied.sentence, key, round]);
 
   const regenerate = useCallback(() => {
-    apply();
-    setRound((r) => r + 1);
+    if (apply()) setRound((r) => r + 1);
   }, [apply]);
   const addSelected = useCallback(
     (s: Pick<Suggestion, 'password' | 'hint'>) =>
@@ -195,6 +209,8 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       draft,
       applied,
       dirty,
+      problems,
+      notice,
       apply,
       discard,
       setReq,
@@ -216,7 +232,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       clearSelected,
       isSelected,
     }),
-    [draft, applied, dirty, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, result, busy, key, regenerate, selected, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, result, busy, key, regenerate, selected, addSelected, removeSelected, clearSelected, isSelected],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;

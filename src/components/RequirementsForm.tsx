@@ -1,7 +1,7 @@
 import type { Comfort } from '../lib/grammar';
-import { MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, separatorProblem, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
-import { useState } from 'react';
+import { automaticSeparator, MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, SEPARATOR_PREFERENCE, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
 import { isPinkyStretch } from '../lib/keyboard';
+import { ignoredSymbols, ruleProblems, type RuleProblem } from '../lib/validation';
 import { NumberField } from './NumberField';
 import { SiteRules } from './SiteRules';
 
@@ -22,6 +22,48 @@ const COMFORT: { value: Comfort; label: string; hint: string }[] = [
   { value: 'relaxed', label: 'Relaxed', hint: 'Every word. Shortest for a given strength.' },
 ];
 
+const SEPARATORS: { value: string; label: string; title: string }[] = [
+  { value: 'auto', label: 'Automatic', title: 'Whatever the site allows: ";" if it can, else a space, else "." or ","' },
+  { value: ' ', label: 'Space', title: 'A space, typed with the thumb' },
+  { value: '', label: 'None', title: 'The words run together' },
+];
+
+/** How a resolved separator reads in a sentence. */
+const describe = (separator: string) => (separator === ' ' ? 'a space' : separator === '' ? 'none, so the words run together' : `"${separator}"`);
+
+/** Where in the form a problem shows: beside the first field it names. */
+type Anchor = 'length' | 'must' | 'allows' | 'strength' | 'separator' | 'style' | 'other';
+const ANCHORS: Partial<Record<keyof Requirements, Anchor>> = {
+  minLength: 'length',
+  maxLength: 'length',
+  minUppercase: 'must',
+  minDigits: 'must',
+  minSymbols: 'must',
+  allowedSymbols: 'allows',
+  allowSpaces: 'allows',
+  targetBits: 'strength',
+  separator: 'separator',
+  initials: 'style',
+  shorthand: 'style',
+  madeUp: 'style',
+  count: 'style',
+};
+const anchorOf = (p: RuleProblem): Anchor => ANCHORS[p.fields[0]!] ?? 'other';
+
+function Problems({ list, anchor }: { list: RuleProblem[]; anchor: Anchor }) {
+  const here = list.filter((p) => anchorOf(p) === anchor);
+  if (!here.length) return null;
+  return (
+    <div id={`problems-${anchor}`} className="field-errors">
+      {here.map((p) => (
+        <p className="field-error" key={p.message}>
+          {p.message}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export function RequirementsForm({ value, onChange }: Props) {
   const set = <K extends keyof Requirements>(key: K, v: Requirements[K]) => onChange({ ...value, [key]: v });
   const num = (key: 'minLength' | 'maxLength' | 'targetBits' | 'count', min: number, max: number) => ({
@@ -30,30 +72,38 @@ export function RequirementsForm({ value, onChange }: Props) {
     max,
     onCommit: (n: number | null) => n !== null && set(key, n),
   });
-  // The last separator character chosen, so unticking and re-ticking "Use a separator" brings it back.
-  const [lastSeparator, setLastSeparator] = useState(value.separator === '' ? ';' : value.separator);
-  const useSeparator = value.separator !== '';
-  const separatorIssue = separatorProblem(value.separator, value);
-  const separatorStretch = value.avoidPinkyStretch && value.separator !== 'auto' && value.separator !== '' && isPinkyStretch(value.separator);
+  // Every contradiction shows beside the first field it names, and every field it names is marked and points at it.
+  const problems = ruleProblems(value);
+  const mark = (field: keyof Requirements) => {
+    const p = problems.find((x) => x.fields.includes(field));
+    return p ? { 'aria-invalid': true as const, 'aria-describedby': `problems-${anchorOf(p)}`, 'data-field': field } : {};
+  };
+
+  const symbolSeparator = !SEPARATORS.some((c) => c.value === value.separator);
+  const separatorStretch = value.avoidPinkyStretch && symbolSeparator && isPinkyStretch(value.separator);
+  const separatorBlocked = problems.some((p) => p.fields[0] === 'separator');
+  const ignored = ignoredSymbols(value.allowedSymbols);
 
   return (
     <form className="panel form" onSubmit={(e) => e.preventDefault()}>
       <h2>Requirement options</h2>
 
       <SiteRules value={value} onChange={onChange} />
+      <Problems list={problems} anchor="other" />
 
       <fieldset>
         <legend>Length</legend>
         <div className="row">
           <label className="field">
             <span>Minimum</span>
-            <NumberField {...num('minLength', 1, 256)} />
+            <NumberField {...num('minLength', 1, 256)} {...mark('minLength')} />
           </label>
           <label className="field">
             <span>Maximum</span>
-            <NumberField {...num('maxLength', 1, 256)} />
+            <NumberField {...num('maxLength', 1, 256)} {...mark('maxLength')} />
           </label>
         </div>
+        <Problems list={problems} anchor="length" />
       </fieldset>
 
       <fieldset>
@@ -73,10 +123,12 @@ export function RequirementsForm({ value, onChange }: Props) {
                 aria-label={`Minimum ${label.toLowerCase()}`}
                 value={value[key] > 0 ? value[key] : null}
                 onCommit={(n) => n !== null && set(key, n)}
+                {...mark(key)}
               />
             </label>
           </div>
         ))}
+        <Problems list={problems} anchor="must" />
       </fieldset>
 
       <fieldset>
@@ -93,8 +145,16 @@ export function RequirementsForm({ value, onChange }: Props) {
             className="mono"
             value={value.allowedSymbols}
             onChange={(e) => set('allowedSymbols', e.target.value)}
+            {...mark('allowedSymbols')}
           />
         </label>
+        <Problems list={problems} anchor="allows" />
+        {ignored.length > 0 && (
+          <p className="hint">
+            Not used: {ignored.map((c) => (c === ' ' ? 'space' : `"${c}"`)).join(' ')}. Only keyboard symbols count here; letters
+            and digits are always allowed{ignored.includes(' ') ? ', and spaces go by the Spaces box' : ''}.
+          </p>
+        )}
       </fieldset>
 
       <fieldset>
@@ -116,8 +176,9 @@ export function RequirementsForm({ value, onChange }: Props) {
         </div>
         <label className="field inline">
           <span>Custom target (bits)</span>
-          <NumberField {...num('targetBits', 0, 256)} />
+          <NumberField {...num('targetBits', 0, 256)} {...mark('targetBits')} />
         </label>
+        <Problems list={problems} anchor="strength" />
       </fieldset>
 
       <fieldset>
@@ -161,45 +222,63 @@ export function RequirementsForm({ value, onChange }: Props) {
 
       <fieldset>
         <legend>Style</legend>
-        <label className="check">
+        <span className="field-label" id="separator-label">
+          Separator between words
+        </span>
+        <div className="separator-row">
+          <div className="segmented" role="group" aria-labelledby="separator-label">
+            {SEPARATORS.map((c) => {
+              const chosen = value.separator === c.value;
+              // A space the site forbids cannot be picked; one picked before spaces were ruled out stays, with the error below.
+              const ruledOut = c.value === ' ' && !value.allowSpaces;
+              return (
+                <button
+                  type="button"
+                  key={c.label}
+                  className={chosen ? 'active' : ''}
+                  aria-pressed={chosen}
+                  disabled={ruledOut && !chosen}
+                  title={ruledOut ? 'The site does not allow spaces' : c.title}
+                  onClick={() => set('separator', c.value)}
+                  {...(chosen ? mark('separator') : {})}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
           <input
-            type="checkbox"
-            checked={useSeparator}
-            onChange={(e) => set('separator', e.target.checked ? lastSeparator : '')}
+            type="text"
+            className={symbolSeparator ? 'mono separator-symbol active' : 'mono separator-symbol'}
+            maxLength={1}
+            spellCheck={false}
+            autoComplete="off"
+            placeholder="or ;"
+            aria-label="Separator symbol"
+            value={symbolSeparator ? value.separator : ''}
+            onChange={(e) => {
+              const typed = [...e.target.value].slice(-1).join('');
+              set('separator', typed === '' ? 'auto' : typed); // emptied: back to Automatic
+            }}
+            {...(symbolSeparator ? mark('separator') : {})}
           />
-          Use a separator between words
-        </label>
-        {useSeparator && (
-          <>
-            <label className="field inline">
-              <span>Separator character</span>
-              <input
-                type="text"
-                className="mono"
-                maxLength={1}
-                spellCheck={false}
-                autoComplete="off"
-                placeholder="auto"
-                aria-label="Separator character"
-                value={value.separator === 'auto' ? '' : value.separator}
-                onChange={(e) => {
-                  const next = e.target.value === '' ? 'auto' : [...e.target.value].slice(-1).join('');
-                  setLastSeparator(next);
-                  set('separator', next);
-                }}
-              />
-            </label>
-            <p className={separatorIssue ? 'field-error' : 'hint'}>
-              {separatorIssue ??
-                (value.separator === 'auto'
-                  ? 'Empty: the fastest the site allows (a space, else ; . - , _).'
+        </div>
+        <Problems list={problems} anchor="separator" />
+        {!separatorBlocked && (
+          <p className="hint">
+            {value.separator === 'auto'
+              ? `Automatic: ${describe(automaticSeparator(value))} under these rules. It is ";" whenever the site allows it (home row, no Shift, and it counts as a symbol), else a space, else the first allowed of ${SEPARATOR_PREFERENCE.slice(1)
+                  .filter((c) => !(value.avoidPinkyStretch && isPinkyStretch(c)))
+                  .map((c) => `"${c}"`)
+                  .join(' ')}, else none.`
+              : value.separator === ' '
+                ? 'A space: typed with the thumb.'
+                : value.separator === ''
+                  ? 'None: the words run together.'
                   : separatorStretch
                     ? `"${value.separator}" is a pinky stretch; kept because you chose it.`
-                    : value.separator === ' '
-                      ? 'A space: typed with the thumb.'
-                      : `Words are joined with "${value.separator}".`)}
-            </p>
-          </>
+                    : `Words are joined with "${value.separator}". Clear the box for Automatic.`}
+          </p>
         )}
         <label className="check">
           <input
@@ -246,8 +325,9 @@ export function RequirementsForm({ value, onChange }: Props) {
         </label>
         <label className="field inline">
           <span>Suggestions</span>
-          <NumberField {...num('count', 1, 20)} />
+          <NumberField {...num('count', 1, 20)} {...mark('count')} />
         </label>
+        <Problems list={problems} anchor="style" />
       </fieldset>
     </form>
   );

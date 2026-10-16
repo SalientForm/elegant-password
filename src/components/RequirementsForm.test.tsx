@@ -97,14 +97,63 @@ describe('RequirementsForm', () => {
     expect(req()).toMatchObject({ minLength: 15, maxLength: 64, minUppercase: 0, minDigits: 0, minSymbols: 0, allowSpaces: true, targetBits: 60, comfort: 'strict' });
   });
 
-  it('warns beside the presets when one rules out the chosen separator', () => {
-    render(<Harness />);
-    expect(screen.queryByText(/Pick another under Style/)).toBeNull();
+  it('sets a separator a preset rules out to Automatic, says so beside the presets, and shows no error', () => {
+    render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, separator: ';' }} />);
     fireEvent.click(screen.getByRole('button', { name: /No symbols/ }));
-    expect(req().separator).toBe(';'); // style is the user's: left as it was
-    expect(screen.getByText(/";" is chosen as the separator, but it is not an allowed symbol\. Pick another under Style/)).toBeTruthy();
+    expect(req()).toMatchObject({ separator: 'auto', allowedSymbols: '', minSymbols: 0, allowSpaces: false });
+    expect(screen.getByText('No symbols: separator set to Automatic (none), as ";" is not allowed.').getAttribute('role')).toBe('status');
+    expect(document.querySelector('.field-error')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Automatic' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText(/^Automatic: none, so the words run together under these rules/)).toBeTruthy();
+    // The note is about that tap: it goes once the form moves on.
     fireEvent.click(screen.getByRole('button', { name: /Typical site/ }));
-    expect(screen.queryByText(/Pick another under Style/)).toBeNull();
+    expect(screen.queryByText(/separator set to Automatic/)).toBeNull();
+    expect(screen.getByText(/^Automatic: ";" under these rules/)).toBeTruthy();
+    // A separator the preset allows is left alone, with nothing to say.
+    fireEvent.change(screen.getByLabelText('Separator symbol'), { target: { value: '#' } });
+    fireEvent.click(screen.getByRole('button', { name: /Short max \(16\)/ }));
+    expect(req().separator).toBe('#');
+    expect(screen.queryByText(/separator set to Automatic/)).toBeNull();
+  });
+
+  it('shows each contradiction beside the fields at fault, marks them, and clears it once fixed', () => {
+    render(<Harness />);
+    const max = screen.getByLabelText('Maximum');
+    fireEvent.change(max, { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Minimum'), { target: { value: '20' } });
+    expect(screen.getByText('The minimum length (20) is above the maximum (10).').closest('#problems-length')).toBeTruthy();
+    expect(max.getAttribute('aria-invalid')).toBe('true');
+    expect(max.getAttribute('aria-describedby')).toBe('problems-length');
+    expect(screen.getByLabelText('Minimum').getAttribute('aria-invalid')).toBe('true');
+    fireEvent.change(max, { target: { value: '30' } });
+    expect(screen.queryByText(/is above the maximum/)).toBeNull();
+    expect(max.getAttribute('aria-invalid')).toBeNull();
+
+    // The user's own example: symbols required, and the symbols field emptied.
+    const symbols = screen.getByRole('textbox', { name: 'Symbols' });
+    fireEvent.change(symbols, { target: { value: '' } });
+    expect(screen.getByText(/^A symbol is required, but no symbols are allowed\./).closest('#problems-allows')).toBeTruthy();
+    expect(symbols.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByLabelText('Minimum symbols').getAttribute('aria-invalid')).toBe('true');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Symbols' })); // untick: no longer required
+    expect(document.querySelector('.field-error')).toBeNull();
+
+    // More required characters than the maximum allows.
+    fireEvent.change(screen.getByLabelText('Maximum'), { target: { value: '12' } });
+    fireEvent.change(screen.getByLabelText('Minimum'), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('Minimum uppercase letters'), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('Minimum digits'), { target: { value: '4' } });
+    expect(document.querySelector('.field-error')).toBeNull(); // 12 fits exactly
+    fireEvent.change(screen.getByLabelText('Maximum'), { target: { value: '11' } });
+    expect(screen.getByText('8 uppercase letters + 4 digits need at least 12 characters, more than the maximum of 11.')).toBeTruthy();
+    expect(screen.getByLabelText('Minimum digits').getAttribute('aria-describedby')).toBe('problems-length');
+  });
+
+  it('says which characters in the symbols field are not used, without blocking anything', () => {
+    render(<Harness />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Symbols' }), { target: { value: '!@ aé' } });
+    expect(screen.getByText(/^Not used: space "a" "é"\. Only keyboard symbols count here; letters and digits are always allowed, and spaces go by the Spaces box\.$/)).toBeTruthy();
+    expect(document.querySelector('.field-error')).toBeNull();
   });
 
   it('fills in the rules from pasted text, says what it understood, and leaves the rest alone', () => {
@@ -136,6 +185,17 @@ describe('RequirementsForm', () => {
     expect(req().maxLength).toBe(16);
   });
 
+  it('never leaves pasted rules contradicting the separator: it becomes Automatic and the message says so', () => {
+    render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, separator: ';' }} />);
+    fireEvent.click(screen.getByRole('button', { name: "Paste the site's rules" }));
+    const box = screen.getByRole('textbox', { name: "The site's password rules" });
+    fireEvent.paste(box);
+    fireEvent.change(box, { target: { value: 'Use letters and numbers only. No spaces.' } });
+    expect(req()).toMatchObject({ separator: 'auto', allowedSymbols: '', minSymbols: 0, allowSpaces: false });
+    expect(pasteStatus().textContent).toBe('Filled in: no symbols, no spaces, separator set to Automatic (none), as ";" is not allowed.');
+    expect(document.querySelector('.field-error')).toBeNull();
+  });
+
   it('says so plainly and changes nothing when the text holds no rules', () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole('button', { name: "Paste the site's rules" }));
@@ -147,30 +207,47 @@ describe('RequirementsForm', () => {
     expect(req()).toEqual(DEFAULT_REQUIREMENTS);
   });
 
-  it('uses a separator only when ticked, accepts any allowed character, and explains problems', () => {
+  it('offers Automatic, Space, None or a symbol of your own as the separator, and explains each choice or its problem', () => {
     render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, allowedSymbols: ';-' }} />);
-    const box = screen.getByRole('checkbox', { name: 'Use a separator between words' }) as HTMLInputElement;
-    expect(box.checked).toBe(true); // the default ";"
-    const field = screen.getByLabelText('Separator character') as HTMLInputElement;
-    expect(field.value).toBe(';');
+    const pressed = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed');
+    const field = screen.getByLabelText('Separator symbol') as HTMLInputElement;
+    expect(pressed('Automatic')).toBe('true'); // the default
+    expect(field.value).toBe('');
+    expect(screen.getByText(/^Automatic: ";" under these rules\. It is ";" whenever the site allows it/)).toBeTruthy();
     fireEvent.change(field, { target: { value: '-' } });
     expect(req().separator).toBe('-');
+    expect(pressed('Automatic')).toBe('false');
+    expect(field.className).toContain('active');
     expect(screen.getByText(/pinky stretch; kept because you chose it/)).toBeTruthy();
     fireEvent.change(field, { target: { value: '#' } });
     expect(req().separator).toBe('#');
-    expect(screen.getByText(/not an allowed symbol/)).toBeTruthy();
+    expect(screen.getByText('"#" is chosen as the separator, but it is not an allowed symbol. Choose Automatic to use one the site allows.')).toBeTruthy();
+    expect(field.getAttribute('aria-invalid')).toBe('true');
     fireEvent.change(field, { target: { value: 'x' } });
     expect(screen.getByText(/not a letter or digit/)).toBeTruthy();
     fireEvent.change(field, { target: { value: '' } });
-    expect(req().separator).toBe('auto'); // empty means the fastest allowed
-    expect(screen.getByText(/fastest the site allows/)).toBeTruthy();
-    fireEvent.change(field, { target: { value: ' ' } });
+    expect(req().separator).toBe('auto'); // emptied: back to Automatic
+    fireEvent.click(screen.getByRole('button', { name: 'Space' }));
     expect(req().separator).toBe(' ');
     expect(screen.getByText(/typed with the thumb/)).toBeTruthy();
-    fireEvent.click(box);
+    fireEvent.click(within(screen.getByRole('group', { name: 'Separator between words' })).getByRole('button', { name: 'None' }));
     expect(req().separator).toBe('');
-    expect(screen.queryByLabelText('Separator character')).toBeNull();
-    fireEvent.click(box);
-    expect(req().separator).toBe(' '); // back to the last one chosen
+    expect(screen.getByText('None: the words run together.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Automatic' }));
+    expect(req().separator).toBe('auto');
+  });
+
+  it('cannot pick Space while spaces are not allowed, and flags a Space picked before they were ruled out', () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Space' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Spaces' })); // the user rules spaces out after choosing one
+    const space = screen.getByRole('button', { name: 'Space' }) as HTMLButtonElement;
+    expect(space.disabled).toBe(false); // still the choice, so it can be seen and changed
+    expect(space.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText(/^Space is chosen as the separator, but spaces are not allowed\./).closest('#problems-separator')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Automatic' }));
+    expect(document.querySelector('.field-error')).toBeNull();
+    expect((screen.getByRole('button', { name: 'Space' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/^Automatic: ";" under these rules/)).toBeTruthy();
   });
 });

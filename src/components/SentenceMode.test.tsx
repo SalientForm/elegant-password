@@ -63,6 +63,26 @@ describe('SentenceInput', () => {
     expect(tag.disabled).toBe(true);
   });
 
+  it('says when the site allows none of the length tag\'s symbols, so padding goes untagged', () => {
+    const show = (lengthTag: SentenceOptions['lengthTag'], allowedSymbols: string, padding = true) =>
+      render(<SentenceInput value="" onChange={() => {}} options={{ ...DEFAULT_SENTENCE_OPTIONS, lengthTag, padding }} onOptionsChange={() => {}} req={{ ...DEFAULT_REQUIREMENTS, allowedSymbols }} />);
+    const note = () => screen.queryByText(/so padding goes without a tag here/);
+    show('total', '!@#$%');
+    expect(note()).toBeNull();
+    cleanup();
+    show('total', '!@');
+    expect(note()!.textContent).toBe('The site allows none of “%” “$” “#” (without a pinky stretch), so padding goes without a tag here.');
+    cleanup();
+    show('factor', '!#');
+    expect(note()!.textContent).toMatch(/^The site allows none of “@”/);
+    cleanup();
+    show('none', '');
+    expect(note()).toBeNull();
+    cleanup();
+    show('total', '', false); // no padding, nothing to say
+    expect(note()).toBeNull();
+  });
+
   it('summarises the random bits across the batch', () => {
     const r = fromSentence('the otters eat their salad at noon', { ...DEFAULT_REQUIREMENTS, twists: 2, count: 4 }, undefined, { rng: seeded(6) });
     render(<SentenceStrength suggestions={r.suggestions} sentence="the otters eat their salad at noon" />);

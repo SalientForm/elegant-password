@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
-import { separatorProblem, type Requirements } from '../lib/generate';
+import type { Requirements } from '../lib/generate';
 import { applyParsedRules, parseRuleText } from '../lib/ruleText';
-import { matchingPreset, SITE_PRESETS, withRules } from '../lib/sitePresets';
+import { applyPreset, matchingPreset, SITE_PRESETS } from '../lib/sitePresets';
 
 interface Props {
   value: Requirements;
@@ -15,10 +15,18 @@ interface Filled {
   found: boolean;
 }
 
+/** What a preset tap had to fix, kept while the form still holds what that tap made. */
+interface PresetNote {
+  made: Requirements;
+  message: string;
+}
+
 /**
- * One-tap rule sets, and a box for the site's own wording. Both only change
- * the rule fields, and only in the draft, like any other edit: nothing sticks
- * until it is submitted.
+ * One-tap rule sets, and a box for the site's own wording. Both change the
+ * rule fields, and only in the draft, like any other edit: nothing sticks
+ * until it is submitted. Neither ever leaves the form contradicting itself:
+ * a separator the new rules forbid becomes Automatic, and each such fix is
+ * said (beside the presets, or in the paste box's message).
  */
 export function SiteRules({ value, onChange }: Props) {
   const active = matchingPreset(value);
@@ -26,13 +34,8 @@ export function SiteRules({ value, onChange }: Props) {
   const [text, setText] = useState('');
   const [filled, setFilled] = useState<Filled | null>(null);
   const pasting = useRef(false);
-  // Set when a preset or the pasted rules ruled out the chosen separator, so the warning shows where the change was made.
-  const [brokeSeparator, setBrokeSeparator] = useState(false);
-  const separatorIssue = brokeSeparator ? separatorProblem(value.separator, value) : undefined;
-  const change = (next: Requirements) => {
-    setBrokeSeparator(!separatorProblem(value.separator, value) && !!separatorProblem(next.separator, next));
-    onChange(next);
-  };
+  const [presetNote, setPresetNote] = useState<PresetNote | null>(null);
+  const note = presetNote && JSON.stringify(presetNote.made) === JSON.stringify(value) ? presetNote.message : null;
 
   const fill = (source: string) => {
     const parsed = parseRuleText(source);
@@ -41,7 +44,8 @@ export function SiteRules({ value, onChange }: Props) {
       return;
     }
     const { req, notes } = applyParsedRules(value, parsed);
-    change(req);
+    setPresetNote(null);
+    onChange(req);
     setFilled({ text: source, found: true, message: `Filled in: ${[...parsed.understood, ...notes].join(', ')}.` });
   };
 
@@ -65,7 +69,11 @@ export function SiteRules({ value, onChange }: Props) {
             key={p.label}
             className={p === active ? 'preset active' : 'preset'}
             aria-pressed={p === active}
-            onClick={() => change(withRules(value, p.rules))}
+            onClick={() => {
+              const { req, notes } = applyPreset(value, p.rules);
+              setPresetNote(notes.length ? { made: req, message: `${p.label}: ${notes.join(', ')}.` } : null);
+              onChange(req);
+            }}
             title={p.hint}
           >
             <strong>{p.label}</strong>
@@ -73,7 +81,11 @@ export function SiteRules({ value, onChange }: Props) {
           </button>
         ))}
       </div>
-      {separatorIssue && <p className="field-error">{separatorIssue} Pick another under Style, or leave it empty for the fastest allowed.</p>}
+      {note && (
+        <p className="hint preset-note" role="status">
+          {note}
+        </p>
+      )}
       <button type="button" className="ghost paste-toggle" aria-expanded={open} aria-controls={open ? 'paste-rules' : undefined} onClick={() => setOpen(!open)}>
         <span aria-hidden="true">{open ? '▾' : '▸'}</span> Paste the site's rules
       </button>

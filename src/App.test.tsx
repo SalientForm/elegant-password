@@ -97,6 +97,29 @@ describe('App: apply changes', () => {
     expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull();
   });
 
+  it('blocks Submit and Refresh while the rules contradict themselves, keeps the last passwords, and shows where to fix it', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const before = passwordsShown();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Symbols' }), { target: { value: '' } });
+    const bar = screen.getByRole('region', { name: 'Unapplied changes' });
+    expect((within(bar).getByRole('button', { name: 'Submit changes' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Refresh' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(bar).getByRole('alert').textContent).toMatch(/A symbol is required, but no symbols are allowed/);
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(passwordsShown()).toEqual(before);
+    expect(JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!).allowedSymbols).not.toBe('');
+    // "Show" puts focus on the first field at fault.
+    fireEvent.click(within(bar).getByRole('button', { name: 'Show' }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Symbols' })));
+    // Corrected, it submits.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Symbols' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
+    await waitFor(() => expect(JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!)).toMatchObject({ allowedSymbols: '', minSymbols: 0 }));
+    await waitFor(() => expect(passwordsShown()).not.toEqual(before), { timeout: 10_000 });
+  });
+
   it('turns a typed sentence into passwords when applied, and keeps them across a reload', { timeout: 30_000 }, async () => {
     const first = render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });

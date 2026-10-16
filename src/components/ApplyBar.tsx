@@ -4,16 +4,22 @@ import { usePasswords } from '../state/PasswordsProvider';
 /** Controls where Enter already means something else; the global shortcut leaves them alone. */
 const OWN_ENTER = new Set(['BUTTON', 'A', 'SELECT', 'TEXTAREA']);
 
+interface Props {
+  /** Opens the options column at the first problem, wherever it is on screen. */
+  onShowProblems?: () => void;
+}
+
 /**
  * Two buttons that float over the page while there are unapplied changes:
  * Discard throws them away, Submit changes saves them and regenerates.
  * While they are showing, Enter anywhere submits (except on a button, link
  * or select, where Enter has its own job) and Escape discards. Gone as soon
- * as there is nothing to submit. Never disabled: submitting while a batch
- * is still being made simply supersedes that batch.
+ * as there is nothing to submit. Submitting while a batch is still being
+ * made simply supersedes that batch; the one thing that disables Submit is a
+ * contradiction in the rules, said above the buttons until it is fixed.
  */
-export function ApplyBar() {
-  const { dirty, apply, discard } = usePasswords();
+export function ApplyBar({ onShowProblems }: Props) {
+  const { dirty, apply, discard, problems } = usePasswords();
 
   useEffect(() => {
     if (!dirty) return undefined;
@@ -34,14 +40,36 @@ export function ApplyBar() {
   }, [dirty, apply, discard]);
 
   if (!dirty) return null;
+  const blocked = problems.length > 0;
   return (
     <div className="apply-bar" role="region" aria-label="Unapplied changes">
-      <button type="button" className="floating ghost" onClick={discard} title="Escape">
-        Discard
-      </button>
-      <button type="button" className="floating primary" onClick={apply} title="Enter">
-        Submit changes
-      </button>
+      {blocked && (
+        <div className="apply-problems floating" id="apply-problems" role="alert">
+          <p>
+            <strong>{problems.length === 1 ? 'Fix this to submit:' : `Fix ${problems.length} problems to submit:`}</strong> {problems[0]!.message}
+          </p>
+          {onShowProblems && (
+            <button type="button" className="ghost" onClick={onShowProblems}>
+              Show
+            </button>
+          )}
+        </div>
+      )}
+      <div className="apply-buttons">
+        <button type="button" className="floating ghost" onClick={discard} title="Escape">
+          Discard
+        </button>
+        <button
+          type="button"
+          className="floating primary"
+          onClick={apply}
+          disabled={blocked}
+          aria-describedby={blocked ? 'apply-problems' : undefined}
+          title={blocked ? 'Fix the problems in the options first' : 'Enter'}
+        >
+          Submit changes
+        </button>
+      </div>
     </div>
   );
 }

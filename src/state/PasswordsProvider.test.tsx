@@ -40,8 +40,12 @@ function Probe() {
       <output data-testid="first">{first?.password ?? ''}</output>
       <output data-testid="error">{p.outcome && !p.outcome.ok ? p.outcome.error : ''}</output>
       <output data-testid="selected">{p.selected.map((e) => e.password).join('|')}</output>
+      <output data-testid="problems">{p.problems.map((x) => x.message).join('|')}</output>
+      <output data-testid="notice">{p.notice ?? ''}</output>
       <button onClick={() => p.setReq({ ...p.draft.req, twists: 3 })}>twists3</button>
       <button onClick={() => p.setReq({ ...p.draft.req, minLength: 40, maxLength: 20 })}>contradict</button>
+      <button onClick={() => p.setReq({ ...p.draft.req, minLength: 20 })}>fix</button>
+      <button onClick={() => p.setReq({ ...p.draft.req, minLength: 4, maxLength: 8 })}>tight</button>
       <button onClick={p.apply}>apply</button>
       <button onClick={p.discard}>discard</button>
       <button onClick={p.regenerate}>again</button>
@@ -175,15 +179,37 @@ describe('PasswordsProvider', () => {
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)).toEqual([]);
   });
 
-  it('shows requirement problems as messages and marks a batch stale while new inputs are pending', async () => {
+  it('never applies a draft that contradicts itself: apply and Refresh are refused, and nothing runs, until it is fixed', async () => {
     const gen = countingGenerator();
     mount(gen);
     await settled();
+    const shown = text('first');
     fireEvent.click(screen.getByText('contradict'));
+    expect(text('problems')).toBe('The minimum length (40) is above the maximum (20).');
+    fireEvent.click(screen.getByText('apply'));
+    fireEvent.click(screen.getByText('again'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(gen.runs).toHaveLength(1);
+    expect(text('dirty')).toBe('true'); // still a draft
+    expect(text('first')).toBe(shown); // the last good batch stays
+    expect(text('stale')).toBe('false');
+    fireEvent.click(screen.getByText('fix'));
+    expect(text('problems')).toBe('');
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(gen.runs).toHaveLength(2));
+    expect(gen.runs[1]!.req).toMatchObject({ minLength: 20, maxLength: 20 });
+  });
+
+  it('shows what only planning can find as a message, and marks a batch stale while new inputs are pending', async () => {
+    const gen = countingGenerator();
+    mount(gen);
+    await settled();
+    fireEvent.click(screen.getByText('tight')); // consistent, but no made-up sentence is 4-8 characters
+    expect(text('problems')).toBe('');
     expect(text('stale')).toBe('false'); // a draft is not pending input; it is not applied
     fireEvent.click(screen.getByText('apply'));
     expect(text('stale')).toBe('true');
-    await waitFor(() => expect(text('error')).toMatch(/Maximum length/));
+    await waitFor(() => expect(text('error')).toMatch(/No sentence fits between 4 and 8 characters/));
     expect(text('stale')).toBe('false');
   });
 
@@ -211,36 +237,35 @@ describe('PasswordsProvider', () => {
 });
 
 describe('PasswordsProvider: a contradictory requirement set', () => {
-  function Tweaker() {
+  function Shown() {
     const p = usePasswords();
     return (
       <>
-        <button onClick={() => p.setReq({ ...p.draft.req, minLength: 40, maxLength: 32, twists: 3, allowSpaces: false })}>contradict</button>
         <button onClick={() => p.apply()}>apply</button>
+        <button onClick={() => p.setReq({ ...p.draft.req, twists: 1 })}>edit</button>
         <pre data-testid="applied">{JSON.stringify(p.applied.req)}</pre>
+        <output data-testid="notice">{p.notice ?? ''}</output>
       </>
     );
   }
-  it('is persisted as applied, and a reload repairs the lengths while keeping every other setting', async () => {
+  it('saved before this check existed, is repaired on load, keeping every other setting, and says what was reset until the next submit', async () => {
     const local = memoryStore();
-    const first = render(
-      <PasswordsProvider generator={countingGenerator()} local={local} session={memoryStore()} debounceMs={0}>
-        <Tweaker />
-      </PasswordsProvider>,
-    );
-    fireEvent.click(screen.getByText('contradict'));
-    fireEvent.click(screen.getByText('apply'));
-    await waitFor(() => expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).minLength).toBe(40));
-    first.unmount();
+    local.setItem(REQUIREMENTS_KEY, JSON.stringify({ ...DEFAULT_REQUIREMENTS, version: 2, minLength: 40, maxLength: 32, twists: 3, allowSpaces: false, separator: ' ' }));
+    const gen = countingGenerator();
     render(
-      <PasswordsProvider generator={countingGenerator()} local={local} session={memoryStore()} debounceMs={0}>
-        <Tweaker />
+      <PasswordsProvider generator={gen} local={local} session={memoryStore()} debounceMs={0}>
+        <Shown />
       </PasswordsProvider>,
     );
     const applied = JSON.parse(screen.getByTestId('applied').textContent!);
-    expect(applied.twists).toBe(3);
-    expect(applied.allowSpaces).toBe(false);
-    expect(applied.maxLength).toBe(32);
-    expect(applied.minLength).toBeLessThanOrEqual(32);
+    expect(applied).toMatchObject({ twists: 3, allowSpaces: false, maxLength: 32, minLength: DEFAULT_REQUIREMENTS.minLength, separator: 'auto' });
+    expect(screen.getByTestId('notice').textContent).toBe('Some saved settings could not be used, so they are back to their defaults: minimum length, separator.');
+    // It generates from the repaired set, never from the contradiction, and saves the repair.
+    await waitFor(() => expect(gen.runs).toHaveLength(1));
+    expect(gen.runs[0]!.req).toEqual(expect.objectContaining({ minLength: DEFAULT_REQUIREMENTS.minLength, separator: 'auto' }));
+    await waitFor(() => expect(JSON.parse(local.getItem(REQUIREMENTS_KEY)!).minLength).toBe(DEFAULT_REQUIREMENTS.minLength));
+    fireEvent.click(screen.getByText('edit'));
+    fireEvent.click(screen.getByText('apply'));
+    expect(screen.getByTestId('notice').textContent).toBe('');
   });
 });

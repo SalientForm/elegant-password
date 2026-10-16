@@ -1,6 +1,6 @@
 import type { LengthTag } from '../lib/fluff';
-import type { SentenceOptions, ShrinkStyle } from '../lib/fromSentence';
-import type { Suggestion } from '../lib/generate';
+import { lengthTagSymbol, TAG_SYMBOLS, type SentenceOptions, type ShrinkStyle } from '../lib/fromSentence';
+import { comfortableSymbols, type Requirements, type Suggestion } from '../lib/generate';
 import { NumberField } from './NumberField';
 
 interface InputProps {
@@ -10,6 +10,8 @@ interface InputProps {
   onOptionsChange: (next: SentenceOptions) => void;
   /** Called when Enter is pressed in the sentence field: submit the changes at once. */
   onSubmit?: () => void;
+  /** The rules in the draft, to say when the chosen length tag cannot be used under them. */
+  req?: Requirements;
 }
 
 const TAGS: { value: LengthTag; label: string }[] = [
@@ -24,7 +26,10 @@ const SHRINK: { value: ShrinkStyle; label: string; example: string }[] = [
   { value: 'ends', label: 'First + last', example: 'Two letters, first and last consonant: jupiter → jr, piece → pc' },
 ];
 
-export function SentenceInput({ value, onChange, options, onOptionsChange, onSubmit }: InputProps) {
+export function SentenceInput({ value, onChange, options, onOptionsChange, onSubmit, req }: InputProps) {
+  // The tag needs one of its symbols; without one the padding still reaches the minimum, just untagged, and this says so.
+  const tag = options.lengthTag;
+  const noTag = req && options.padding && tag !== 'none' && !lengthTagSymbol(tag, comfortableSymbols(req));
   return (
     <div className="sentence">
       <label className="field">
@@ -105,6 +110,12 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
           ))}
         </select>
       </label>
+      {noTag && (
+        <p className="hint">
+          The site allows none of {TAG_SYMBOLS[tag].map((c) => `“${c}”`).join(' ')}
+          {req.avoidPinkyStretch ? ' (without a pinky stretch)' : ''}, so padding goes without a tag here.
+        </p>
+      )}
       <p className="hint">
         Padding only adds what is missing, after every word has been kept whole: a word when more than 3 short, a digit
         or symbol repeated (“$t33l” → “$t33333l”), a run of digits (123), closing marks (!!), and the tag last. The tag

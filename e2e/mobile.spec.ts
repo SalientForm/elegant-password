@@ -409,6 +409,29 @@ test('phone: the section tabs fit their text at 320 and 390 px and the page neve
   }
 });
 
+test('phone: a blocked Submit says why without scrolling sideways, and "Show" opens Options at the field', async ({ page }) => {
+  for (const width of [320, 360, 412]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.reload();
+    await settled(page);
+    await tab(page, 'Options').click();
+    await noSideways(page, `${width}: the separator choices`);
+    await page.getByRole('textbox', { name: 'Symbols', exact: true }).fill('');
+    await page.getByLabel('Minimum', { exact: true }).fill('40');
+    const bar = page.getByRole('region', { name: 'Unapplied changes' });
+    await expect(bar.getByRole('alert')).toContainText('Fix 2 problems to submit:');
+    await expect(bar.getByRole('button', { name: 'Submit changes', exact: true })).toBeDisabled();
+    await noSideways(page, `${width}: options with errors`);
+    await tab(page, 'Suggestions').click();
+    await noSideways(page, `${width}: suggestions under a blocked bar`);
+    await bar.getByRole('button', { name: 'Show', exact: true }).click();
+    await expect(tab(page, 'Options')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByLabel('Minimum', { exact: true })).toBeFocused();
+    await bar.getByRole('button', { name: 'Discard', exact: true }).click();
+    await expect(bar).toHaveCount(0);
+  }
+});
+
 test('phone: cards run edge to edge with square corners, one line below each and no gap between them', async ({ page }) => {
   await settled(page);
   await cardsEdgeToEdge(page, 'suggestions');
