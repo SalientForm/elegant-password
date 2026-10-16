@@ -66,10 +66,10 @@ but counts no bits either.
 flowchart TD
   A[Sentence] --> B[normalise: strip accents, lowercase,\nremove apostrophes, split on non a-z0-9]
   B --> C[tokens: word / number / small word]
-  C --> D[small words → capital initials;\nN random words → initials\nkeeping enough letters for the uppercase rule]
+  C --> D[small words → capital initials;\nN random words → initials;\nboth keep enough letters for the uppercase rule]
   D --> E[shrink long words: drop vowels or first + last]
   E --> F[compression ladder: one small change per step\nvowels → interior letters → long numbers → drop small words\n→ longest word to initial → drop shortest piece]
-  F --> G[binary search the ladder for the least-compressed\nstate whose finished password fits the target]
+  F --> G[binary search the ladder for the least-compressed\nstate whose finished password fits the target\nand keeps every rule]
   G --> H[finish a state: deliberate swaps on whole words;\ncapitalise a random word;\ndigits by swaps or a number in front or at the end;\nsymbols by separators, some swaps, a closing symbol drawn per password;\nrandom swaps in the length window; glue and join]
   H --> I{fits min…target?}
   I -- too long even when fully compressed --> J[explain: use fewer words or raise the maximum]
@@ -86,7 +86,14 @@ filler before the tag is sized to land exactly on the minimum.
 
 The ladder is monotone: every step shortens the bare text, so the first
 state that fits is found with log₂(states) finishes instead of one per
-state. Each state is finished once; the result is reused.
+state. Each state is finished once; the result is reused. No step takes
+the letters the uppercase rule needs, but a state can still break a rule
+by being compressed: with the separator the only symbol allowed, a state
+that dropped words has fewer separators than the symbol rule needs. The
+search steers by such a state's length all the same, and the pick passes
+over it to the nearest state that keeps every rule: the least compressed
+that fits the target, else the most compressed over it but within the
+maximum. A sentence is refused only when no state keeps every rule.
 
 ## 4. Scoring a password cold
 

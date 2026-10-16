@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, trimInterior, type SentenceOptions } from './fromSentence';
+import { compressions, DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, trimInterior, type SentenceOptions, type ShrinkStyle } from './fromSentence';
 import { DEFAULT_REQUIREMENTS, RequirementsError, type Requirements } from './generate';
 import { easedText } from './ease';
 import { scoreCold } from './score';
+import { randomInt, type RandomSource } from './random';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
+import { ADJECTIVES, NOUNS, VERBS } from './words';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, minLength: 8, ...over });
 
@@ -370,5 +372,106 @@ describe('deliberate swaps in your own sentence', () => {
     const r = fromSentence('bricks ducks', req({ easeSwaps: true, minUppercase: 8, minDigits: 0, minSymbols: 0, minLength: 1, twists: 0, count: 1 }), plainOpts, { rng: seeded() });
     expect(r.suggestions[0]!.password).toBe('BRICKS;DUCKS');
     expect(scoreCold('BRICKS;DUCKS', 'bricks ducks').easedCount).toBe(0);
+  });
+});
+
+describe('a rule the most compressed state cannot meet', () => {
+  const upper = (s: string) => (s.match(/[A-Z]/g) ?? []).length;
+  const allMet = (r: ReturnType<typeof fromSentence>) => {
+    expect(r.suggestions.length).toBeGreaterThan(0);
+    for (const sg of r.suggestions) for (const c of sg.checks) expect(c.met, `${sg.password}: ${c.rule}`).toBe(true);
+  };
+
+  it('fits "ducks" with 5 capitals required: the letters are in the uncompressed word', () => {
+    // Padded to the 12-character minimum, then with no padding and a minimum the word itself can reach.
+    const padded = fromSentence('ducks', { ...DEFAULT_REQUIREMENTS, minUppercase: 5, count: 3 }, undefined, { rng: seeded(1) });
+    allMet(padded);
+    for (const sg of padded.suggestions) expect(sg.password).toContain('DUCKS');
+    const plain = fromSentence('ducks', req({ minUppercase: 5, minLength: 5 }), { ...DEFAULT_SENTENCE_OPTIONS, padding: false }, { rng: seeded(1) });
+    allMet(plain);
+    for (const sg of plain.suggestions) expect(sg.password).toContain('DUCKS');
+    // A target the letters cannot reach is missed, with a warning, rather than refused.
+    const targeted = fromSentence('ducks eat', req({ minUppercase: 7, minLength: 8 }), { ...DEFAULT_SENTENCE_OPTIONS, targetLength: 8 }, { rng: seeded(1) });
+    allMet(targeted);
+    for (const sg of targeted.suggestions) expect(upper(sg.password)).toBeGreaterThanOrEqual(7);
+    expect(targeted.warnings.some((w) => /could not get down to 8/.test(w))).toBe(true);
+    // One more capital than the sentence has letters is still refused.
+    expect(() => fromSentence('ducks', req({ minUppercase: 6 }), undefined, { rng: seeded(1) })).toThrow(/does not have 6 letters to capitalise/);
+  });
+
+  it('never compresses away the letters the uppercase rule needs, dropping vowels included', () => {
+    const word = (text: string) => ({ text, original: text, kind: 'word' as const, small: false });
+    const states = (words: string[], minUppercase: number) =>
+      [...compressions(words.map(word), req({ minUppercase }), DEFAULT_SENTENCE_OPTIONS)].map((st) => st.map((t) => t.text).join(' '));
+    expect(states(['ducks'], 5)).toEqual(['ducks']);
+    expect(states(['ducks'], 1)).toContain('dcks');
+    for (const st of states(['ducks', 'eat', 'warm', 'bread'], 12)) expect(st.replace(/[^a-z]/g, '').length, st).toBeGreaterThanOrEqual(12);
+  });
+
+  it('keeps small words whole when their initials would leave too few letters for the uppercase rule', () => {
+    const the = fromSentence('the', req({ minUppercase: 3, minLength: 1 }), undefined, { rng: seeded(1) });
+    allMet(the);
+    for (const sg of the.suggestions) expect(sg.password).toContain('THE');
+    // The longest small word stays whole first: "for" keeps its three letters, "in" and "my" become initials.
+    const three = fromSentence('for in my', req({ minUppercase: 5, minLength: 1 }), { ...DEFAULT_SENTENCE_OPTIONS, padding: false }, { rng: seeded(1) });
+    allMet(three);
+    for (const sg of three.suggestions) expect(sg.password).toMatch(/FOR.*I.*M/);
+    const teach = fromSentence('or teach', req({ minUppercase: 7, minLength: 1 }), undefined, { rng: seeded(1) });
+    allMet(teach);
+    for (const sg of teach.suggestions) expect(sg.password).toMatch(/OR.TEACH/);
+  });
+
+  it('keeps the words whose separators the symbol rule needs when the separator is the only symbol allowed', () => {
+    const onlySeparator = { allowedSymbols: ';', separator: ';', allowSpaces: false, minDigits: 0, minLength: 4 };
+    // A target of 4 would drop words, and with them separators; three words (two separators) is the most compressed that keeps the rule.
+    const two = fromSentence('ducks eat warm bread', req({ ...onlySeparator, minSymbols: 2 }), { ...DEFAULT_SENTENCE_OPTIONS, targetLength: 4 }, { rng: seeded(1) });
+    allMet(two);
+    for (const sg of two.suggestions) expect(sg.password.split(';')).toHaveLength(3);
+    expect(two.warnings.some((w) => /could not get down to 4/.test(w))).toBe(true);
+    const three = fromSentence('ducks eat warm bread', req({ ...onlySeparator, minSymbols: 3 }), { ...DEFAULT_SENTENCE_OPTIONS, targetLength: 6 }, { rng: seeded(1) });
+    allMet(three);
+    for (const sg of three.suggestions) expect(sg.password.split(';')).toHaveLength(4);
+    // Four separators from four words cannot be had at any compression: refused, naming the separator.
+    expect(() => fromSentence('ducks eat warm bread', req({ ...onlySeparator, minSymbols: 4 }), undefined, { rng: seeded(1) })).toThrow(/only allowed symbol is the separator/);
+  });
+
+  it('refuses a sentence only when no state meets every rule, across random sentences and rules', { timeout: 60_000 }, () => {
+    const rng = seeded(11);
+    const pick = <T,>(items: readonly T[], r: RandomSource): T => items[randomInt(items.length, r)]!;
+    const small = ['a', 'an', 'the', 'of', 'for', 'to', 'in', 'on', 'and', 'or', 'my', 'is'];
+    for (let i = 0; i < 400; i++) {
+      const n = 1 + randomInt(6, rng);
+      const words = Array.from({ length: n }, () => (randomInt(4, rng) === 0 ? pick(small, rng) : pick([...ADJECTIVES, ...NOUNS, ...VERBS], rng)));
+      if (randomInt(4, rng) === 0) words.push(String(randomInt(100, rng)));
+      const sentence = words.join(' ');
+      const letters = sentence.replace(/[^a-z]/g, '').length;
+      // Every rule here can be met by some state: no more capitals than letters, and with the separator as the only
+      // symbol, no more symbols than the separators between the words.
+      const onlySeparator = randomInt(3, rng) === 0;
+      const rules = req({
+        minUppercase: Math.min(8, letters, 1 + randomInt(8, rng)),
+        minLength: 1 + randomInt(16, rng),
+        maxLength: 64,
+        minSymbols: onlySeparator ? Math.min(n - 1, randomInt(3, rng)) : randomInt(3, rng),
+        twists: randomInt(3, rng),
+        initials: randomInt(3, rng),
+        easeSwaps: randomInt(2, rng) === 1,
+        ...(onlySeparator ? { allowedSymbols: ';', separator: ';', allowSpaces: false } : {}),
+        count: 2,
+      });
+      const opts = {
+        ...DEFAULT_SENTENCE_OPTIONS,
+        shrink: pick<ShrinkStyle>(['none', 'vowels', 'ends'], rng),
+        shrinkFrom: 3 + randomInt(5, rng),
+        targetLength: randomInt(2, rng) ? null : Math.max(rules.minLength, 4 + randomInt(10, rng)),
+      };
+      let r;
+      try {
+        r = fromSentence(sentence, rules, opts, { rng: seeded(i) });
+      } catch (e) {
+        throw new Error(`${(e as Error).message}\n  sentence: ${JSON.stringify(sentence)}\n  req: ${JSON.stringify(rules)}\n  opts: ${JSON.stringify(opts)}`);
+      }
+      allMet(r);
+    }
   });
 });

@@ -1037,6 +1037,30 @@
       {
         "kind": "test",
         "title": "skips the swaps when they would leave too few letters for the uppercase rule"
+      },
+      {
+        "kind": "group",
+        "title": "a rule the most compressed state cannot meet"
+      },
+      {
+        "kind": "test",
+        "title": "fits \"ducks\" with 5 capitals required: the letters are in the uncompressed word"
+      },
+      {
+        "kind": "test",
+        "title": "never compresses away the letters the uppercase rule needs, dropping vowels included"
+      },
+      {
+        "kind": "test",
+        "title": "keeps small words whole when their initials would leave too few letters for the uppercase rule"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the words whose separators the symbol rule needs when the separator is the only symbol allowed"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a sentence only when no state meets every rule, across random sentences and rules"
       }
     ]
   },

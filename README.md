@@ -108,8 +108,10 @@ explanation for each:
   initials, then drop words): "jupiter brings 5 leds for piece" at 12 ->
   `jr;B;5ls;Fpc`. A symbol between words is optional. Fitting is exact:
   each compression step is finished into a real password and the
-  least-compressed one that fits is kept. Property tests prove any sentence
-  reduces to 12 characters that pass every rule (`src/lib/reduceTo12.test.ts`).
+  least-compressed one that fits and keeps every rule is kept; no step
+  takes the letters the uppercase rule needs, so "ducks" with 5 capitals
+  is `DUCKS`, not a refusal. Property tests prove any sentence reduces to
+  12 characters that pass every rule (`src/lib/reduceTo12.test.ts`).
 - **Layout.** Three columns: the rules and swaps on the left, suggestions in
   the middle (ordered by Difficulty, easiest to type first, by default, or by
   Memorability or Strength with the toggle above them; the choice is

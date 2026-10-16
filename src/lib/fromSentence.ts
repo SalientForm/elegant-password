@@ -5,14 +5,15 @@
 // Steps, in order:
 //   1. Normalise: lowercase, strip accents and punctuation, split into words.
 //   2. Initials: small words ("for") and N random words become one capital
-//      letter ("F", "B").
+//      letter ("F", "B"), never taking the letters the uppercase rule needs.
 //   3. Shorten: long words are shrunk in the chosen style, either dropping
 //      inner vowels ("sweets" -> "swts") or keeping just the first and last
 //      consonant ("jupiter" -> "jr"). If still over the target length, keep
 //      compressing the longest words: drop vowels, trim interior consonants
 //      ("jptr" -> "jpr" -> "jr"), drop small words, turn words into initials,
 //      and as a last resort drop words entirely. The least-compressed state
-//      that fits is found by binary search over that ladder.
+//      that fits and keeps every rule is found by binary search over that
+//      ladder; a sentence is refused only when no state keeps every rule.
 //   4. Deliberate swaps for typing ease, when on: each word still whole
 //      gets its fixed misspelling ("wise" -> "wyse"; see ease.ts). Then
 //      fill required digits and symbols with matching twists ("e" -> "3",
@@ -211,10 +212,13 @@ export function* compressions(start: Token[], req: Requirements, opts: SentenceO
   const lettersOk = (ts: Token[]) => tokenLetters(ts) >= minLetters;
 
   const actions: (() => Token[] | undefined)[] = [
-    // Drop vowels from the longest word.
+    // Drop vowels from the longest word that can spare them.
     () => {
-      const hit = longestWords().find(([t]) => dropVowels(t.text) !== t.text);
-      return hit && replace(hit[1], { ...hit[0], text: dropVowels(hit[0].text) });
+      for (const [t, i] of longestWords()) {
+        const next = replace(i, { ...t, text: dropVowels(t.text) });
+        if (dropVowels(t.text) !== t.text && lettersOk(next)) return next;
+      }
+      return undefined;
     },
     // Trim an interior letter from the longest word, down to two letters.
     () => {
@@ -284,7 +288,15 @@ function attempt(ctx: Context): Attempt {
     kind: /^[0-9]+$/.test(w) ? 'number' : 'word',
     small: SMALL_WORDS.has(w),
   }));
-  if (opts.smallWordInitials) start = start.map((t) => (t.kind === 'word' && t.small ? toInitial(t) : t));
+  if (opts.smallWordInitials) {
+    // Small words become initials, but never the letters the uppercase rule needs: the longest stay whole until enough remain.
+    const small = start.flatMap((t, i) => (t.kind === 'word' && t.small ? [i] : [])).sort((x, y) => start[y]!.text.length - start[x]!.text.length);
+    const minLetters = Math.max(1, req.minUppercase);
+    let keep = 0;
+    const shaped = () => start.map((t, i) => (small.indexOf(i) >= keep ? toInitial(t) : t));
+    while (keep < small.length && tokenLetters(shaped()) < minLetters) keep++;
+    start = shaped();
+  }
   // Random initials and the shrink style are deliberate, but if together they
   // leave the sentence under the minimum length, back off: first keep the
   // longest words whole, then use fewer initials.
@@ -333,6 +345,8 @@ interface Problem {
   problem: string;
   /** The state was already under the minimum length; more compression cannot help. */
   tooShort?: boolean;
+  /** How long the state came out when another rule failed, so the search can still steer by length. */
+  length?: number;
 }
 
 /** How many ladder states a fit finished; exposed for tests of the search. */
@@ -368,7 +382,11 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
   // is kept and reused). Along the ladder a state is either still too long,
   // or short enough: it fits, or it is already under the minimum. The
   // boundary between the two is what we want, and whatever is returned
-  // always fits.
+  // always fits. A state can also break another rule (too few letters to
+  // capitalise, or fewer separators than the symbol rule needs with no
+  // closing mark allowed); the search steers by its length all the same,
+  // and the pick below passes over it to the nearest state that keeps
+  // every rule, so a sentence is refused only when no state does.
   const finished = new Map<number, Finished | Problem>();
   const fin = (i: number): Finished | Problem => {
     let f = finished.get(i);
@@ -380,34 +398,40 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
     return f;
   };
   const fits = (f: Finished | Problem): f is Finished => !('problem' in f) && f.length <= limit;
-  const shortEnough = (f: Finished | Problem) => fits(f) || ('problem' in f && !!f.tooShort);
+  const shortEnough = (f: Finished | Problem) => ('problem' in f ? !!f.tooShort || (f.length !== undefined && f.length <= limit) : f.length <= limit);
 
-  let best: Finished;
+  // The first state that is short enough; past the end when even the most compressed is over the target.
   let lo = 0;
   let hi = candidates.length - 1;
-  const last = fin(hi);
-  if (!shortEnough(last)) {
-    // Even fully compressed it is over the target: the best is what we have.
-    if ('problem' in last) return { problem: last.problem };
-    best = last;
-  } else {
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (shortEnough(fin(mid))) hi = mid;
-      else lo = mid + 1;
-    }
-    const found = fin(hi);
-    if (fits(found)) best = found;
-    else if (hi === 0) return { problem: (found as Problem).problem, tooShort: true };
-    else {
-      // This state is under the minimum and the one before it is over the target.
-      const before = fin(hi - 1);
-      if ('problem' in before) return { problem: before.problem };
-      // Over the maximum itself, not just the target: the state under the minimum is the one padding can complete.
-      if (before.length > req.maxLength) return { problem: (found as Problem).problem, tooShort: true };
-      best = before;
-    }
+  if (!shortEnough(fin(hi))) lo = hi = candidates.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (shortEnough(fin(mid))) hi = mid;
+    else lo = mid + 1;
   }
+
+  let best: Finished | undefined;
+  let short: Problem | undefined;
+  let broken: Problem | undefined;
+  // The least compressed state that fits: from the boundary on, until the states are under the minimum.
+  for (let i = hi; i < candidates.length && !best; i++) {
+    const f = fin(i);
+    if (fits(f)) best = f;
+    else if ('problem' in f && f.tooShort) {
+      short = f;
+      break;
+    } else if ('problem' in f) broken ??= f;
+  }
+  // Else the most compressed state still over the target that keeps every rule. A less compressed one is longer
+  // still, so the first found decides: within the maximum it is kept, over it the sentence needs padding or fewer words.
+  for (let i = hi - 1; i >= 0 && !best; i--) {
+    const f = fin(i);
+    if (!('problem' in f)) {
+      if (f.length > req.maxLength && short) return { problem: short.problem, tooShort: true }; // the state under the minimum is the one padding can complete
+      best = f;
+    } else broken ??= f;
+  }
+  if (!best) return short ? { problem: short.problem, tooShort: true } : { problem: broken!.problem };
   if (best.length > req.maxLength) {
     return {
       problem: `Even compressed, your sentence makes ${best.length} characters, over the ${req.maxLength} maximum. Use fewer words or raise the maximum.`,
@@ -480,7 +504,7 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
     }
   }
   const stillNeeded = Math.max(0, req.minSymbols - sepSymbols - symbolCount(texts()));
-  if (stillNeeded > 0 && !closing) return { problem: ctx.closingProblem };
+  if (stillNeeded > 0 && !closing) return { problem: ctx.closingProblem, length: joinTokens(texts(), glue, separator).length };
   const endSymbol = closing?.repeat(stillNeeded) ?? '';
 
   // 5. The user's random twists, kept inside the length limits (and the target).
@@ -550,7 +574,7 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
     };
   }
   if (countUpper(password) < req.minUppercase) {
-    return { problem: `Your sentence does not have ${req.minUppercase} letters to capitalise. Add a word.` };
+    return { problem: `Your sentence does not have ${req.minUppercase} letters to capitalise. Add a word.`, length };
   }
 
   const dropped = base.filter((w) => !state.some((t) => t.original === w));
