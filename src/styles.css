@@ -65,8 +65,8 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 /* Title top left, the description on its own line beneath it, both left-justified. */
 .topbar-text { display: grid; justify-items: start; gap: 0.3rem; text-align: left; }
 .topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 13pt; }
-/* The credit with the licence beneath it, left-aligned with each other, so they line up when the row wraps on a narrow screen too. */
-.topbar .credits { flex: none; display: grid; justify-items: start; gap: 0.1rem; }
+/* The credit with the licence link beneath it, right-justified under it. */
+.topbar .credits { flex: none; display: grid; justify-items: end; gap: 0.1rem; }
 .topbar .brand, .topbar .license { font-size: 0.78rem; font-weight: 400; font-style: italic; opacity: 0.3; white-space: nowrap; }
 .topbar .brand strong { font-weight: 700; }
 .topbar .license { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
