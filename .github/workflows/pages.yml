@@ -28,6 +28,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096 # generate.test.ts runs out of the default heap on the runner
       - run: pnpm build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
