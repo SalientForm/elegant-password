@@ -5,7 +5,8 @@ criterion is enforced, and how a password is scored afterwards. The code is
 the source of truth; this is the map. Generic criteria (anything of the form
 "at least N of class X", or "between A and B long") are handled by one
 mechanism each. Specific criteria (the separator, pinky stretches, initials,
-two-letter words, made-up nouns, glue, swaps) each have their own step.
+two-letter words, made-up nouns, glue, deliberate and random swaps) each have
+their own step.
 
 ## 1. The criteria
 
@@ -18,14 +19,15 @@ two-letter words, made-up nouns, glue, swaps) each have their own step.
 | Only these symbols, spaces or not | generic (alphabet) | Every symbol the tool picks on its own (separator, closing mark, swap output) is filtered by the allowed set; closing marks and swap outputs are never the separator character, since a password never starts or ends with its separator (when the separator is the only allowed symbol and marks are needed, the request is refused). A separator chosen by hand must be allowed or the request is rejected. |
 | Separator | specific | `auto` → space if allowed, else the first allowed and comfortable of `; . - , _`, else none. A chosen separator is honoured even if it is a stretch. |
 | Avoid pinky stretches | specific | Symbols more than one key from a pinky's home are removed from the set the tool may pick from (swap outputs, closing marks, automatic separator). If every allowed symbol is a stretch, one is used and a warning says so. |
-| Typing comfort | specific | Each word pool (and the number pool) is ranked by typing cost and cut to the easiest 40 / 70 / 100 %. |
+| Typing comfort | specific | Each word pool (and the number pool) is ranked by typing cost and cut to the easiest 40 / 70 / 100 %. With deliberate swaps on, words are ranked as typed with their swap. |
+| Deliberate swaps (typing ease) | specific | Off by default. A whole word with a same-finger jump or a reach of 6+ key widths is typed with one fixed sound-alike misspelling that removes it (`wise` → `wyse`, `ease.ts`). A fixed function of the word: 0 bits. Planning counts words at their typed length with unchanged pool sizes; letters only, so the separator and symbol rules never meet it; sentence mode swaps the words still whole unless that leaves too few letters for the uppercase rule. |
 | Target bits | specific | Among templates that reach the target, the shortest expected length wins; otherwise the strongest, with a warning. |
 | Number | specific | Placed in front of a random noun phrase; the position is counted as bits. |
 | Capital initials | specific | Fixed-priority positions become one capital letter; the slot's pool becomes its distinct initials, so the count stays exact. Never swapped. |
 | Two-letter words | specific | Fixed-priority positions become first letter + last consonant; pool becomes distinct pairs. Never swapped. |
 | Made-up nouns | specific | The first N noun slots draw from the key-roll words (all lowercase or ALL CAPS). Never swapped, never recased. |
 | Glue | specific | The number and small-word initials attach to the next word without a separator; the separator count drops accordingly. |
-| Swaps (twists) | specific | The minimum N, or half the time N + 1 (never above 3), where the letters allow, placed uniformly among every distinct outcome inside the length and letter limits; fewer with a warning when they do not. |
+| Swaps (twists) | specific | The minimum N, or half the time N + 1 (never above 3), where the letters allow, placed uniformly among every distinct outcome inside the length and letter limits, on the words as typed (deliberate swaps included); fewer with a warning when they do not. |
 | Count | generic | Each suggestion is an independent draw. |
 
 ## 2. Make up a sentence
@@ -39,9 +41,9 @@ flowchart TD
   E --> F[overhead = separators + closing marks\nletters must fit min−overhead … max−overhead]
   F --> G{enough letters\nfor the uppercase rule?}
   G -- no --> D
-  G -- yes --> H[LengthModel: count sequences by total letters\nbits = log2 Σ counts]
+  G -- yes --> H[LengthModel: count sequences by total letters,\nwords as typed with deliberate swaps when on\nbits = log2 Σ counts]
   H --> I[choose plan: meets target → shortest;\nelse strongest + warning]
-  I --> J[sample variant ∝ count, total length ∝ count,\nword lengths ∝ completions, word uniform]
+  I --> J[sample variant ∝ count, total length ∝ count,\nword lengths ∝ completions, word uniform;\nthe hint keeps each word as written]
   J --> K[swaps: skip number, initials, two-letter, made-up;\nkeep the first letter; stay in the length window;\nkeep enough letters; pick uniformly among outcomes]
   K --> L[render: capitals, glue, separator, closing marks]
   L --> M[cold score from password + hint]
@@ -51,8 +53,11 @@ flowchart TD
 Why planning before sampling: the entropy must be known exactly, so the set
 of possible passwords is counted first and the password is then drawn
 uniformly from exactly that set. Fixed rules (which positions become
-initials, how capitals are applied, the separator) add no bits and are not
-random. The closing symbol is drawn at random for each password, for variety,
+initials, how capitals are applied, the separator, deliberate swaps) add no
+bits and are not random. A deliberate swap is a function of its word, no two
+list words share a swapped spelling, and the model counts each word at its
+typed length, so the count stays exact with them on.
+The closing symbol is drawn at random for each password, for variety,
 but counts no bits either.
 
 ## 3. Use my sentence
@@ -65,7 +70,7 @@ flowchart TD
   D --> E[shrink long words: drop vowels or first + last]
   E --> F[compression ladder: one small change per step\nvowels → interior letters → long numbers → drop small words\n→ longest word to initial → drop shortest piece]
   F --> G[binary search the ladder for the least-compressed\nstate whose finished password fits the target]
-  G --> H[finish a state: capitalise a random word first;\ndigits by swaps or a number in front or at the end;\nsymbols by separators, some swaps, a closing symbol drawn per password;\nrandom swaps in the length window; glue and join]
+  G --> H[finish a state: deliberate swaps on whole words;\ncapitalise a random word;\ndigits by swaps or a number in front or at the end;\nsymbols by separators, some swaps, a closing symbol drawn per password;\nrandom swaps in the length window; glue and join]
   H --> I{fits min…target?}
   I -- too long even when fully compressed --> J[explain: use fewer words or raise the maximum]
   I -- too short at the start --> K[back off: keep long words whole,\nthen fewer random initials]
@@ -92,19 +97,21 @@ everywhere it appears (a card, the saved list, a year later).
 ```mermaid
 flowchart TD
   A[password + hint] --> B[normalise the hint into words]
-  B --> C[align each word in the password:\nwhole, shortened, initial, number, or swapped spelling;\nelse further along the run of symbols that follows]
+  B --> C[align each word in the password:\nwhole, deliberately swapped, shortened, initial, number,\nor randomly swapped spelling, deliberate winning a tie;\nelse further along the run of symbols that follows]
   C --> C2[repeated digits or symbols count as the\nsame word; a length tag's digits are a number word]
   C2 --> D{hint matches a\nsentence template?}
-  D -- yes --> E[most restrictive comfort level whose pools\ncontain every word → pool sizes →\nsentence bits = Σ log2 sizes + number position]
+  D -- yes --> E[most restrictive comfort level whose pools\ncontain every word, pools ranked as written or as typed,\nfewer bits kept → pool sizes →\nsentence bits = Σ log2 sizes + number position]
   D -- no --> F[each word from its text: a list pick,\n2.3 bits a letter, or its digits;\n+ log2 C(eligible words, initials)]
-  E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the swaps found]
+  E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the random swaps found;\ndeliberate swaps 0 bits]
   F --> G
-  G --> H[difficulty rubric on the password,\nmemory load = words + swaps]
+  G --> H[difficulty rubric on the password,\nmemory load = words + random and deliberate swaps]
 ```
 
 What it deliberately leaves out: the length limits (not knowable cold, so the
 card can sit a little above the plan's exact figure), the user's own mapping
-list (always the built-in 64), and any selection bias. Choosing a favourite
+list (always the built-in 64; deliberate swaps follow their own fixed table),
+whether deliberate swaps were on (both comfort rankings are tried and the
+lower figure kept), and any selection bias. Choosing a favourite
 among suggestions, or rolling again until one is liked, is a bias the figures
 do not discount; the strength panel says so in one sentence.
 
@@ -126,3 +133,7 @@ applied inputs. Applied inputs are persisted; drafts are not.
   enough letters always remain (`twists.test.ts`).
 - Cold scores are pure, serialisable, and agree with what the cards show
   (`score.test.ts`, `generate.test.ts`).
+- Deliberate swaps only ever remove an awkward move, keep the first letter,
+  never merge two words, are recognised cold at zero bits and never read as
+  random swaps, and keep the plan's count equal to a brute-force count over
+  the typed lengths (`ease.test.ts`, `score.test.ts`, `generate.test.ts`).

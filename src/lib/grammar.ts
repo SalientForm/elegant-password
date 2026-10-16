@@ -5,6 +5,7 @@
 //   "sleepy otters gently paint 7 rusty boats near quiet lakes tonight"
 
 import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from './words';
+import { easedText } from './ease';
 import { wordCost } from './keyboard';
 
 export type Slot = 'num' | 'adj' | 'noun' | 'verb' | 'adv' | 'end' | 'prep' | 'and';
@@ -200,30 +201,45 @@ const poolCache = new Map<string, Record<Slot, readonly string[]>>();
 
 /**
  * Word and number pools filtered to the easiest-to-type share for a
- * comfort level. The joiner is never filtered.
+ * comfort level. The joiner is never filtered. With `eased`, words are
+ * ranked as they are typed with their deliberate swaps (see ease.ts), so a
+ * word that one fixed misspelling makes easy stays in; the pools still hold
+ * the words as written, and keep the same sizes.
  */
-export function pools(comfort: Comfort, minDigits = 1): Record<Slot, readonly string[]> {
-  const cacheKey = `${comfort}:${minDigits}`;
+export function pools(comfort: Comfort, minDigits = 1, eased = false): Record<Slot, readonly string[]> {
+  const cacheKey = `${comfort}:${minDigits}:${eased ? 1 : 0}`;
   const cached = poolCache.get(cacheKey);
   if (cached) return cached;
   const share = COMFORT_SHARE[comfort];
   // Numbers are ranked like words: close-together digits ("357") beat far-apart ones ("129").
   const result: Partial<Record<Slot, readonly string[]>> = { num: easiest(numbers(minDigits), share) };
   for (const [slot, words] of Object.entries(RAW_POOLS) as [Exclude<Slot, 'num'>, readonly string[]][]) {
-    result[slot] = slot === 'and' ? words : easiest(words, share);
+    result[slot] = slot === 'and' ? words : easiest(words, share, eased ? easedText : undefined);
   }
   const complete = result as Record<Slot, readonly string[]>;
   poolCache.set(cacheKey, complete);
   return complete;
 }
 
-/** The easiest-to-type share of a pool, never fewer than MIN_POOL. */
-function easiest(words: readonly string[], share: number): readonly string[] {
+/** The easiest-to-type share of a pool, never fewer than MIN_POOL; `typed` gives the spelling to rank by. */
+function easiest(words: readonly string[], share: number, typed: (w: string) => string = (w) => w): readonly string[] {
   if (share >= 1) return words;
   const keep = Math.max(MIN_POOL, Math.round(words.length * share));
   return [...words]
-    .map((w) => ({ w, cost: wordCost(w) }))
+    .map((w) => ({ w, cost: wordCost(typed(w)) }))
     .sort((a, b) => a.cost - b.cost || a.w.localeCompare(b.w))
     .slice(0, keep)
     .map((x) => x.w);
+}
+
+const typedCache = new WeakMap<readonly string[], readonly string[]>();
+
+/** A pool as typed with deliberate swaps: the same size, since no two words share a swapped spelling. */
+export function typedPool(pool: readonly string[]): readonly string[] {
+  let typed = typedCache.get(pool);
+  if (!typed) {
+    typed = pool.map(easedText);
+    typedCache.set(pool, typed);
+  }
+  return typed;
 }

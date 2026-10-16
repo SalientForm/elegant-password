@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements } from './generate';
 import { fromSentence } from './fromSentence';
 import { isMemorableDigits, scoreAlone, scoreCold, twistsToTry, wordBitsFromText } from './score';
+import { BUILT_IN_MAPPINGS, twistOutcomes } from './twists';
 import { initialsOf, pools } from './grammar';
 import { seeded } from './testRandom';
 import { lookupKey, OFF_MODEL_PRESS, pressFor } from './keyboard';
@@ -222,5 +223,67 @@ describe('cold scoring very long words', () => {
     const r = scoreCold('Sprclfr6lstcxpldkz;@ntd$stbl$hmntrnsm....', 'supercalifragilisticexpialidocious antidisestablishmentarianism');
     expect(performance.now() - started).toBeLessThan(500);
     expect(Number.isFinite(r.bits)).toBe(true);
+  });
+});
+
+describe('deliberate swaps in cold scoring', () => {
+  const hint = '13 wise kids openly pet twisty toys';
+  const plain = '13;Wise;kids;openly;pet;twisty;toys';
+  const eased = '13;Wyse;kyds;openly;pet;twysty;toys';
+  const outcomes = (bases: string[], count: number) =>
+    twistOutcomes(bases, { count, mappings: BUILT_IN_MAPPINGS, skip: (i) => i === 0, protectFirstLetter: true, minDelta: -Infinity, maxDelta: Infinity }, count);
+
+  it('recognises a deliberate swap from the hint alone and counts it as zero bits', () => {
+    const a = scoreCold(plain, hint);
+    const b = scoreCold(eased, hint);
+    expect(b.words.filter((w) => w.form === 'eased').map((w) => `${w.word}:${w.text}`)).toEqual(['wise:Wyse', 'kids:kyds', 'twisty:twysty']);
+    expect(b.easedCount).toBe(3);
+    expect(b.twistCount).toBe(0);
+    expect(b.twistBits).toBe(0);
+    expect(b.template).toEqual(a.template);
+    expect(b.sentenceBits).toBe(a.sentenceBits);
+    expect(b.bits).toBe(a.bits);
+    expect(scoreCold(eased, hint)).toEqual(b); // pure
+  });
+
+  it('never reads a deliberate swap as a random one, which would overstate the bits', () => {
+    // "i>y" is also a built-in random swap: read that way, the same text would claim this many outcomes.
+    expect(outcomes(['13', 'wise', 'kids', 'openly', 'pet', 'twisty', 'toys'], 3)).toBeGreaterThan(1000);
+    expect(scoreCold(eased, hint).twistOptions).toBe(1);
+  });
+
+  it('counts random swaps on top from the deliberate spelling, as the generator places them', () => {
+    const s = scoreCold('13;Wyse;kyd$;openly;pet;twysty;toys', hint);
+    expect(s.words[2]).toMatchObject({ word: 'kids', form: 'eased', base: 'kyds', text: 'kyd$', twists: 1 });
+    expect(s.easedCount).toBe(3);
+    expect(s.twistCount).toBe(1);
+    const expected = outcomes(['13', 'wyse', 'kyds', 'openly', 'pet', 'twysty', 'toys'], 1);
+    expect(s.twistOptions).toBe(expected);
+    expect(s.bits).toBeCloseTo(scoreCold(eased, hint).bits + Math.log2(expected), 9);
+  });
+
+  it('credits the easier typing in difficulty, and counts each swap as one more spelling to remember', () => {
+    const a = scoreCold(plain, hint);
+    const b = scoreCold(eased, hint);
+    expect(b.difficulty.measurements.sameFingerPer10).toBeLessThan(a.difficulty.measurements.sameFingerPer10);
+    expect(b.difficulty.measurements.seconds).toBeLessThan(a.difficulty.measurements.seconds);
+    expect(b.difficulty.measurements.chunks).toBe(a.difficulty.measurements.chunks + 3);
+    expect(b.memorability.swappedWords).toBe(3);
+    expect(b.memorability.score).toBe(a.memorability.score - 15);
+  });
+
+  it('never scores above the pools a sentence came from, with the setting on or off', () => {
+    for (const easeSwaps of [false, true]) {
+      for (const comfort of ['strict', 'balanced', 'relaxed'] as const) {
+        const r = generate(req({ comfort, easeSwaps, twists: 0, maxLength: 80, count: 10 }), { rng: seeded(14) });
+        const unconstrained = r.plan.bits + r.plan.lengthPenaltyBits;
+        for (const s of r.suggestions) {
+          const cold = scoreCold(s.password, s.hint);
+          expect(cold.template, s.hint).toBeDefined();
+          expect(cold.twistCount, s.password).toBe(0);
+          expect(cold.sentenceBits).toBeLessThanOrEqual(unconstrained + 1e-6);
+        }
+      }
+    }
   });
 });

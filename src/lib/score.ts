@@ -16,6 +16,14 @@
 // origin: a word on the tool's lists is one pick from that list, any other
 // word is English-like text at a fixed number of bits per letter, a capital
 // initial is one letter, a number is its digits.
+//
+// Deliberate swaps for typing ease (ease.ts) are a fixed function of the
+// word, so the scorer works them out from the hint: a word typed with its
+// deliberate swap is form 'eased' and adds no bits. It is preferred over
+// reading the same text as a random swap, which would overstate the bits;
+// random swaps on top are counted from the swapped spelling, as the
+// generator places them. A random swap that happens to produce a word's
+// deliberate spelling is read as deliberate: the lower figure.
 
 import { scoreDifficulty, type Difficulty } from './difficulty';
 import {
@@ -31,16 +39,18 @@ import {
   type Slot,
 } from './grammar';
 import { typingProfile, type TypingProfile } from './keyboard';
+import { easedText } from './ease';
 import { dropVowels, normalizeSentence, SMALL_WORDS, trimInterior } from './text';
 import { BUILT_IN_MAPPINGS, spellingsOf, twistOutcomes, type Mapping } from './twists';
 
-export type WordForm = 'word' | 'short' | 'initial' | 'number' | 'dropped';
+/** 'eased': whole, with its deliberate swap for typing ease ("wise" typed "wyse"). */
+export type WordForm = 'word' | 'eased' | 'short' | 'initial' | 'number' | 'dropped';
 
 export interface ScoredWord {
   /** The hint word, normalised. */
   word: string;
   form: WordForm;
-  /** The form's text before any twist ("jptr"); empty when the word was dropped. */
+  /** The form's text before any random twist ("jptr", "wyse"); empty when the word was dropped. */
   base: string;
   /** As it appears in the password, case as typed; empty when dropped. */
   text: string;
@@ -56,7 +66,7 @@ export interface ScoredWord {
  * keep their full length score 1, shortened words the fraction kept,
  * dropped words 0 (fidelity, 60 %); shorter passwords score higher
  * (brevity, 40 %: 1 at 16 characters or fewer, 0 at 48 or more); each
- * swapped word costs 5 points, up to 20.
+ * swapped word (a random or a deliberate swap) costs 5 points, up to 20.
  */
 export interface Memorability {
   score: number;
@@ -80,7 +90,7 @@ export function memorabilityOf(password: string, words: readonly ScoredWord[]): 
   const fidelity = credits.length ? credits.reduce((a, b) => a + b, 0) / credits.length : 0;
   const length = [...password].length;
   const brevity = Math.min(1, Math.max(0, 1 - (length - MEMORABILITY.shortAt) / (MEMORABILITY.longAt - MEMORABILITY.shortAt)));
-  const swappedWords = words.filter((w) => w.twists > 0).length;
+  const swappedWords = words.filter((w) => w.twists > 0 || w.form === 'eased').length;
   const penalty = Math.min(MEMORABILITY.maxSwapPenalty, swappedWords * MEMORABILITY.swapPenalty);
   const score = Math.max(0, Math.round(100 * (MEMORABILITY.fidelityWeight * fidelity + MEMORABILITY.brevityWeight * brevity) - penalty));
   return { score, fidelity, brevity, sameSize: credits.filter((c) => c >= 1).length, swappedWords };
@@ -96,6 +106,8 @@ export interface ColdScore {
   initialBits: number;
   twistCount: number;
   twistOptions: number;
+  /** Words typed with their deliberate swap for typing ease: zero bits, but one more thing to remember. */
+  easedCount: number;
   /** The matched template, number included. */
   template?: Slot[];
   /** The most restrictive comfort level whose pools contain every word. */
@@ -132,6 +144,9 @@ function formsOf(word: string): { base: string; form: WordForm }[] {
   }
   const two = twoLetter(word);
   if (!out.has(two)) out.set(two, 'short');
+  // The deliberate swap, when the word has one, reads before a shortened form of the same text.
+  const eased = easedText(word);
+  if (eased !== word) out.set(eased, 'eased');
   return [...out].map(([base, form]) => ({ base, form })).sort((a, b) => b.base.length - a.base.length);
 }
 
@@ -163,12 +178,23 @@ function expandedLength(rest: string, spelling: string): number | undefined {
   return m && m[0].length > spelling.length ? m[0].length : undefined;
 }
 
-/** The longest way `word` could appear at the start of `rest`; fewest twists on ties. */
+/**
+ * The longest way `word` could appear at the start of `rest`; fewest random
+ * twists on ties, then the deliberate swap's spelling as the base: the
+ * generator only ever twists on top of it, and reading it as a random swap
+ * of the plain word would overstate the bits.
+ */
 function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): ScoredWord | undefined {
   const forms = formsOf(word);
   let best: ScoredWord | undefined;
   const consider = (c: ScoredWord) => {
-    if (!best || c.text.length > best.text.length || (c.text.length === best.text.length && c.twists < best.twists)) best = c;
+    if (
+      !best ||
+      c.text.length > best.text.length ||
+      (c.text.length === best.text.length && (c.twists < best.twists || (c.twists === best.twists && c.form === 'eased' && best.form !== 'eased')))
+    ) {
+      best = c;
+    }
   };
   for (const { base, form } of forms) {
     if (startsWithFold(rest, base)) consider({ word, form, base, text: rest.slice(0, base.length), twists: 0 });
@@ -180,9 +206,9 @@ function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): Sc
   }
   const initial = word[0]!.toUpperCase();
   if (/[A-Z]/.test(initial) && rest[0] === initial) consider({ word, form: 'initial', base: initial, text: initial, twists: 0 });
-  // Only look for twisted spellings when the plain word is not there: twists
-  // never leave the plain word in place, and enumerating spellings costs more.
-  if (best?.form === 'word') return best;
+  // Only look for twisted spellings when the word (or its deliberate swap) is
+  // there untwisted: nothing beats it, and enumerating spellings costs more.
+  if (best?.form === 'word' || best?.form === 'eased') return best;
   for (const { base, form } of forms) {
     if (form === 'number') continue;
     for (const s of spellingsOf(base, mappings, twistsToTry(base.length))) {
@@ -224,11 +250,11 @@ function align(password: string, words: readonly string[], mappings: readonly Ma
 }
 
 const poolSets = new Map<string, Set<string>>();
-function inPool(word: string, slot: Slot, comfort: Comfort, minDigits: number): boolean {
-  const key = `${comfort}:${minDigits}:${slot}`;
+function inPool(word: string, slot: Slot, comfort: Comfort, minDigits: number, eased = false): boolean {
+  const key = `${comfort}:${minDigits}:${eased ? 1 : 0}:${slot}`;
   let set = poolSets.get(key);
   if (!set) {
-    set = new Set(pools(comfort, minDigits)[slot]);
+    set = new Set(pools(comfort, minDigits, eased)[slot]);
     poolSets.set(key, set);
   }
   return set.has(word);
@@ -251,6 +277,15 @@ interface Match {
   bits: number;
 }
 
+/**
+ * The pools a sentence could have come from: words ranked as written, or as
+ * typed with their deliberate swaps (the "Ease awkward words" setting). The
+ * password cannot say which for sure (a random swap can land on a word's
+ * deliberate spelling), so both are tried and the lower figure kept, which
+ * is never above the pools the sentence was really drawn from.
+ */
+const EASE_FAMILIES = [false, true] as const;
+
 /** The sentence template (and comfort level) this hint fits with the fewest bits, if any. */
 function matchTemplate(words: readonly string[], scored: readonly ScoredWord[]): Match | undefined {
   const options = words.map(slotsFor);
@@ -261,14 +296,16 @@ function matchTemplate(words: readonly string[], scored: readonly ScoredWord[]):
     for (const shape of hasNumber ? numberPlacements(template) : [template]) {
       const slots = shape.slots as Slot[];
       if (slots.length !== words.length || !slots.every((slot, i) => options[i]!.includes(slot))) continue;
-      const match = measureMatch(words, scored, slots, hasNumber ? numberPlacements(template).length : 1);
-      if (match && (!best || match.bits < best.bits)) best = match;
+      for (const eased of EASE_FAMILIES) {
+        const match = measureMatch(words, scored, slots, hasNumber ? numberPlacements(template).length : 1, eased);
+        if (match && (!best || match.bits < best.bits)) best = match;
+      }
     }
   }
   return best;
 }
 
-function measureMatch(words: readonly string[], scored: readonly ScoredWord[], slots: Slot[], placements: number): Match | undefined {
+function measureMatch(words: readonly string[], scored: readonly ScoredWord[], slots: Slot[], placements: number, eased: boolean): Match | undefined {
   // The most restrictive comfort level whose pools contain every word.
   let level = 0;
   for (let i = 0; i < words.length; i++) {
@@ -276,7 +313,7 @@ function measureMatch(words: readonly string[], scored: readonly ScoredWord[], s
     const slot = slots[i]!;
     if (slot === 'and' || isMadeUpNoun(word)) continue;
     const minDigits = slot === 'num' ? digitsFor(word) : 1;
-    const found = COMFORTS.findIndex((c, j) => j >= level && inPool(word, slot, c, minDigits));
+    const found = COMFORTS.findIndex((c, j) => j >= level && inPool(word, slot, c, minDigits, eased));
     if (found < 0) return undefined;
     level = found;
   }
@@ -285,7 +322,7 @@ function measureMatch(words: readonly string[], scored: readonly ScoredWord[], s
     const slot = slots[i]!;
     if (slot === 'and') return 1;
     if (isMadeUpNoun(word)) return MADE_UP_NOUNS.length;
-    const pool = pools(comfort, slot === 'num' ? digitsFor(word) : 1)[slot];
+    const pool = pools(comfort, slot === 'num' ? digitsFor(word) : 1, eased)[slot];
     const form = scored[i];
     if (form?.form === 'initial') return initialsOf(pool).length;
     if (form?.form === 'short' && form.base === twoLetter(word)) return twoLettersOf(pool).length;
@@ -376,12 +413,13 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
   let twistOptions = 1;
   if (twistCount > 0) {
     const bases = scored.map((s) => s.base);
-    const first = scored.find((s) => s.form === 'word' || s.form === 'short');
+    const twistable = (s: ScoredWord) => s.form === 'word' || s.form === 'eased' || s.form === 'short';
+    const first = scored.find(twistable);
     const protectFirstLetter = !!first && /^[A-Z][a-z]/.test(first.text);
     twistOptions = twistOutcomes(bases, {
       count: twistCount,
       mappings,
-      skip: (i) => scored[i]!.form !== 'word' && scored[i]!.form !== 'short',
+      skip: (i) => !twistable(scored[i]!),
       protectFirstLetter,
       minDelta: -Infinity,
       maxDelta: Infinity,
@@ -399,6 +437,8 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
 
   // One rule for every password: the exact template figure when the hint is one of the tool's sentences, else each word from its text.
   const sentenceBits = match ? match.bits : scored.reduce((sum, w) => sum + wordBitsFromText(w), 0);
+  // A deliberate swap is a fixed function of its word: no bits, but one more spelling to remember.
+  const easedCount = scored.filter((s) => s.form === 'eased').length;
   const result: ColdScore = {
     bits: sentenceBits + twistBits + initialBits,
     sentenceBits,
@@ -406,11 +446,12 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
     initialBits,
     twistCount,
     twistOptions,
+    easedCount,
     template: match?.template,
     comfort: match?.comfort,
     aligned: scored.every((s) => s.form !== 'dropped'),
     words: scored,
-    difficulty: scoreDifficulty(password, words.length + twistCount),
+    difficulty: scoreDifficulty(password, words.length + twistCount + easedCount),
     typing: typingProfile(password),
     memorability: memorabilityOf(password, scored),
   };

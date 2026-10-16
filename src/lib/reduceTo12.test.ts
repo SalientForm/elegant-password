@@ -91,6 +91,14 @@ describe('any sentence reduces to 12 characters', { timeout: 60_000 }, () => {
     }
   });
 
+  it('with deliberate swaps for typing ease on, across the same random rules', () => {
+    const rng = seeded(2);
+    for (let i = 0; i < 600; i++) {
+      const { req, opts } = randomSettings(rng);
+      expectFits(randomSentence(rng), { ...req, easeSwaps: true }, opts, i);
+    }
+  });
+
   it('when compressing toward 12 under the default 32-character maximum', () => {
     const rng = seeded(3);
     for (let i = 0; i < 300; i++) {

@@ -13,7 +13,9 @@
 //      ("jptr" -> "jpr" -> "jr"), drop small words, turn words into initials,
 //      and as a last resort drop words entirely. The least-compressed state
 //      that fits is found by binary search over that ladder.
-//   4. Fill required digits and symbols with matching twists ("e" -> "3",
+//   4. Deliberate swaps for typing ease, when on: each word still whole
+//      gets its fixed misspelling ("wise" -> "wyse"; see ease.ts). Then
+//      fill required digits and symbols with matching twists ("e" -> "3",
 //      "a" -> "@"); anything twists cannot supply is appended.
 //   5. Apply the user's random twists.
 //   6. Capitalise if still needed, join (numbers and small-word initials can
@@ -52,6 +54,7 @@ import {
   type Suggestion,
 } from './generate';
 import { pools, twoLetter } from './grammar';
+import { easedText } from './ease';
 import { cryptoRandom, randomInt, type RandomSource } from './random';
 import { scoreCold } from './score';
 import { dropVowels, letterCount, normalizeSentence, SMALL_WORDS, trimInterior } from './text';
@@ -140,6 +143,18 @@ const digitCount = (words: readonly string[]) => words.join('').replace(/[^0-9]/
 const symbolCount = (words: readonly string[]) => [...words.join('')].filter(isSymbol).length;
 const describeTwist = (t: AppliedTwist) => `${t.mapping.from} → ${t.mapping.to || '–'} in “${t.before}”`;
 const tokenLetters = (ts: readonly Token[]) => ts.reduce((n, t) => n + letterCount(t.text), 0);
+
+/**
+ * Deliberate swaps for typing ease on the words still whole: a shortened
+ * word is already changed, and an initial, number or padding is not a word
+ * to swap. Skipped altogether if the swaps would leave too few letters for
+ * the uppercase rule ("bricks" -> "brix" drops two).
+ */
+function easeWhole(state: readonly Token[], req: Requirements): readonly Token[] {
+  if (!req.easeSwaps) return state;
+  const eased = state.map((t) => (t.kind === 'word' && t.text === t.original ? { ...t, text: easedText(t.original) } : t));
+  return tokenLetters(eased) >= req.minUppercase ? eased : state;
+}
 
 /**
  * Make `count` of the words capital initials, drawn uniformly among the sets
@@ -332,7 +347,7 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
   // still clearly too long. Finishing can shorten by at most a few
   // characters (digit twists like "for" -> "4"), hence the slack.
   const slack = 2 * (req.minDigits + req.minSymbols) + 4;
-  const bare = (ts: readonly Token[]) => ts.reduce((n, t) => n + t.text.length, 0) + Math.max(0, ts.length - 1) * separator.length;
+  const bare = (ts: readonly Token[]) => easeWhole(ts, req).reduce((n, t) => n + t.text.length, 0) + Math.max(0, ts.length - 1) * separator.length;
   const key = start.map((t) => `${t.kind}:${t.text}`).join(' ');
   let states = ladderCache.get(key);
   if (!states) {
@@ -401,16 +416,18 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
   return { suggestion: best.suggestion, missedTarget: opts.targetLength !== null && best.length > limit };
 }
 
-/** Steps 4-7 on one compression state: required digits and symbols, random twists, case and joining, and padding when asked. */
+/** Steps 4-7 on one compression state: deliberate swaps, required digits and symbols, random twists, case and joining, and padding when asked. */
 function finish(state: readonly Token[], limit: number, ctx: Context, pad = false): Finished | Problem {
   const { base, req, opts, separator, mappings, rng } = ctx;
   // This password's own closing mark, drawn from the allowed comfortable symbols other than the separator.
   const closing = ctx.closingChoices.length ? ctx.closingChoices[randomInt(ctx.closingChoices.length, rng)] : undefined;
   let { hint } = ctx;
-  // Capitalise first: twists only match lowercase letters, so the capitals
+  // Deliberate swaps first, so random swaps land on the words as typed.
+  const typed = easeWhole(state, req);
+  // Capitalise next: twists only match lowercase letters, so the capitals
   // the uppercase rule needs can never be swapped away.
-  const capitalised = applyUppercase(state.map((t) => t.text), req.minUppercase, undefined, rng); // a random word, for variety
-  let tokens = state.map((t, i) => ({ ...t, text: capitalised[i]! }));
+  const capitalised = applyUppercase(typed.map((t) => t.text), req.minUppercase, undefined, rng); // a random word, for variety
+  let tokens = typed.map((t, i) => ({ ...t, text: capitalised[i]! }));
   const texts = () => tokens.map((t) => t.text);
   const glueOf = (ts: readonly Token[]) =>
     ts.map((t, i) => req.glue && i < ts.length - 1 && ts[i + 1]!.kind !== 'fluff' && (t.kind === 'number' || (t.kind === 'initial' && t.small))); // never onto padding: the padding plan budgeted a separator before each piece

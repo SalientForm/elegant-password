@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, type Requirements } from './generate';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
-import { isMadeUpNoun, twoLetter } from './grammar';
+import { isMadeUpNoun, pools, twoLetter } from './grammar';
+import { easedText, easeOf, plainOf } from './ease';
 import { scoreCold } from './score';
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, ...over });
@@ -245,6 +246,7 @@ describe('audit fixes', () => {
         madeUp: pick([0, 1, 2]),
         glue: pick([true, false]),
         avoidPinkyStretch: pick([true, false]),
+        easeSwaps: i % 2 === 0, // not drawn, so the other combinations stay the ones this test has always covered
         count: 5,
       });
       try {
@@ -376,5 +378,87 @@ describe('variety across a batch', () => {
     const counts = new Set(r.suggestions.map((s) => s.twists.length));
     expect(counts.has(1) && counts.has(2)).toBe(true);
     for (const s of r.suggestions) expect(s.twists.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('deliberate swaps for typing ease', () => {
+  const whole = (w: { slot: string; text: string; original: string }) => w.slot !== 'num' && w.text.length > 2 && w.original.length > 2;
+
+  it('types every awkward whole word with its swap, keeps the hint as written, and adds no bits', () => {
+    const r = generate(req({ easeSwaps: true, twists: 0, count: 20 }), { rng: seeded(5) });
+    let eased = 0;
+    for (const s of r.suggestions) {
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+      const cold = scoreCold(s.password, s.hint);
+      expect(cold.bits).toBe(s.bits);
+      expect(cold.twistCount, s.password).toBe(0);
+      expect(cold.aligned, s.password).toBe(true);
+      for (const w of s.words.filter(whole)) expect(w.text.toLowerCase(), s.password).toBe(easedText(w.original));
+      expect(s.hint).toBe(s.words.map((w) => w.original).join(' '));
+      expect(cold.easedCount).toBe(s.words.filter((w) => w.text.toLowerCase() !== w.original).length);
+      eased += cold.easedCount;
+    }
+    expect(eased).toBeGreaterThan(0);
+  });
+
+  it('keeps the plan exact: the same pool sizes, with words counted at their typed length', () => {
+    const tight = { includeNumber: false, minDigits: 0, minSymbols: 0, targetBits: 0, minLength: 12, maxLength: 14, separator: ';', twists: 0 };
+    const on = generate(req({ ...tight, easeSwaps: true, count: 20 }), { rng: seeded(6) });
+    const off = generate(req({ ...tight, easeSwaps: false, count: 1 }), { rng: seeded(6) });
+    expect(on.plan.template.slots).toEqual(['noun', 'verb', 'noun']);
+    expect(on.plan.easeSwaps).toBe(true);
+    // Swaps change no pool size, so the unconstrained figure is the same with them on or off: zero bits.
+    expect(on.plan.breakdown.map((b) => b.poolSize)).toEqual(off.plan.breakdown.map((b) => b.poolSize));
+    expect(on.plan.bits + on.plan.lengthPenaltyBits).toBeCloseTo(off.plan.bits + off.plan.lengthPenaltyBits, 9);
+    // Brute force over the length histograms of the words as typed.
+    const p = pools('balanced', 0, true);
+    const histogram = (words: readonly string[]) => {
+      const h = new Map<number, number>();
+      for (const w of words) h.set(w.length, (h.get(w.length) ?? 0) + 1);
+      return h;
+    };
+    const count = (typed: (w: string) => string) => {
+      const nouns = histogram(p.noun.map(typed));
+      const verbs = histogram(p.verb.map(typed));
+      let n = 0;
+      for (const [a, x] of nouns) for (const [b, y] of verbs) for (const [c, z] of nouns) if (a + b + c >= 10 && a + b + c <= 12) n += x * y * z;
+      return n;
+    };
+    expect(on.plan.bits).toBeCloseTo(Math.log2(count(easedText)), 9);
+    expect(count(easedText)).not.toBe(count((w) => w)); // the typed lengths are what count
+    for (const s of on.suggestions) {
+      expect(s.password.length, s.password).toBeGreaterThanOrEqual(12);
+      expect(s.password.length, s.password).toBeLessThanOrEqual(14);
+    }
+  });
+
+  it('never swaps initials, two-letter words, made-up nouns or numbers, and random swaps on top are counted from the swapped spelling', () => {
+    const r = generate(req({ easeSwaps: true, initials: 1, shorthand: 1, madeUp: 1, twists: 3, minUppercase: 3, count: 20, maxLength: 64, targetBits: 50 }), { rng: seeded(8) });
+    for (const s of r.suggestions) {
+      for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+      const cold = scoreCold(s.password, s.hint);
+      expect(cold.aligned, `${s.password} / ${s.hint}`).toBe(true);
+      expect(cold.template).toBeDefined();
+      for (const w of s.words) {
+        if (/^[A-Z]$/.test(w.text)) expect(w.original[0]!.toUpperCase()).toBe(w.text);
+        if (w.slot === 'num') expect(w.text).toMatch(/^[0-9]+$/);
+      }
+      for (const w of cold.words) if (w.form === 'eased') expect(w.base).toBe(easedText(w.word));
+      // Every random swap is on a word as typed, deliberate swap included.
+      for (const t of s.twists) expect(plainOf(t.before) !== t.before || easeOf(t.before) === undefined, t.before).toBe(true);
+    }
+  });
+
+  it('is deterministic: the same draw gives the same passwords, and a word is always swapped the same way', () => {
+    const a = generate(req({ easeSwaps: true, count: 10 }), { rng: seeded(9) });
+    const b = generate(req({ easeSwaps: true, count: 10 }), { rng: seeded(9) });
+    expect(a.suggestions.map((s) => s.password)).toEqual(b.suggestions.map((s) => s.password));
+    const spelled = new Map<string, Set<string>>();
+    for (const seed of [1, 2, 3, 4]) {
+      for (const s of generate(req({ easeSwaps: true, twists: 0, comfort: 'relaxed', count: 20 }), { rng: seeded(seed) }).suggestions) {
+        for (const w of s.words.filter(whole)) spelled.set(w.original, new Set([...(spelled.get(w.original) ?? []), w.text.toLowerCase()]));
+      }
+    }
+    for (const [word, texts] of spelled) expect([...texts], word).toEqual([easedText(word)]);
   });
 });

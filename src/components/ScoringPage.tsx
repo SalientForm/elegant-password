@@ -13,7 +13,7 @@ export function ScoringPage() {
           way. The maths assumes the attacker knows this tool, its word lists, the sentence patterns and every rule, so
           only the random choices count. Which words were drawn, where the number went, which spellings the swaps
           chose: those add bits. Fixed rules add nothing: capitalising the first letter, the separator, the closing
-          marks, which words become initials. 40 bits means about a trillion equally likely passwords. The "S" badge on
+          marks, which words become initials, and the deliberate swaps that ease awkward words. 40 bits means about a trillion equally likely passwords. The "S" badge on
           each card is green from the Strong preset at 50 bits, yellow from Everyday at 40, and red below.
         </p>
         <h3>The plan: exact</h3>
@@ -30,6 +30,16 @@ export function ScoringPage() {
           found are counted as the number of distinct ways they could have landed. Nothing else goes in, not the
           settings, not how many suggestions you saw, so a password scores the same wherever and whenever it appears.
           The cold figure does not know the length limits, so it can sit a little above the plan's exact figure.
+        </p>
+        <h3>Deliberate swaps</h3>
+        <p>
+          With "Ease awkward words" on, a word with a same-finger jump (like e-d) or a long reach (six key widths or
+          more, like w-i) is typed with one fixed misspelling that removes it: “wise” becomes wyse, “cool” cul. The
+          swap is a fixed function of the word, so the scorer works it out from the hint and counts it as zero bits,
+          never as a random swap; random swaps on top are counted from the swapped spelling. The easier typing shows
+          in the difficulty score, and each one is a spelling to remember, so it adds to memory load and costs
+          memorability like any swap. Comfort then ranks words as typed; since a password cannot say for sure which
+          ranking made it, the scorer tries both and keeps the lower figure.
         </p>
         <h3>Words that are not on the lists</h3>
         <p>
@@ -99,7 +109,7 @@ export function ScoringPage() {
           initial for a six-letter word keeps one sixth), 0 when it was dropped. The mean of those credits is fidelity,
           worth {MEMORABILITY.fidelityWeight * 100}% of the score. Brevity is worth the other{' '}
           {MEMORABILITY.brevityWeight * 100}%: 1 at {MEMORABILITY.shortAt} characters or fewer, falling to 0 at{' '}
-          {MEMORABILITY.longAt} or more. Each swapped word then costs {MEMORABILITY.swapPenalty} points, up to{' '}
+          {MEMORABILITY.longAt} or more. Each swapped word, random or deliberate, then costs {MEMORABILITY.swapPenalty} points, up to{' '}
           {MEMORABILITY.maxSwapPenalty}. The badge is green above 75, yellow above 45, and red at 45 or below.
         </p>
       </section>
