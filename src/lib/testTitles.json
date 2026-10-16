@@ -553,7 +553,7 @@
       },
       {
         "kind": "test",
-        "title": "lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits"
+        "title": "lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits and nothing to remember"
       },
       {
         "kind": "group",
@@ -1105,6 +1105,30 @@
       {
         "kind": "test",
         "title": "no longer stops the search: with the separator the only symbol allowed, a state with enough separators is used"
+      },
+      {
+        "kind": "group",
+        "title": "a rule the most compressed state cannot meet"
+      },
+      {
+        "kind": "test",
+        "title": "fits \"ducks\" with 5 capitals required: the letters are in the uncompressed word"
+      },
+      {
+        "kind": "test",
+        "title": "never compresses away the letters the uppercase rule needs, dropping vowels included"
+      },
+      {
+        "kind": "test",
+        "title": "keeps small words whole when their initials would leave too few letters for the uppercase rule"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the words whose separators the symbol rule needs when the separator is the only symbol allowed"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a sentence only when no state meets every rule, across random sentences and rules"
       }
     ]
   },
@@ -1649,7 +1673,11 @@
       },
       {
         "kind": "test",
-        "title": "credits the easier typing in difficulty, and counts each swap as one more spelling to remember"
+        "title": "credits the easier typing in difficulty, and charges no memory load or memorability for the swaps"
+      },
+      {
+        "kind": "test",
+        "title": "counts a word made shorter by its deliberate swap as kept whole, and still charges random swaps on top"
       },
       {
         "kind": "test",
@@ -1717,6 +1745,10 @@
       {
         "kind": "test",
         "title": "keeps valid fields and falls back per field for odd ones"
+      },
+      {
+        "kind": "test",
+        "title": "gives settings saved before \"Ease awkward words\" existed the new default, on, and keeps a stored choice"
       },
       {
         "kind": "test",

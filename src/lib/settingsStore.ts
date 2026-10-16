@@ -26,7 +26,9 @@ const LENGTH_TAGS: readonly LengthTag[] = ['total', 'factor', 'none'];
  * wherever ";" is allowed (the same passwords) and something allowed where
  * it is not. And 'auto' meant "a space where allowed, else ; . - , _", so
  * an older 'auto' with spaces allowed loads as a space, and its passwords
- * do not change either.
+ * do not change either. "Ease awkward words" was off by default before
+ * version 2 and is on now; an older saved "off" was that default, not a
+ * choice, so it loads as the new default too.
  */
 export const REQUIREMENTS_VERSION = 2;
 
@@ -67,6 +69,7 @@ export function readRequirements(raw: unknown): LoadedRequirements {
   if (raw.version !== REQUIREMENTS_VERSION) {
     if (out.separator === ';') out.separator = 'auto';
     else if (out.separator === 'auto' && out.allowSpaces === true) out.separator = ' ';
+    if (out.easeSwaps === false) out.easeSwaps = DEFAULT_REQUIREMENTS.easeSwaps;
   }
   const req = out as unknown as Requirements;
   const fixed = repair(req);

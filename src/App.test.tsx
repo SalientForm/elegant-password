@@ -203,6 +203,9 @@ describe('App: order and pages', () => {
     expect(await screen.findByRole('heading', { name: 'Strength, in bits' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeTruthy();
     expect(screen.getByText('Finger rolls')).toBeTruthy();
+    // Deliberate swaps come with their words: no memory load, no memorability penalty.
+    expect(screen.getByText(/adds nothing to memory load and costs no memorability/)).toBeTruthy();
+    expect(screen.getByText(/a deliberate swap costs nothing/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Scoring' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText(/read like a sentence/)).toBeTruthy(); // the one app description, on every page
   });

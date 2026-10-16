@@ -88,7 +88,10 @@ export interface Requirements {
   /**
    * Deliberate swaps for typing ease: a word with a same-finger jump or a
    * long reach is typed with one fixed misspelling that removes it ("wise"
-   * -> "wyse"; see ease.ts). A fixed rule, so it adds no bits.
+   * -> "wyse"; see ease.ts). A fixed rule that comes with the word, so it
+   * adds no bits and nothing to remember. On by default: measured at the
+   * defaults it makes passwords a little easier to type and costs nothing
+   * on strength or memorability (TODO.md has the figures).
    */
   easeSwaps: boolean;
   count: number;
@@ -113,7 +116,7 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
   madeUp: 0,
   glue: false,
   avoidPinkyStretch: true,
-  easeSwaps: false,
+  easeSwaps: true,
   count: 5,
 };
 

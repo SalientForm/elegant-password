@@ -262,14 +262,30 @@ describe('deliberate swaps in cold scoring', () => {
     expect(s.bits).toBeCloseTo(scoreCold(eased, hint).bits + Math.log2(expected), 9);
   });
 
-  it('credits the easier typing in difficulty, and counts each swap as one more spelling to remember', () => {
+  it('credits the easier typing in difficulty, and charges no memory load or memorability for the swaps', () => {
     const a = scoreCold(plain, hint);
     const b = scoreCold(eased, hint);
     expect(b.difficulty.measurements.sameFingerPer10).toBeLessThan(a.difficulty.measurements.sameFingerPer10);
     expect(b.difficulty.measurements.seconds).toBeLessThan(a.difficulty.measurements.seconds);
-    expect(b.difficulty.measurements.chunks).toBe(a.difficulty.measurements.chunks + 3);
-    expect(b.memorability.swappedWords).toBe(3);
-    expect(b.memorability.score).toBe(a.memorability.score - 15);
+    expect(b.difficulty.measurements.chunks).toBe(a.difficulty.measurements.chunks); // the swaps come with their words
+    expect(b.difficulty.score).toBeLessThan(a.difficulty.score);
+    expect(b.memorability).toEqual(a.memorability);
+    expect(b.memorability.swappedWords).toBe(0);
+  });
+
+  it('counts a word made shorter by its deliberate swap as kept whole, and still charges random swaps on top', () => {
+    const h = 'cool kids lift bricks';
+    const plainCold = scoreCold('Cool;kids;lift;bricks', h);
+    const easedCold = scoreCold('Cul;kyds;lift;brix', h);
+    expect(easedCold.words.filter((w) => w.form === 'eased').map((w) => w.base)).toEqual(['cul', 'kyds', 'brix']);
+    expect(easedCold.memorability).toMatchObject({ sameSize: 4, fidelity: 1, swappedWords: 0 });
+    expect(easedCold.memorability.score).toBeGreaterThanOrEqual(plainCold.memorability.score); // shorter, and nothing lost
+    expect(easedCold.difficulty.measurements.chunks).toBe(4);
+    const twisted = scoreCold('Cul;kyd$;lift;brix', h);
+    expect(twisted.memorability).toMatchObject({ fidelity: 1, swappedWords: 1 });
+    expect(twisted.memorability.score).toBe(easedCold.memorability.score - 5);
+    expect(twisted.difficulty.measurements.chunks).toBe(5);
+    expect(scoreCold('Cul;kyds;lift;brix', h)).toEqual(easedCold); // pure
   });
 
   it('never scores above the pools a sentence came from, with the setting on or off', () => {

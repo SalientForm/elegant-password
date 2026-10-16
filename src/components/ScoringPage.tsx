@@ -38,9 +38,10 @@ export function ScoringPage() {
           more, like w-i) is typed with one fixed misspelling that removes it: “wise” becomes wyse, “cool” cul. The
           swap is a fixed function of the word, so the scorer works it out from the hint and counts it as zero bits,
           never as a random swap; random swaps on top are counted from the swapped spelling. The easier typing shows
-          in the difficulty score, and each one is a spelling to remember, so it adds to memory load and costs
-          memorability like any swap. Comfort then ranks words as typed; since a password cannot say for sure which
-          ranking made it, the scorer tries both and keeps the lower figure.
+          in the difficulty score. It is not one more thing to remember: it comes with its word by one fixed rule, so
+          it adds nothing to memory load and costs no memorability, and the swapped word counts as kept whole. Comfort
+          then ranks words as typed; since a password cannot say for sure which ranking made it, the scorer tries both
+          and keeps the lower figure.
         </p>
         <h3>Words that are not on the lists</h3>
         <p>
@@ -106,12 +107,13 @@ export function ScoringPage() {
         <p>
           How closely the password still looks like the sentence it came from, scored from the password and its hint
           alone. Each hint word is found in the password and given a size credit: 1 when it kept its full length (a
-          swapped spelling of the same length still counts in full), the fraction kept when it was shortened (a capital
-          initial for a six-letter word keeps one sixth), 0 when it was dropped. The mean of those credits is fidelity,
+          swapped spelling of the same length still counts in full, and so does a word typed with its deliberate swap,
+          like “cool” as cul), the fraction kept when it was shortened (a capital initial for a six-letter word keeps
+          one sixth), 0 when it was dropped. The mean of those credits is fidelity,
           worth {MEMORABILITY.fidelityWeight * 100}% of the score. Brevity is worth the other{' '}
           {MEMORABILITY.brevityWeight * 100}%: 1 at {MEMORABILITY.shortAt} characters or fewer, falling to 0 at{' '}
-          {MEMORABILITY.longAt} or more. Each swapped word, random or deliberate, then costs {MEMORABILITY.swapPenalty} points, up to{' '}
-          {MEMORABILITY.maxSwapPenalty}. The badge is green above 75, yellow above 45, and red at 45 or below.
+          {MEMORABILITY.longAt} or more. Each word with a random swap then costs {MEMORABILITY.swapPenalty} points, up to{' '}
+          {MEMORABILITY.maxSwapPenalty}; a deliberate swap costs nothing. The badge is green above 75, yellow above 45, and red at 45 or below.
         </p>
       </section>
     </div>

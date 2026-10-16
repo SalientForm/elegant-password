@@ -91,8 +91,8 @@ explanation for each:
 - **"At least N" rules** for uppercase, digits and symbols (all on by
   default). Several capitals means whole words in capitals, so the case
   never flips back and forth.
-- **Defaults**: max 32 characters, 40-bit target, 2 minimum swaps, and
-  uppercase, digit and symbol all required.
+- **Defaults**: max 32 characters, 40-bit target, 2 minimum swaps,
+  deliberate swaps on, and uppercase, digit and symbol all required.
 - **Rolls**: neighbouring keys on one row under one hand (`asdf`, `ert`,
   `fg`) are the cheapest move and have their own rubric criterion. Numbers
   favour close-together digits (`357` over `129`).
@@ -102,17 +102,21 @@ explanation for each:
   (`a>@`, `e>3`, `ph>f`, ...), each switchable, plus your own. Mapping
   choices are saved in localStorage. Twist strength is counted exactly from
   the number of distinct ways the twists could land.
-- **Deliberate swaps for typing ease** (off by default): instead of being
+- **Deliberate swaps for typing ease** (on by default): instead of being
   filtered out, a word with a same-finger jump (`e-d`) or a long reach (six
-  key widths or more, `w-i`) can be typed with one fixed sound-alike
+  key widths or more, `w-i`) is typed with one fixed sound-alike
   misspelling that removes it: `wise` -> `wyse`, `cool` -> `cul`, `bricks`
-  -> `brix`. It is a function of the word alone, so it adds no bits; the
-  cold scorer works it out from the hint and never counts it as a random
-  swap, and typing comfort then ranks words as typed. The rule and its
-  table are in `src/lib/ease.ts`. Measured on 600 suggestions at the
-  defaults it helps only a little (mean difficulty 41.4 -> 41.3, same-finger
-  pairs per 10 keys 0.65 -> 0.62, memorability 73.4 -> 72.6), so it stays
-  off by default and the comfort filter is unchanged.
+  -> `brix`. It is a function of the word alone, so it adds no bits and
+  nothing to remember: the cold scorer works it out from the hint, never
+  counts it as a random swap, and charges it no memory load and no
+  memorability. Typing comfort then ranks words as typed. The rule and its
+  table are in `src/lib/ease.ts`. Measured on 6,000 suggestions at the
+  defaults, about 30% get a swap and those are 1.7 difficulty points
+  easier; over all suggestions mean difficulty goes 41.6 -> 41.3 and
+  same-finger pairs per 10 keys 0.67 -> 0.61, with memorability (73.6) and
+  bits unchanged. A small gain at no cost, so it is on by default; the
+  comfort filter is unchanged. "Ease awkward words with deliberate swaps"
+  switches it off.
 - **Avoid pinky stretches** (on by default): the tool never picks a symbol
   more than one key from where a pinky rests (`! - _ = + ) |` ...). A
   separator you choose yourself, like `-`, is still used.
@@ -124,8 +128,10 @@ explanation for each:
   initials, then drop words): "jupiter brings 5 leds for piece" at 12 ->
   `jr;B;5ls;Fpc`. A symbol between words is optional. Fitting is exact:
   each compression step is finished into a real password and the
-  least-compressed one that fits is kept. Property tests prove any sentence
-  reduces to 12 characters that pass every rule (`src/lib/reduceTo12.test.ts`).
+  least-compressed one that fits and keeps every rule is kept; no step
+  takes the letters the uppercase rule needs, so "ducks" with 5 capitals
+  is `DUCKS`, not a refusal. Property tests prove any sentence reduces to
+  12 characters that pass every rule (`src/lib/reduceTo12.test.ts`).
 - **Layout.** Three columns: the rules and swaps on the left, suggestions in
   the middle (ordered by Difficulty, easiest to type first, by default, or by
   Memorability or Strength with the toggle above them; the choice is
@@ -154,7 +160,8 @@ explanation for each:
 - **Memorability** (0-100, on every card and list entry): how closely the
   password still looks like its hint. Words that keep their full length
   score in full, shortened words the fraction kept, dropped words nothing;
-  shorter passwords score higher; each swapped word costs a little.
+  shorter passwords score higher; each word with a random swap costs a
+  little. A deliberate swap costs nothing: it comes with its word.
 - **Test a password** (top of the right column): type any password and
   press Enter. Every keystroke is timed as you type, so the first run is
   scored too and becomes the password under test; corrections (Backspace,

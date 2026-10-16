@@ -32,7 +32,7 @@ describe('SuggestionCard', () => {
     expect(screen.getByRole('heading', { name: `Memorability: ${s.memorability} / 100` })).toBeTruthy();
     expect(screen.getByText(/hint words keep their full length/)).toBeTruthy();
     expect(screen.getByText(/brevity \d+%/)).toBeTruthy();
-    expect(screen.getByText(/^(No spelling differs from the hint, so no penalty\.|\d+ spellings? differs? from the hint: −\d+ points\.)$/)).toBeTruthy();
+    expect(screen.getByText(/^(No random swaps, so no penalty\.|\d+ words? ha(s|ve) random swaps: −\d+ points\.)( The (\d+ )?deliberate swaps? costs? nothing: (it|each) comes with its word\.)?$/)).toBeTruthy();
   });
 
   it('explains whole-word capitals, initials, spaces, no separator and a chosen stretch', () => {
@@ -99,7 +99,7 @@ describe('SuggestionCard', () => {
     expect((screen.getByRole('button', { name: 'Added' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits', () => {
+  it('lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits and nothing to remember', () => {
     const { s, context } = first({});
     const hint = '13 wise kids openly pet twisty toys';
     const password = '13;Wyse;kyd$;openly;pet;twysty;toys';
@@ -111,7 +111,7 @@ describe('SuggestionCard', () => {
     };
     show(swapped, context);
     fireEvent.click(screen.getByRole('button', { name: 'Why?' }));
-    expect(screen.getByText(/Deliberate swaps make awkward words easier to type\. They follow a fixed rule, so they add no/)).toBeTruthy();
+    expect(screen.getByText(/Deliberate swaps make awkward words easier to type\. They follow a fixed rule, so they add no\s+strength and nothing to remember/)).toBeTruthy();
     const deliberate = document.querySelector('.eased-list')!;
     expect([...deliberate.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
       'i → y in “wise” (wyse) removes the long reach w-i (deliberate swap)',
@@ -121,6 +121,9 @@ describe('SuggestionCard', () => {
     // The random swap is listed on its own, on the word as typed.
     const random = [...document.querySelectorAll('.twist-list:not(.eased-list) li')].map((li) => li.textContent);
     expect(random).toContain('s → $ in “kyds” (symbol swap)');
+    // Memorability charges the random swap only, and the swapped words keep their full length.
+    expect(screen.getByText(/^7 of 7 hint words keep their full length\./)).toBeTruthy();
+    expect(screen.getByText('1 word has random swaps: −5 points. The 3 deliberate swaps cost nothing: each comes with its word.')).toBeTruthy();
   });
 });
 

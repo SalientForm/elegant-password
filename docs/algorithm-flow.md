@@ -20,7 +20,7 @@ their own step.
 | Separator | specific | Automatic (the default) → `;` whenever it is allowed, else a space if allowed, else the first allowed and comfortable of `. - , _`, else none; never a problem, whatever the rules. Under the default rules it is `;`, the old default, so default passwords are unchanged. A chosen separator is honoured even if it is a stretch. |
 | Avoid pinky stretches | specific | Symbols more than one key from a pinky's home are removed from the set the tool may pick from (swap outputs, closing marks, automatic separator). If every allowed symbol is a stretch, one is used and a warning says so. |
 | Typing comfort | specific | Each word pool (and the number pool) is ranked by typing cost and cut to the easiest 40 / 70 / 100 %. With deliberate swaps on, words are ranked as typed with their swap. |
-| Deliberate swaps (typing ease) | specific | Off by default. A whole word with a same-finger jump or a reach of 6+ key widths is typed with one fixed sound-alike misspelling that removes it (`wise` → `wyse`, `ease.ts`). A fixed function of the word: 0 bits. Planning counts words at their typed length with unchanged pool sizes; letters only, so the separator and symbol rules never meet it; sentence mode swaps the words still whole unless that leaves too few letters for the uppercase rule. |
+| Deliberate swaps (typing ease) | specific | On by default. A whole word with a same-finger jump or a reach of 6+ key widths is typed with one fixed sound-alike misspelling that removes it (`wise` → `wyse`, `ease.ts`). A fixed function of the word: 0 bits. Planning counts words at their typed length with unchanged pool sizes; letters only, so the separator and symbol rules never meet it; sentence mode swaps the words still whole unless that leaves too few letters for the uppercase rule. |
 | Target bits | specific | Among templates that reach the target, the shortest expected length wins; otherwise the strongest, with a warning. |
 | Number | specific | Placed in front of a random noun phrase; the position is counted as bits. |
 | Capital initials | specific | Fixed-priority positions become one capital letter; the slot's pool becomes its distinct initials, so the count stays exact. Never swapped. |
@@ -87,10 +87,10 @@ but counts no bits either.
 flowchart TD
   A[Sentence] --> B[normalise: strip accents, lowercase,\nremove apostrophes, split on non a-z0-9]
   B --> C[tokens: word / number / small word]
-  C --> D[small words → capital initials;\nN random words → initials\nkeeping enough letters for the uppercase rule]
+  C --> D[small words → capital initials;\nN random words → initials;\nboth keep enough letters for the uppercase rule]
   D --> E[shrink long words: drop vowels or first + last]
   E --> F[compression ladder: one small change per step\nvowels → interior letters → long numbers → drop small words\n→ longest word to initial → drop shortest piece]
-  F --> G[binary search the ladder for the least-compressed\nstate whose finished password fits the target]
+  F --> G[binary search the ladder for the least-compressed\nstate whose finished password fits the target\nand keeps every rule]
   G --> H[finish a state: deliberate swaps on whole words;\ncapitalise a random word;\ndigits by swaps or a number in front or at the end;\nsymbols by separators, some swaps, a closing symbol drawn per password;\nrandom swaps in the length window; glue and join]
   H --> I{fits min…target?}
   I -- too long even when fully compressed --> J[explain: use fewer words or raise the maximum]
@@ -107,11 +107,14 @@ filler before the tag is sized to land exactly on the minimum.
 
 The ladder is monotone: every step shortens the bare text, so the first
 state that fits is found with log₂(states) finishes instead of one per
-state. Each state is finished once; the result is reused. States at the
-compressed end that have a problem of their own (too few letters left for
-the uppercase rule, too few separators when the separator is the only
-symbol allowed) are stepped past first, and the search runs on the states
-before them.
+state. Each state is finished once; the result is reused. No step takes
+the letters the uppercase rule needs, but a state can still break a rule
+by being compressed: with the separator the only symbol allowed, a state
+that dropped words has fewer separators than the symbol rule needs. The
+search steers by such a state's length all the same, and the pick passes
+over it to the nearest state that keeps every rule: the least compressed
+that fits the target, else the most compressed over it but within the
+maximum. A sentence is refused only when no state keeps every rule.
 
 ## 4. Scoring a password cold
 
@@ -129,14 +132,18 @@ flowchart TD
   D -- no --> F[each word from its text: a list pick,\n2.3 bits a letter, or its digits;\n+ log2 C(eligible words, initials)]
   E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the random swaps found;\ndeliberate swaps 0 bits]
   F --> G
-  G --> H[difficulty rubric on the password,\nmemory load = words + random and deliberate swaps]
+  G --> H[difficulty rubric on the password,\nmemory load = words + random swaps;\nmemorability: deliberate swaps cost nothing]
 ```
 
 What it deliberately leaves out: the length limits (not knowable cold, so the
 card can sit a little above the plan's exact figure), the user's own mapping
 list (always the built-in 64; deliberate swaps follow their own fixed table),
 whether deliberate swaps were on (both comfort rankings are tried and the
-lower figure kept), and any selection bias. Choosing a favourite
+lower figure kept), and any selection bias. A deliberate swap is recognised
+from the hint but not charged: it comes with its word by one fixed rule, so
+it adds no memory load, costs no memorability, and the swapped word counts
+as kept whole. Recognising it still matters, or it would read as a random
+swap and be charged as one. Choosing a favourite
 among suggestions, or rolling again until one is liked, is a bias the figures
 do not discount; the strength panel says so in one sentence.
 
