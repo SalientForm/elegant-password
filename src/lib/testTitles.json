@@ -1644,6 +1644,10 @@
       },
       {
         "kind": "test",
+        "title": "gives settings saved before \"Ease awkward words\" existed the new default, on, and keeps a stored choice"
+      },
+      {
+        "kind": "test",
         "title": "returns the defaults for anything that does not validate"
       },
       {

@@ -11,6 +11,7 @@ import {
   parseMode,
   parseRequirements,
   parseSentenceOptions,
+  REQUIREMENTS_KEY,
   saveMode,
   saveRequirements,
   saveSentenceOptions,
@@ -31,8 +32,18 @@ describe('settings store', () => {
     expect(parsed.twists).toBe(3);
     expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, easeSwaps: true }).easeSwaps).toBe(true);
     expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, easeSwaps: 'yes' }).easeSwaps).toBe(DEFAULT_REQUIREMENTS.easeSwaps);
-    const older = Object.fromEntries(Object.entries(DEFAULT_REQUIREMENTS).filter(([key]) => key !== 'easeSwaps')); // saved before the option existed
-    expect(parseRequirements(older).easeSwaps).toBe(false);
+  });
+
+  it('gives settings saved before "Ease awkward words" existed the new default, on, and keeps a stored choice', () => {
+    expect(DEFAULT_REQUIREMENTS.easeSwaps).toBe(true);
+    // Saved before the option existed: no field. Every other field is kept; the option takes the default.
+    const older = { ...Object.fromEntries(Object.entries(DEFAULT_REQUIREMENTS).filter(([key]) => key !== 'easeSwaps')), maxLength: 40, comfort: 'strict' };
+    expect(parseRequirements(older)).toEqual({ ...DEFAULT_REQUIREMENTS, maxLength: 40, comfort: 'strict', easeSwaps: true });
+    // Saved with the option: the stored value stands, off included.
+    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, easeSwaps: false }).easeSwaps).toBe(false);
+    const store = memoryStore();
+    store.setItem(REQUIREMENTS_KEY, JSON.stringify(older));
+    expect(loadRequirements(store).easeSwaps).toBe(true);
   });
 
   it('returns the defaults for anything that does not validate', () => {

@@ -71,8 +71,8 @@ explanation for each:
 - **"At least N" rules** for uppercase, digits and symbols (all on by
   default). Several capitals means whole words in capitals, so the case
   never flips back and forth.
-- **Defaults**: max 32 characters, 40-bit target, 2 minimum swaps, and
-  uppercase, digit and symbol all required.
+- **Defaults**: max 32 characters, 40-bit target, 2 minimum swaps,
+  deliberate swaps on, and uppercase, digit and symbol all required.
 - **Rolls**: neighbouring keys on one row under one hand (`asdf`, `ert`,
   `fg`) are the cheapest move and have their own rubric criterion. Numbers
   favour close-together digits (`357` over `129`).
@@ -82,17 +82,21 @@ explanation for each:
   (`a>@`, `e>3`, `ph>f`, ...), each switchable, plus your own. Mapping
   choices are saved in localStorage. Twist strength is counted exactly from
   the number of distinct ways the twists could land.
-- **Deliberate swaps for typing ease** (off by default): instead of being
+- **Deliberate swaps for typing ease** (on by default): instead of being
   filtered out, a word with a same-finger jump (`e-d`) or a long reach (six
-  key widths or more, `w-i`) can be typed with one fixed sound-alike
+  key widths or more, `w-i`) is typed with one fixed sound-alike
   misspelling that removes it: `wise` -> `wyse`, `cool` -> `cul`, `bricks`
-  -> `brix`. It is a function of the word alone, so it adds no bits; the
-  cold scorer works it out from the hint and never counts it as a random
-  swap, and typing comfort then ranks words as typed. The rule and its
-  table are in `src/lib/ease.ts`. Measured on 600 suggestions at the
-  defaults it helps only a little (mean difficulty 41.4 -> 41.3, same-finger
-  pairs per 10 keys 0.65 -> 0.62, memorability 73.4 -> 72.6), so it stays
-  off by default and the comfort filter is unchanged.
+  -> `brix`. It is a function of the word alone, so it adds no bits and
+  nothing to remember: the cold scorer works it out from the hint, never
+  counts it as a random swap, and charges it no memory load and no
+  memorability. Typing comfort then ranks words as typed. The rule and its
+  table are in `src/lib/ease.ts`. Measured on 6,000 suggestions at the
+  defaults, about 30% get a swap and those are 1.7 difficulty points
+  easier; over all suggestions mean difficulty goes 41.6 -> 41.3 and
+  same-finger pairs per 10 keys 0.67 -> 0.61, with memorability (73.6) and
+  bits unchanged. A small gain at no cost, so it is on by default; the
+  comfort filter is unchanged. "Ease awkward words with deliberate swaps"
+  switches it off.
 - **Avoid pinky stretches** (on by default): the tool never picks a symbol
   more than one key from where a pinky rests (`! - _ = + ) |` ...). A
   separator you choose yourself, like `-`, is still used.

@@ -89,7 +89,7 @@ function requirementsTable(): string {
     ['madeUp', String(d.madeUp), `0-${MAX_MADE_UP} nouns replaced by made-up words of at most two key rolls`],
     ['glue', String(d.glue), 'Attach numbers and small-word initials to the next word'],
     ['avoidPinkyStretch', String(d.avoidPinkyStretch), 'Toggle; on by default'],
-    ['easeSwaps', String(d.easeSwaps), 'Toggle "Ease awkward words with deliberate swaps" (section 7); off by default'],
+    ['easeSwaps', String(d.easeSwaps), 'Toggle "Ease awkward words with deliberate swaps" (section 7); on by default'],
     ['count', String(d.count), '1-20 suggestions'],
   ];
   return ['| Option | Default | Range / meaning |', '| --- | --- | --- |', ...rows.map((r) => `| ${r.join(' | ')} |`)].join('\n');
@@ -206,7 +206,7 @@ ${mappingSection()}
 - Swaps never touch the number, initials, made-up nouns or two-letter words; match lowercase letters only; never overlap; keep the first letter a letter when it will be capitalised; never make a word vanish.
 - **Counting**: per word, every distinct spelling reachable with up to N non-overlapping swaps, at the fewest swaps that make it; combine words with a DP over (swaps used, length change, letter change) so results stay within the length limits and keep enough letters for the uppercase rule; pick uniformly; bits = log2(count); fall back to fewer swaps if none fit. The same table counts outcomes when a password is scored cold.
 
-### Deliberate swaps for typing ease (easeSwaps, off by default)
+### Deliberate swaps for typing ease (easeSwaps, on by default)
 
 Instead of filtering awkward words out, a word that is awkward to type is typed with one fixed misspelling that removes the awkward move (${code('wise → wyse')}, ${code('kids → kyds')}, ${code('cool → cul')}, ${code('lazy → lasy')}, ${code('bricks → brix')}). The rule, a fixed function of the word alone (not its neighbours, the separator, the settings or the mapping switches), so it adds zero bits and the cold scorer can recompute it from the hint:
 1. **Awkward moves** in a word of lowercase letters: a same-finger jump (two different keys, one finger, not a roll: ${code('ed')}, ${code('un')}, ${code('ki')}) or a long reach (${LONG_REACH} key widths or more between consecutive keys: ${code('w-i')}, ${code('a-i')}). A word with none is left alone.
