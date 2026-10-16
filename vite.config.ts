@@ -6,6 +6,8 @@ import { cspPlugin } from './build/csp.ts';
 
 // Ports 4270-4279 are this project's block (see ~/.claude/CLAUDE.md).
 export default defineConfig({
+  // GitHub Pages serves the app under /elegant-password/; the deploy workflow sets BASE_PATH.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react(), cspPlugin()],
   worker: { format: 'es' },
   // Remote access goes through Tailscale Serve (https://lean.tail4b6ff1.ts.net:4270).
