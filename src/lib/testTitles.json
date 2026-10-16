@@ -459,6 +459,18 @@
       {
         "kind": "test",
         "title": "cannot pick Space while spaces are not allowed, and flags a Space picked before they were ruled out"
+      },
+      {
+        "kind": "group",
+        "title": "problems while a number is typed"
+      },
+      {
+        "kind": "test",
+        "title": "does not flash \"minimum above maximum\" on the way from 1 to 16; it shows after a pause, and a fix clears at once"
+      },
+      {
+        "kind": "test",
+        "title": "shows a problem at once when the field is left"
       }
     ]
   },

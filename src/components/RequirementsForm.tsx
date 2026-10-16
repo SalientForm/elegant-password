@@ -2,6 +2,7 @@ import type { Comfort } from '../lib/grammar';
 import { automaticSeparator, MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, SEPARATOR_PREFERENCE, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
 import { isPinkyStretch } from '../lib/keyboard';
 import { ignoredSymbols, ruleProblems, type RuleProblem } from '../lib/validation';
+import { useShownProblems } from './useShownProblems';
 import { NumberField } from './NumberField';
 import { SiteRules } from './SiteRules';
 
@@ -73,7 +74,7 @@ export function RequirementsForm({ value, onChange }: Props) {
     onCommit: (n: number | null) => n !== null && set(key, n),
   });
   // Every contradiction shows beside the first field it names, and every field it names is marked and points at it.
-  const problems = ruleProblems(value);
+  const problems = useShownProblems(ruleProblems(value));
   const mark = (field: keyof Requirements) => {
     const p = problems.find((x) => x.fields.includes(field));
     return p ? { 'aria-invalid': true as const, 'aria-describedby': `problems-${anchorOf(p)}`, 'data-field': field } : {};

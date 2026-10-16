@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { usePasswords } from '../state/PasswordsProvider';
+import { useShownProblems } from './useShownProblems';
 
 /** Controls where Enter already means something else; the global shortcut leaves them alone. */
 const OWN_ENTER = new Set(['BUTTON', 'A', 'SELECT', 'TEXTAREA']);
@@ -19,7 +20,8 @@ interface Props {
  * contradiction in the rules, said above the buttons until it is fixed.
  */
 export function ApplyBar({ onShowProblems }: Props) {
-  const { dirty, apply, discard, problems } = usePasswords();
+  const { dirty, apply, discard, problems: live } = usePasswords();
+  const problems = useShownProblems(live); // apply() itself still refuses any draft with problems
 
   useEffect(() => {
     if (!dirty) return undefined;

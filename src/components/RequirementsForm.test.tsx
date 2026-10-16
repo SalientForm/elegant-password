@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
 import { RequirementsForm } from './RequirementsForm';
+import { SETTLE_MS } from './useShownProblems';
 
 afterEach(cleanup);
 
@@ -249,5 +250,40 @@ describe('RequirementsForm', () => {
     expect(document.querySelector('.field-error')).toBeNull();
     expect((screen.getByRole('button', { name: 'Space' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/^Automatic: ";" under these rules/)).toBeTruthy();
+  });
+});
+
+describe('problems while a number is typed', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('does not flash "minimum above maximum" on the way from 1 to 16; it shows after a pause, and a fix clears at once', () => {
+    vi.useFakeTimers();
+    render(<Harness />);
+    const max = screen.getByLabelText('Maximum');
+    max.focus();
+    act(() => void fireEvent.input(max, { target: { value: '1' } })); // the first digit of 16: committed, and below the minimum
+    expect(req().maxLength).toBe(1);
+    expect(screen.queryByText(/is above the maximum/)).toBeNull();
+    expect(max.getAttribute('aria-invalid')).toBeNull();
+    act(() => void fireEvent.input(max, { target: { value: '16' } }));
+    act(() => void vi.advanceTimersByTime(SETTLE_MS));
+    expect(screen.queryByText(/is above the maximum/)).toBeNull(); // 16 is fine: nothing ever showed
+
+    act(() => void fireEvent.input(max, { target: { value: '1' } }));
+    act(() => void vi.advanceTimersByTime(SETTLE_MS)); // a pause on a value that really is wrong
+    expect(screen.getByText(/is above the maximum/)).toBeTruthy();
+    act(() => void fireEvent.input(max, { target: { value: '20' } }));
+    expect(screen.queryByText(/is above the maximum/)).toBeNull(); // fixed: gone without waiting
+  });
+
+  it('shows a problem at once when the field is left', () => {
+    vi.useFakeTimers();
+    render(<Harness />);
+    const max = screen.getByLabelText('Maximum');
+    max.focus();
+    act(() => void fireEvent.input(max, { target: { value: '5' } }));
+    expect(screen.queryByText(/is above the maximum/)).toBeNull();
+    act(() => max.blur());
+    expect(screen.getByText(/is above the maximum/)).toBeTruthy();
   });
 });
