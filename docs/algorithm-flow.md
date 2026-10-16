@@ -104,14 +104,18 @@ flowchart TD
   D -- no --> F[each word from its text: a list pick,\n2.3 bits a letter, or its digits;\n+ log2 C(eligible words, initials)]
   E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the random swaps found;\ndeliberate swaps 0 bits]
   F --> G
-  G --> H[difficulty rubric on the password,\nmemory load = words + random and deliberate swaps]
+  G --> H[difficulty rubric on the password,\nmemory load = words + random swaps;\nmemorability: deliberate swaps cost nothing]
 ```
 
 What it deliberately leaves out: the length limits (not knowable cold, so the
 card can sit a little above the plan's exact figure), the user's own mapping
 list (always the built-in 64; deliberate swaps follow their own fixed table),
 whether deliberate swaps were on (both comfort rankings are tried and the
-lower figure kept), and any selection bias. Choosing a favourite
+lower figure kept), and any selection bias. A deliberate swap is recognised
+from the hint but not charged: it comes with its word by one fixed rule, so
+it adds no memory load, costs no memorability, and the swapped word counts
+as kept whole. Recognising it still matters, or it would read as a random
+swap and be charged as one. Choosing a favourite
 among suggestions, or rolling again until one is liked, is a bias the figures
 do not discount; the strength panel says so in one sentence.
 

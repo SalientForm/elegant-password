@@ -134,7 +134,8 @@ explanation for each:
 - **Memorability** (0-100, on every card and list entry): how closely the
   password still looks like its hint. Words that keep their full length
   score in full, shortened words the fraction kept, dropped words nothing;
-  shorter passwords score higher; each swapped word costs a little.
+  shorter passwords score higher; each word with a random swap costs a
+  little. A deliberate swap costs nothing: it comes with its word.
 - **Test a password** (top of the right column): type any password and
   press Enter. Every keystroke is timed as you type, so the first run is
   scored too and becomes the password under test; corrections (Backspace,

@@ -23,7 +23,11 @@
 // reading the same text as a random swap, which would overstate the bits;
 // random swaps on top are counted from the swapped spelling, as the
 // generator places them. A random swap that happens to produce a word's
-// deliberate spelling is read as deliberate: the lower figure.
+// deliberate spelling is read as deliberate: the lower figure. Nor is a
+// deliberate swap one more thing to remember: it follows from the word by
+// one fixed rule, so it adds nothing to memory load and costs no
+// memorability. The scorer still has to recognise it, or it would read as
+// a random swap and be charged as one.
 
 import { scoreDifficulty, type Difficulty } from './difficulty';
 import {
@@ -66,7 +70,9 @@ export interface ScoredWord {
  * keep their full length score 1, shortened words the fraction kept,
  * dropped words 0 (fidelity, 60 %); shorter passwords score higher
  * (brevity, 40 %: 1 at 16 characters or fewer, 0 at 48 or more); each
- * swapped word (a random or a deliberate swap) costs 5 points, up to 20.
+ * word with a random swap costs 5 points, up to 20. A word typed with its
+ * deliberate swap counts as kept whole and costs nothing: the swap follows
+ * from the word.
  */
 export interface Memorability {
   score: number;
@@ -76,6 +82,7 @@ export interface Memorability {
   brevity: number;
   /** Hint words that kept their full length. */
   sameSize: number;
+  /** Hint words with a random swap; deliberate swaps are not counted. */
   swappedWords: number;
 }
 
@@ -84,13 +91,15 @@ export const MEMORABILITY = { fidelityWeight: 0.6, brevityWeight: 0.4, shortAt: 
 export function memorabilityOf(password: string, words: readonly ScoredWord[]): Memorability {
   const credits = words.map((w) => {
     if (w.form === 'dropped') return 0;
-    const kept = [...w.text].length / Math.max(1, [...w.word].length);
+    // A deliberately swapped word is the whole word as this tool types it ("cool" as "cul"), so its full length is its swapped spelling's.
+    const full = w.form === 'eased' ? w.base : w.word;
+    const kept = [...w.text].length / Math.max(1, [...full].length);
     return Math.min(1, kept);
   });
   const fidelity = credits.length ? credits.reduce((a, b) => a + b, 0) / credits.length : 0;
   const length = [...password].length;
   const brevity = Math.min(1, Math.max(0, 1 - (length - MEMORABILITY.shortAt) / (MEMORABILITY.longAt - MEMORABILITY.shortAt)));
-  const swappedWords = words.filter((w) => w.twists > 0 || w.form === 'eased').length;
+  const swappedWords = words.filter((w) => w.twists > 0).length;
   const penalty = Math.min(MEMORABILITY.maxSwapPenalty, swappedWords * MEMORABILITY.swapPenalty);
   const score = Math.max(0, Math.round(100 * (MEMORABILITY.fidelityWeight * fidelity + MEMORABILITY.brevityWeight * brevity) - penalty));
   return { score, fidelity, brevity, sameSize: credits.filter((c) => c >= 1).length, swappedWords };
@@ -106,7 +115,7 @@ export interface ColdScore {
   initialBits: number;
   twistCount: number;
   twistOptions: number;
-  /** Words typed with their deliberate swap for typing ease: zero bits, but one more thing to remember. */
+  /** Words typed with their deliberate swap for typing ease: zero bits, and nothing more to remember. */
   easedCount: number;
   /** The matched template, number included. */
   template?: Slot[];
@@ -437,7 +446,7 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
 
   // One rule for every password: the exact template figure when the hint is one of the tool's sentences, else each word from its text.
   const sentenceBits = match ? match.bits : scored.reduce((sum, w) => sum + wordBitsFromText(w), 0);
-  // A deliberate swap is a fixed function of its word: no bits, but one more spelling to remember.
+  // A deliberate swap is a fixed function of its word: no bits, and no memory load, since the word brings it with it.
   const easedCount = scored.filter((s) => s.form === 'eased').length;
   const result: ColdScore = {
     bits: sentenceBits + twistBits + initialBits,
@@ -451,7 +460,7 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
     comfort: match?.comfort,
     aligned: scored.every((s) => s.form !== 'dropped'),
     words: scored,
-    difficulty: scoreDifficulty(password, words.length + twistCount + easedCount),
+    difficulty: scoreDifficulty(password, words.length + twistCount),
     typing: typingProfile(password),
     memorability: memorabilityOf(password, scored),
   };

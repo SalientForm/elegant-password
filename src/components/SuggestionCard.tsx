@@ -146,7 +146,8 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   // The memorability breakdown comes from the same cold score as the badge.
   const cold = useMemo(() => scoreCold(password, hint), [password, hint]);
   const memo = cold.memorability;
-  const changedWords = cold.words.filter((w) => w.form === 'dropped' || [...w.text].length < [...w.word].length);
+  // A deliberately swapped word is whole as typed ("cool" as "cul"), so only shortened and dropped words count as changed.
+  const changedWords = cold.words.filter((w) => w.form === 'dropped' || [...w.text].length < [...(w.form === 'eased' ? w.base : w.word)].length);
   // Deliberate swaps are read from the password and hint, like everything else the card says.
   const eased = cold.words.flatMap((w) => {
     const e = w.form === 'eased' ? easeOf(w.word) : undefined;
@@ -257,7 +258,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
               <>
                 <p>
                   Deliberate swaps make awkward words easier to type. They follow a fixed rule, so they add no
-                  strength; remember them with the sentence:
+                  strength and nothing to remember: each comes with its word:
                 </p>
                 <ul className="twist-list eased-list">
                   {eased.map((e) => (
@@ -320,8 +321,8 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
             <h3>Memorability: {memo.score} / 100</h3>
             <p>
               How closely it still looks like its hint, and how short it is. Words that keep their full length count in
-              full, shortened words count the fraction kept, dropped words nothing; shorter is better; a spelling that
-              differs from the hint costs a little.
+              full, shortened words count the fraction kept, dropped words nothing; shorter is better; a random swap
+              costs a little, a deliberate swap nothing.
             </p>
             <ul>
               <li>
@@ -339,8 +340,9 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
               </li>
               <li>
                 {memo.swappedWords === 0
-                  ? 'No spelling differs from the hint, so no penalty.'
-                  : `${memo.swappedWords} spelling${memo.swappedWords === 1 ? '' : 's'} differ${memo.swappedWords === 1 ? 's' : ''} from the hint: −${Math.min(MEMORABILITY.maxSwapPenalty, memo.swappedWords * MEMORABILITY.swapPenalty)} points.`}
+                  ? 'No random swaps, so no penalty.'
+                  : `${memo.swappedWords} word${memo.swappedWords === 1 ? ' has' : 's have'} random swaps: −${Math.min(MEMORABILITY.maxSwapPenalty, memo.swappedWords * MEMORABILITY.swapPenalty)} points.`}
+                {eased.length > 0 && ` ${eased.length === 1 ? 'The deliberate swap costs' : `The ${eased.length} deliberate swaps cost`} nothing: ${eased.length === 1 ? 'it comes' : 'each comes'} with its word.`}
               </li>
             </ul>
           </section>

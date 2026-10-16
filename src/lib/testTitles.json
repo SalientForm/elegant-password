@@ -497,7 +497,7 @@
       },
       {
         "kind": "test",
-        "title": "lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits"
+        "title": "lists deliberate swaps apart from random swaps, as a fixed rule that adds no bits and nothing to remember"
       },
       {
         "kind": "group",
@@ -1569,7 +1569,11 @@
       },
       {
         "kind": "test",
-        "title": "credits the easier typing in difficulty, and counts each swap as one more spelling to remember"
+        "title": "credits the easier typing in difficulty, and charges no memory load or memorability for the swaps"
+      },
+      {
+        "kind": "test",
+        "title": "counts a word made shorter by its deliberate swap as kept whole, and still charges random swaps on top"
       },
       {
         "kind": "test",

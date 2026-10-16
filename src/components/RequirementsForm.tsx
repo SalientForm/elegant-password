@@ -154,8 +154,8 @@ export function RequirementsForm({ value, onChange }: Props) {
         </label>
         <p className="hint">
           A word with a same-finger jump or a long reach gets one fixed misspelling that removes it: “wise” → wyse,
-          “cool” → cul. Comfort then ranks words as typed. A fixed rule, so it adds no strength, and the hint keeps the
-          word as written.
+          “cool” → cul. Comfort then ranks words as typed. A fixed rule that comes with the word, so it adds no
+          strength and nothing to remember, and the hint keeps the word as written.
         </p>
       </fieldset>
 

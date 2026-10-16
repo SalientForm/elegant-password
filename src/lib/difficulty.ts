@@ -118,7 +118,7 @@ export const RUBRIC: readonly Criterion[] = [
   {
     id: 'chunks',
     name: 'Memory load',
-    measures: 'Things to remember: words, the number and each swap, deliberate ones included',
+    measures: 'Things to remember: words, the number and each random swap (a deliberate swap comes with its word)',
     weight: 5,
     cutPoints: [6, 8, 10, 13],
     format: fixed(0),
