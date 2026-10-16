@@ -12,8 +12,9 @@ export function ScoringPage() {
           Strength is entropy: log2 of the number of passwords the generator could have produced in exactly the same
           way. The maths assumes the attacker knows this tool, its word lists, the sentence patterns and every rule, so
           only the random choices count. Which words were drawn, where the number went, which spellings the swaps
-          chose: those add bits. Fixed rules add nothing: capitalising the first letter, the separator, the closing
-          marks, which words become initials, and the deliberate swaps that ease awkward words. 40 bits means about a trillion equally likely passwords. The "S" badge on
+          chose: those add bits. Fixed rules add nothing: capitalising the first letter, the separator, which words
+          become initials, and the deliberate swaps that ease awkward words. The closing symbol is drawn at random
+          for each password, for variety, but counts nothing either. 40 bits means about a trillion equally likely passwords. The "S" badge on
           each card is green from the Strong preset at 50 bits, yellow from Everyday at 40, and red below.
         </p>
         <h3>The plan: exact</h3>

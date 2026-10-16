@@ -52,13 +52,14 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
       </table>
 
       <p className="hint">
-        Capitalisation, separators, the closing symbol{plan.easeSwaps ? ' and the deliberate swaps that ease awkward words' : ''}{' '}
-        follow fixed rules, so they add nothing here. Random swaps add more on top. Each card scores its own password from the password and its hint alone, so a password reads the same
+        Capitalisation and separators{plan.easeSwaps ? ' and the deliberate swaps that ease awkward words' : ''} follow
+        fixed rules, and the closing symbol, though drawn at random for variety, is not counted, so they add nothing
+        here. Random swaps add more on top. Each card scores its own password from the password and its hint alone, so a password reads the same
         wherever it appears; that figure does not know about the length limits, so it can sit a little above this one.
       </p>
       <p className="hint">
-        Choosing a favourite is a bias the figures here do not discount: seeing several suggestions, or pressing New
-        passwords until you like one, leans your choice toward what you find likeable. Take the first one you can live
+        Choosing a favourite is a bias the figures here do not discount: seeing several suggestions, or pressing Refresh
+        until you like one, leans your choice toward what you find likeable. Take the first one you can live
         with rather than the one you love.
       </p>
 
