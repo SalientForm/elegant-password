@@ -28,6 +28,7 @@ const PAGES: { id: Page; href: string; label: string }[] = [
 ];
 
 const TITLE = 'Thuh Eleg@nt Pa$$word!';
+const LICENSE_URL = 'https://github.com/SalientForm/elegant-password/blob/main/LICENSE';
 /** One line for the whole app, the same on every page. */
 const DESCRIPTION = 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.';
 
@@ -73,9 +74,14 @@ export function App() {
                 <h1>{TITLE}</h1>
                 <p className="tagline">{DESCRIPTION}</p>
               </div>
-              <span className="brand">
-                brought to you by <strong>SalientForm</strong>
-              </span>
+              <div className="credits">
+                <span className="brand">
+                  brought to you by <strong>SalientForm</strong>
+                </span>
+                <a className="license" href={LICENSE_URL} target="_blank" rel="noreferrer">
+                  MIT License
+                </a>
+              </div>
             </div>
             {!phone && (
               <nav className="topnav" aria-label="Pages">

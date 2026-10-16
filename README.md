@@ -210,6 +210,16 @@ drafting and applying changes, the saved list, sentence mode, copy, the
 Fun page download, and fails on any console error. First time only:
 `pnpm exec playwright install chromium-headless-shell`.
 
+## Deploy
+
+Every push to `main`, merges included, runs `.github/workflows/pages.yml`:
+unit tests, then a build under `/elegant-password/` (`BASE_PATH`), published
+to GitHub Pages at https://salientform.github.io/elegant-password/.
+
+## License
+
+[MIT](LICENSE), copyright SalientForm.
+
 ## Layout
 
 - `src/lib/words.ts`: word pools per part of speech

@@ -219,6 +219,9 @@ describe('App: order and pages', () => {
     const credit = screen.getByText((_, el) => el?.classList.contains('brand') === true);
     expect(credit.textContent?.replace(/\s+/g, ' ').trim()).toBe('brought to you by SalientForm');
     expect(credit.querySelector('strong')?.textContent).toBe('SalientForm'); // only the name is bold
+    const license = screen.getByRole('link', { name: 'MIT License' });
+    expect(license.getAttribute('href')).toBe('https://github.com/SalientForm/elegant-password/blob/main/LICENSE');
+    expect(credit.compareDocumentPosition(license) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // beneath the credit
     expect(screen.getByText(/read like a sentence/)).toBeTruthy();
   });
 });

@@ -2,6 +2,7 @@
   "name": "elegant-passwords",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@11.5.0",
   "engines": {
