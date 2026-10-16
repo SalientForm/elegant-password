@@ -14,8 +14,9 @@
 // its neighbours in the same list ("no spaces or symbols"), else from a
 // heading line such as "Your password must contain:".
 
-import { MAX_DIGITS, MAX_SYMBOLS, MAX_UPPERCASE, DEFAULT_REQUIREMENTS, type Requirements } from './generate';
-import type { RuleFields } from './sitePresets';
+import type { Requirements } from './generate';
+import { settleRules, type RuleFields } from './sitePresets';
+import { MAX_LENGTH } from './validation'; // the form's own limit
 
 export interface ParsedRules {
   /** Only the fields the text spoke to. */
@@ -43,8 +44,6 @@ interface SymbolList {
   /** Introduced by "such as" or "e.g.": a sample, not the full set. */
   example: boolean;
 }
-
-const MAX_LENGTH = 256; // the form's own limit
 
 // ---------------------------------------------------------------- normalising
 
@@ -441,37 +440,13 @@ function finish(l: Lengths, f: Found): ParsedRules {
 /**
  * The requirements with what was understood filled in, and anything else as
  * it was. Where the result would not be valid on its own (a new minimum above
- * the old maximum, more digits than the form allows), the smallest fix is
- * made and said.
+ * the old maximum, more digits than the form allows, a separator the text
+ * rules out), the smallest fix is made to what the text did not say, and
+ * named.
  */
 export function applyParsedRules(req: Requirements, parsed: ParsedRules): { req: Requirements; notes: string[] } {
   const { rules } = parsed;
   const next: Requirements = { ...req, ...rules };
-  const notes: string[] = [];
   if (parsed.excludedSymbols) next.allowedSymbols = [...next.allowedSymbols].filter((c) => !parsed.excludedSymbols.includes(c)).join('');
-  if (next.minLength > next.maxLength) {
-    if (rules.maxLength === undefined) {
-      next.maxLength = next.minLength;
-      notes.push(`maximum raised to ${next.maxLength} to fit`);
-    } else {
-      next.minLength = next.maxLength;
-      notes.push(`minimum lowered to ${next.minLength} to fit`);
-    }
-  }
-  const caps: ['minUppercase' | 'minDigits' | 'minSymbols', number, string][] = [
-    ['minUppercase', MAX_UPPERCASE, 'uppercase letters'],
-    ['minDigits', MAX_DIGITS, 'digits'],
-    ['minSymbols', MAX_SYMBOLS, 'symbols'],
-  ];
-  for (const [key, cap, label] of caps) {
-    if (next[key] > cap) {
-      next[key] = cap;
-      notes.push(`${label} capped at ${cap}`);
-    }
-  }
-  if (next.minSymbols > 0 && next.allowedSymbols === '') {
-    next.allowedSymbols = DEFAULT_REQUIREMENTS.allowedSymbols;
-    notes.push(`symbols ${next.allowedSymbols} allowed, as none were`);
-  }
-  return { req: next, notes };
+  return settleRules(next, new Set(Object.keys(rules) as (keyof RuleFields)[]));
 }

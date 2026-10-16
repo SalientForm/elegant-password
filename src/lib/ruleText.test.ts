@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_REQUIREMENTS, validate } from './generate';
+import { DEFAULT_REQUIREMENTS, ruleProblems, validate } from './generate';
 import { applyParsedRules, parseRuleText } from './ruleText';
 import type { RuleFields } from './sitePresets';
 
@@ -145,8 +145,8 @@ describe('applyParsedRules', () => {
   const custom = { ...DEFAULT_REQUIREMENTS, targetBits: 60, comfort: 'strict' as const, separator: '.', twists: 3, initials: 2, glue: true, count: 9 };
 
   it('fills in only what was understood and keeps every other setting', () => {
-    const { req, notes } = applyParsedRules(custom, parseRuleText('Must be 8-20 characters and include at least one number and one of !@#$%.'));
-    expect(req).toEqual({ ...custom, minLength: 8, maxLength: 20, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%' });
+    const { req, notes } = applyParsedRules({ ...custom, separator: '#' }, parseRuleText('Must be 8-20 characters and include at least one number and one of !@#$%.'));
+    expect(req).toEqual({ ...custom, separator: '#', minLength: 8, maxLength: 20, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%' });
     expect(notes).toEqual([]);
   });
 
@@ -184,5 +184,50 @@ describe('applyParsedRules', () => {
     const { req, notes } = applyParsedRules(none, parseRuleText('Must include a special character.'));
     expect(req).toMatchObject({ minSymbols: 1, allowedSymbols: DEFAULT_REQUIREMENTS.allowedSymbols });
     expect(notes).toHaveLength(1);
+  });
+
+  it('sets a separator the text rules out to Automatic, and says so', () => {
+    const semicolon = { ...DEFAULT_REQUIREMENTS, separator: ';' };
+    const alnum = applyParsedRules(semicolon, parseRuleText('Letters and numbers only, no spaces.'));
+    expect(alnum.req).toMatchObject({ separator: 'auto', allowedSymbols: '', minSymbols: 0, allowSpaces: false });
+    expect(alnum.notes).toEqual(['separator set to Automatic (none), as ";" is not allowed']);
+    const spaced = applyParsedRules({ ...DEFAULT_REQUIREMENTS, separator: ' ' }, parseRuleText('No spaces.'));
+    expect(spaced.req.separator).toBe('auto');
+    expect(spaced.notes).toEqual(['separator set to Automatic (";"), as spaces are not allowed']);
+    const excluded = applyParsedRules(semicolon, parseRuleText('Must not contain ; or :'));
+    expect(excluded.req.separator).toBe('auto');
+    expect(excluded.notes).toEqual(['separator set to Automatic (a space), as ";" is not allowed']);
+    // Automatic itself is never changed: it follows the rules on its own.
+    expect(applyParsedRules(DEFAULT_REQUIREMENTS, parseRuleText('Letters and numbers only.')).notes).toEqual([]);
+  });
+
+  it('lowers the counts the text did not set when they no longer fit its maximum, the largest first', () => {
+    const mine = { ...DEFAULT_REQUIREMENTS, minUppercase: 3, minDigits: 4, minSymbols: 6 };
+    const { req, notes } = applyParsedRules(mine, parseRuleText('Must be at most 8 characters.'));
+    expect(req).toMatchObject({ maxLength: 8, minLength: 8, minSymbols: 1, minDigits: 4, minUppercase: 3 });
+    expect(notes).toEqual(['minimum lowered to 8 to fit', 'symbols lowered to 1 to fit']);
+    // Counts the text did set stay; the others give way.
+    const stated = applyParsedRules(mine, parseRuleText('8 characters maximum, with at least 6 symbols.'));
+    expect(stated.req).toMatchObject({ maxLength: 8, minSymbols: 6, minDigits: 0, minUppercase: 2 });
+    expect(stated.notes).toEqual(['minimum lowered to 8 to fit', 'digits no longer required, to fit', 'uppercase letters lowered to 2 to fit']);
+  });
+
+  it('never leaves the rules contradicting themselves, from any starting point, for any text it reads', () => {
+    const starts = [
+      DEFAULT_REQUIREMENTS,
+      { ...DEFAULT_REQUIREMENTS, separator: ';' },
+      { ...DEFAULT_REQUIREMENTS, separator: ' ' },
+      { ...DEFAULT_REQUIREMENTS, separator: '-', allowedSymbols: '-' },
+      { ...DEFAULT_REQUIREMENTS, minUppercase: 8, minDigits: 4, minSymbols: 8, maxLength: 64, minLength: 30 },
+      { ...DEFAULT_REQUIREMENTS, minSymbols: 0, allowedSymbols: '', allowSpaces: false, separator: '' },
+    ];
+    const texts = [...CASES.map((c) => c.text), 'At most 6 characters.', 'Exactly 4 characters.', 'Must include 8 symbols, 4 digits and 8 capitals, up to 12 characters.'];
+    for (const start of starts) {
+      for (const text of texts) {
+        const { req } = applyParsedRules(start, parseRuleText(text));
+        // Only text that contradicts itself may leave a problem, and then only about the counts it set against its own maximum.
+        for (const p of ruleProblems(req)) expect(p.fields[0], `${text} from ${JSON.stringify(start)}: ${p.message}`).toBe('maxLength');
+      }
+    }
   });
 });

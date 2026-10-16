@@ -5,10 +5,11 @@
 import { MODES, type Mode } from './engine';
 import type { LengthTag } from './fluff';
 import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from './fromSentence';
-import { DEFAULT_REQUIREMENTS, separatorProblem, validate, type Requirements } from './generate';
-import { COMFORT_SHARE, type Comfort } from './grammar';
+import { DEFAULT_REQUIREMENTS, type Requirements } from './generate';
+import { COMFORT_SHARE } from './grammar';
 import { DEFAULT_SORT, SORT_ORDERS, type SortOrder } from './sort';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, writeJson, type KeyValueStore } from './storage';
+import { FIELD_LABELS, ruleProblems } from './validation';
 
 export const REQUIREMENTS_KEY = 'elegant-passwords:requirements:v1';
 export const SENTENCE_OPTIONS_KEY = 'elegant-passwords:sentence-options:v1';
@@ -18,58 +19,94 @@ export const SORT_KEY = 'elegant-passwords:sort:v1';
 const SHRINK_STYLES: readonly ShrinkStyle[] = ['none', 'vowels', 'ends'];
 const LENGTH_TAGS: readonly LengthTag[] = ['total', 'factor', 'none'];
 
+/**
+ * Saved with the requirements. Before version 2 there was no Automatic
+ * separator to default to: ";" was the default, so nearly every saved ";"
+ * is the default rather than a choice, and loads as Automatic, which is ";"
+ * wherever ";" is allowed (the same passwords) and something allowed where
+ * it is not. And 'auto' meant "a space where allowed, else ; . - , _", so
+ * an older 'auto' with spaces allowed loads as a space, and its passwords
+ * do not change either.
+ */
+export const REQUIREMENTS_VERSION = 2;
+
+export interface LoadedRequirements {
+  req: Requirements;
+  /** Saved fields that could not be used and are back to their defaults. */
+  reset: (keyof Requirements)[];
+}
+
 /** The stored requirements, field by field, falling back to the defaults for anything odd. */
-export function parseRequirements(raw: unknown): Requirements {
-  if (!isRecord(raw)) return DEFAULT_REQUIREMENTS;
+export const parseRequirements = (raw: unknown): Requirements => readRequirements(raw).req;
+
+/**
+ * The stored requirements, and which saved fields had to go back to their
+ * defaults: odd values field by field, then any contradiction (a minimum
+ * above the maximum, symbols required and none allowed) repaired by
+ * resetting as few fields as will do, never by discarding the rest.
+ */
+export function readRequirements(raw: unknown): LoadedRequirements {
+  if (!isRecord(raw)) return { req: DEFAULT_REQUIREMENTS, reset: [] };
   const out: Record<string, unknown> = { ...DEFAULT_REQUIREMENTS };
-  for (const key of Object.keys(DEFAULT_REQUIREMENTS) as (keyof Requirements)[]) {
+  const reset = new Set<keyof Requirements>();
+  for (const key of KEYS) {
+    if (!own(raw, key)) continue; // saved before the field existed: the default, and nothing to report
     const value = raw[key];
     const fallback = DEFAULT_REQUIREMENTS[key];
-    if (key === 'separator') {
-      if (isString(value) && !separatorProblem(value, { allowSpaces: true, allowedSymbols: isString(raw.allowedSymbols) ? raw.allowedSymbols : DEFAULT_REQUIREMENTS.allowedSymbols })) out.separator = value;
-    } else if (key === 'comfort') {
-      if (isString(value) && own(COMFORT_SHARE, value)) out.comfort = value as Comfort;
-    } else if (typeof fallback === 'number') {
-      if (isFiniteNumber(value)) out[key] = value;
-    } else if (typeof fallback === 'boolean') {
-      if (isBoolean(value)) out[key] = value;
-    } else if (isString(value)) {
-      out[key] = value;
-    }
+    const ok =
+      key === 'comfort'
+        ? isString(value) && own(COMFORT_SHARE, value)
+        : typeof fallback === 'number'
+          ? isFiniteNumber(value)
+          : typeof fallback === 'boolean'
+            ? isBoolean(value)
+            : isString(value);
+    if (ok) out[key] = value;
+    else reset.add(key);
+  }
+  if (raw.version !== REQUIREMENTS_VERSION) {
+    if (out.separator === ';') out.separator = 'auto';
+    else if (out.separator === 'auto' && out.allowSpaces === true) out.separator = ' ';
   }
   const req = out as unknown as Requirements;
+  const fixed = repair(req);
+  for (const key of KEYS) if (fixed[key] !== req[key]) reset.add(key);
+  return { req: fixed, reset: KEYS.filter((k) => reset.has(k)) };
+}
+
+const KEYS = Object.keys(DEFAULT_REQUIREMENTS) as (keyof Requirements)[];
+// Style before rules: a separator the rules forbid goes back to Automatic rather than the rules being loosened.
+const REPAIR_ORDER: (keyof Requirements)[] = ['separator', ...KEYS.filter((k) => k !== 'separator')];
+const valid = (req: Requirements) => ruleProblems(req).length === 0;
+
+function repair(req: Requirements): Requirements {
   if (valid(req)) return req;
-  // Validation looks across fields (the minimum against the maximum): repair the record field by field, each
-  // offending field back to its default, rather than discard it, so one bad field never wipes every other setting.
-  const keys = Object.keys(DEFAULT_REQUIREMENTS) as (keyof Requirements)[];
   const reset = (base: Requirements, ...which: (keyof Requirements)[]) => Object.assign({ ...base }, ...which.map((k) => ({ [k]: DEFAULT_REQUIREMENTS[k] }))) as Requirements;
-  for (const key of keys) {
+  for (const key of REPAIR_ORDER) {
     const fixed = reset(req, key);
     if (valid(fixed)) return fixed;
   }
-  for (const a of keys) {
-    for (const b of keys) {
+  for (const a of REPAIR_ORDER) {
+    for (const b of REPAIR_ORDER) {
       if (a === b) continue;
       const fixed = reset(req, a, b);
       if (valid(fixed)) return fixed;
     }
   }
   let fixed = req;
-  for (const key of keys) {
+  for (const key of REPAIR_ORDER) {
     fixed = reset(fixed, key);
     if (valid(fixed)) return fixed;
   }
   return DEFAULT_REQUIREMENTS;
 }
 
-const valid = (req: Requirements): boolean => {
-  try {
-    validate(req);
-    return true;
-  } catch {
-    return false;
-  }
-};
+/** One line for the options column when saved settings had to be repaired on load, else null. */
+export function resetNotice(reset: readonly (keyof Requirements)[]): string | null {
+  if (!reset.length) return null;
+  return `Some saved settings could not be used, so they are back to their defaults: ${reset.map((k) => FIELD_LABELS[k]).join(', ')}.`;
+}
+
 const own = (o: object, key: string) => Object.prototype.hasOwnProperty.call(o, key); // never a prototype key such as "toString"
 
 export function parseSentenceOptions(raw: unknown): SentenceOptions {
@@ -94,7 +131,8 @@ export function parseMode(raw: unknown): Mode {
 }
 
 export const loadRequirements = (store: KeyValueStore | undefined) => parseRequirements(readJson(store, REQUIREMENTS_KEY));
-export const saveRequirements = (store: KeyValueStore | undefined, req: Requirements) => writeJson(store, REQUIREMENTS_KEY, req);
+export const loadRequirementsReport = (store: KeyValueStore | undefined) => readRequirements(readJson(store, REQUIREMENTS_KEY));
+export const saveRequirements = (store: KeyValueStore | undefined, req: Requirements) => writeJson(store, REQUIREMENTS_KEY, { ...req, version: REQUIREMENTS_VERSION });
 export const loadSentenceOptions = (store: KeyValueStore | undefined) => parseSentenceOptions(readJson(store, SENTENCE_OPTIONS_KEY));
 export const saveSentenceOptions = (store: KeyValueStore | undefined, opts: SentenceOptions) => writeJson(store, SENTENCE_OPTIONS_KEY, opts);
 export function parseSort(raw: unknown): SortOrder {

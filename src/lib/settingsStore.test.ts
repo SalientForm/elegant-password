@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SENTENCE_OPTIONS } from './fromSentence';
 import { DEFAULT_REQUIREMENTS } from './generate';
+import { ruleProblems } from './validation';
 import {
   loadMode,
   loadSort,
@@ -14,32 +15,39 @@ import {
   saveMode,
   saveRequirements,
   saveSentenceOptions,
+  REQUIREMENTS_VERSION,
+  readRequirements,
+  resetNotice,
+  REQUIREMENTS_KEY,
 } from './settingsStore';
 import { DEFAULT_SORT } from './sort';
 import { memoryStore } from './storage';
 
+/** Requirements as this version saves them. */
+const SAVED = { ...DEFAULT_REQUIREMENTS, version: REQUIREMENTS_VERSION };
+
 describe('settings store', () => {
   it('keeps valid fields and falls back per field for odd ones', () => {
-    const parsed = parseRequirements({ ...DEFAULT_REQUIREMENTS, maxLength: 40, separator: 'nope', comfort: 'strict', glue: 'yes', twists: 3 });
+    const parsed = parseRequirements({ ...SAVED, maxLength: 40, separator: 'nope', comfort: 'strict', glue: 'yes', twists: 3 });
     expect(parsed.maxLength).toBe(40);
     expect(parsed.separator).toBe(DEFAULT_REQUIREMENTS.separator);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, separator: '+', allowedSymbols: '+' }).separator).toBe('+');
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, separator: 'x' }).separator).toBe(DEFAULT_REQUIREMENTS.separator);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, separator: '' }).separator).toBe('');
+    expect(parseRequirements({ ...SAVED, separator: '+', allowedSymbols: '+' }).separator).toBe('+');
+    expect(parseRequirements({ ...SAVED, separator: 'x' }).separator).toBe(DEFAULT_REQUIREMENTS.separator);
+    expect(parseRequirements({ ...SAVED, separator: '' }).separator).toBe('');
     expect(parsed.comfort).toBe('strict');
     expect(parsed.glue).toBe(DEFAULT_REQUIREMENTS.glue);
     expect(parsed.twists).toBe(3);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, easeSwaps: true }).easeSwaps).toBe(true);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, easeSwaps: 'yes' }).easeSwaps).toBe(DEFAULT_REQUIREMENTS.easeSwaps);
-    const older = Object.fromEntries(Object.entries(DEFAULT_REQUIREMENTS).filter(([key]) => key !== 'easeSwaps')); // saved before the option existed
+    expect(parseRequirements({ ...SAVED, easeSwaps: true }).easeSwaps).toBe(true);
+    expect(parseRequirements({ ...SAVED, easeSwaps: 'yes' }).easeSwaps).toBe(DEFAULT_REQUIREMENTS.easeSwaps);
+    const older = Object.fromEntries(Object.entries(SAVED).filter(([key]) => key !== 'easeSwaps')); // saved before the option existed
     expect(parseRequirements(older).easeSwaps).toBe(false);
   });
 
   it('returns the defaults for anything that does not validate', () => {
     expect(parseRequirements(null)).toBe(DEFAULT_REQUIREMENTS);
     expect(parseRequirements('x')).toBe(DEFAULT_REQUIREMENTS);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, minLength: 30, maxLength: 20 })).toEqual({ ...DEFAULT_REQUIREMENTS, maxLength: 20 }); // repaired, not discarded
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, count: 99 })).toEqual(DEFAULT_REQUIREMENTS);
+    expect(parseRequirements({ ...SAVED, minLength: 30, maxLength: 20 })).toEqual({ ...DEFAULT_REQUIREMENTS, maxLength: 20 }); // repaired, not discarded
+    expect(parseRequirements({ ...SAVED, count: 99 })).toEqual(DEFAULT_REQUIREMENTS);
   });
 
   it('parses sentence options and the mode', () => {
@@ -85,7 +93,7 @@ describe('settings store', () => {
 
 describe('stored requirements that fail validation as a whole', () => {
   it('are repaired field by field, so a minimum above the maximum never wipes every other setting on reload', () => {
-    const stored = { ...DEFAULT_REQUIREMENTS, minLength: 40, maxLength: 32, twists: 3, allowSpaces: false, initials: 2, separator: '-' };
+    const stored = { ...SAVED, minLength: 40, maxLength: 32, twists: 3, allowSpaces: false, initials: 2, separator: '-' };
     const parsed = parseRequirements(stored);
     expect(parsed.twists).toBe(3);
     expect(parsed.allowSpaces).toBe(false);
@@ -100,10 +108,67 @@ describe('stored requirements that fail validation as a whole', () => {
   });
 
   it('treats prototype keys as odd data: a stored "toString" is neither a comfort level nor an order', () => {
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, comfort: 'toString' }).comfort).toBe(DEFAULT_REQUIREMENTS.comfort);
-    expect(parseRequirements({ ...DEFAULT_REQUIREMENTS, comfort: 'constructor' }).comfort).toBe(DEFAULT_REQUIREMENTS.comfort);
+    expect(parseRequirements({ ...SAVED, comfort: 'toString' }).comfort).toBe(DEFAULT_REQUIREMENTS.comfort);
+    expect(parseRequirements({ ...SAVED, comfort: 'constructor' }).comfort).toBe(DEFAULT_REQUIREMENTS.comfort);
     expect(parseSort('toString')).toBe(DEFAULT_SORT);
     expect(parseSort('constructor')).toBe(DEFAULT_SORT);
     expect(parseSort('easiest')).toBe('difficulty'); // the real legacy names still map
+  });
+});
+
+describe('stored requirements: contradictions, the reset report and older versions', () => {
+  it('load every contradiction the form blocks as a set that validates, keeping what it can and naming what was reset', () => {
+    const cases: [string, Record<string, unknown>, (keyof typeof DEFAULT_REQUIREMENTS)[]][] = [
+      ['minimum above the maximum', { minLength: 40, maxLength: 32 }, ['minLength']],
+      ['symbols required, none allowed', { minSymbols: 2, allowedSymbols: '' }, ['allowedSymbols']],
+      ['required characters past the maximum', { minLength: 8, maxLength: 10, minUppercase: 8, minDigits: 4 }, ['maxLength']],
+      ['separator not allowed', { separator: ';', allowedSymbols: '!@#' }, ['separator']],
+      ['space separator, spaces not allowed', { separator: ' ', allowSpaces: false }, ['separator']],
+      ['separator a letter', { separator: 'x' }, ['separator']],
+      ['count out of range', { count: 99 }, ['count']],
+      ['negative target', { targetBits: -5 }, ['targetBits']],
+      ['too many initials', { initials: 7 }, ['initials']],
+      ['a number field holding text', { maxLength: 'lots' }, ['maxLength']],
+    ];
+    for (const [label, fields, reset] of cases) {
+      const loaded = readRequirements({ ...SAVED, twists: 3, comfort: 'strict', ...fields });
+      expect(ruleProblems(loaded.req), label).toEqual([]);
+      expect(loaded.reset, label).toEqual(reset);
+      expect(loaded.req.twists, label).toBe(3); // everything else is kept
+      expect(loaded.req.comfort, label).toBe('strict');
+    }
+  });
+
+  it('put a separator the rules forbid back to Automatic rather than loosen the rules', () => {
+    const loaded = readRequirements({ ...SAVED, separator: ' ', allowSpaces: false, allowedSymbols: '!' });
+    expect(loaded.req).toMatchObject({ separator: 'auto', allowSpaces: false, allowedSymbols: '!' });
+    expect(loaded.reset).toEqual(['separator']);
+  });
+
+  it('report nothing for a clean record, for no record, or for fields saved before they existed', () => {
+    expect(readRequirements(SAVED).reset).toEqual([]);
+    expect(readRequirements(undefined)).toEqual({ req: DEFAULT_REQUIREMENTS, reset: [] });
+    const { easeSwaps: _gone, ...older } = SAVED;
+    expect(readRequirements(older).reset).toEqual([]);
+  });
+
+  it('say which saved settings were reset, in words, or nothing at all', () => {
+    expect(resetNotice([])).toBeNull();
+    expect(resetNotice(['minLength', 'separator'])).toBe('Some saved settings could not be used, so they are back to their defaults: minimum length, separator.');
+  });
+
+  it('read an older ";" (the old default) as Automatic, and an older "auto" (a space first) as a space where spaces are allowed, so no passwords change', () => {
+    const { version: _v, ...legacy } = SAVED;
+    expect(parseRequirements({ ...legacy, separator: ';' }).separator).toBe('auto');
+    expect(readRequirements({ ...legacy, separator: ';', allowedSymbols: '!@#' })).toMatchObject({ req: { separator: 'auto' }, reset: [] }); // was a contradiction; now simply Automatic
+    expect(parseRequirements({ ...legacy, separator: 'auto', allowSpaces: true }).separator).toBe(' ');
+    expect(parseRequirements({ ...legacy, separator: 'auto', allowSpaces: false }).separator).toBe('auto'); // it already meant ";" first there
+    expect(parseRequirements({ ...legacy, separator: '-' }).separator).toBe('-');
+    expect(parseRequirements({ ...SAVED, separator: ';' }).separator).toBe(';'); // chosen since Automatic existed: kept
+    expect(parseRequirements({ ...SAVED, separator: 'auto', allowSpaces: true }).separator).toBe('auto');
+    const store = memoryStore();
+    saveRequirements(store, DEFAULT_REQUIREMENTS);
+    expect(JSON.parse(store.getItem(REQUIREMENTS_KEY)!).version).toBe(REQUIREMENTS_VERSION);
+    expect(loadRequirements(store)).toEqual(DEFAULT_REQUIREMENTS);
   });
 });
