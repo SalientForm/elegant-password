@@ -20,30 +20,38 @@ import {
   type Slot,
   type Template,
 } from './grammar';
-import { isPinkyStretch, lookupKey, type TypingProfile } from './keyboard';
+import { isPinkyStretch, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
 import { scoreCold } from './score';
 import { plainOf } from './ease';
 import { letterCount } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
+import { allowedSymbolSet, isSymbol, MAX_TWISTS, RequirementsError, separatorProblem, validate } from './validation';
+
+// The rule checks live in validation.ts; re-exported so callers keep one import for requirements.
+export {
+  allowedSymbolSet,
+  isSymbol,
+  MAX_DIGITS,
+  MAX_INITIALS,
+  MAX_MADE_UP,
+  MAX_SHORTHAND,
+  MAX_SYMBOLS,
+  MAX_TWISTS,
+  MAX_UPPERCASE,
+  RequirementsError,
+  ruleProblems,
+  separatorProblem,
+  validate,
+  type RuleProblem,
+} from './validation';
 
 /**
- * What goes between words: 'auto' (the fastest the site allows), '' (nothing),
- * or one character: a space, or any symbol the site allows.
+ * What goes between words: 'auto' (Automatic: see resolveSeparator), ''
+ * (nothing), or one character: a space, or any symbol the site allows.
  */
 export type Separator = string;
-
-/** Why a separator cannot be used, or undefined when it can. */
-export function separatorProblem(separator: string, req: Pick<Requirements, 'allowSpaces' | 'allowedSymbols'>): string | undefined {
-  if (separator === 'auto' || separator === '') return undefined;
-  if ([...separator].length !== 1) return 'The separator must be a single character.';
-  if (separator === ' ') return req.allowSpaces ? undefined : 'Space is chosen as the separator, but spaces are not allowed.';
-  if (!isSymbol(separator)) return 'The separator must be a symbol or a space, not a letter or digit.';
-  if (!lookupKey(separator)) return `"${separator}" is not on a standard keyboard.`;
-  if (![...req.allowedSymbols].includes(separator)) return `"${separator}" is chosen as the separator, but it is not an allowed symbol.`;
-  return undefined;
-}
 
 export interface Requirements {
   minLength: number;
@@ -86,13 +94,6 @@ export interface Requirements {
   count: number;
 }
 
-export const MAX_TWISTS = 3;
-export const MAX_INITIALS = 3;
-export const MAX_SHORTHAND = 3;
-export const MAX_MADE_UP = 3;
-export const MAX_UPPERCASE = 8;
-export const MAX_DIGITS = 4;
-export const MAX_SYMBOLS = 8;
 
 export const DEFAULT_REQUIREMENTS: Requirements = {
   minLength: 12,
@@ -102,7 +103,7 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
   minSymbols: 1,
   allowedSymbols: '!@#$%^&*-_.,?;',
   allowSpaces: true,
-  separator: ';',
+  separator: 'auto',
   includeNumber: true,
   targetBits: 40,
   comfort: 'balanced',
@@ -209,20 +210,14 @@ export interface GenerateResult {
   warnings: string[];
 }
 
-export class RequirementsError extends Error {}
-
-// For the automatic separator when spaces are not allowed. ";" sits under
-// the right pinky on the home row (no reach, no Shift); "." is a bottom-row
-// key near the letters; "," measures cheap but reads badly between words;
-// "-" is a pinky stretch and "_" also needs Shift.
+// The Automatic separator. ";" comes first: it sits under the right pinky
+// on the home row (no reach, no Shift), counts toward the symbol rule, and
+// is what the defaults have always used. Then a space (the thumb) where the
+// site takes one; then "." (a bottom-row key near the letters); "," measures
+// cheap but reads badly between words; "-" is a pinky stretch and "_" also
+// needs Shift, so those two only come up with the pinky rule off.
 export const SEPARATOR_PREFERENCE = [';', '.', '-', ',', '_'] as const;
 export const END_PREFERENCE = ['.', '!', '?'] as const;
-
-export const isSymbol = (c: string) => /[^A-Za-z0-9\s]/.test(c);
-
-export function allowedSymbolSet(req: Requirements): string[] {
-  return [...new Set(req.allowedSymbols)].filter((c) => isSymbol(c) && lookupKey(c));
-}
 
 /** Allowed symbols the tool may pick on its own, honouring the pinky rule. */
 export function comfortableSymbols(req: Requirements): string[] {
@@ -230,15 +225,24 @@ export function comfortableSymbols(req: Requirements): string[] {
   return req.avoidPinkyStretch ? allowed.filter((c) => !isPinkyStretch(c)) : allowed;
 }
 
-export function resolveSeparator(req: Requirements, allowed: string[]): string {
-  if (req.separator === 'auto') {
-    if (req.allowSpaces) return ' ';
-    const comfortable = comfortableSymbols(req);
-    return SEPARATOR_PREFERENCE.find((s) => comfortable.includes(s)) ?? '';
-  }
+/**
+ * What Automatic resolves to under these rules: ";" whenever the site
+ * allows it, else a space, else the first allowed and comfortable of
+ * ". - , _", else nothing (the words run together). Never a problem, so
+ * a change of site rules can never leave it invalid.
+ */
+export function automaticSeparator(req: Requirements): string {
+  const comfortable = comfortableSymbols(req);
+  if (comfortable.includes(SEPARATOR_PREFERENCE[0])) return SEPARATOR_PREFERENCE[0];
+  if (req.allowSpaces) return ' ';
+  return SEPARATOR_PREFERENCE.find((s) => comfortable.includes(s)) ?? '';
+}
+
+/** The separator to use: Automatic resolved, or the user's own choice, which must be allowed. */
+export function resolveSeparator(req: Requirements): string {
+  if (req.separator === 'auto') return automaticSeparator(req);
   const problem = separatorProblem(req.separator, req);
   if (problem) throw new RequirementsError(problem);
-  void allowed;
   return req.separator;
 }
 
@@ -292,43 +296,6 @@ function endSymbolFor(separators: number, separator: string, req: Requirements, 
   const needed = Math.max(0, req.minSymbols - fromSeparators);
   if (needed === 0) return '';
   return closing?.repeat(needed);
-}
-
-export function validate(req: Requirements): void {
-  if (!Number.isInteger(req.minLength) || req.minLength < 1) {
-    throw new RequirementsError('Minimum length must be a whole number of at least 1.');
-  }
-  if (!Number.isInteger(req.maxLength) || req.maxLength < req.minLength) {
-    throw new RequirementsError('Maximum length must be at least the minimum length.');
-  }
-  if (!(req.targetBits >= 0)) throw new RequirementsError('Target strength must be zero or more bits.');
-  if (!Number.isInteger(req.initials) || req.initials < 0 || req.initials > MAX_INITIALS) {
-    throw new RequirementsError(`Capital initials must be between 0 and ${MAX_INITIALS}.`);
-  }
-  if (!Number.isInteger(req.madeUp) || req.madeUp < 0 || req.madeUp > MAX_MADE_UP) {
-    throw new RequirementsError(`Made-up nouns must be between 0 and ${MAX_MADE_UP}.`);
-  }
-  if (!Number.isInteger(req.shorthand) || req.shorthand < 0 || req.shorthand > MAX_SHORTHAND) {
-    throw new RequirementsError(`Two-letter words must be between 0 and ${MAX_SHORTHAND}.`);
-  }
-  if (!Number.isInteger(req.twists) || req.twists < 0 || req.twists > MAX_TWISTS) {
-    throw new RequirementsError(`Minimum swaps must be between 0 and ${MAX_TWISTS}.`);
-  }
-  const counts: [keyof Requirements, string, number][] = [
-    ['minUppercase', 'Uppercase letters', MAX_UPPERCASE],
-    ['minDigits', 'Digits', MAX_DIGITS],
-    ['minSymbols', 'Symbols', MAX_SYMBOLS],
-  ];
-  for (const [key, label, max] of counts) {
-    const n = req[key];
-    if (typeof n !== 'number' || !Number.isInteger(n) || n < 0 || n > max) {
-      throw new RequirementsError(`${label} must be a whole number from 0 to ${max}.`);
-    }
-  }
-  if (!Number.isInteger(req.count) || req.count < 1 || req.count > 20) {
-    throw new RequirementsError('Number of suggestions must be between 1 and 20.');
-  }
-  if (typeof req.separator !== 'string') throw new RequirementsError('The separator must be text.');
 }
 
 const modelCache = new Map<string, LengthModel>();
@@ -434,19 +401,25 @@ export function joinTokens(words: readonly string[], glue: readonly boolean[], s
 export function plan(req: Requirements): Candidate {
   validate(req);
   const allowed = allowedSymbolSet(req);
-  const separator = resolveSeparator(req, allowed);
+  const separator = resolveSeparator(req);
   const closing = closingSymbol(req, allowed, separator);
 
   const withNumber = req.includeNumber || req.minDigits > 0;
   let best: Candidate | undefined;
   let tooFewLetters = false;
+  // A shape whose separators do not supply the symbols, with no closing mark to make up the rest, is skipped,
+  // not fatal: a longer sentence has more separators ("only ;" and 5 symbols fits six words).
+  let noClosing = false;
   for (const template of templates()) {
     const shapes = (withNumber ? numberPlacements(template) : [template]).map((t) => shapeOf(t, req));
     const variants: Variant[] = [];
     for (const shape of shapes) {
       const separators = shape.slots.length - 1 - shape.glue.filter(Boolean).length;
       const endSymbol = endSymbolFor(separators, separator, req, closing);
-      if (endSymbol === undefined) throw new RequirementsError(noClosingProblem(allowed, separator));
+      if (endSymbol === undefined) {
+        noClosing = true;
+        continue;
+      }
       const overhead = separators * separator.length + endSymbol.length;
       const lo = req.minLength - overhead;
       const hi = req.maxLength - overhead;
@@ -507,11 +480,13 @@ export function plan(req: Requirements): Candidate {
     if (!best || better(candidate.plan, best.plan)) best = candidate;
   }
   if (!best) {
+    if (noClosing) throw new RequirementsError(noClosingProblem(allowed, separator));
     throw new RequirementsError(
       tooFewLetters
         ? `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase} letters to capitalise. ` +
           'Raise the maximum length or use fewer initials, two-letter words and made-up nouns.'
-        : `No sentence fits between ${req.minLength} and ${req.maxLength} characters. Try widening the length range.`,
+        : `No sentence fits between ${req.minLength} and ${req.maxLength} characters. Try widening the length range, ` +
+          'or use your own sentence (Use my sentence), which can be shortened further.',
     );
   }
   return best;

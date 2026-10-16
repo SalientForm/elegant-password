@@ -372,3 +372,24 @@ describe('deliberate swaps in your own sentence', () => {
     expect(scoreCold('BRICKS;DUCKS', 'bricks ducks').easedCount).toBe(0);
   });
 });
+
+describe('a compressed state with a problem of its own', () => {
+  const met = (r: ReturnType<typeof fromSentence>) => {
+    expect(r.suggestions.length).toBeGreaterThan(0);
+    for (const s of r.suggestions) expect(s.checks.every((c) => c.met), s.password).toBe(true);
+  };
+
+  it('no longer stops the search: a less compressed state with the capitals is used (it used to be refused)', () => {
+    met(fromSentence('ducks', req({ minUppercase: 5, count: 3 }), undefined, { rng: seeded(2) }));
+    met(fromSentence('big yellow ducks swim across the pond', req({ minUppercase: 5, maxLength: 14, count: 3 }), undefined, { rng: seeded(3) }));
+  });
+
+  it('no longer stops the search: with the separator the only symbol allowed, a state with enough separators is used', () => {
+    const only = req({ allowedSymbols: ';', separator: ';', allowSpaces: false, minSymbols: 5, maxLength: 64, count: 3 });
+    const r = fromSentence('jupiter brings five leds for piece today', only, undefined, { rng: seeded(4) });
+    met(r);
+    for (const s of r.suggestions) expect([...s.password].filter((c) => c === ';').length).toBeGreaterThanOrEqual(5);
+    // Still refused, naming the separator, when no state has enough.
+    expect(() => fromSentence('two words', { ...only, minSymbols: 4 }, undefined, { rng: seeded(4) })).toThrow(/only allowed symbol is the separator/);
+  });
+});

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MAX_TWISTS, type Requirements, allowedSymbolSet, resolveSeparator } from '../lib/generate';
+import { MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
 import { isPinkyStretch } from '../lib/keyboard';
 import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingStore';
 import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, validateMapping, type Mapping, type MappingKind } from '../lib/twists';
@@ -25,7 +25,7 @@ const show = (to: string) => (to === '' ? '–' : to);
 /** The separator the requirements resolve to, or undefined while they are invalid or the separator is a space. */
 function separatorInUse(req: Requirements): string | undefined {
   try {
-    const s = resolveSeparator(req, allowedSymbolSet(req));
+    const s = resolveSeparator(req);
     return s.trim() ? s : undefined;
   } catch {
     return undefined;

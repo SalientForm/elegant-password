@@ -29,11 +29,11 @@ Follow-ups:
   sound-alike spelling removes (`e-d`, `u-n`, `b-r`). A larger table that
   stays readable, or a model that rewards alternating hands, would be
   needed before turning swaps on by default or relaxing the filter.
-- Sentence mode (seen while testing, not caused by this change): a sentence
-  whose most compressed ladder state lacks the letters the uppercase rule
-  needs is refused even when a less compressed state has them ("ducks" with
-  5 capitals required). `fitLength` returns that state's problem without
-  searching the less compressed ones.
+- Done (2026-10-15, with the rule-contradiction work): sentence mode no
+  longer refuses a sentence whose most compressed ladder state lacks the
+  letters for the uppercase rule ("ducks" with 5 capitals) or the separators
+  for the symbol rule; `fitLength` steps back past such states and searches
+  the ones before.
 
 ## Future considerations
 

@@ -128,8 +128,8 @@ describe('generate', () => {
   });
 
   it('defaults to the home-row semicolon, honours an explicitly chosen dash, and falls back to a stretch only when nothing else is allowed', () => {
-    // The default separator must not be a pinky stretch while the pinky rule is on by default.
-    expect(DEFAULT_REQUIREMENTS.separator).toBe(';');
+    // The default is Automatic, which is ";" under the default rules: not a pinky stretch, while the pinky rule is on by default.
+    expect(DEFAULT_REQUIREMENTS.separator).toBe('auto');
     expect(DEFAULT_REQUIREMENTS.avoidPinkyStretch).toBe(true);
     expect(generate(req({}), { rng: seeded() }).plan.separator).toBe(';');
     expect(generate(req({ separator: '-' }), { rng: seeded() }).plan.separator).toBe('-');
@@ -145,7 +145,7 @@ describe('generate', () => {
     expect(() => generate(req({ separator: '-', allowedSymbols: '!' }))).toThrow(RequirementsError);
     expect(() => generate(req({ separator: 'x' }))).toThrow(/not a letter or digit/);
     expect(() => generate(req({ separator: ';;' }))).toThrow(/single character/);
-    expect(() => generate(req({ separator: 'é', allowedSymbols: 'é' }))).toThrow(/standard keyboard/);
+    expect(() => generate(req({ separator: 'é', allowedSymbols: 'é!' }))).toThrow(/standard keyboard/);
     // Any allowed symbol works as the separator, not only the ones that used to be in a list.
     const plus = generate(req({ separator: '+', allowedSymbols: '+.', avoidPinkyStretch: false, count: 2 }), { rng: seeded() });
     expect(plus.plan.separator).toBe('+');
@@ -219,7 +219,9 @@ describe('audit fixes', () => {
     // Swaps like "and" -> "&" remove letters; they may never push the password under the rule.
     all(generate(req({ minUppercase: 8, twists: 3, minLength: 8, maxLength: 16, targetBits: 10, count: 20, avoidPinkyStretch: false }), { rng: seeded(2) }));
     // When no shape can supply the letters, the error says what to change.
-    expect(() => generate(req({ minUppercase: 8, initials: 3, shorthand: 3, minLength: 1, maxLength: 8 }))).toThrow(/letters to capitalise/);
+    expect(() => generate(req({ minUppercase: 8, minDigits: 0, minSymbols: 0, initials: 3, shorthand: 3, minLength: 1, maxLength: 8 }))).toThrow(/letters to capitalise/);
+    // With the digit and symbol as well, nine characters are needed for the eight capitals alone: refused before planning.
+    expect(() => generate(req({ minUppercase: 8, initials: 3, shorthand: 3, minLength: 1, maxLength: 8 }))).toThrow(/more than the maximum of 8/);
   });
 
   it('meets every rule across random requirement combinations', { timeout: 60_000 }, () => {
@@ -328,7 +330,13 @@ describe('edges of a password', () => {
 
 describe('generate: the separator is never a closing mark or a swap output', () => {
   it('refuses closing marks that would be the separator, naming it, instead of a password short on symbols', () => {
-    expect(() => generate({ ...DEFAULT_REQUIREMENTS, separator: '.', allowedSymbols: '.', allowSpaces: false, minSymbols: 6 })).toThrow(/only allowed symbol is the separator/);
+    expect(() => generate({ ...DEFAULT_REQUIREMENTS, separator: '.', allowedSymbols: '.', allowSpaces: false, minSymbols: 8 })).toThrow(/only allowed symbol is the separator/);
+    // A short sentence that would need closing marks no longer stops the plan: a longer one has the separators (it used to throw at the first shape).
+    const long = generate({ ...DEFAULT_REQUIREMENTS, separator: '.', allowedSymbols: '.', allowSpaces: false, minSymbols: 6, count: 10 }, { rng: seeded(3) });
+    for (const s of long.suggestions) {
+      expect(s.checks.every((c) => c.met), s.password).toBe(true);
+      expect([...s.password].filter((c) => c === '.').length).toBeGreaterThanOrEqual(6);
+    }
     // Separators alone meeting the rule are fine, and no password ends with one.
     const ok = generate({ ...DEFAULT_REQUIREMENTS, separator: '.', allowedSymbols: '.', allowSpaces: false, minSymbols: 2, count: 10 }, { rng: seeded(1) });
     for (const s of ok.suggestions) {

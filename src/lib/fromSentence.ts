@@ -134,6 +134,18 @@ interface Context {
   ladderCache: Map<string, Token[][]>;
 }
 
+/** The symbols each length tag may start with, in order of preference. */
+export const TAG_SYMBOLS: Record<Exclude<LengthTag, 'none'>, readonly string[]> = { total: ['%', '$', '#'], factor: ['@'] };
+
+/**
+ * The symbol a length tag starts with under these rules, or undefined when
+ * the site allows none of them comfortably: then the padding simply goes
+ * without its tag, and the form says so.
+ */
+export function lengthTagSymbol(tag: LengthTag, comfortable: readonly string[]): string | undefined {
+  return tag === 'none' ? undefined : TAG_SYMBOLS[tag].find((s) => comfortable.includes(s));
+}
+
 /** Digit and symbol swaps made for a rule stop here; the rest of the rule comes from an appended number or closing marks (every extra swap multiplies the choices to search). */
 const MAX_RULE_TWISTS = 3;
 
@@ -385,6 +397,13 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
   let best: Finished;
   let lo = 0;
   let hi = candidates.length - 1;
+  // A state can have a problem of its own that compressing further only makes worse: too few letters left for the
+  // uppercase rule, or too few separators for the symbol rule when the separator is the only symbol allowed. Those sit
+  // at the compressed end, so step back past them and search only the states before.
+  const ownProblem = (f: Finished | Problem) => 'problem' in f && !f.tooShort;
+  const first = fin(hi);
+  while (hi > 0 && ownProblem(fin(hi))) hi--;
+  if (ownProblem(fin(hi))) return { problem: (first as Problem).problem };
   const last = fin(hi);
   if (!shortEnough(last)) {
     // Even fully compressed it is over the target: the best is what we have.
@@ -517,8 +536,8 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
       max: req.maxLength,
       separator,
       tag: opts.lengthTag,
-      totalSymbol: ['%', '$', '#'].find((s) => comfortable.includes(s)),
-      factorSymbol: comfortable.includes('@') ? '@' : undefined,
+      totalSymbol: lengthTagSymbol('total', comfortable),
+      factorSymbol: lengthTagSymbol('factor', comfortable),
       mark: comfortable.includes('!') ? '!' : closing,
       repeatable: repeatAt >= 0 ? { tokenIndex: repeatAt, char: tokens[repeatAt]!.text.match(/[0-9]/)?.[0] ?? tokens[repeatAt]!.text.match(/[^a-zA-Z0-9]/)![0] } : undefined,
       words: [...p.adj, ...p.noun],
@@ -611,7 +630,7 @@ export function fromSentence(
   if (words.length === 0) throw new RequirementsError('Type a sentence to turn into a password.');
 
   const allowed = allowedSymbolSet(req);
-  const separator = resolveSeparator(req, allowed);
+  const separator = resolveSeparator(req);
   const closing = closingSymbol(req, allowed, separator);
   const usable = usableMappings(mappings, req, separator);
   const ctx: Context = {

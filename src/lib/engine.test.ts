@@ -17,7 +17,9 @@ describe('engine', () => {
 
   it('turns requirement problems into messages and bugs into flagged messages, never throws', () => {
     const bad = runInputs({ ...base, req: { ...DEFAULT_REQUIREMENTS, minLength: 30, maxLength: 20 } });
-    expect(bad).toEqual({ ok: false, error: 'Maximum length must be at least the minimum length.' });
+    expect(bad).toEqual({ ok: false, error: 'The minimum length (30) is above the maximum (20).' });
+    const tight = runInputs({ ...base, req: { ...DEFAULT_REQUIREMENTS, minLength: 4, maxLength: 8 } }); // consistent, but no made-up sentence is that short
+    expect(tight.ok === false && tight.error).toMatch(/No sentence fits between 4 and 8 characters/);
     const empty = runInputs({ ...base, mode: 'sentence', sentence: '' });
     expect(empty.ok).toBe(false);
     const broken = runInputs({ ...base, mode: 'sentence', sentence: 'hello there', sentenceOptions: null as unknown as GenerateInputs['sentenceOptions'] });
