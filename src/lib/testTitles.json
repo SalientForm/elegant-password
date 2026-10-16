@@ -36,6 +36,10 @@
       },
       {
         "kind": "test",
+        "title": "phone: a blocked Submit says why without scrolling sideways, and \"Show\" opens Options at the field"
+      },
+      {
+        "kind": "test",
         "title": "phone: cards run edge to edge with square corners, one line below each and no gap between them"
       },
       {
@@ -82,6 +86,18 @@
       {
         "kind": "test",
         "title": "number fields can be typed through and apply as a draft"
+      },
+      {
+        "kind": "test",
+        "title": "a site preset that rules out the separator still makes passwords: the separator becomes Automatic, and the form says so"
+      },
+      {
+        "kind": "test",
+        "title": "an impossible combination shows its error beside the fields, blocks Submit, Enter and Refresh, and works once corrected"
+      },
+      {
+        "kind": "test",
+        "title": "saved settings that contradict themselves load repaired, with a note, and still make passwords"
       },
       {
         "kind": "test",
@@ -155,6 +171,10 @@
       {
         "kind": "test",
         "title": "treats a site preset and pasted rules as a draft: nothing is saved until submitted, and Discard undoes them"
+      },
+      {
+        "kind": "test",
+        "title": "blocks Submit and Refresh while the rules contradict themselves, keeps the last passwords, and shows where to fix it"
       },
       {
         "kind": "test",
@@ -248,6 +268,10 @@
       {
         "kind": "test",
         "title": "submits on plain Enter or ⌘+Enter, discards on Escape, and leaves buttons, links and selects to their own Enter"
+      },
+      {
+        "kind": "test",
+        "title": "disables Submit while the draft contradicts itself, says why above it, and refuses Enter and Ctrl+Enter until it is fixed"
       }
     ]
   },
@@ -402,7 +426,15 @@
       },
       {
         "kind": "test",
-        "title": "warns beside the presets when one rules out the chosen separator"
+        "title": "sets a separator a preset rules out to Automatic, says so beside the presets, and shows no error"
+      },
+      {
+        "kind": "test",
+        "title": "shows each contradiction beside the fields at fault, marks them, and clears it once fixed"
+      },
+      {
+        "kind": "test",
+        "title": "says which characters in the symbols field are not used, without blocking anything"
       },
       {
         "kind": "test",
@@ -414,11 +446,19 @@
       },
       {
         "kind": "test",
+        "title": "never leaves pasted rules contradicting the separator: it becomes Automatic and the message says so"
+      },
+      {
+        "kind": "test",
         "title": "says so plainly and changes nothing when the text holds no rules"
       },
       {
         "kind": "test",
-        "title": "uses a separator only when ticked, accepts any allowed character, and explains problems"
+        "title": "offers Automatic, Space, None or a symbol of your own as the separator, and explains each choice or its problem"
+      },
+      {
+        "kind": "test",
+        "title": "cannot pick Space while spaces are not allowed, and flags a Space picked before they were ruled out"
       }
     ]
   },
@@ -465,6 +505,10 @@
       {
         "kind": "test",
         "title": "controls padding and its length tag"
+      },
+      {
+        "kind": "test",
+        "title": "says when the site allows none of the length tag's symbols, so padding goes untagged"
       },
       {
         "kind": "test",
@@ -1037,6 +1081,18 @@
       {
         "kind": "test",
         "title": "skips the swaps when they would leave too few letters for the uppercase rule"
+      },
+      {
+        "kind": "group",
+        "title": "a compressed state with a problem of its own"
+      },
+      {
+        "kind": "test",
+        "title": "no longer stops the search: a less compressed state with the capitals is used (it used to be refused)"
+      },
+      {
+        "kind": "test",
+        "title": "no longer stops the search: with the separator the only symbol allowed, a state with enough separators is used"
       }
     ]
   },
@@ -1449,6 +1505,18 @@
       {
         "kind": "test",
         "title": "brings back the usual symbols when one is required and none are allowed"
+      },
+      {
+        "kind": "test",
+        "title": "sets a separator the text rules out to Automatic, and says so"
+      },
+      {
+        "kind": "test",
+        "title": "lowers the counts the text did not set when they no longer fit its maximum, the largest first"
+      },
+      {
+        "kind": "test",
+        "title": "never leaves the rules contradicting themselves, from any starting point, for any text it reads"
       }
     ]
   },
@@ -1661,6 +1729,30 @@
       {
         "kind": "test",
         "title": "treats prototype keys as odd data: a stored \"toString\" is neither a comfort level nor an order"
+      },
+      {
+        "kind": "group",
+        "title": "stored requirements: contradictions, the reset report and older versions"
+      },
+      {
+        "kind": "test",
+        "title": "load every contradiction the form blocks as a set that validates, keeping what it can and naming what was reset"
+      },
+      {
+        "kind": "test",
+        "title": "put a separator the rules forbid back to Automatic rather than loosen the rules"
+      },
+      {
+        "kind": "test",
+        "title": "report nothing for a clean record, for no record, or for fields saved before they existed"
+      },
+      {
+        "kind": "test",
+        "title": "say which saved settings were reset, in words, or nothing at all"
+      },
+      {
+        "kind": "test",
+        "title": "read an older \";\" (the old default) as Automatic, and an older \"auto\" (a space first) as a space where spaces are allowed, so no passwords change"
       }
     ]
   },
@@ -1690,6 +1782,18 @@
       {
         "kind": "test",
         "title": "match exactly, reading the allowed symbols as a set"
+      },
+      {
+        "kind": "test",
+        "title": "never leave the form contradicting itself, whatever separator and style were chosen"
+      },
+      {
+        "kind": "test",
+        "title": "say what they changed beyond the rules: a separator they rule out becomes Automatic"
+      },
+      {
+        "kind": "test",
+        "title": "each make passwords that meet their rules after a tap, even over the old \";\" default"
       },
       {
         "kind": "test",
@@ -1884,6 +1988,75 @@
     ]
   },
   {
+    "file": "src/lib/validation.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "ruleProblems"
+      },
+      {
+        "kind": "test",
+        "title": "finds nothing in the defaults"
+      },
+      {
+        "kind": "test",
+        "title": "length: each bound a whole number from 1 to 256, and the minimum not above the maximum"
+      },
+      {
+        "kind": "test",
+        "title": "must contain: each count a whole number in its range"
+      },
+      {
+        "kind": "test",
+        "title": "must contain: the required characters fit within the maximum, one character to a rule"
+      },
+      {
+        "kind": "test",
+        "title": "site allows: symbols required but none the tool can type"
+      },
+      {
+        "kind": "test",
+        "title": "separator: one the rules allow, or Automatic or none, which always are"
+      },
+      {
+        "kind": "test",
+        "title": "strength, comfort, shapes, swaps and the count stay in their ranges"
+      },
+      {
+        "kind": "test",
+        "title": "lists every problem at once, in form order"
+      },
+      {
+        "kind": "test",
+        "title": "is what the engine checks: validate throws the first problem, so nothing is ever made from a contradiction"
+      },
+      {
+        "kind": "group",
+        "title": "the symbols field"
+      },
+      {
+        "kind": "test",
+        "title": "uses keyboard symbols once each, and names everything else as not used"
+      },
+      {
+        "kind": "group",
+        "title": "the Automatic separator"
+      },
+      {
+        "kind": "test",
+        "title": "is \";\" whenever allowed, else a space, else \".\" or \",\", else none"
+      },
+      {
+        "kind": "test",
+        "title": "always resolves to a separator the rules allow, whatever the rules"
+      },
+      {
+        "kind": "test",
+        "title": "is the default, and makes the same passwords the old \";\" default made"
+      }
+    ]
+  },
+  {
     "file": "src/lib/words.test.ts",
     "titles": [
       {
@@ -1921,7 +2094,11 @@
       },
       {
         "kind": "test",
-        "title": "shows requirement problems as messages and marks a batch stale while new inputs are pending"
+        "title": "never applies a draft that contradicts itself: apply and Refresh are refused, and nothing runs, until it is fixed"
+      },
+      {
+        "kind": "test",
+        "title": "shows what only planning can find as a message, and marks a batch stale while new inputs are pending"
       },
       {
         "kind": "test",
@@ -1933,7 +2110,7 @@
       },
       {
         "kind": "test",
-        "title": "is persisted as applied, and a reload repairs the lengths while keeping every other setting"
+        "title": "saved before this check existed, is repaired on load, keeping every other setting, and says what was reset until the next submit"
       }
     ]
   }

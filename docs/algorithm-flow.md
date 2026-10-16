@@ -16,8 +16,8 @@ their own step.
 | At least N uppercase letters | generic (class count) | Planning never picks a shape with fewer letters than N; swaps keep at least N letters; rendering capitalises one letter (N = 1) or whole words (N ≥ 2), starting at the first ordinary word (generated) or a random word, wrapping round (sentence). Capital initials and ALL-CAPS made-up nouns count first. |
 | At least N digits | generic (class count) | Generated: the number has N digits. Sentence: half the time digit swaps first (`e→3`, `for→4`), then a comfortable number of the missing digits goes in front or at the end, at random, and into the hint there. |
 | At least N symbols | generic (class count) | Symbol separators count; the shortfall is symbol swaps (sentence mode, a random number of them up to three) or a closing symbol drawn at random for each password from the allowed comfortable set (never the separator), repeated. |
-| Only these symbols, spaces or not | generic (alphabet) | Every symbol the tool picks on its own (separator, closing mark, swap output) is filtered by the allowed set; closing marks and swap outputs are never the separator character, since a password never starts or ends with its separator (when the separator is the only allowed symbol and marks are needed, the request is refused). A separator chosen by hand must be allowed or the request is rejected. |
-| Separator | specific | `auto` → space if allowed, else the first allowed and comfortable of `; . - , _`, else none. A chosen separator is honoured even if it is a stretch. |
+| Only these symbols, spaces or not | generic (alphabet) | Every symbol the tool picks on its own (separator, closing mark, swap output) is filtered by the allowed set; closing marks and swap outputs are never the separator character, since a password never starts or ends with its separator (shapes that would need such marks are skipped; when no shape is left, the request is refused and the separator named). A separator chosen by hand must be allowed: the form will not submit one that is not (section 1a). |
+| Separator | specific | Automatic (the default) → `;` whenever it is allowed, else a space if allowed, else the first allowed and comfortable of `. - , _`, else none; never a problem, whatever the rules. Under the default rules it is `;`, the old default, so default passwords are unchanged. A chosen separator is honoured even if it is a stretch. |
 | Avoid pinky stretches | specific | Symbols more than one key from a pinky's home are removed from the set the tool may pick from (swap outputs, closing marks, automatic separator). If every allowed symbol is a stretch, one is used and a warning says so. |
 | Typing comfort | specific | Each word pool (and the number pool) is ranked by typing cost and cut to the easiest 40 / 70 / 100 %. With deliberate swaps on, words are ranked as typed with their swap. |
 | Deliberate swaps (typing ease) | specific | Off by default. A whole word with a same-finger jump or a reach of 6+ key widths is typed with one fixed sound-alike misspelling that removes it (`wise` → `wyse`, `ease.ts`). A fixed function of the word: 0 bits. Planning counts words at their typed length with unchanged pool sizes; letters only, so the separator and symbol rules never meet it; sentence mode swaps the words still whole unless that leaves too few letters for the uppercase rule. |
@@ -30,11 +30,32 @@ their own step.
 | Swaps (twists) | specific | The minimum N, or half the time N + 1 (never above 3), where the letters allow, placed uniformly among every distinct outcome inside the length and letter limits, on the words as typed (deliberate swaps included); fewer with a warning when they do not. |
 | Count | generic | Each suggestion is an independent draw. |
 
+## 1a. Rules that contradict each other
+
+One pure function, `ruleProblems` (`src/lib/validation.ts`), lists every
+contradiction in a set of requirements. The form shows each one beside the
+fields it names, Submit, Enter and Refresh are refused while there is any,
+stored settings are repaired with it on load, and the engine's `validate`
+throws its first, so no password is ever made from a contradiction.
+
+| Contradiction | How it is reached | What happens |
+| --- | --- | --- |
+| Minimum above the maximum | Typing either length | Shown under Length; Submit blocked. Pasted rules move the bound the text did not state, and say so. |
+| A length, count or range out of bounds (lengths 1-256, counts 0-8 / 0-4 / 0-8, target 0-256 bits, initials, two-letter words, made-up nouns and swaps 0-3, 1-20 suggestions) | Stored settings, or a tampered store; the number fields clamp | Shown under the field's fieldset; Submit blocked. Stored: reset to the default, named in a warning. |
+| Required uppercase + digits + symbols more than the maximum | Raising the counts or lowering the maximum | Shown under Length, every count marked; Submit blocked. Pasted rules lower the counts the text did not state, largest first, or raise an unstated maximum. |
+| Symbols required, no keyboard symbol allowed | Emptying the symbols field, or filling it with letters or symbols off the keyboard | Shown under Site allows, the count marked; Submit blocked. Pasted rules bring back the default symbols (or drop the count the text did not set). |
+| Chosen separator not allowed, spaces chosen with spaces ruled out, a letter or digit, two characters, off the keyboard | Changing the allowed symbols or Spaces after choosing; typing it | Shown under the separator; Submit blocked. A preset or pasted rules set it to Automatic and say so; Space cannot be picked while spaces are not allowed. Stored: back to Automatic. |
+| Symbols that are only reachable through the separator, too many to fit | Allowing only the separator's symbol and requiring many | Found by planning: shapes short of separators are skipped; when none is left the engine names the separator. |
+| No made-up sentence fits the length range; too few letters for the uppercase rule | A narrow range (generated mode needs about 13-15 characters) | Found by planning: an error in place of the suggestions after Submit, pointing at the length range or at Use my sentence. |
+| Length tag symbol not allowed | Rules without `% $ #` (or `@` for the factor tag) | Not a contradiction: padding goes untagged, and the form says so. |
+| Custom or built-in swap whose output is not allowed | Narrowing the symbols | Not a contradiction: the swap is skipped (struck through, with the reason), with a warning if none is left. |
+| Compress-toward target outside the length range | Sentence options | Not a contradiction: clamped into the range. |
+
 ## 2. Make up a sentence
 
 ```mermaid
 flowchart TD
-  A[Requirements] --> B[validate: ranges, counts, whole numbers]
+  A[Requirements] --> B[validate: ruleProblems, section 1a]
   B --> C[resolve separator and closing mark\nallowed set ∩ comfortable set]
   C --> D{for each template × number placement}
   D --> E[shape: initials, two-letter, made-up, glue positions]
@@ -86,7 +107,11 @@ filler before the tag is sized to land exactly on the minimum.
 
 The ladder is monotone: every step shortens the bare text, so the first
 state that fits is found with log₂(states) finishes instead of one per
-state. Each state is finished once; the result is reused.
+state. Each state is finished once; the result is reused. States at the
+compressed end that have a problem of their own (too few letters left for
+the uppercase rule, too few separators when the separator is the only
+symbol allowed) are stepped past first, and the search runs on the states
+before them.
 
 ## 4. Scoring a password cold
 
@@ -120,13 +145,20 @@ do not discount; the strength panel says so in one sentence.
 Edits are a draft. The flow above runs when the draft is applied (the
 floating "Submit changes" bar, Ctrl+Enter, or "Refresh", which applies
 and rolls), and once on load if the stored batch was not made from the
-applied inputs. Applied inputs are persisted; drafts are not.
+applied inputs. A draft with a contradiction (section 1a) cannot be
+applied, so the applied inputs never hold one. Applied inputs are
+persisted; drafts are not.
 
 ## 6. Guarantees that tests hold
 
 - Every generated password passes every check across random requirement
   combinations (`generate.test.ts`), including uppercase rules with
   initials, two-letter words and letter-removing swaps.
+- Every contradiction is found, named and blocked; Automatic always
+  resolves to a separator the rules allow; presets and pasted rules never
+  leave a contradiction the text did not state; stored contradictions load
+  repaired (`validation.test.ts`, `sitePresets.test.ts`,
+  `ruleText.test.ts`, `settingsStore.test.ts`).
 - Any sentence with a letter reduces to 12 characters that pass every rule
   (`reduceTo12.test.ts`).
 - Swap counts are exact and sampling is uniform; a word never vanishes;

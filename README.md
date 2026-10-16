@@ -13,8 +13,10 @@ explanation for each:
   and runs along one row, and penalises long reaches, row jumps, same-finger
   pairs and Shift. Case never alternates inside a word: one capital starts a
   word, and several mean whole words in capitals.
-  The default separator is `;`, on the home row under the right pinky; "auto"
-  prefers a space (thumb) when the site allows one.
+  The separator is Automatic by default: `;` (home row under the right
+  pinky, no Shift, and it counts as a symbol) whenever the site allows it,
+  else a space (thumb), else `.` or `,`, else none. Space, None or any
+  allowed symbol can be chosen instead.
 - **Strong**: entropy is computed exactly, as log2 of the number of passwords
   the chosen pattern can produce within the length limits, assuming the
   attacker knows this tool. Words come from `crypto.getRandomValues`, and
@@ -45,8 +47,8 @@ explanation for each:
   (16)* (8-16, `!@#$%&*`, as many banks), *8-20, few symbols*
   (`!@#$%^&*`) and *NIST passphrase* (15-64, anything goes, nothing
   required). Strength, comfort, style and swaps stay yours. The preset the
-  rules match exactly shows pressed; one that rules out your separator
-  says so beside the presets.
+  rules match exactly shows pressed; one that rules out a separator you
+  chose sets it to Automatic and says so beside the presets.
 - **Paste the site's rules.** Paste the sign-up form's wording ("Must be
   8-20 characters and include at least one number and one of !@#$%") and
   the form fills in, saying what it understood: "8-20 characters, a digit,
@@ -54,13 +56,31 @@ explanation for each:
   patterns, no network and no model: lengths, "at least N" counts,
   symbol lists, spaces, "letters and numbers only". Whatever the text
   does not mention stays as it was; text with no rules says so and
-  changes nothing. Presets and pasted rules are drafts like any edit.
+  changes nothing. Anything the new rules would contradict is fixed in
+  what the text did not say, and named ("maximum raised to 40 to fit",
+  "separator set to Automatic"). Presets and pasted rules are drafts like
+  any edit.
+- **Rules that cannot all hold are caught, never generated.** One pure
+  function (`src/lib/validation.ts`) finds every contradiction: a minimum
+  above the maximum, more required uppercase letters, digits and symbols
+  than the maximum allows, a symbol required with none allowed (an empty
+  symbols field), a chosen separator or Space the rules forbid, anything
+  out of range. Each shows in red beside the fields at fault, and while
+  there is any, Submit changes is disabled with the reason above it
+  ("Show" goes to the field), Enter and Refresh do nothing, and the last
+  passwords stay. What only planning can know (no made-up sentence is 4-8
+  characters) is said in place of the suggestions. Saved settings that
+  contradict themselves load repaired, as few fields reset as will do,
+  with a note naming them. The full table is in the algorithm flow,
+  section 1a.
 - **Padding.** A sentence that is under the site's minimum even with every
   word kept whole is padded, planned once with no retry: a word when more
   than 3 short, a swapped digit or symbol repeated (`$t33l` -> `$t33333l`),
   a run of digits, closing marks, and a length tag last. `%50` says the
   whole password is 50 characters (so 47 characters get `%50`, never 53);
-  `@3` says 3 divides the length before it. Both switchable.
+  `@3` says 3 divides the length before it. Both switchable; when the site
+  allows none of the tag's symbols, padding goes untagged and the form says
+  so.
 - **Survives a refresh.** The current passwords and the applied sentence
   live in sessionStorage (gone when the tab closes); the applied settings,
   mode, mappings and your list live in localStorage. On reload the same
@@ -191,6 +211,7 @@ Fun page download, and fails on any console error. First time only:
 - `src/lib/grammar.ts`: sentence templates and comfort-filtered pools
 - `src/lib/lengthModel.ts`: exact counting and uniform sampling under length limits
 - `src/lib/generate.ts`: requirements, plan selection, explanations
+- `src/lib/validation.ts`: every contradiction in a set of requirements, for the form, the store and the engine
 - `src/lib/twists.ts`: the 64 mappings and exact twist counting
 - `src/lib/mappingStore.ts`: localStorage persistence for mappings
 - `src/lib/fromSentence.ts`: "Use my sentence" mode
