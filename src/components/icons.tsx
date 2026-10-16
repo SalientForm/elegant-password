@@ -51,6 +51,14 @@ export const InfoIcon = ({ size = 16 }: IconProps) => (
   </svg>
 );
 
+/** A circular arrow: draw again. */
+export const RefreshIcon = ({ size = 16 }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M20 12a8 8 0 1 1-2.34-5.66L20 8.5" />
+    <path d="M20 3.5v5h-5" />
+  </svg>
+);
+
 /** A circle with a diagonal bar: the usual "cancel" / "clear" sign. */
 export const CancelIcon = ({ size = 16 }: IconProps) => (
   <svg {...base(size)}>

@@ -143,7 +143,7 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
   if (typeof req.separator !== 'string') add('The separator must be text.', 'separator');
   else if (typeof req.allowedSymbols === 'string') {
     const problem = separatorProblem(req.separator, req);
-    if (problem) add(/not allowed|not an allowed/.test(problem) ? `${problem} Choose Automatic to use one the site allows.` : problem, 'separator');
+    if (problem) add(/not allowed|not an allowed/.test(problem) ? `${problem} Choose Auto to use one the site allows.` : problem, 'separator');
   }
   const shapes: ['initials' | 'shorthand' | 'madeUp' | 'twists', string, number][] = [
     ['initials', 'Capital initials', MAX_INITIALS],

@@ -8,7 +8,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { inputsKey, type GenerateInputs, type Mode, type Outcome } from '../lib/engine';
 import type { SentenceOptions } from '../lib/fromSentence';
-import type { Requirements, Suggestion } from '../lib/generate';
+import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
 import { createGenerator, type Generator } from '../lib/generator';
 import { activeMappings, loadMappingSettings, saveMappingSettings, type MappingSettings } from '../lib/mappingStore';
 import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from '../lib/selectedStore';
@@ -60,8 +60,12 @@ export interface PasswordsContextValue {
   busy: boolean;
   /** True when the batch on screen was made from different inputs than the applied ones. */
   stale: boolean;
-  /** Apply any draft and ask for a fresh batch. Refused while the draft has problems. */
+  /** Apply any draft and ask for a fresh batch from the same sentence. Refused while the draft has problems. */
   regenerate: () => void;
+  /** The made-up sentence every batch is built from, kept until newSentence; null before the first draw. */
+  generated: GeneratedSentence | null;
+  /** Apply any draft and draw a new made-up sentence, the only way it changes. Refused while the draft has problems. */
+  newSentence: () => void;
   selected: SelectedEntry[];
   addSelected: (s: Pick<Suggestion, 'password' | 'hint'>) => void;
   removeSelected: (password: string) => void;
@@ -109,6 +113,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const [sort, setSort] = useState(() => loadSort(localStore));
   const [selected, setSelected] = useState(() => loadSelected(localStore));
   const [round, setRound] = useState(restored?.round ?? 0);
+  const [generated, setGenerated] = useState<GeneratedSentence | null>(restored?.generated ?? null);
   const [result, setResult] = useState<Result | null>(
     restored?.outcome ? { key: restored.key, round: restored.round, outcome: restored.outcome } : null,
   );
@@ -144,8 +149,8 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const mappings = useMemo(() => activeMappings(draft.mappingSettings), [draft.mappingSettings]);
   const appliedMappings = useMemo(() => activeMappings(applied.mappingSettings), [applied.mappingSettings]);
   const inputs = useMemo<GenerateInputs>(
-    () => ({ mode, req: applied.req, sentence: applied.sentence, sentenceOptions: applied.sentenceOptions, mappings: appliedMappings }),
-    [mode, applied, appliedMappings],
+    () => ({ mode, req: applied.req, sentence: applied.sentence, sentenceOptions: applied.sentenceOptions, mappings: appliedMappings, generated }),
+    [mode, applied, appliedMappings, generated],
   );
   const key = useMemo(() => inputsKey(inputs), [inputs]);
 
@@ -173,9 +178,13 @@ export function PasswordsProvider({ children, generator: given, local, session, 
     const id = ++latest.current;
     setBusy(true);
     const timer = setTimeout(() => {
-      void generator.run({ id, ...inputsRef.current }).then((outcome) => {
+      const request = inputsRef.current;
+      void generator.run({ id, ...request }).then((outcome) => {
         if (id !== latest.current) return; // superseded
-        setResult({ key, round, outcome });
+        // A new draw becomes the kept sentence, and the batch is filed under the inputs with it, so it is not made again.
+        const drawn = request.mode === 'generated' && !request.generated && outcome.ok ? outcome.generated : undefined;
+        if (drawn) setGenerated(drawn);
+        setResult({ key: drawn ? inputsKey({ ...request, generated: drawn }) : key, round, outcome });
         setBusy(false);
       });
     }, debounceMs);
@@ -189,11 +198,17 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       round: result?.round ?? round,
       sentence: applied.sentence,
       outcome: result?.outcome ?? null,
+      ...(generated ? { generated } : {}),
     });
-  }, [sessionStore, result, applied.sentence, key, round]);
+  }, [sessionStore, result, applied.sentence, key, round, generated]);
 
   const regenerate = useCallback(() => {
     if (apply()) setRound((r) => r + 1);
+  }, [apply]);
+  const newSentence = useCallback(() => {
+    if (!apply()) return;
+    setGenerated(null);
+    setRound((r) => r + 1);
   }, [apply]);
   const addSelected = useCallback(
     (s: Pick<Suggestion, 'password' | 'hint'>) =>
@@ -226,13 +241,15 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       busy,
       stale: !!result && result.key !== key,
       regenerate,
+      generated,
+      newSentence,
       selected,
       addSelected,
       removeSelected,
       clearSelected,
       isSelected,
     }),
-    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, result, busy, key, regenerate, selected, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;

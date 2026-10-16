@@ -55,8 +55,8 @@ describe('ruleProblems', () => {
 
   it('separator: one the rules allow, or Automatic or none, which always are', () => {
     expect(fieldsOf({ separator: ';', allowedSymbols: '!@#' })).toEqual([['separator']]);
-    expect(messages({ separator: ';', allowedSymbols: '!@#' })).toEqual(['";" is chosen as the separator, but it is not an allowed symbol. Choose Automatic to use one the site allows.']);
-    expect(messages({ separator: ' ', allowSpaces: false })).toEqual(['Space is chosen as the separator, but spaces are not allowed. Choose Automatic to use one the site allows.']);
+    expect(messages({ separator: ';', allowedSymbols: '!@#' })).toEqual(['";" is chosen as the separator, but it is not an allowed symbol. Choose Auto to use one the site allows.']);
+    expect(messages({ separator: ' ', allowSpaces: false })).toEqual(['Space is chosen as the separator, but spaces are not allowed. Choose Auto to use one the site allows.']);
     expect(messages({ separator: 'x' })).toEqual(['The separator must be a symbol or a space, not a letter or digit.']);
     expect(messages({ separator: ';;' })).toEqual(['The separator must be a single character.']);
     expect(messages({ separator: 'é', allowedSymbols: 'é!' })).toEqual(['"é" is not on a standard keyboard.']);

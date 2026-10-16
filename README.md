@@ -41,6 +41,9 @@ explanation for each:
   draft: "Discard" and "Submit changes" float over the page (Ctrl+Enter
   also submits) and disappear once there is nothing to submit. Submitting
   saves the settings and regenerates; "Refresh" submits any draft too.
+- **The sentence stays put.** A made-up sentence is kept until you press
+  the refresh icon beside it. Refresh under Suggestions, the order and rule
+  changes all rebuild the passwords from the same sentence.
 - **Site presets.** One tap sets the site's rules, and only those (length,
   required classes, allowed symbols, spaces): *Typical site* (the
   defaults), *No spaces*, *No symbols* (letters and digits), *Short max

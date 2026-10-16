@@ -134,7 +134,7 @@ export function settleRules(req: Requirements, stated: ReadonlySet<keyof Require
   if (separatorProblem(next.separator, next)) {
     const was = next.separator;
     next.separator = 'auto';
-    notes.push(`separator set to Automatic (${shown(automaticSeparator(next))}), as ${was === ' ' ? 'spaces are' : `${shown(was)} is`} not allowed`);
+    notes.push(`separator set to Auto (${shown(automaticSeparator(next))}), as ${was === ' ' ? 'spaces are' : `${shown(was)} is`} not allowed`);
   }
   return { req: next, notes };
 }

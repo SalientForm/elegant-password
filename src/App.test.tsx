@@ -161,20 +161,44 @@ describe('App: order and pages', () => {
     expect([...memo].sort((a, b) => b - a)).toEqual(memo);
   });
 
-  it('shows the first suggestion\'s sentence under the mode tabs while making one up', async () => {
+  it('shows the batch\'s one sentence under the mode tabs while making one up, whatever the order', async () => {
     render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const shown = screen.getByTestId('generated-sentence').textContent;
     expect(screen.queryByText('Fast to type')).toBeNull(); // every "Why?" starts closed
-    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Why?' }));
-    const firstHint = within(cards()[0]!).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
-    expect(shown).toBe(firstHint);
-    fireEvent.click(screen.getByRole('button', { name: 'Strength' }));
-    const top = within(cards()[0]!);
-    const why = top.queryByRole('button', { name: 'Why?' });
-    if (why) fireEvent.click(why); // a card keeps its own open state when the order changes
-    const newFirst = top.getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
-    expect(screen.getByTestId('generated-sentence').textContent).toBe(newFirst); // follows the order
+    const hints = () =>
+      cards().map((c) => {
+        const why = within(c).queryByRole('button', { name: 'Why?' });
+        if (why) fireEvent.click(why); // a card keeps its own open state when the order changes
+        return within(c).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
+      });
+    expect(new Set(hints())).toEqual(new Set([shown])); // every card is built from it
+    const before = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent);
+    for (const order of ['Strength', 'Memorability', 'Difficulty']) {
+      fireEvent.click(screen.getByRole('button', { name: order }));
+      expect(screen.getByTestId('generated-sentence').textContent).toBe(shown); // the order never changes it
+      expect(new Set(hints())).toEqual(new Set([shown]));
+      const now = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent);
+      expect([...now].sort()).toEqual([...before].sort()); // the same cards, only reordered
+    }
+  });
+
+  it('keeps the sentence when Refresh makes new passwords; only the button beside the sentence draws a new one', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const sentence = () => screen.getByTestId('generated-sentence').textContent;
+    const passwords = () => cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent).join('|');
+    const shown = sentence();
+    const before = passwords();
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    expect(refresh.textContent).toBe(''); // an icon, named by its label
+    fireEvent.click(refresh);
+    await waitFor(() => expect(passwords()).not.toBe(before), { timeout: 10_000 });
+    expect(sentence()).toBe(shown);
+    const newSentence = screen.getByRole('button', { name: 'New sentence' });
+    expect(screen.getByTestId('generated-sentence').parentElement!.contains(newSentence)).toBe(true); // beside the sentence
+    fireEvent.click(newSentence);
+    await waitFor(() => expect(sentence()).not.toBe(shown), { timeout: 10_000 });
   });
 
   it('keeps the mode tabs in the sentence card, every suggestion in the Suggestions card, and the strength panel apart', { timeout: 30_000 }, async () => {
@@ -213,7 +237,7 @@ describe('App: order and pages', () => {
   it('shows the title above the tabs with the description beside it and the SalientForm credit', () => {
     render(<App />);
     const title = screen.getByRole('heading', { level: 1 });
-    expect(title.textContent).toBe('Thuh Eleg@nt Pa$$word!');
+    expect(title.textContent).toBe('7he Eleg@nt Pa$$word!');
     const nav = screen.getByRole('navigation', { name: 'Pages' });
     expect(title.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // title first, tabs after
     const credit = screen.getByText((_, el) => el?.classList.contains('brand') === true);
@@ -421,7 +445,7 @@ describe('App header', () => {
     const { unmount } = render(<App />);
     const header = screen.getByRole('banner');
     expect(header.className).toBe('app-header');
-    expect(within(header).getByRole('heading', { level: 1 }).textContent).toBe('Thuh Eleg@nt Pa$$word!');
+    expect(within(header).getByRole('heading', { level: 1 }).textContent).toBe('7he Eleg@nt Pa$$word!');
     expect(within(header).getByRole('navigation', { name: 'Pages' })).toBeTruthy();
     unmount();
     Object.defineProperty(window, 'matchMedia', {

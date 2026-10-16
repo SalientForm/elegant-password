@@ -24,7 +24,7 @@ const COMFORT: { value: Comfort; label: string; hint: string }[] = [
 ];
 
 const SEPARATORS: { value: string; label: string; title: string }[] = [
-  { value: 'auto', label: 'Automatic', title: 'Whatever the site allows: ";" if it can, else a space, else "." or ","' },
+  { value: 'auto', label: 'Auto', title: 'Automatic: whatever the site allows: ";" if it can, else a space, else "." or ","' },
   { value: ' ', label: 'Space', title: 'A space, typed with the thumb' },
   { value: '', label: 'None', title: 'The words run together' },
 ];
@@ -268,7 +268,7 @@ export function RequirementsForm({ value, onChange }: Props) {
         {!separatorBlocked && (
           <p className="hint">
             {value.separator === 'auto'
-              ? `Automatic: ${describe(automaticSeparator(value))} under these rules. It is ";" whenever the site allows it (home row, no Shift, and it counts as a symbol), else a space, else the first allowed of ${SEPARATOR_PREFERENCE.slice(1)
+              ? `Auto: ${describe(automaticSeparator(value))} under these rules. It is ";" whenever the site allows it (home row, no Shift, and it counts as a symbol), else a space, else the first allowed of ${SEPARATOR_PREFERENCE.slice(1)
                   .filter((c) => !(value.avoidPinkyStretch && isPinkyStretch(c)))
                   .map((c) => `"${c}"`)
                   .join(' ')}, else none.`
@@ -278,7 +278,7 @@ export function RequirementsForm({ value, onChange }: Props) {
                   ? 'None: the words run together.'
                   : separatorStretch
                     ? `"${value.separator}" is a pinky stretch; kept because you chose it.`
-                    : `Words are joined with "${value.separator}". Clear the box for Automatic.`}
+                    : `Words are joined with "${value.separator}". Clear the box for Auto.`}
           </p>
         )}
         <label className="check">

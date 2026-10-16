@@ -73,6 +73,10 @@
       },
       {
         "kind": "test",
+        "title": "the sentence stays through Refresh, a rule change and a reload; only \"New sentence\" draws another"
+      },
+      {
+        "kind": "test",
         "title": "adds a password to my list, scores it the same, and keeps the list across a reload"
       },
       {
@@ -190,7 +194,11 @@
       },
       {
         "kind": "test",
-        "title": "shows the first suggestion's sentence under the mode tabs while making one up"
+        "title": "shows the batch's one sentence under the mode tabs while making one up, whatever the order"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the sentence when Refresh makes new passwords; only the button beside the sentence draws a new one"
       },
       {
         "kind": "test",
@@ -1253,15 +1261,39 @@
       },
       {
         "kind": "test",
+        "title": "builds every card from one sentence, varying only swaps and closing marks, with no repeated password"
+      },
+      {
+        "kind": "test",
+        "title": "gives fewer cards, with a warning, when the sentence has too little to vary"
+      },
+      {
+        "kind": "test",
         "title": "draws the closing symbol per password, so a batch ends in different marks, all allowed and never the separator"
       },
       {
         "kind": "test",
-        "title": "keeps the opening capital on the first word: a generated batch varies in its words, and the sentence-like start types fastest"
+        "title": "keeps the opening capital on the first word, and the sentence-like start types fastest"
       },
       {
         "kind": "test",
         "title": "applies the minimum number of swaps or one more, at random"
+      },
+      {
+        "kind": "group",
+        "title": "a kept sentence"
+      },
+      {
+        "kind": "test",
+        "title": "is the hint of every card, and comes back as drawn"
+      },
+      {
+        "kind": "test",
+        "title": "is fitted again when the rules change: initials and swaps follow the rules, the words stay"
+      },
+      {
+        "kind": "test",
+        "title": "says why when it cannot fit, and points at drawing a new one"
       },
       {
         "kind": "group",
@@ -1723,6 +1755,10 @@
       },
       {
         "kind": "test",
+        "title": "keeps the made-up sentence, and drops only that when it is malformed"
+      },
+      {
+        "kind": "test",
         "title": "rejects anything malformed rather than trusting it"
       },
       {
@@ -2131,6 +2167,10 @@
       {
         "kind": "test",
         "title": "keeps the current passwords across a reload without rolling new ones"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the made-up sentence through Refresh, rule changes, an error and a reload; only \"new sentence\" draws another"
       },
       {
         "kind": "test",

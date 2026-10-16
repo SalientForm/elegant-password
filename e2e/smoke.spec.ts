@@ -96,6 +96,24 @@ test('"Refresh" rolls a fresh batch and applies any draft', async ({ page }) => 
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('elegant-passwords:requirements:v1') ?? '{}').comfort)).toBe('relaxed');
 });
 
+test('the sentence stays through Refresh, a rule change and a reload; only "New sentence" draws another', async ({ page }) => {
+  const before = await settledPasswords(page);
+  const sentence = page.getByTestId('generated-sentence');
+  const shown = await sentence.textContent();
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect.poll(async () => passwords(page)).not.toEqual(before);
+  await expect(sentence).toHaveText(shown!);
+  await page.getByRole('button', { name: 'Relaxed', exact: true }).click();
+  await page.getByRole('button', { name: 'Submit changes', exact: true }).click();
+  await expect(applyBar(page)).toHaveCount(0);
+  await expect(sentence).toHaveText(shown!);
+  await page.reload();
+  await settledPasswords(page);
+  await expect(sentence).toHaveText(shown!);
+  await page.getByRole('button', { name: 'New sentence', exact: true }).click();
+  await expect(sentence).not.toHaveText(shown!);
+});
+
 test('adds a password to my list, scores it the same, and keeps the list across a reload', async ({ page }) => {
   const shown = await settledPasswords(page);
   const first = cards(page).first();
@@ -187,8 +205,8 @@ test('a site preset that rules out the separator still makes passwords: the sepa
   await settledPasswords(page);
 
   await page.getByRole('button', { name: /^No symbols/ }).click();
-  await expect(page.getByText('No symbols: separator set to Automatic (none), as ";" is not allowed.')).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Separator between words' }).getByRole('button', { name: 'Automatic', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('No symbols: separator set to Auto (none), as ";" is not allowed.')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Separator between words' }).getByRole('button', { name: 'Auto', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.field-error')).toHaveCount(0);
   await expect(applyBar(page).getByRole('button', { name: 'Submit changes', exact: true })).toBeEnabled();
   await applyBar(page).getByRole('button', { name: 'Submit changes', exact: true }).click();
@@ -438,7 +456,7 @@ test('every small icon button has the same border colour and a subtle drop shado
   await cards(page).first().getByRole('button', { name: 'Add', exact: true }).click(); // a list entry brings Remove and Copy buttons too
   const look = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>('.icon-button')]
-      .filter((b) => b.offsetWidth > 0 && b.getAttribute('aria-pressed') !== 'true')
+      .filter((b) => b.offsetWidth > 0 && b.getAttribute('aria-pressed') !== 'true' && !b.classList.contains('primary')) // Refresh is the one filled, primary icon button
       .map((b) => ({ name: b.getAttribute('aria-label'), border: getComputedStyle(b).borderColor, shadow: getComputedStyle(b).boxShadow })),
   );
   expect(look.length).toBeGreaterThan(4);

@@ -102,9 +102,12 @@ describe('generate', () => {
   });
 
   it('reads as a sentence: verbs follow nouns, numbers start a noun phrase anywhere', () => {
-    const result = generate(req({ minDigits: 1, count: 20 }), { rng: seeded(3) });
+    // One sentence per batch, so the number's position varies across batches.
+    const rng = seeded(3);
+    const batches = Array.from({ length: 8 }, () => generate(req({ minDigits: 1, count: 3 }), { rng }));
+    const result = batches[0]!;
     const positions = new Set<number>();
-    for (const s of result.suggestions) {
+    for (const s of batches.flatMap((b) => b.suggestions)) {
       const slots = s.words.map((w) => w.slot);
       const n = slots.indexOf('num');
       positions.add(n);
@@ -363,6 +366,23 @@ describe('generate: the separator is never a closing mark or a swap output', () 
 });
 
 describe('variety across a batch', () => {
+  it('builds every card from one sentence, varying only swaps and closing marks, with no repeated password', () => {
+    for (const seed of [1, 2, 3]) {
+      const r = generate({ ...DEFAULT_REQUIREMENTS, count: 10 }, { rng: seeded(seed) });
+      expect(r.suggestions).toHaveLength(10);
+      expect(new Set(r.suggestions.map((s) => s.hint)).size).toBe(1);
+      expect(new Set(r.suggestions.map((s) => s.words.map((w) => w.original).join(' '))).size).toBe(1);
+      expect(new Set(r.suggestions.map((s) => s.password)).size).toBe(10);
+    }
+  });
+
+  it('gives fewer cards, with a warning, when the sentence has too little to vary', () => {
+    // No swaps, and the separator supplies the symbol: every draw is the same password.
+    const r = generate({ ...DEFAULT_REQUIREMENTS, twists: 0, count: 5 }, { rng: seeded(4) });
+    expect(r.suggestions).toHaveLength(1);
+    expect(r.warnings.some((w) => w.startsWith('Only 1 different versions'))).toBe(true);
+  });
+
   it('draws the closing symbol per password, so a batch ends in different marks, all allowed and never the separator', () => {
     const r = generate({ ...DEFAULT_REQUIREMENTS, allowSpaces: true, separator: ' ', allowedSymbols: '!?.$#', minSymbols: 2, count: 20 }, { rng: seeded(5) });
     const endings = new Set(r.suggestions.map((s) => s.password.slice(-2)));
@@ -373,7 +393,7 @@ describe('variety across a batch', () => {
     }
   });
 
-  it('keeps the opening capital on the first word: a generated batch varies in its words, and the sentence-like start types fastest', () => {
+  it('keeps the opening capital on the first word, and the sentence-like start types fastest', () => {
     const r = generate({ ...DEFAULT_REQUIREMENTS, initials: 0, madeUp: 0, count: 20 }, { rng: seeded(6) });
     for (const s of r.suggestions) {
       expect(s.password.split(';').find((w) => /[a-zA-Z]/.test(w))).toMatch(/^[0-9]*[A-Z]/); // the first word with letters, after any glued number
@@ -386,6 +406,41 @@ describe('variety across a batch', () => {
     const counts = new Set(r.suggestions.map((s) => s.twists.length));
     expect(counts.has(1) && counts.has(2)).toBe(true);
     for (const s of r.suggestions) expect(s.twists.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('a kept sentence', () => {
+  const first = generate(req({ count: 3 }), { rng: seeded(11) });
+  const kept = first.sentence;
+
+  it('is the hint of every card, and comes back as drawn', () => {
+    expect(kept.words.join(' ')).toBe(first.suggestions[0]!.hint);
+    expect(kept.slots).toHaveLength(kept.words.length);
+    const again = generate(req({ count: 5 }), { rng: seeded(12), sentence: kept });
+    expect(again.sentence).toEqual(kept);
+    for (const s of again.suggestions) {
+      expect(s.hint).toBe(first.suggestions[0]!.hint);
+      expect(s.checks.every((c) => c.met)).toBe(true);
+    }
+    expect(again.plan.template.slots).toEqual(kept.slots.filter((slot) => slot !== 'num'));
+  });
+
+  it('is fitted again when the rules change: initials and swaps follow the rules, the words stay', () => {
+    const r = generate(req({ count: 5, initials: 1, twists: 3 }), { rng: seeded(13), sentence: kept });
+    for (const s of r.suggestions) {
+      expect(s.hint).toBe(kept.words.join(' '));
+      expect(s.words.filter((w) => /^[A-Z]$/.test(w.text))).toHaveLength(1);
+      expect(s.checks.every((c) => c.met)).toBe(true);
+    }
+  });
+
+  it('says why when it cannot fit, and points at drawing a new one', () => {
+    const fail = (over: Partial<Requirements>) => () => generate(req(over), { rng: seeded(14), sentence: kept });
+    const length = [...first.suggestions[0]!.password].length;
+    expect(fail({ minLength: length + 12, maxLength: length + 20 })).toThrow(/does not fit these rules: it comes to \d+ characters.*Draw a new sentence/);
+    expect(fail({ includeNumber: false, minDigits: 0 })).toThrow(/it has a number, and these rules leave numbers out/);
+    expect(fail({ madeUp: 1 })).toThrow(/it has 0 made-up nouns, and these rules ask for 1/);
+    expect(fail({ minDigits: 3, twists: 0 })).toThrow(/no version of it meets "At least 3 digits"/);
   });
 });
 
@@ -462,8 +517,9 @@ describe('deliberate swaps for typing ease', () => {
     const b = generate(req({ easeSwaps: true, count: 10 }), { rng: seeded(9) });
     expect(a.suggestions.map((s) => s.password)).toEqual(b.suggestions.map((s) => s.password));
     const spelled = new Map<string, Set<string>>();
-    for (const seed of [1, 2, 3, 4]) {
-      for (const s of generate(req({ easeSwaps: true, twists: 0, comfort: 'relaxed', count: 20 }), { rng: seeded(seed) }).suggestions) {
+    const rng = seeded(1);
+    for (let batch = 0; batch < 80; batch++) {
+      for (const s of generate(req({ easeSwaps: true, twists: 0, comfort: 'relaxed', count: 1 }), { rng }).suggestions) {
         for (const w of s.words.filter(whole)) spelled.set(w.original, new Set([...(spelled.get(w.original) ?? []), w.text.toLowerCase()]));
       }
     }

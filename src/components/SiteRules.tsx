@@ -61,7 +61,7 @@ export function SiteRules({ value, onChange }: Props) {
 
   return (
     <fieldset className="site-rules">
-      <legend>Site rules</legend>
+      <legend>Site rule presets</legend>
       <div className="presets">
         {SITE_PRESETS.map((p) => (
           <button

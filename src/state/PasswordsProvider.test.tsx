@@ -38,6 +38,8 @@ function Probe() {
       <output data-testid="draft">{p.draft.req.twists}</output>
       <output data-testid="applied">{p.applied.req.twists}</output>
       <output data-testid="first">{first?.password ?? ''}</output>
+      <output data-testid="sentence">{p.generated?.words.join(' ') ?? ''}</output>
+      <output data-testid="hints">{p.outcome?.ok ? [...new Set(p.outcome.suggestions.map((s) => s.hint))].join('|') : ''}</output>
       <output data-testid="error">{p.outcome && !p.outcome.ok ? p.outcome.error : ''}</output>
       <output data-testid="selected">{p.selected.map((e) => e.password).join('|')}</output>
       <output data-testid="problems">{p.problems.map((x) => x.message).join('|')}</output>
@@ -46,9 +48,11 @@ function Probe() {
       <button onClick={() => p.setReq({ ...p.draft.req, minLength: 40, maxLength: 20 })}>contradict</button>
       <button onClick={() => p.setReq({ ...p.draft.req, minLength: 20 })}>fix</button>
       <button onClick={() => p.setReq({ ...p.draft.req, minLength: 4, maxLength: 8 })}>tight</button>
+      <button onClick={() => p.setReq(DEFAULT_REQUIREMENTS)}>defaults</button>
       <button onClick={p.apply}>apply</button>
       <button onClick={p.discard}>discard</button>
       <button onClick={p.regenerate}>again</button>
+      <button onClick={p.newSentence}>new-sentence</button>
       <button onClick={() => first && p.addSelected(first)}>add</button>
       <button onClick={() => p.selected[0] && p.removeSelected(p.selected[0].password)}>remove</button>
       <button onClick={() => p.setMode('sentence')}>sentence-mode</button>
@@ -140,9 +144,60 @@ describe('PasswordsProvider', () => {
     expect(text('first')).toBe(shown);
     expect(gen2.runs).toHaveLength(0);
     const stored = loadSession(session)!;
+    expect(stored.generated?.words.join(' ')).toBe(text('sentence'));
     expect(stored.key).toBe(
-      inputsKey({ mode: 'generated', req: DEFAULT_REQUIREMENTS, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: activeMappings(loadMappingSettings(local)) }),
+      inputsKey({ mode: 'generated', req: DEFAULT_REQUIREMENTS, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: activeMappings(loadMappingSettings(local)), generated: stored.generated }),
     );
+  });
+
+  it('keeps the made-up sentence through Refresh, rule changes, an error and a reload; only "new sentence" draws another', async () => {
+    const gen = countingGenerator();
+    const { local, session, unmount } = mount(gen);
+    await settled();
+    const sentence = text('sentence')!;
+    expect(sentence).not.toBe('');
+    expect(text('hints')).toBe(sentence); // every card is built from it
+
+    // Refresh: new passwords, the same sentence, one run.
+    const first = text('first');
+    fireEvent.click(screen.getByText('again'));
+    await waitFor(() => expect(gen.runs).toHaveLength(2));
+    await settled();
+    expect(text('first')).not.toBe(first);
+    expect(text('sentence')).toBe(sentence);
+    expect(text('hints')).toBe(sentence);
+    expect(gen.runs[1]!.generated?.words.join(' ')).toBe(sentence);
+
+    // An applied rule change rebuilds the cards from the same sentence.
+    fireEvent.click(screen.getByText('twists3'));
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(gen.runs).toHaveLength(3));
+    await settled();
+    expect(text('sentence')).toBe(sentence);
+    expect(text('hints')).toBe(sentence);
+
+    // Rules it cannot fit give an error, and the sentence is still kept.
+    fireEvent.click(screen.getByText('tight'));
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(text('error')).not.toBe(''));
+    expect(text('sentence')).toBe(sentence);
+
+    // A reload keeps it too.
+    unmount();
+    mount(countingGenerator(), local, session);
+    await waitFor(() => expect(text('error')).not.toBe(''));
+    expect(text('sentence')).toBe(sentence);
+
+    // Only "new sentence" changes it (here after loosening the rules again).
+    fireEvent.click(screen.getByText('defaults'));
+    fireEvent.click(screen.getByText('apply'));
+    await settled();
+    expect(text('sentence')).toBe(sentence);
+    expect(text('hints')).toBe(sentence);
+    fireEvent.click(screen.getByText('new-sentence'));
+    await waitFor(() => expect(text('sentence')).not.toBe(sentence));
+    await settled();
+    expect(text('hints')).toBe(text('sentence'));
   });
 
   it('persists applied settings, the mode, the applied sentence and the list; drafts are not persisted', async () => {

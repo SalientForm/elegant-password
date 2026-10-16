@@ -190,13 +190,13 @@ describe('applyParsedRules', () => {
     const semicolon = { ...DEFAULT_REQUIREMENTS, separator: ';' };
     const alnum = applyParsedRules(semicolon, parseRuleText('Letters and numbers only, no spaces.'));
     expect(alnum.req).toMatchObject({ separator: 'auto', allowedSymbols: '', minSymbols: 0, allowSpaces: false });
-    expect(alnum.notes).toEqual(['separator set to Automatic (none), as ";" is not allowed']);
+    expect(alnum.notes).toEqual(['separator set to Auto (none), as ";" is not allowed']);
     const spaced = applyParsedRules({ ...DEFAULT_REQUIREMENTS, separator: ' ' }, parseRuleText('No spaces.'));
     expect(spaced.req.separator).toBe('auto');
-    expect(spaced.notes).toEqual(['separator set to Automatic (";"), as spaces are not allowed']);
+    expect(spaced.notes).toEqual(['separator set to Auto (";"), as spaces are not allowed']);
     const excluded = applyParsedRules(semicolon, parseRuleText('Must not contain ; or :'));
     expect(excluded.req.separator).toBe('auto');
-    expect(excluded.notes).toEqual(['separator set to Automatic (a space), as ";" is not allowed']);
+    expect(excluded.notes).toEqual(['separator set to Auto (a space), as ";" is not allowed']);
     // Automatic itself is never changed: it follows the rules on its own.
     expect(applyParsedRules(DEFAULT_REQUIREMENTS, parseRuleText('Letters and numbers only.')).notes).toEqual([]);
   });

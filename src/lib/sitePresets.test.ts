@@ -56,9 +56,9 @@ describe('site rule presets', () => {
   it('say what they changed beyond the rules: a separator they rule out becomes Automatic', () => {
     const semicolon = { ...DEFAULT_REQUIREMENTS, separator: ';' };
     const preset = (label: string) => SITE_PRESETS.find((p) => p.label === label)!;
-    expect(applyPreset(semicolon, preset('No symbols').rules).notes).toEqual(['separator set to Automatic (none), as ";" is not allowed']);
-    expect(applyPreset(semicolon, preset('Short max (16)').rules).notes).toEqual(['separator set to Automatic (none), as ";" is not allowed']);
-    expect(applyPreset({ ...DEFAULT_REQUIREMENTS, separator: ' ' }, preset('No spaces').rules).notes).toEqual(['separator set to Automatic (";"), as spaces are not allowed']);
+    expect(applyPreset(semicolon, preset('No symbols').rules).notes).toEqual(['separator set to Auto (none), as ";" is not allowed']);
+    expect(applyPreset(semicolon, preset('Short max (16)').rules).notes).toEqual(['separator set to Auto (none), as ";" is not allowed']);
+    expect(applyPreset({ ...DEFAULT_REQUIREMENTS, separator: ' ' }, preset('No spaces').rules).notes).toEqual(['separator set to Auto (";"), as spaces are not allowed']);
     expect(applyPreset(semicolon, preset('NIST passphrase').rules)).toEqual({ req: { ...semicolon, ...preset('NIST passphrase').rules }, notes: [] });
   });
 

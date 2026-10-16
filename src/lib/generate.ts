@@ -5,6 +5,7 @@ import type { Difficulty } from './difficulty';
 import {
   initialPositions,
   initialsOf,
+  isMadeUpNoun,
   MADE_UP_NOUNS,
   madeUpPositions,
   shorthandPositions,
@@ -24,7 +25,7 @@ import { isPinkyStretch, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
 import { scoreCold } from './score';
-import { plainOf } from './ease';
+import { easedText, plainOf } from './ease';
 import { letterCount } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
 import { allowedSymbolSet, isSymbol, MAX_TWISTS, RequirementsError, separatorProblem, validate } from './validation';
@@ -211,6 +212,19 @@ export interface GenerateResult {
   plan: Plan;
   suggestions: Suggestion[];
   warnings: string[];
+  /** The sentence every suggestion was built from: the one passed in, or a new draw. */
+  sentence: GeneratedSentence;
+}
+
+/**
+ * A made-up sentence, kept from batch to batch until the user draws a new
+ * one: the template's slots with any number placed, and the words as
+ * written, one per slot (the hint). Plain data, so it can be stored and
+ * sent to a worker.
+ */
+export interface GeneratedSentence {
+  slots: Slot[];
+  words: string[];
 }
 
 // The Automatic separator. ";" comes first: it sits under the right pinky
@@ -401,69 +415,87 @@ export function joinTokens(words: readonly string[], glue: readonly boolean[], s
   return words.map((w, i) => (i < words.length - 1 && !glue[i] ? w + separator : w)).join('');
 }
 
-export function plan(req: Requirements): Candidate {
+/** What planning a template needs from the rules, worked out once. */
+interface PlanContext {
+  allowed: string[];
+  separator: string;
+  closing: string | undefined;
+  withNumber: boolean;
+}
+
+function planContext(req: Requirements): PlanContext {
   validate(req);
   const allowed = allowedSymbolSet(req);
   const separator = resolveSeparator(req);
-  const closing = closingSymbol(req, allowed, separator);
+  return { allowed, separator, closing: closingSymbol(req, allowed, separator), withNumber: req.includeNumber || req.minDigits > 0 };
+}
 
-  const withNumber = req.includeNumber || req.minDigits > 0;
-  let best: Candidate | undefined;
-  let tooFewLetters = false;
-  // A shape whose separators do not supply the symbols, with no closing mark to make up the rest, is skipped,
-  // not fatal: a longer sentence has more separators ("only ;" and 5 symbols fits six words).
+interface TemplateCandidate {
+  candidate?: Candidate;
+  /** A shape was skipped because its separators fall short with no closing mark to make up the rest. */
+  noClosing: boolean;
+  /** A shape was skipped because it cannot offer the uppercase rule enough letters. */
+  tooFewLetters: boolean;
+}
+
+/** The plan for one template under these rules: its variants (one per number placement) and their exact count. */
+function candidateFor(template: Template, req: Requirements, ctx: PlanContext): TemplateCandidate {
+  const { separator, closing } = ctx;
   let noClosing = false;
-  for (const template of templates()) {
-    const shapes = (withNumber ? numberPlacements(template) : [template]).map((t) => shapeOf(t, req));
-    const variants: Variant[] = [];
-    for (const shape of shapes) {
-      const separators = shape.slots.length - 1 - shape.glue.filter(Boolean).length;
-      const endSymbol = endSymbolFor(separators, separator, req, closing);
-      if (endSymbol === undefined) {
-        noClosing = true;
-        continue;
-      }
-      const overhead = separators * separator.length + endSymbol.length;
-      const lo = req.minLength - overhead;
-      const hi = req.maxLength - overhead;
-      if (hi <= 0) continue;
-      if (minLettersOf(shape, req.comfort, req.minDigits, req.easeSwaps) < req.minUppercase) {
-        tooFewLetters = true;
-        continue;
-      }
-      const model = modelFor(shape, req.comfort, req.minDigits, req.easeSwaps);
-      const count = model.count(lo, hi);
-      if (count > 0) variants.push({ shape, model, count, endSymbol, lo, hi });
+  let tooFewLetters = false;
+  const shapes = (ctx.withNumber ? numberPlacements(template) : [template]).map((t) => shapeOf(t, req));
+  const variants: Variant[] = [];
+  for (const shape of shapes) {
+    const separators = shape.slots.length - 1 - shape.glue.filter(Boolean).length;
+    const endSymbol = endSymbolFor(separators, separator, req, closing);
+    if (endSymbol === undefined) {
+      noClosing = true;
+      continue;
     }
-    const count = variants.reduce((sum, v) => sum + v.count, 0);
-    if (count === 0) continue;
+    const overhead = separators * separator.length + endSymbol.length;
+    const lo = req.minLength - overhead;
+    const hi = req.maxLength - overhead;
+    if (hi <= 0) continue;
+    if (minLettersOf(shape, req.comfort, req.minDigits, req.easeSwaps) < req.minUppercase) {
+      tooFewLetters = true;
+      continue;
+    }
+    const model = modelFor(shape, req.comfort, req.minDigits, req.easeSwaps);
+    const count = model.count(lo, hi);
+    if (count > 0) variants.push({ shape, model, count, endSymbol, lo, hi });
+  }
+  const count = variants.reduce((sum, v) => sum + v.count, 0);
+  if (count === 0) return { noClosing, tooFewLetters };
 
-    const first = shapes[0]!;
-    const bits = Math.log2(count);
-    const breakdown: SlotBreakdown[] = first.slots.map((slot, i) => {
-      const size = slotPool(first, i, req.comfort, req.minDigits, req.easeSwaps).length;
-      const form = first.madeUp.includes(i)
-        ? 'madeUp'
-        : first.initials.includes(i)
-          ? 'initial'
-          : first.shorthand.includes(i)
-            ? 'shorthand'
-            : undefined;
-      const labels = { madeUp: 'made-up noun', initial: `${SLOT_LABELS[slot]} initial`, shorthand: `${SLOT_LABELS[slot]} (two letters)` };
-      return {
-        slot: form ?? slot,
-        label: form ? labels[form] : SLOT_LABELS[slot],
-        poolSize: size,
-        bits: Math.log2(size),
-      };
-    });
-    if (shapes.length > 1) {
-      breakdown.push({ slot: 'position', label: 'number position', poolSize: shapes.length, bits: Math.log2(shapes.length) });
-    }
-    const unconstrained = breakdown.reduce((sum, b) => sum + b.bits, 0);
-    const meanLength =
-      variants.reduce((sum, v) => sum + (v.model.meanLength(v.lo, v.hi) + req.minLength - v.lo) * v.count, 0) / count;
-    const candidate: Candidate = {
+  const first = shapes[0]!;
+  const bits = Math.log2(count);
+  const breakdown: SlotBreakdown[] = first.slots.map((slot, i) => {
+    const size = slotPool(first, i, req.comfort, req.minDigits, req.easeSwaps).length;
+    const form = first.madeUp.includes(i)
+      ? 'madeUp'
+      : first.initials.includes(i)
+        ? 'initial'
+        : first.shorthand.includes(i)
+          ? 'shorthand'
+          : undefined;
+    const labels = { madeUp: 'made-up noun', initial: `${SLOT_LABELS[slot]} initial`, shorthand: `${SLOT_LABELS[slot]} (two letters)` };
+    return {
+      slot: form ?? slot,
+      label: form ? labels[form] : SLOT_LABELS[slot],
+      poolSize: size,
+      bits: Math.log2(size),
+    };
+  });
+  if (shapes.length > 1) {
+    breakdown.push({ slot: 'position', label: 'number position', poolSize: shapes.length, bits: Math.log2(shapes.length) });
+  }
+  const unconstrained = breakdown.reduce((sum, b) => sum + b.bits, 0);
+  const meanLength =
+    variants.reduce((sum, v) => sum + (v.model.meanLength(v.lo, v.hi) + req.minLength - v.lo) * v.count, 0) / count;
+  return {
+    noClosing,
+    tooFewLetters,
+    candidate: {
       variants,
       plan: {
         template,
@@ -479,11 +511,25 @@ export function plan(req: Requirements): Candidate {
         lengthPenaltyBits: Math.max(0, unconstrained - bits),
         easeSwaps: req.easeSwaps,
       },
-    };
-    if (!best || better(candidate.plan, best.plan)) best = candidate;
+    },
+  };
+}
+
+export function plan(req: Requirements): Candidate {
+  const ctx = planContext(req);
+  let best: Candidate | undefined;
+  let tooFewLetters = false;
+  // A shape whose separators do not supply the symbols, with no closing mark to make up the rest, is skipped,
+  // not fatal: a longer sentence has more separators ("only ;" and 5 symbols fits six words).
+  let noClosing = false;
+  for (const template of templates()) {
+    const t = candidateFor(template, req, ctx);
+    noClosing ||= t.noClosing;
+    tooFewLetters ||= t.tooFewLetters;
+    if (t.candidate && (!best || better(t.candidate.plan, best.plan))) best = t.candidate;
   }
   if (!best) {
-    if (noClosing) throw new RequirementsError(noClosingProblem(allowed, separator));
+    if (noClosing) throw new RequirementsError(noClosingProblem(ctx.allowed, ctx.separator));
     throw new RequirementsError(
       tooFewLetters
         ? `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase} letters to capitalise. ` +
@@ -620,6 +666,11 @@ export interface GenerateOptions {
   mappings?: readonly Mapping[];
 }
 
+export interface MakeUpOptions extends GenerateOptions {
+  /** The sentence to build the batch from. A new one is drawn only when there is none. */
+  sentence?: GeneratedSentence;
+}
+
 /**
  * Mappings whose output only uses characters the site accepts, and never the
  * separator: a password never starts or ends with its separator, so a swap
@@ -632,9 +683,53 @@ export function usableMappings(mappings: readonly Mapping[], req: Requirements, 
   return mappings.filter((m) => [...m.to].every((c) => /[a-z0-9]/.test(c) || allowed.has(c)));
 }
 
-export function generate(req: Requirements, options: GenerateOptions = {}): GenerateResult {
-  const { rng = cryptoRandom, mappings = BUILT_IN_MAPPINGS } = options;
-  const { plan: chosen, variants } = plan(req);
+const same = <T>(a: readonly T[], b: readonly T[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * The plan, variant and typed words for a kept sentence under these rules.
+ * Initials, two-letter words and deliberate swaps are worked out again from
+ * the words as written, so they follow the rules; the words themselves never
+ * change. A RequirementsError says why when the sentence cannot fit.
+ */
+function keptSentence(sentence: GeneratedSentence, req: Requirements): { candidate: Candidate; variant: Variant; typed: string[] } {
+  plan(req); // rules no sentence can meet get the general message, not one about this sentence
+  const ctx = planContext(req);
+  const doesNotFit = (why: string) =>
+    new RequirementsError(`The sentence does not fit these rules: ${why}. Draw a new sentence with the button beside it, or change the rules back.`);
+  const hasNumber = sentence.slots.includes('num');
+  if (hasNumber && !ctx.withNumber) throw doesNotFit('it has a number, and these rules leave numbers out');
+  if (!hasNumber && ctx.withNumber) throw doesNotFit('these rules need a number, and it has none');
+  const template = templates().find((t) => same(t.slots, sentence.slots.filter((slot) => slot !== 'num')));
+  if (!template || sentence.words.length !== sentence.slots.length) throw doesNotFit('its shape is not one this tool makes');
+  const t = candidateFor(template, req, ctx);
+  const variant = t.candidate?.variants.find((v) => same(v.shape.slots, sentence.slots));
+  if (!t.candidate || !variant) {
+    if (t.noClosing) throw new RequirementsError(noClosingProblem(ctx.allowed, ctx.separator));
+    throw doesNotFit(t.tooFewLetters ? `it has too few letters for ${req.minUppercase} capitals` : `no sentence of its shape fits ${req.minLength}-${req.maxLength} characters`);
+  }
+  const { shape } = variant;
+  const madeUp = sentence.words.flatMap((w, j) => (shape.slots[j] === 'noun' && isMadeUpNoun(w) ? [j] : []));
+  if (!same(madeUp, shape.madeUp)) {
+    throw doesNotFit(`it has ${madeUp.length} made-up noun${madeUp.length === 1 ? '' : 's'}, and these rules ask for ${shape.madeUp.length}`);
+  }
+  const typed = sentence.words.map((w, j) => {
+    if (shape.initials.includes(j)) return w[0]!.toUpperCase();
+    if (shape.shorthand.includes(j)) return twoLetter(w);
+    return req.easeSwaps && isWholeWord(shape, j) ? easedText(w) : w;
+  });
+  const length = render(typed, variant, t.candidate.plan).length;
+  if (length < req.minLength || length > req.maxLength) {
+    throw doesNotFit(`it comes to ${length} characters, and these rules allow ${req.minLength}-${req.maxLength}`);
+  }
+  return { candidate: t.candidate, variant, typed };
+}
+
+export function generate(req: Requirements, options: MakeUpOptions = {}): GenerateResult {
+  const { rng = cryptoRandom, mappings = BUILT_IN_MAPPINGS, sentence: kept } = options;
+  // One sentence per batch: every card is built from the same words and hint, so the cards differ only in
+  // their swaps and closing marks. A kept sentence stays whatever the rules; a new one is drawn only without one.
+  const drawn = kept ? keptSentence(kept, req) : undefined;
+  const { plan: chosen, variants } = drawn?.candidate ?? plan(req);
   const p = pools(req.comfort, req.minDigits, req.easeSwaps);
   const warnings: string[] = [];
   const twistMappings = usableMappings(mappings, req, chosen.separator);
@@ -657,26 +752,49 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
     warnings.push('No separator is available, so the words run together. Spaces or a symbol make it easier to read.');
   }
 
-  // Each password draws its own closing symbol, so a batch does not all end in the same mark.
+  const variant = drawn?.variant ?? variants[weightedIndex(variants.map((v) => v.count), rng)]!;
+  const { shape, model } = variant;
+  // Drawn as typed: with deliberate swaps on, awkward whole words come out already swapped ("wyse").
+  const typed = drawn?.typed ?? model.sample(variant.lo, variant.hi, rng);
+  const original = typed.map((w, j) => (req.easeSwaps && isWholeWord(shape, j) ? plainOf(w) : w));
+  const length = render(typed, variant, chosen).length;
+  // Twists never touch the number, initials, made-up nouns or two-letter
+  // words, so what the card says about those stays true.
+  const fixed = (j: number) => !isWholeWord(shape, j);
+  // Letters the uppercase rule can count on without touching the twisted words.
+  const fixedLetters = typed.reduce((n, w, j) => {
+    if (!fixed(j) || shape.slots[j] === 'num') return n;
+    if (shape.madeUp.includes(j)) return n + (w === w.toUpperCase() ? letterCount(w) : 0);
+    return n + letterCount(w);
+  }, 0);
+  // Initials and two-letter forms only fix some letters; offer a word to picture so they are easy to remember.
+  const pictured = kept?.words ?? original.map((w, j) => {
+    const matches = shape.initials.includes(j)
+      ? (x: string) => x[0]!.toUpperCase() === w
+      : shape.shorthand.includes(j)
+        ? (x: string) => twoLetter(x) === w
+        : undefined;
+    if (!matches) return w;
+    const options = p[shape.slots[j]!].filter(matches);
+    return options[randomInt(options.length, rng)] ?? w;
+  });
+  const named = (positions: number[]) => positions.map((j) => `${original[j]} (${pictured[j]})`).join(', ');
+  const shapeSteps = [
+    shape.initials.length ? `typed as capital initials: ${named(shape.initials)}` : '',
+    shape.shorthand.length ? `typed as two letters, first and last consonant: ${named(shape.shorthand)}` : '',
+    shape.madeUp.length ? `made-up nouns from key rolls: ${shape.madeUp.map((j) => original[j]).join(', ')}` : '',
+  ].filter(Boolean);
+  const hint = pictured.join(' ');
+
+  // Each password draws its own closing symbol and swaps, so a batch does not all end in the same mark.
+  // A draw that repeats a password already in the batch is skipped; a sentence with little to vary
+  // (no swaps, one closing mark) gives fewer cards rather than copies.
   const closings = closingChoices(req, allowedSymbolSet(req), chosen.separator);
   const suggestions: Suggestion[] = [];
-  for (let i = 0; i < req.count; i++) {
-    const variant = variants[weightedIndex(variants.map((v) => v.count), rng)]!;
+  const seen = new Set<string>();
+  let unmet: string | undefined;
+  for (let tries = 0; suggestions.length < req.count && tries < req.count * 10; tries++) {
     const endSymbol = variant.endSymbol ? closings[randomInt(closings.length, rng)]!.repeat(variant.endSymbol.length) : '';
-    const { shape, model } = variant;
-    // Drawn as typed: with deliberate swaps on, awkward whole words come out already swapped ("wyse").
-    const typed = model.sample(variant.lo, variant.hi, rng);
-    const original = typed.map((w, j) => (req.easeSwaps && isWholeWord(shape, j) ? plainOf(w) : w));
-    const length = render(typed, variant, chosen).length;
-    // Twists never touch the number, initials, made-up nouns or two-letter
-    // words, so what the card says about those stays true.
-    const fixed = (j: number) => !isWholeWord(shape, j);
-    // Letters the uppercase rule can count on without touching the twisted words.
-    const fixedLetters = typed.reduce((n, w, j) => {
-      if (!fixed(j) || shape.slots[j] === 'num') return n;
-      if (shape.madeUp.includes(j)) return n + (w === w.toUpperCase() ? letterCount(w) : 0);
-      return n + letterCount(w);
-    }, 0);
     // Random swaps land on the words as typed, deliberate swaps included, and are counted from there.
     const twisted = applyTwists(
       typed,
@@ -694,25 +812,22 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
       rng,
     );
     const password = render(twisted.words, variant, chosen, undefined, endSymbol); // the opening capital stays: a sentence-like start
-    // Initials and two-letter forms only fix some letters; offer a word to picture so they are easy to remember.
-    const pictured = original.map((w, j) => {
-      const matches = shape.initials.includes(j)
-        ? (x: string) => x[0]!.toUpperCase() === w
-        : shape.shorthand.includes(j)
-          ? (x: string) => twoLetter(x) === w
-          : undefined;
-      if (!matches) return w;
-      const options = p[shape.slots[j]!].filter(matches);
-      return options[randomInt(options.length, rng)] ?? w;
-    });
-    const named = (positions: number[]) => positions.map((j) => `${original[j]} (${pictured[j]})`).join(', ');
-    const shapeSteps = [
-      shape.initials.length ? `typed as capital initials: ${named(shape.initials)}` : '',
-      shape.shorthand.length ? `typed as two letters, first and last consonant: ${named(shape.shorthand)}` : '',
-      shape.madeUp.length ? `made-up nouns from key rolls: ${shape.madeUp.map((j) => original[j]).join(', ')}` : '',
-    ].filter(Boolean);
-    const hint = pictured.join(' ');
+    if (seen.has(password)) continue;
+    seen.add(password);
     const score = scoreCold(password, hint);
+    const checks = checkRequirements(password, req, {
+      separator: chosen.separator,
+      endSymbol,
+      uppercaseHow:
+        shape.initials.length && countUpper(original.join('')) >= req.minUppercase
+          ? `capital initials: ${shape.initials.map((j) => original[j]).join(' ')}`
+          : undefined,
+    });
+    // A drawn sentence always fits; a kept one can miss a rule it was not drawn for (a 2-digit minimum and its "5").
+    if (kept && !checks.every((c) => c.met)) {
+      unmet ??= checks.find((c) => !c.met)!.rule;
+      continue;
+    }
     suggestions.push({
       password,
       hint,
@@ -725,19 +840,20 @@ export function generate(req: Requirements, options: GenerateOptions = {}): Gene
       typing: score.typing,
       difficulty: score.difficulty,
       memorability: score.memorability.score,
-      checks: checkRequirements(password, req, {
-        separator: chosen.separator,
-        endSymbol,
-        uppercaseHow:
-          shape.initials.length && countUpper(original.join('')) >= req.minUppercase
-            ? `capital initials: ${shape.initials.map((j) => original[j]).join(' ')}`
-            : undefined,
-      }),
+      checks,
     });
+  }
+  if (suggestions.length === 0 && unmet) {
+    throw new RequirementsError(
+      `The sentence does not fit these rules: no version of it meets "${unmet}". Draw a new sentence with the button beside it, or change the rules back.`,
+    );
+  }
+  if (suggestions.length < req.count) {
+    warnings.push(`Only ${suggestions.length} different versions of this sentence fit; add swaps or allow more symbols for more variety.`);
   }
   const short = suggestions.filter((s) => s.twists.length < req.twists).length;
   if (short) warnings.push(fewerSwapsWarning(short, req.twists));
-  return { plan: chosen, suggestions, warnings };
+  return { plan: chosen, suggestions, warnings, sentence: { slots: [...shape.slots], words: [...pictured] } };
 }
 
 export function fewerSwapsWarning(count: number, minimum: number): string {

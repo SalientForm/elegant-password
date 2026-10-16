@@ -102,19 +102,19 @@ describe('RequirementsForm', () => {
     render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, separator: ';' }} />);
     fireEvent.click(screen.getByRole('button', { name: /No symbols/ }));
     expect(req()).toMatchObject({ separator: 'auto', allowedSymbols: '', minSymbols: 0, allowSpaces: false });
-    expect(screen.getByText('No symbols: separator set to Automatic (none), as ";" is not allowed.').getAttribute('role')).toBe('status');
+    expect(screen.getByText('No symbols: separator set to Auto (none), as ";" is not allowed.').getAttribute('role')).toBe('status');
     expect(document.querySelector('.field-error')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Automatic' }).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByText(/^Automatic: none, so the words run together under these rules/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Auto' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText(/^Auto: none, so the words run together under these rules/)).toBeTruthy();
     // The note is about that tap: it goes once the form moves on.
     fireEvent.click(screen.getByRole('button', { name: /Typical site/ }));
-    expect(screen.queryByText(/separator set to Automatic/)).toBeNull();
-    expect(screen.getByText(/^Automatic: ";" under these rules/)).toBeTruthy();
+    expect(screen.queryByText(/separator set to Auto/)).toBeNull();
+    expect(screen.getByText(/^Auto: ";" under these rules/)).toBeTruthy();
     // A separator the preset allows is left alone, with nothing to say.
     fireEvent.change(screen.getByLabelText('Separator symbol'), { target: { value: '#' } });
     fireEvent.click(screen.getByRole('button', { name: /Short max \(16\)/ }));
     expect(req().separator).toBe('#');
-    expect(screen.queryByText(/separator set to Automatic/)).toBeNull();
+    expect(screen.queryByText(/separator set to Auto/)).toBeNull();
   });
 
   it('shows each contradiction beside the fields at fault, marks them, and clears it once fixed', () => {
@@ -193,7 +193,7 @@ describe('RequirementsForm', () => {
     fireEvent.paste(box);
     fireEvent.change(box, { target: { value: 'Use letters and numbers only. No spaces.' } });
     expect(req()).toMatchObject({ separator: 'auto', allowedSymbols: '', minSymbols: 0, allowSpaces: false });
-    expect(pasteStatus().textContent).toBe('Filled in: no symbols, no spaces, separator set to Automatic (none), as ";" is not allowed.');
+    expect(pasteStatus().textContent).toBe('Filled in: no symbols, no spaces, separator set to Auto (none), as ";" is not allowed.');
     expect(document.querySelector('.field-error')).toBeNull();
   });
 
@@ -212,17 +212,17 @@ describe('RequirementsForm', () => {
     render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, allowedSymbols: ';-' }} />);
     const pressed = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed');
     const field = screen.getByLabelText('Separator symbol') as HTMLInputElement;
-    expect(pressed('Automatic')).toBe('true'); // the default
+    expect(pressed('Auto')).toBe('true'); // the default
     expect(field.value).toBe('');
-    expect(screen.getByText(/^Automatic: ";" under these rules\. It is ";" whenever the site allows it/)).toBeTruthy();
+    expect(screen.getByText(/^Auto: ";" under these rules\. It is ";" whenever the site allows it/)).toBeTruthy();
     fireEvent.change(field, { target: { value: '-' } });
     expect(req().separator).toBe('-');
-    expect(pressed('Automatic')).toBe('false');
+    expect(pressed('Auto')).toBe('false');
     expect(field.className).toContain('active');
     expect(screen.getByText(/pinky stretch; kept because you chose it/)).toBeTruthy();
     fireEvent.change(field, { target: { value: '#' } });
     expect(req().separator).toBe('#');
-    expect(screen.getByText('"#" is chosen as the separator, but it is not an allowed symbol. Choose Automatic to use one the site allows.')).toBeTruthy();
+    expect(screen.getByText('"#" is chosen as the separator, but it is not an allowed symbol. Choose Auto to use one the site allows.')).toBeTruthy();
     expect(field.getAttribute('aria-invalid')).toBe('true');
     fireEvent.change(field, { target: { value: 'x' } });
     expect(screen.getByText(/not a letter or digit/)).toBeTruthy();
@@ -234,7 +234,7 @@ describe('RequirementsForm', () => {
     fireEvent.click(within(screen.getByRole('group', { name: 'Separator between words' })).getByRole('button', { name: 'None' }));
     expect(req().separator).toBe('');
     expect(screen.getByText('None: the words run together.')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Automatic' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
     expect(req().separator).toBe('auto');
   });
 
@@ -246,10 +246,10 @@ describe('RequirementsForm', () => {
     expect(space.disabled).toBe(false); // still the choice, so it can be seen and changed
     expect(space.getAttribute('aria-invalid')).toBe('true');
     expect(screen.getByText(/^Space is chosen as the separator, but spaces are not allowed\./).closest('#problems-separator')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Automatic' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
     expect(document.querySelector('.field-error')).toBeNull();
     expect((screen.getByRole('button', { name: 'Space' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/^Automatic: ";" under these rules/)).toBeTruthy();
+    expect(screen.getByText(/^Auto: ";" under these rules/)).toBeTruthy();
   });
 });
 

@@ -29,6 +29,16 @@ describe('session store', () => {
     expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null })?.outcome).toBeNull();
   });
 
+  it('keeps the made-up sentence, and drops only that when it is malformed', () => {
+    const generated = { slots: ['adj', 'noun'], words: ['sleepy', 'otters'] };
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated })?.generated).toEqual(generated);
+    for (const bad of [{ slots: ['adj'], words: ['a', 'b'] }, { slots: ['toString'], words: ['x'] }, { slots: [], words: [] }, 'sleepy otters']) {
+      const back = parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated: bad });
+      expect(back).toBeDefined();
+      expect(back?.generated).toBeUndefined();
+    }
+  });
+
   it('rejects anything malformed rather than trusting it', () => {
     expect(parseSession(null)).toBeUndefined();
     expect(parseSession({ key: 'k' })).toBeUndefined();

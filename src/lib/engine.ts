@@ -3,7 +3,7 @@
 // thing, and the result is plain data that can be stored and restored.
 
 import { fromSentence, type SentenceOptions } from './fromSentence';
-import { generate, RequirementsError, type Plan, type Requirements, type Suggestion } from './generate';
+import { generate, RequirementsError, type GeneratedSentence, type Plan, type Requirements, type Suggestion } from './generate';
 import { mappingKey, type Mapping } from './twists';
 
 export type Mode = 'generated' | 'sentence';
@@ -15,6 +15,8 @@ export interface GenerateInputs {
   sentence: string;
   sentenceOptions: SentenceOptions;
   mappings: readonly Mapping[];
+  /** The made-up sentence to keep (generated mode); null draws a new one. */
+  generated?: GeneratedSentence | null;
 }
 
 export interface GenerateRequest extends GenerateInputs {
@@ -31,6 +33,8 @@ export type Outcome =
       warnings: string[];
       /** The exact plan, for the strength panel (generated mode only). */
       plan?: Plan;
+      /** The made-up sentence every suggestion was built from (generated mode only). */
+      generated?: GeneratedSentence;
     }
   | {
       ok: false;
@@ -51,8 +55,8 @@ export function runInputs(inputs: GenerateInputs): Outcome {
       const r = fromSentence(inputs.sentence, inputs.req, inputs.sentenceOptions, { mappings: inputs.mappings });
       return { ok: true, source: 'sentence', separator: r.separator, suggestions: r.suggestions, warnings: r.warnings };
     }
-    const r = generate(inputs.req, { mappings: inputs.mappings });
-    return { ok: true, source: 'generated', separator: r.plan.separator, suggestions: r.suggestions, warnings: r.warnings, plan: r.plan };
+    const r = generate(inputs.req, { mappings: inputs.mappings, sentence: inputs.generated ?? undefined });
+    return { ok: true, source: 'generated', separator: r.plan.separator, suggestions: r.suggestions, warnings: r.warnings, plan: r.plan, generated: r.sentence };
   } catch (e) {
     if (e instanceof RequirementsError) return { ok: false, error: e.message };
     return { ok: false, error: e instanceof Error ? e.message : String(e), unexpected: true };
@@ -61,12 +65,14 @@ export function runInputs(inputs: GenerateInputs): Outcome {
 
 /**
  * A stable key for everything that changes the result. Inputs that do not
- * matter in a mode (the sentence while making one up) are left out, so
- * typing in the other mode's box does not throw passwords away.
+ * matter in a mode (the sentence while making one up, the made-up sentence
+ * while using your own) are left out, so typing in the other mode's box does
+ * not throw passwords away.
  */
 export function inputsKey(inputs: GenerateInputs): string {
   const req = Object.fromEntries(Object.entries(inputs.req).sort(([a], [b]) => a.localeCompare(b)));
   const mappings = inputs.mappings.map(mappingKey);
-  const sentence = inputs.mode === 'sentence' ? { sentence: inputs.sentence, sentenceOptions: inputs.sentenceOptions } : {};
+  const sentence =
+    inputs.mode === 'sentence' ? { sentence: inputs.sentence, sentenceOptions: inputs.sentenceOptions } : { generated: inputs.generated ?? null };
   return JSON.stringify({ mode: inputs.mode, req, mappings, ...sentence });
 }

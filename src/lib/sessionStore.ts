@@ -5,7 +5,8 @@
 // of rolling fresh passwords.
 
 import type { Outcome } from './engine';
-import type { Suggestion } from './generate';
+import type { GeneratedSentence, Suggestion } from './generate';
+import { SLOT_LABELS } from './grammar';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, removeKey, writeJson, type KeyValueStore } from './storage';
 
 export const SESSION_KEY = 'elegant-passwords:session:v1';
@@ -17,6 +18,8 @@ export interface StoredSession {
   round: number;
   sentence: string;
   outcome: Outcome | null;
+  /** The made-up sentence the user keeps until they draw a new one. */
+  generated?: GeneratedSentence;
 }
 
 const isStringArray = (x: unknown): x is string[] => Array.isArray(x) && x.every(isString);
@@ -55,6 +58,14 @@ const isTyping = (t: unknown): boolean =>
   isFiniteNumber(t.averageDistance) &&
   isFiniteNumber(t.sameFingerPairs);
 
+export const isGeneratedSentence = (x: unknown): x is GeneratedSentence =>
+  isRecord(x) &&
+  isStringArray(x.slots) &&
+  x.slots.every((slot) => Object.hasOwn(SLOT_LABELS, slot)) &&
+  isStringArray(x.words) &&
+  x.words.length > 0 &&
+  x.words.length === x.slots.length;
+
 export function isOutcome(x: unknown): x is Outcome {
   if (!isRecord(x)) return false;
   if (x.ok === false) return isString(x.error);
@@ -65,6 +76,7 @@ export function isOutcome(x: unknown): x is Outcome {
     Array.isArray(x.suggestions) &&
     x.suggestions.every(isSuggestion) &&
     isStringArray(x.warnings) &&
+    (x.generated === undefined || isGeneratedSentence(x.generated)) &&
     (x.plan === undefined ||
       (isRecord(x.plan) && isFiniteNumber(x.plan.bits) && Array.isArray(x.plan.breakdown) && x.plan.breakdown.every((b) => isRecord(b) && isString(b.label) && isFiniteNumber(b.poolSize) && isFiniteNumber(b.bits))))
   );
@@ -73,7 +85,9 @@ export function isOutcome(x: unknown): x is Outcome {
 export function parseSession(raw: unknown): StoredSession | undefined {
   if (!isRecord(raw) || !isString(raw.key) || !isFiniteNumber(raw.round) || !isString(raw.sentence)) return undefined;
   if (raw.outcome !== null && !isOutcome(raw.outcome)) return undefined;
-  return { key: raw.key, round: raw.round, sentence: raw.sentence, outcome: raw.outcome as Outcome | null };
+  // A made-up sentence that does not parse is dropped on its own: the app draws a new one.
+  const generated = isGeneratedSentence(raw.generated) ? { generated: raw.generated } : {};
+  return { key: raw.key, round: raw.round, sentence: raw.sentence, outcome: raw.outcome as Outcome | null, ...generated };
 }
 
 export const loadSession = (store: KeyValueStore | undefined) => parseSession(readJson(store, SESSION_KEY));

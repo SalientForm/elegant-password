@@ -174,7 +174,10 @@ main.columns.phone { display: block; }
 [aria-invalid='true'] { border-color: var(--bad) !important; box-shadow: 0 0 0 1px var(--bad); } /* the field a problem names, beside its message */
 .reset { justify-self: start; padding-left: 0; }
 .segmented.four { grid-template-columns: repeat(4, 1fr); }
-.separator-row { display: grid; grid-template-columns: minmax(0, 1fr) 3.4rem; gap: 0.3rem; } /* Automatic, Space, None, then a box for a symbol of your own */
+.separator-row { display: flex; flex-wrap: wrap; gap: 0.3rem; } /* Auto, Space, None, then a box for a symbol of your own; the box wraps below rather than covering a button */
+.separator-row .segmented { flex: 1 1 auto; display: flex; } /* each button as wide as its own label, then sharing what is left, so all four fit one row in the options column */
+.separator-row .segmented > button { flex: 1 0 auto; padding-inline: 0.5rem; } /* a little tighter than other buttons, so the symbol box still fits beside them in the 300 px options column */
+.separator-row .separator-symbol { flex: 0 0 3.4rem; width: 3.4rem; }
 .separator-symbol { text-align: center; }
 .separator-symbol.active { background: var(--accent-soft); border-color: var(--accent); } /* pressed, like the buttons beside it, when the separator is a symbol typed here */
 .field-errors .field-error + .field-error { margin-top: 0.15rem; }
@@ -236,6 +239,7 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .icon-button:hover { color: var(--accent); }
 .icon-button[aria-pressed='true'] { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
 .icon-button svg { display: block; }
+.icon-button.primary, .icon-button.primary:hover { padding: 0; color: var(--panel); background: var(--accent); border-color: var(--accent); }
 /* One line; cut with an ellipsis only when it does not fit (the tip then shows it in full). */
 .password { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; min-width: 0; }
 .card-row > .pw-tip-anchor { flex: 1 1 auto; min-width: 0; }
@@ -331,6 +335,8 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .panel.suggestions .card { background: var(--bg); } /* a card inside the suggestions card */
 .sentence .sentence-input { font-size: 1.05rem; padding: 0.55rem 0.7rem; }
 .sentence-in-question { margin: 0.5rem 0 0.25rem !important; }
+.generated-row { display: flex; align-items: center; gap: 0.5rem; }
+.generated-row .generated-sentence { flex: 1; min-width: 0; }
 .generated-sentence { margin: 0; font-size: 1.15rem; line-height: 1.4; padding: 0.55rem 0.7rem; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; }
 .strength p { margin: 0.5rem 0 0; }
 .chip.initial { outline: 1.5px solid var(--accent); }
@@ -420,7 +426,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .apply-bar .apply-problems { display: flex; align-items: center; gap: 0.6rem; width: max-content; max-width: min(34rem, calc(100vw - 1.5rem)); padding: 0.5rem 0.5rem 0.5rem 0.9rem; border-radius: var(--radius); border: 1px solid var(--bad); background: var(--panel); color: var(--bad); font-size: 0.85rem; } /* a card, not a pill: the message can run to two lines */
 .apply-problems p { margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .apply-problems button { flex: none; color: var(--bad); border-color: var(--bad); }
-.apply-bar .floating { pointer-events: auto; border-radius: 999px; padding: 0.6rem 1.1rem; font-size: 0.9rem; box-shadow: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3); }
+.apply-bar .floating { pointer-events: auto; border-radius: 999px; padding: 0.6rem 1.1rem; font-size: 0.9rem; box-shadow: 0 0.75rem 8rem rgb(0 0 0 / 0.6), 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3); } /* a wide 8 rem blur lifts them off whatever they float over */
 .apply-bar .floating.ghost { background: var(--panel); border-color: var(--line); color: var(--ink); }
 @media (max-width: 600px) { .apply-bar { left: 0; right: 0; transform: none; } }
 .chip.fluff { background: var(--warn-soft); border: 1px dashed var(--warn); }

@@ -10,7 +10,7 @@ import { SelectedList } from './components/SelectedList';
 import { SentenceInput, SentenceStrength } from './components/SentenceMode';
 import { StrengthPanel } from './components/StrengthPanel';
 import { SuggestionCard, type CardContext } from './components/SuggestionCard';
-import { MenuIcon } from './components/icons';
+import { MenuIcon, RefreshIcon } from './components/icons';
 import { panelId, TabPanel, Tabs, tabId } from './components/Tabs';
 import { relevantTo, TwistsPanel } from './components/TwistsPanel';
 import { TypingTest } from './components/TypingTest';
@@ -27,7 +27,7 @@ const PAGES: { id: Page; href: string; label: string }[] = [
   { id: 'fun', href: '#/fun', label: 'Fun' },
 ];
 
-const TITLE = 'Thuh Eleg@nt Pa$$word!';
+const TITLE = '7he Eleg@nt Pa$$word!';
 const LICENSE_URL = 'https://github.com/SalientForm/elegant-password/blob/main/LICENSE';
 /** One line for the whole app, the same on every page. */
 const DESCRIPTION = 'Passwords that read like a sentence, sit comfortably under your fingers, and are still hard to guess.';
@@ -266,12 +266,24 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
         <TabPanel idPrefix="mode" id="generated" active={p.mode === 'generated'}>
           <div className="sentence">
             <span className="field-label">Generated sentence</span>
-            <p className="generated-sentence" data-testid="generated-sentence" aria-live="polite">
-              {ordered[0]?.hint ?? '…'}
-            </p>
+            <div className="generated-row">
+              <p className="generated-sentence" data-testid="generated-sentence" aria-live="polite">
+                {p.generated?.words.join(' ') ?? '…'}
+              </p>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={p.newSentence}
+                disabled={blocked}
+                aria-label="New sentence"
+                title={blocked ? 'Fix the problems in the options first' : p.dirty ? 'Draw a new sentence (submits your changes too)' : 'Draw a new sentence'}
+              >
+                <RefreshIcon />
+              </button>
+            </div>
             <p className="hint">
-              The sentence behind the first suggestion below, drawn at random from the word lists and fitted to the rules on
-              the left. Every card shows its own under Why?.
+              The sentence behind every suggestion below, drawn at random from the word lists. It stays the same until you
+              draw a new one with the button beside it; changing the rules or refreshing the suggestions keeps it.
             </p>
           </div>
         </TabPanel>
@@ -299,12 +311,17 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
             )}
             <button
               type="button"
-              className="primary"
+              className="icon-button primary"
               onClick={p.regenerate}
               disabled={nothingToRun || blocked}
-              title={blocked ? 'Fix the problems in the options first' : p.dirty ? 'Submits your changes too' : undefined}
+              aria-label="Refresh"
+              title={
+                blocked
+                  ? 'Fix the problems in the options first'
+                  : `New versions of the same sentence${p.dirty ? ' (submits your changes too)' : ''}`
+              }
             >
-              Refresh
+              <RefreshIcon />
             </button>
           </div>
         </div>

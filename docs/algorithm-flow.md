@@ -64,8 +64,8 @@ flowchart TD
   G -- no --> D
   G -- yes --> H[LengthModel: count sequences by total letters,\nwords as typed with deliberate swaps when on\nbits = log2 Σ counts]
   H --> I[choose plan: meets target → shortest;\nelse strongest + warning]
-  I --> J[sample variant ∝ count, total length ∝ count,\nword lengths ∝ completions, word uniform;\nthe hint keeps each word as written]
-  J --> K[swaps: skip number, initials, two-letter, made-up;\nkeep the first letter; stay in the length window;\nkeep enough letters; pick uniformly among outcomes]
+  I --> J[sample one sentence per batch: variant ∝ count,\ntotal length ∝ count, word lengths ∝ completions,\nword uniform; the hint keeps each word as written]
+  J --> K[per card, swaps: skip number, initials, two-letter, made-up;\nkeep the first letter; stay in the length window;\nkeep enough letters; pick uniformly among outcomes]
   K --> L[render: capitals, glue, separator, closing marks]
   L --> M[cold score from password + hint]
   M --> N[checks: every rule ✓/✗, warnings]
@@ -78,8 +78,20 @@ initials, how capitals are applied, the separator, deliberate swaps) add no
 bits and are not random. A deliberate swap is a function of its word, no two
 list words share a swapped spelling, and the model counts each word at its
 typed length, so the count stays exact with them on.
-The closing symbol is drawn at random for each password, for variety,
-but counts no bits either.
+Every card in a batch is built from the same sentence, so reordering the
+cards never changes the sentence; the cards differ in their swaps and their
+closing symbol, drawn at random for each password for variety (the closing
+symbol counts no bits). A draw that repeats a password already in the batch
+is dropped, so a sentence with little to vary gives fewer cards.
+
+The sentence is kept until the user draws a new one ("New sentence", the
+button beside it). Refresh and rule changes skip the sampling step and fit
+the kept words to the rules instead: initials, two-letter words and
+deliberate swaps are worked out again from the words as written, then the
+swaps and closing marks are drawn per card as usual. When the kept sentence
+cannot fit (the rules add or drop the number or made-up nouns, its length
+falls outside the range, or no version meets a rule), the error says why and
+the sentence stays.
 
 ## 3. Use my sentence
 
@@ -150,8 +162,9 @@ do not discount; the strength panel says so in one sentence.
 ## 5. When the flow runs
 
 Edits are a draft. The flow above runs when the draft is applied (the
-floating "Submit changes" bar, Ctrl+Enter, or "Refresh", which applies
-and rolls), and once on load if the stored batch was not made from the
+floating "Submit changes" bar, Ctrl+Enter, "Refresh", which applies and
+rolls new versions of the same sentence, or "New sentence", which applies
+and draws a new one), and once on load if the stored batch was not made from the
 applied inputs. A draft with a contradiction (section 1a) cannot be
 applied, so the applied inputs never hold one. Applied inputs are
 persisted; drafts are not.
