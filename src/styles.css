@@ -5,6 +5,7 @@
   --phone-bar-bg: color-mix(in srgb, var(--bar), var(--panel) 50%); /* the phone bar: half way from that to the panel colour (white in light mode) */
   --header-bg: color-mix(in srgb, var(--bar), var(--panel) 75%); /* the top header: three quarters of the way, lighter than the bar that runs under it */
   --line-dark: color-mix(in srgb, var(--line), black 18%); /* the header's bottom line, a shade darker than the tabs' border above it */
+  --header-gap: 1.25rem; /* the space between the header and the content below it */
   --toggle: color-mix(in srgb, var(--panel), var(--bg) 30%); /* an unselected toggle button: near white, just off the panel colour */
   --panel: #ffffff;
   --ink: #1f2328;
@@ -78,11 +79,18 @@ main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.
  * the top of the viewport, fills its height, and scrolls on its own, never
  * past its own content. While the header is in view, the page scrolls first
  * (see columnScroll.ts).
+ *
+ * The columns' scroll boxes reach up through the gap under the header, so a
+ * scrolled column is cut off at the header's edge rather than in mid-air; their
+ * top padding grows by the same amount, so the content still starts where it
+ * did. They stick that same amount above the viewport and are that much
+ * taller, so once stuck nothing changes either.
  */
+main.columns:not(.narrow) { --reach: var(--header-gap); margin-top: calc(-1 * var(--reach)); }
 .aside { display: grid; gap: 1rem; align-self: start; }
 main.columns > .sidebar, main.columns > .results, main.columns > .aside {
-  position: sticky; top: 0; max-height: 100vh; overflow-y: auto; align-self: start;
-  scrollbar-width: thin; padding: 1rem 0.35rem 0 0.15rem; box-sizing: border-box;
+  position: sticky; top: calc(-1 * var(--reach, 0px)); max-height: calc(100vh + var(--reach, 0px)); overflow-y: auto; align-self: start;
+  scrollbar-width: thin; padding: calc(1rem + var(--reach, 0px)) 0.35rem 0 0.15rem; box-sizing: border-box;
 }
 /*
  * Each column's own 1 rem margin at the bottom, as a real spacer rather than
@@ -112,7 +120,7 @@ main.columns.narrow > .sidebar::after, main.columns.narrow > .results::after, ma
 main.columns > [hidden] { display: none; }
 fieldset { min-inline-size: 0; } /* the browser default, min-content, keeps a form from fitting a narrow column */
 main.columns > div:focus { outline: none; }
-main.columns > .strip { position: sticky; top: 0; height: 100vh; height: 100dvh; width: 2.25rem; display: flex; align-items: center; justify-content: center; align-self: start; }
+main.columns > .strip { position: sticky; top: calc(-1 * var(--reach, 0px)); height: calc(100vh + var(--reach, 0px)); height: calc(100dvh + var(--reach, 0px)); padding-top: var(--reach, 0px); width: 2.25rem; display: flex; align-items: center; justify-content: center; align-self: start; }
 .strip-button { writing-mode: vertical-rl; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-weight: 600; font-size: 0.85rem; padding: 0.9rem 0.3rem; border-radius: 999px; min-height: 0; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); opacity: 0.65; }
 .strip-button:hover, .strip-button:focus-visible { color: var(--accent); border-color: var(--accent); opacity: 1; }
 .strip.left .strip-button { transform: rotate(180deg); } /* left of the open column the label reads bottom to top; right of it, top to bottom */
@@ -347,7 +355,10 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
  * the tabs' own light border just above it. Its inner box lines up with the
  * page content.
  */
-.app-header { margin: -0.75rem calc(50% - 50vw) 1.25rem; padding-top: 0.75rem; background: var(--header-bg); border-bottom: 1px solid var(--line-dark); box-shadow: 0 2px 10px rgb(0 0 0 / 0.1); }
+.app-header { position: relative; z-index: 1; isolation: isolate; overflow: clip; margin: -0.75rem calc(50% - 50vw) var(--header-gap); padding-top: 0.75rem; background: var(--header-bg); border-bottom: 1px solid var(--line-dark); box-shadow: 0 2px 10px rgb(0 0 0 / 0.1); }
+/* A faint line-art backdrop, its detail on the right away from the title. Drawn at a fixed size (it doesn't rescale with the window; narrower screens just show less of its left side), its left edge faded so it has no seam on wide screens, and its top edge 3rem above the header's. Multiplied so the image's own off-white drops out and only the lines tint the header; inverted and screened in the dark. */
+.app-header::before { content: ''; position: absolute; inset: 0 0 0 auto; width: 1440px; z-index: -1; pointer-events: none; background: url('./assets/header-bg.webp') center -3rem / 100% auto no-repeat; mask-image: linear-gradient(to right, transparent, #000 25%); mix-blend-mode: multiply; opacity: 0.65; }
+@media (prefers-color-scheme: dark) { .app-header::before { filter: invert(1); mix-blend-mode: screen; } }
 .app-header .header-inner { max-width: 1380px; margin: 0 auto; padding: 0 1.25rem; }
 /* On a phone the bar below meets the header with no gap, and the header (with its shadow) is drawn over it, so the bar reads as running out from underneath. */
 @media (max-width: 600px) { .app-header { position: relative; z-index: 6; margin-bottom: 0; } }
