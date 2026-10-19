@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPinkyStretch, isRoll, lookupKey, transitionCost, typingProfile, wordCost } from './keyboard';
+import { isFarShift, isPinkyStretch, isRoll, lookupKey, transitionCost, typingProfile, wordCost } from './keyboard';
 
 const key = (c: string) => lookupKey(c)!.key;
 
@@ -43,5 +43,11 @@ describe('keyboard model', () => {
   it('charges characters outside the model as a shifted press of the farthest key instead of rejecting them', () => {
     expect(() => typingProfile('café')).not.toThrow();
     expect(typingProfile('café').shiftPresses).toBe(typingProfile('cafe').shiftPresses + 1);
+  });
+
+  it('knows which shifted keys one hand can reach while holding Shift', () => {
+    expect(['Z', 'A', 'Q', 'E', 'R', '!', '@', '#', 'P', 'K', 'M', ':', '"', '?', '>', '{', '+', ')'].filter(isFarShift)).toEqual([]);
+    expect(['T', 'G', 'B', 'Y', 'H', 'N', 'U', 'J', 'I', '$', '%', '^', '&', '*', '('].every(isFarShift)).toBe(true);
+    expect(isFarShift('t')).toBe(false); // not shifted
   });
 });

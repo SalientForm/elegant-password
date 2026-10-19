@@ -1,7 +1,8 @@
 // Settings that survive a reload: the site requirements, the sentence-mode
-// options and which mode is open. None of these is a secret, so they live
+// options, which mode is open and the typing mode difficulty is scored for. None of these is a secret, so they live
 // in localStorage. Anything malformed falls back to the default.
 
+import { DEFAULT_TYPING_MODE, TYPING_MODE_IDS, type TypingMode } from './difficulty';
 import { MODES, type Mode } from './engine';
 import type { LengthTag } from './fluff';
 import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from './fromSentence';
@@ -15,6 +16,7 @@ export const REQUIREMENTS_KEY = 'elegant-passwords:requirements:v1';
 export const SENTENCE_OPTIONS_KEY = 'elegant-passwords:sentence-options:v1';
 export const MODE_KEY = 'elegant-passwords:mode:v1';
 export const SORT_KEY = 'elegant-passwords:sort:v1';
+export const TYPING_MODE_KEY = 'elegant-passwords:typing-mode:v1';
 
 const SHRINK_STYLES: readonly ShrinkStyle[] = ['none', 'vowels', 'ends'];
 const LENGTH_TAGS: readonly LengthTag[] = ['total', 'factor', 'none'];
@@ -149,3 +151,9 @@ export const loadSort = (store: KeyValueStore | undefined) => parseSort(readJson
 export const saveSort = (store: KeyValueStore | undefined, sort: SortOrder) => writeJson(store, SORT_KEY, sort);
 export const loadMode = (store: KeyValueStore | undefined) => parseMode(readJson(store, MODE_KEY));
 export const saveMode = (store: KeyValueStore | undefined, mode: Mode) => writeJson(store, MODE_KEY, mode);
+
+export function parseTypingMode(raw: unknown): TypingMode {
+  return isString(raw) && TYPING_MODE_IDS.includes(raw as TypingMode) ? (raw as TypingMode) : DEFAULT_TYPING_MODE;
+}
+export const loadTypingMode = (store: KeyValueStore | undefined) => parseTypingMode(readJson(store, TYPING_MODE_KEY));
+export const saveTypingMode = (store: KeyValueStore | undefined, mode: TypingMode) => writeJson(store, TYPING_MODE_KEY, mode);

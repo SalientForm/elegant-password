@@ -94,10 +94,17 @@ export function ScoringPage() {
       <section className="panel">
         <h2>Difficulty, 0 to 100</h2>
         <p>
-          How hard a password is to type and to carry in your head. Nine criteria, each measured on the password alone,
+          How hard a password is to type and to carry in your head. Up to nine criteria, each measured on the password alone,
           each landing on a level from Effortless (0) to Hard (4) by fixed cut-points. A criterion earns weight × level
           ÷ 4 points; the weights add up to 100. Totals: 0–20 effortless, 21–40 easy, 41–60 moderate, 61–80 demanding,
           81–100 hard. Each card shows its own table; this is the whole rubric.
+        </p>
+        <p>
+          The rubric depends on how the password will be typed, chosen in the Mode card on the Passwords page: with ten
+          fingers on the home row (the standard), with two fingers hunting for keys, with one hand,
+          or as quickly as possible. Each mode weighs the criteria differently, drops the ones that no longer apply and
+          has its own typing-time model, so the same password can score differently in each. The mode changes only the
+          difficulty: the passwords, their strength and memorability stay the same.
         </p>
         <RubricTable />
       </section>

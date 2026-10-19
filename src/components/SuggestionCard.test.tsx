@@ -73,7 +73,7 @@ describe('SuggestionCard', () => {
     fireEvent.mouseEnter(screen.getByText(s.password).parentElement!);
     expect(screen.queryByRole('tooltip')).toBeNull(); // it fits, so no tip
     fireEvent.mouseEnter(screen.getByText(`D ${s.difficulty.score}`).parentElement!);
-    expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()}`);
+    expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()} (ten-finger)`);
     fireEvent.mouseLeave(screen.getByText(`D ${s.difficulty.score}`).parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.getByText(`M ${s.memorability}`)).toBeTruthy();

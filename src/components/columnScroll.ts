@@ -5,6 +5,21 @@
 
 import { useEffect, type RefObject } from 'react';
 
+/** Pixels in a wheel "line", as Chromium counts it. */
+export const LINE_PX = 40;
+
+/**
+ * A wheel step's vertical distance in pixels. Most wheels report pixels, but
+ * some report lines (Firefox; a Windows setting) or whole screens (Windows set
+ * to scroll "one screen at a time", as a Mac trackpad over Remote Desktop
+ * arrives): taken as pixels, those would move the page a pixel or three.
+ */
+export function wheelPixels(e: Pick<WheelEvent, 'deltaY' | 'deltaMode'>, pageHeight: number): number {
+  if (e.deltaMode === 1) return e.deltaY * LINE_PX; // WheelEvent.DOM_DELTA_LINE
+  if (e.deltaMode === 2) return e.deltaY * pageHeight; // WheelEvent.DOM_DELTA_PAGE
+  return e.deltaY;
+}
+
 /**
  * How far the page itself should scroll for a wheel step, or undefined when
  * the wheel should act on the column as usual. `columnsTop` is the page
@@ -29,7 +44,7 @@ export function usePageFirstWheel(ref: RefObject<HTMLElement | null>, enabled: b
       const stickyTop = first ? parseFloat(getComputedStyle(first).top) || 0 : 0;
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       const stop = Math.min(el.getBoundingClientRect().top + window.scrollY - stickyTop, maxScroll);
-      const step = pageScrollFor(e.deltaY, stop, window.scrollY);
+      const step = pageScrollFor(wheelPixels(e, window.innerHeight), stop, window.scrollY);
       if (step === undefined) return;
       e.preventDefault();
       window.scrollBy({ top: step });

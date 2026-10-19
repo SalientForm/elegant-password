@@ -5,7 +5,7 @@
   --phone-bar-bg: color-mix(in srgb, var(--bar), var(--panel) 50%); /* the phone bar: half way from that to the panel colour (white in light mode) */
   --header-bg: color-mix(in srgb, var(--bar), var(--panel) 75%); /* the top header: three quarters of the way, lighter than the bar that runs under it */
   --line-dark: color-mix(in srgb, var(--line), black 18%); /* the header's bottom line, a shade darker than the tabs' border above it */
-  --header-gap: 1.25rem; /* the space between the header and the content below it */
+  --header-gap: 1rem; /* the space between the header and the content below it, the same as between the columns */
   --toggle: color-mix(in srgb, var(--panel), var(--bg) 30%); /* an unselected toggle button: near white, just off the panel colour */
   --panel: #ffffff;
   --ink: #1f2328;
@@ -52,6 +52,30 @@
 }
 
 * { box-sizing: border-box; }
+
+/*
+ * Scroll bars like macOS with "show scroll bars automatically" (scrollbars.ts
+ * sets the class only where scroll bars take up room, as on Windows): a thin
+ * rounded handle, no arrow buttons, no track, a little wider and darker under
+ * the pointer. scrollbars.ts marks an area .scrollbar-shown while the pointer is
+ * over it or it scrolls (the page's own bar: while it scrolls); Chromium draws
+ * the page's bar from the body's styles.
+ */
+:root { --scroll-thumb: rgb(0 0 0 / 0.32); --scroll-thumb-hover: rgb(0 0 0 / 0.5); }
+@media (prefers-color-scheme: dark) { :root { --scroll-thumb: rgb(255 255 255 / 0.3); --scroll-thumb-hover: rgb(255 255 255 / 0.5); } }
+.classic-scrollbars ::-webkit-scrollbar, .classic-scrollbars::-webkit-scrollbar { width: 11px; height: 11px; background: transparent; }
+.classic-scrollbars ::-webkit-scrollbar-button, .classic-scrollbars::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+.classic-scrollbars ::-webkit-scrollbar-track, .classic-scrollbars::-webkit-scrollbar-track,
+.classic-scrollbars ::-webkit-scrollbar-corner, .classic-scrollbars::-webkit-scrollbar-corner { background: transparent; }
+.classic-scrollbars ::-webkit-scrollbar-thumb, .classic-scrollbars::-webkit-scrollbar-thumb { background-color: transparent; background-clip: padding-box; border: 3px solid transparent; border-radius: 999px; min-height: 2.5rem; }
+.classic-scrollbars .scrollbar-shown::-webkit-scrollbar-thumb, .classic-scrollbars.scrollbar-shown::-webkit-scrollbar-thumb, .classic-scrollbars.scrollbar-shown body::-webkit-scrollbar-thumb { background-color: var(--scroll-thumb); }
+.classic-scrollbars ::-webkit-scrollbar-thumb:hover, .classic-scrollbars::-webkit-scrollbar-thumb:hover, .classic-scrollbars ::-webkit-scrollbar-thumb:active, .classic-scrollbars::-webkit-scrollbar-thumb:active { background-color: var(--scroll-thumb-hover); border-width: 2px; }
+/* Firefox has no ::-webkit-scrollbar: its thin bar, coloured only while shown. In Chromium, these properties would switch the rules above off. */
+@supports not selector(::-webkit-scrollbar) {
+  .classic-scrollbars, .classic-scrollbars * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  .classic-scrollbars .scrollbar-shown, .classic-scrollbars.scrollbar-shown { scrollbar-color: var(--scroll-thumb) transparent; }
+}
+
 html, body { margin: 0; overflow-x: clip; } /* the page never scrolls sideways */
 h1, h2, h3 { margin: 0; line-height: 1.2; }
 h1 { font-size: 1.9rem; letter-spacing: -0.02em; }
@@ -73,7 +97,8 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .topbar .license { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .topbar .license:hover, .topbar .license:focus-visible { opacity: 0.7; }
 
-main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
+/* 1 rem between the columns' cards: this gap plus a column's 0.35 rem right and 0.15 rem left padding (room for focus rings at the scroll box's edges). */
+main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 0.5rem; align-items: start; }
 /*
  * Desktop: once the header and tabs have scrolled away, each column sticks to
  * the top of the viewport, fills its height, and scrolls on its own, never
@@ -82,16 +107,23 @@ main { display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 1.
  *
  * The columns' scroll boxes reach up through the gap under the header, so a
  * scrolled column is cut off at the header's edge rather than in mid-air; their
- * top padding grows by the same amount, so the content still starts where it
- * did. They stick that same amount above the viewport and are that much
- * taller, so once stuck nothing changes either.
+ * top padding is that same gap, so the content still starts 1 rem under the
+ * header. They stick to the top of the viewport itself, so once the header is
+ * gone the content starts 1 rem under the top of the window too.
  */
 main.columns:not(.narrow) { --reach: var(--header-gap); margin-top: calc(-1 * var(--reach)); }
 .aside { display: grid; gap: 1rem; align-self: start; }
 main.columns > .sidebar, main.columns > .results, main.columns > .aside {
-  position: sticky; top: calc(-1 * var(--reach, 0px)); max-height: calc(100vh + var(--reach, 0px)); overflow-y: auto; align-self: start;
-  scrollbar-width: thin; padding: calc(1rem + var(--reach, 0px)) 0.35rem 0 0.15rem; box-sizing: border-box;
+  position: sticky; top: 0; max-height: 100vh; overflow-y: auto; align-self: start;
+  padding: var(--reach, 0px) 0.35rem 0 0.15rem; box-sizing: border-box;
 }
+/*
+ * Where scroll bars take up room, each column keeps room for its 11 px bar
+ * even when it has nothing to scroll, and that room stands in for the right
+ * padding and most of the gap: still about 1 rem between the cards.
+ */
+.classic-scrollbars main.columns:not(.narrow) { gap: 0.15rem; }
+.classic-scrollbars main.columns:not(.narrow) > .sidebar, .classic-scrollbars main.columns:not(.narrow) > .results, .classic-scrollbars main.columns:not(.narrow) > .aside { padding-right: 0; scrollbar-gutter: stable; }
 /*
  * Each column's own 1 rem margin at the bottom, as a real spacer rather than
  * padding (some browsers leave bottom padding out of a scroll container's
@@ -120,7 +152,7 @@ main.columns.narrow > .sidebar::after, main.columns.narrow > .results::after, ma
 main.columns > [hidden] { display: none; }
 fieldset { min-inline-size: 0; } /* the browser default, min-content, keeps a form from fitting a narrow column */
 main.columns > div:focus { outline: none; }
-main.columns > .strip { position: sticky; top: calc(-1 * var(--reach, 0px)); height: calc(100vh + var(--reach, 0px)); height: calc(100dvh + var(--reach, 0px)); padding-top: var(--reach, 0px); width: 2.25rem; display: flex; align-items: center; justify-content: center; align-self: start; }
+main.columns > .strip { position: sticky; top: 0; height: 100vh; height: 100dvh; width: 2.25rem; display: flex; align-items: center; justify-content: center; align-self: start; }
 .strip-button { writing-mode: vertical-rl; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-weight: 600; font-size: 0.85rem; padding: 0.9rem 0.3rem; border-radius: 999px; min-height: 0; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); opacity: 0.65; }
 .strip-button:hover, .strip-button:focus-visible { color: var(--accent); border-color: var(--accent); opacity: 1; }
 .strip.left .strip-button { transform: rotate(180deg); } /* left of the open column the label reads bottom to top; right of it, top to bottom */
@@ -148,6 +180,10 @@ main.columns.phone { display: block; }
 .segmented.sort { grid-template-columns: repeat(3, 1fr); }
 .scoring { display: grid; gap: 1rem; margin-bottom: 1rem; }
 .scoring h3 { margin-top: 1rem; }
+.scoring .rubric-modes { grid-template-columns: repeat(4, 1fr); margin-top: 0.8rem; } /* the rubric's four modes in one row, two by two on a phone */
+@media (max-width: 600px) { .scoring .rubric-modes { grid-template-columns: repeat(2, 1fr); } }
+.typing-mode { display: grid; gap: 0.7rem; }
+.typing-mode .hint { margin: 0; }
 .scoring p { margin: 0.4rem 0 0; }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; }
@@ -182,6 +218,7 @@ main.columns.phone { display: block; }
 [aria-invalid='true'] { border-color: var(--bad) !important; box-shadow: 0 0 0 1px var(--bad); } /* the field a problem names, beside its message */
 .reset { justify-self: start; padding-left: 0; }
 .segmented.four { grid-template-columns: repeat(4, 1fr); }
+.segmented.two { grid-template-columns: repeat(2, 1fr); }
 .separator-row { display: flex; flex-wrap: wrap; gap: 0.3rem; } /* Auto, Space, None, then a box for a symbol of your own; the box wraps below rather than covering a button */
 .separator-row .segmented { flex: 1 1 auto; display: flex; } /* each button as wide as its own label, then sharing what is left, so all four fit one row in the options column */
 .separator-row .segmented > button { flex: 1 0 auto; padding-inline: 0.5rem; } /* a little tighter than other buttons, so the symbol box still fits beside them in the 300 px options column */

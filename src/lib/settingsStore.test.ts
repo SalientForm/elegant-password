@@ -6,6 +6,7 @@ import {
   loadMode,
   loadSort,
   parseSort,
+  parseTypingMode,
   saveSort,
   loadRequirements,
   loadSentenceOptions,
@@ -84,6 +85,10 @@ describe('settings store', () => {
     expect(parseSort('strongest')).toBe('strength'); // what an earlier version stored
     expect(parseSort('easiest')).toBe('difficulty');
     expect(parseSort('weakest')).toBe('difficulty');
+    expect(parseTypingMode('one-handed')).toBe('one-handed');
+    expect(parseTypingMode('two-finger')).toBe('two-finger');
+    expect(parseTypingMode('one-hand')).toBe('ten-finger');
+    expect(parseTypingMode(undefined)).toBe('ten-finger');
     const store = memoryStore();
     saveSort(store, 'strength');
     expect(loadSort(store)).toBe('strength');

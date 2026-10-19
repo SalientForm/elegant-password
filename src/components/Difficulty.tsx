@@ -1,4 +1,5 @@
-import { criterionOf, LEVELS, RUBRIC, type Criterion, type Difficulty } from '../lib/difficulty';
+import { useState } from 'react';
+import { criterionOf, DEFAULT_TYPING_MODE, LEVELS, RUBRICS, TYPING_MODES, type Criterion, type Difficulty } from '../lib/difficulty';
 
 /** One password scored against each rubric criterion. */
 export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
@@ -14,7 +15,7 @@ export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
       </thead>
       <tbody>
         {difficulty.criteria.map(({ id, value, level, points }) => {
-          const criterion = criterionOf(id);
+          const criterion = criterionOf(id, difficulty.mode);
           return (
           <tr key={criterion.id} title={criterion.measures}>
             <td data-label="Criterion">{criterion.name}</td>
@@ -41,10 +42,19 @@ const band = (c: Criterion, level: number) => {
   return `${c.format(lo)}–${c.format(hi)}`;
 };
 
-/** The whole rubric: what each criterion measures and where its levels start. */
+/** The whole rubric for one typing mode at a time: what each criterion measures and where its levels start. */
 export function RubricTable() {
+  const [mode, setMode] = useState(DEFAULT_TYPING_MODE);
   return (
     <>
+      <div className="segmented two rubric-modes" role="group" aria-label="Typing mode">
+        {TYPING_MODES.map((m) => (
+          <button type="button" key={m.id} className={mode === m.id ? 'active' : ''} aria-pressed={mode === m.id} onClick={() => setMode(m.id)}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+      <p className="hint">{TYPING_MODES.find((m) => m.id === mode)!.hint}</p>
       <div className="table-scroll">
         <table className="rubric stack">
           <thead>
@@ -57,7 +67,7 @@ export function RubricTable() {
             </tr>
           </thead>
           <tbody>
-            {RUBRIC.map((c) => (
+            {RUBRICS[mode].map((c) => (
               <tr key={c.id}>
                 <td data-label="Criterion">
                   <strong>{c.name}</strong>

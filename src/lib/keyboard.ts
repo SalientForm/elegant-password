@@ -94,6 +94,30 @@ export function isPinkyStretch(char: string): boolean {
   return Math.hypot(k.x - home.x, k.y - home.y) > PINKY_REACH;
 }
 
+// Where a pinky holds each Shift key: the part of the key next to "z" and next to "/".
+const SHIFT_KEYS = [
+  { x: 1.25, y: 3 },
+  { x: 12.25, y: 3 },
+] as const;
+
+/** Furthest a key may be from a Shift key, in key widths, for one hand to hold Shift and press it. */
+export const ONE_HAND_SHIFT_REACH = 4;
+
+/** Distance in key widths from the nearer Shift key to the key that types `char`. */
+export function shiftDistance(char: string): number {
+  const k = pressFor(char).key;
+  return Math.min(...SHIFT_KEYS.map((s) => Math.hypot(k.x - s.x, k.y - s.y)));
+}
+
+/**
+ * True for a shifted character one hand cannot type alone: its key is more
+ * than four keys from both Shift keys ("T", "H", "%", "&"), so the hand
+ * holding Shift cannot reach it. "Z", "Q", "!", "?" and ":" are in reach.
+ */
+export function isFarShift(char: string): boolean {
+  return pressFor(char).shifted && shiftDistance(char) > ONE_HAND_SHIFT_REACH;
+}
+
 export const COST = {
   roll: 0.2, // neighbouring key on the same row and hand, e.g. "as", "df", "fg"
   repeat: 0.4, // same key twice, e.g. "ll"

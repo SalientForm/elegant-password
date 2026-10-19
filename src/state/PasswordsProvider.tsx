@@ -1,11 +1,12 @@
 // One provider owns everything the app knows: the settings, the mode, the
-// sentence, the current passwords, and the user's own list. Edits are a
+// typing mode, the sentence, the current passwords, and the user's own list. Edits are a
 // draft until the user applies them; applied settings are what generation
 // uses and what is persisted, so a reload brings back exactly what was
 // applied. Generation runs off the render path (in a worker when the browser
 // has one), keeping the old passwords on screen until the new batch is ready.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { TypingMode } from '../lib/difficulty';
 import { inputsKey, type GenerateInputs, type Mode, type Outcome } from '../lib/engine';
 import type { SentenceOptions } from '../lib/fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
@@ -13,7 +14,19 @@ import { createGenerator, type Generator } from '../lib/generator';
 import { activeMappings, loadMappingSettings, saveMappingSettings, type MappingSettings } from '../lib/mappingStore';
 import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from '../lib/selectedStore';
 import { loadSession, saveSession } from '../lib/sessionStore';
-import { loadMode, loadRequirementsReport, loadSentenceOptions, loadSort, resetNotice, saveMode, saveRequirements, saveSentenceOptions, saveSort } from '../lib/settingsStore';
+import {
+  loadMode,
+  loadRequirementsReport,
+  loadSentenceOptions,
+  loadSort,
+  loadTypingMode,
+  resetNotice,
+  saveMode,
+  saveRequirements,
+  saveSentenceOptions,
+  saveSort,
+  saveTypingMode,
+} from '../lib/settingsStore';
 import type { SortOrder } from '../lib/sort';
 import { browserStore, type KeyValueStore } from '../lib/storage';
 import type { Mapping } from '../lib/twists';
@@ -54,6 +67,9 @@ export interface PasswordsContextValue {
   /** How suggestions are ordered on screen. Takes effect at once. */
   sort: SortOrder;
   setSort: (next: SortOrder) => void;
+  /** How the passwords will be typed, which every difficulty score is for. Takes effect at once; generation does not depend on it. */
+  typingMode: TypingMode;
+  setTypingMode: (next: TypingMode) => void;
   /** The last finished batch, kept on screen while the next one is made. */
   outcome: Outcome | null;
   /** True while a batch is being generated. */
@@ -111,6 +127,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const [draft, setDraft] = useState<Settings>(applied);
   const [mode, setMode] = useState(() => loadMode(localStore));
   const [sort, setSort] = useState(() => loadSort(localStore));
+  const [typingMode, setTypingMode] = useState(() => loadTypingMode(localStore));
   const [selected, setSelected] = useState(() => loadSelected(localStore));
   const [round, setRound] = useState(restored?.round ?? 0);
   const [generated, setGenerated] = useState<GeneratedSentence | null>(restored?.generated ?? null);
@@ -160,6 +177,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   useEffect(() => saveMappingSettings(applied.mappingSettings, localStore), [localStore, applied.mappingSettings]);
   useEffect(() => void saveMode(localStore, mode), [localStore, mode]);
   useEffect(() => void saveSort(localStore, sort), [localStore, sort]);
+  useEffect(() => void saveTypingMode(localStore, typingMode), [localStore, typingMode]);
   useEffect(() => void saveSelected(localStore, selected), [localStore, selected]);
 
   // Generate when the applied inputs or the round change, unless the batch on
@@ -237,6 +255,8 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       setMode,
       sort,
       setSort,
+      typingMode,
+      setTypingMode,
       outcome: result?.outcome ?? null,
       busy,
       stale: !!result && result.key !== key,
@@ -249,7 +269,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       clearSelected,
       isSelected,
     }),
-    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, typingMode, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;

@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
-import { REQUIREMENTS_KEY } from './lib/settingsStore';
+import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from './lib/settingsStore';
 import { MEDIUM, NARROW, PHONE } from './components/useMediaQuery';
 
 afterEach(cleanup);
@@ -45,6 +45,38 @@ describe('App', () => {
     expect(tabs[1]!.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('tabpanel')).toBeTruthy();
     expect(screen.getByLabelText('Your sentence')).toBeTruthy();
+  });
+});
+
+describe('App: typing mode', () => {
+  it('has a Mode card at the top of the right column that rescores every difficulty at once and is remembered', { timeout: 30_000 }, async () => {
+    const first = render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const card = screen.getByRole('heading', { name: 'Mode' }).closest<HTMLElement>('.panel')!;
+    expect(card.parentElement!.className).toBe('aside');
+    expect(card.parentElement!.firstElementChild).toBe(card);
+    const modes = within(card).getAllByRole('button').map((b) => b.textContent);
+    expect(modes).toEqual(['Two-finger', 'Ten-finger', 'One-handed', 'Minimal-quick']);
+    expect(within(card).getByRole('button', { name: 'Ten-finger' }).getAttribute('aria-pressed')).toBe('true');
+
+    const passwords = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent!);
+    fireEvent.click(within(card).getByRole('button', { name: 'One-handed' }));
+    expect(within(card).getByRole('button', { name: 'One-handed' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(card).getByText(/holds Shift too/)).toBeTruthy();
+    // Every card's D badge is now the one-handed score of its password (the cards stay the same passwords).
+    const shown = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent!);
+    expect([...shown].sort()).toEqual([...passwords].sort());
+    for (const c of cards()) expect(within(c).getByText(/^D \d+$/).getAttribute('aria-label')).toMatch(/^Difficulty \d+, \w+ \(one-handed\)$/);
+    // Opened, a card's table is the one-handed rubric, with the one-hand Shift criterion.
+    fireEvent.click(within(cards()[0]!).getByRole('button', { name: /why/i }));
+    expect(within(cards()[0]!).getByText('One-hand Shift')).toBeTruthy();
+    expect(within(cards()[0]!).getByRole('heading', { name: /Difficulty score: \d+ \/ 100 \(\w+\), one-handed/ })).toBeTruthy();
+    expect(window.localStorage.getItem(TYPING_MODE_KEY)).toBe('"one-handed"');
+
+    first.unmount();
+    render(<App />);
+    const again = screen.getByRole('heading', { name: 'Mode' }).closest<HTMLElement>('.panel')!;
+    expect(within(again).getByRole('button', { name: 'One-handed' }).getAttribute('aria-pressed')).toBe('true');
   });
 });
 

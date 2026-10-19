@@ -56,7 +56,7 @@ describe('SelectedList', () => {
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     const d = first.getByText(`D ${score.difficulty.score}`);
     fireEvent.mouseEnter(d.parentElement!);
-    expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()}`); // the full reading, at once
+    expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()} (ten-finger)`); // the full reading, at once, for the typing mode
     fireEvent.mouseLeave(d.parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     fireEvent.mouseEnter(first.getByText(`M ${score.memorability.score}`).parentElement!);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePageFirstWheel } from './components/columnScroll';
 import { MEDIUM, NARROW, PHONE, useMediaQuery } from './components/useMediaQuery';
 import { ApplyBar } from './components/ApplyBar';
@@ -13,7 +13,9 @@ import { SuggestionCard, type CardContext } from './components/SuggestionCard';
 import { MenuIcon, RefreshIcon } from './components/icons';
 import { panelId, TabPanel, Tabs, tabId } from './components/Tabs';
 import { relevantTo, TwistsPanel } from './components/TwistsPanel';
+import { TypingModeCard } from './components/TypingModeCard';
 import { TypingTest } from './components/TypingTest';
+import { difficultyIn } from './lib/difficulty';
 import type { Mode } from './lib/engine';
 import { sortSuggestions, type SortOrder } from './lib/sort';
 import { normalizeSentence } from './lib/text';
@@ -235,7 +237,13 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
     outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
   const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
   const nothingToRun = p.mode === 'sentence' && !draft.sentence.trim();
-  const ordered = outcome?.ok ? sortSuggestions(outcome.suggestions, p.sort) : [];
+  // Difficulty is for the chosen typing mode, so "Difficulty" order follows it too.
+  const typingMode = p.typingMode;
+  const scored = useMemo(
+    () => (outcome?.ok ? outcome.suggestions.map((s) => ({ ...s, difficulty: difficultyIn(s.password, s.difficulty, typingMode) })) : []),
+    [outcome, typingMode],
+  );
+  const ordered = sortSuggestions(scored, p.sort);
   // In sentence mode, swaps whose letters are not in the sentence cannot apply; show them disabled.
   const sentenceWords = p.mode === 'sentence' ? normalizeSentence(draft.sentence) : [];
   const relevant = sentenceWords.length ? relevantTo(sentenceWords) : undefined;
@@ -368,9 +376,9 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
   );
   const aside = (
     <>
-
-        <TypingTest />
-        <SelectedList />
+      <TypingModeCard />
+      <TypingTest />
+      <SelectedList />
     </>
   );
 

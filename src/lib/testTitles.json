@@ -166,6 +166,14 @@
       },
       {
         "kind": "group",
+        "title": "App: typing mode"
+      },
+      {
+        "kind": "test",
+        "title": "has a Mode card at the top of the right column that rescores every difficulty at once and is remembered"
+      },
+      {
+        "kind": "group",
         "title": "App: apply changes"
       },
       {
@@ -729,11 +737,40 @@
       },
       {
         "kind": "group",
+        "title": "wheel steps in lines or screens"
+      },
+      {
+        "kind": "test",
+        "title": "counts them in pixels, so a Windows wheel set to \"one screen at a time\" still moves the header away"
+      },
+      {
+        "kind": "group",
         "title": "usePageFirstWheel and zoom"
       },
       {
         "kind": "test",
         "title": "never intercepts Ctrl+wheel or ⌘+wheel, which are pinch zoom, while still routing a plain wheel to the page"
+      }
+    ]
+  },
+  {
+    "file": "src/components/scrollbars.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "scroll bars"
+      },
+      {
+        "kind": "test",
+        "title": "leaves overlay scroll bars alone"
+      },
+      {
+        "kind": "test",
+        "title": "finds the scrolling areas under the pointer, not the page"
+      },
+      {
+        "kind": "test",
+        "title": "shows an area’s bar while the pointer is over it, and the page’s while it scrolls"
       }
     ]
   },
@@ -800,7 +837,7 @@
       },
       {
         "kind": "test",
-        "title": "has weights summing to 100 and rising cut-points"
+        "title": "has weights summing to 100 and rising cut-points, in every typing mode"
       },
       {
         "kind": "test",
@@ -817,6 +854,30 @@
       {
         "kind": "test",
         "title": "scores a smooth lowercase phrase easier than a twisted, shifted one"
+      },
+      {
+        "kind": "group",
+        "title": "typing modes"
+      },
+      {
+        "kind": "test",
+        "title": "scores the same password differently in each mode, and says which"
+      },
+      {
+        "kind": "test",
+        "title": "rescores in another mode with the memory load carried over, and keeps a score already in the mode"
+      },
+      {
+        "kind": "test",
+        "title": "one-handed, charges a capital or symbol out of reach of the hand holding Shift"
+      },
+      {
+        "kind": "test",
+        "title": "in minimal-quick, rewards rolls and staying on one row more than ten-finger does"
+      },
+      {
+        "kind": "test",
+        "title": "with two fingers, charges length and travel, not rolls or same-finger moves"
       }
     ]
   },
@@ -1392,6 +1453,10 @@
       {
         "kind": "test",
         "title": "charges characters outside the model as a shifted press of the farthest key instead of rejecting them"
+      },
+      {
+        "kind": "test",
+        "title": "knows which shifted keys one hand can reach while holding Shift"
       }
     ]
   },

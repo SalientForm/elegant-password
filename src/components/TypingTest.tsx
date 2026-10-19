@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { criterionOf } from '../lib/difficulty';
+import { criterionOf, DEFAULT_TYPING_MODE, difficultyIn } from '../lib/difficulty';
 import { scoreAlone, scoreCold } from '../lib/score';
 import { finishAttempt, nextTarget, recordKey, startRecording, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
@@ -75,7 +75,9 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis with the full text as a tip, like My list. */
   const shownTarget = target === undefined ? undefined : shown ? target : '•'.repeat([...target].length);
   const alone = useMemo(() => (target !== undefined && hintText === undefined ? scoreAlone(target) : undefined), [target, hintText]);
-  const difficulty = cold?.difficulty ?? alone?.difficulty;
+  const typingMode = passwords?.typingMode ?? DEFAULT_TYPING_MODE;
+  const base = cold?.difficulty ?? alone?.difficulty;
+  const difficulty = useMemo(() => (target !== undefined && base ? difficultyIn(target, base, typingMode) : undefined), [target, base, typingMode]);
   const last = attempts[0];
 
   /** Drop the password under test; the next run starts afresh. */
@@ -196,9 +198,9 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
           )}
           <div className="actions">
             {cold ? (
-              <ScoreBadges bits={cold.bits} difficulty={cold.difficulty} memorability={cold.memorability.score} />
+              <ScoreBadges bits={cold.bits} difficulty={difficulty} memorability={cold.memorability.score} />
             ) : (
-              <ScoreBadges bits={alone!.bits} difficulty={alone!.difficulty} />
+              <ScoreBadges bits={alone!.bits} difficulty={difficulty} />
             )}
           </div>
           {last && (
@@ -208,7 +210,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               </li>
               <li>
                 {last.seconds.toFixed(1)} s for {[...last.typed].length} characters ({last.wpm.toFixed(0)} wpm); the model expected
-                about {criterionOf('seconds').format(difficulty.measurements.seconds)}
+                about {criterionOf('seconds', typingMode).format(difficulty.measurements.seconds)}
               </li>
               <li>
                 {last.corrections === 0

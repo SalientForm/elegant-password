@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { pageScrollFor } from './columnScroll';
+import { LINE_PX, pageScrollFor, wheelPixels } from './columnScroll';
 
 describe('page-first wheel routing', () => {
   it('scrolls the page while the header is in view, then leaves the columns to themselves', () => {
@@ -16,6 +16,16 @@ describe('page-first wheel routing', () => {
     expect(pageScrollFor(-100, 180, 0)).toBeUndefined();
     expect(pageScrollFor(-100, 180, 500)).toBeUndefined();
     expect(pageScrollFor(0, 180, 0)).toBeUndefined();
+  });
+});
+
+describe('wheel steps in lines or screens', () => {
+  it('counts them in pixels, so a Windows wheel set to "one screen at a time" still moves the header away', () => {
+    expect(wheelPixels({ deltaY: 100, deltaMode: 0 }, 800)).toBe(100);
+    expect(wheelPixels({ deltaY: 3, deltaMode: 1 }, 800)).toBe(3 * LINE_PX);
+    expect(wheelPixels({ deltaY: 1, deltaMode: 2 }, 800)).toBe(800);
+    expect(wheelPixels({ deltaY: -1, deltaMode: 2 }, 800)).toBe(-800);
+    expect(pageScrollFor(wheelPixels({ deltaY: 1, deltaMode: 2 }, 800), 180, 0)).toBe(180); // one step, the whole header
   });
 });
 
@@ -38,6 +48,9 @@ describe('usePageFirstWheel and zoom', () => {
     main.getBoundingClientRect = () => ({ top: 200, bottom: 1000, left: 0, right: 100, width: 100, height: 800, x: 0, y: 200, toJSON: () => ({}) });
     expect(fireEvent.wheel(main, { deltaY: 50 })).toBe(false); // intercepted: routed to the page
     expect(scrollBy).toHaveBeenCalled();
+    scrollBy.mockClear();
+    fireEvent.wheel(main, { deltaY: 1, deltaMode: 2 }); // one screen, as Windows reports it: the page moves its whole way, not 1 px
+    expect(scrollBy).toHaveBeenCalledWith({ top: 200 });
     scrollBy.mockClear();
     expect(fireEvent.wheel(main, { deltaY: 50, ctrlKey: true })).toBe(true); // left to the browser
     expect(fireEvent.wheel(main, { deltaY: 50, metaKey: true })).toBe(true);

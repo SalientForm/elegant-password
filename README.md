@@ -165,7 +165,7 @@ explanation for each:
   score in full, shortened words the fraction kept, dropped words nothing;
   shorter passwords score higher; each word with a random swap costs a
   little. A deliberate swap costs nothing: it comes with its word.
-- **Test a password** (top of the right column): type any password and
+- **Test a password** (right column, under Mode): type any password and
   press Enter. Every keystroke is timed as you type, so the first run is
   scored too and becomes the password under test; corrections (Backspace,
   Delete), time, words per minute and accuracy are reported against the
@@ -189,9 +189,23 @@ explanation for each:
   error shows a message and a reload button, never a blank page.
 - **Accessible.** The mode switch is a real tab list (arrow keys, Home,
   End), toggles report their pressed state, and status text is announced.
-- **Difficulty score** (0-100) from a nine-criterion rubric: size, typing
-  speed, reach, row jumps, same-finger pairs, Shift and case, off-letter
-  keys, pinky stretches and memory load. The full rubric is in the app.
+- **Difficulty score** (0-100) from a rubric of up to nine criteria: size,
+  typing speed, reach, row jumps, same-finger pairs, Shift and case,
+  off-letter keys, pinky stretches and memory load. The full rubric is in
+  the app.
+- **Mode** (top of the right column): how the password will be typed, which
+  every difficulty score is for. Ten-finger is the standard rubric;
+  two-finger weighs length, travel and symbols and drops rolls and
+  same-finger moves; one-handed charges every Shift, most
+  of all a capital or symbol more than 4 keys from both Shift keys;
+  minimal-quick weighs rolls and staying on one row ("dadsad",
+  "you;poop"). It rescores the cards, My list and the typing test at once
+  and reorders "Difficulty"; the passwords themselves do not change. At the
+  defaults the mean difficulty is 41.8 ten-finger, 50.8 minimal-quick, 53.4
+  one-handed and 55.7 two-finger (600 suggestions).
+- **Scroll bars** where the browser's take up room (Windows): no arrows and
+  no track, a thin rounded handle shown only while the pointer is over the
+  area or it scrolls, like macOS with scroll bars shown automatically.
 
 ## How it works
 

@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { typingModeLabel, type Difficulty } from '../lib/difficulty';
 import { describeRemoved, easeOf } from '../lib/ease';
 import { roleLabel, STRENGTH_PRESETS, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
@@ -47,7 +48,7 @@ export const strengthWord = (bits: number) => [...STRENGTH_PRESETS].reverse().fi
 
 interface BadgeProps {
   bits: number;
-  difficulty: { score: number; level: number; label: string };
+  difficulty: Pick<Difficulty, 'score' | 'level' | 'label' | 'mode'>;
   /** Undefined when there is no hint to compare with (a password typed in by hand). */
   memorability?: number;
   /** From the user's own sentence: the bits count only the random parts. */
@@ -58,7 +59,7 @@ interface BadgeProps {
 export function ScoreBadges({ bits, difficulty, memorability, mine = false }: BadgeProps) {
   void mine; // the same rule scores every password; nothing about its origin goes in
   const strength = `Strength ${bits.toFixed(0)} bits, ${strengthWord(bits)}; scored from the password and its hint alone`;
-  const diff = `Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()}`;
+  const diff = `Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()} (${typingModeLabel(difficulty.mode).toLowerCase()})`;
   const memo =
     memorability === undefined
       ? 'Memorability needs a hint: it measures how closely the password still looks like its sentence'
@@ -312,7 +313,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
 
           <section>
             <h3>
-              Difficulty score: {difficulty.score} / 100 ({difficulty.label.toLowerCase()})
+              Difficulty score: {difficulty.score} / 100 ({difficulty.label.toLowerCase()}), {typingModeLabel(difficulty.mode).toLowerCase()}
             </h3>
             <DifficultyTable difficulty={difficulty} />
           </section>
