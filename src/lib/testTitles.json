@@ -1473,6 +1473,51 @@
     ]
   },
   {
+    "file": "src/lib/hintConsistency.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the test field scores a password the same with and without its hint"
+      },
+      {
+        "kind": "test",
+        "title": "has 50 hard-coded cases"
+      },
+      {
+        "kind": "test",
+        "title": "${password} / \"${hint}\""
+      },
+      {
+        "kind": "test",
+        "title": "random: ${password} / \"${hint}\""
+      },
+      {
+        "kind": "group",
+        "title": "a hint never raises the strength above the password alone"
+      },
+      {
+        "kind": "test",
+        "title": "${password} / \"${hint}\" and six variations"
+      },
+      {
+        "kind": "test",
+        "title": "random: ${password} / \"${hint}\" and six variations"
+      },
+      {
+        "kind": "test",
+        "title": "words in the hint that are not in the password add nothing"
+      },
+      {
+        "kind": "test",
+        "title": "a hint that reveals a swapped or shortened word is capped at the text reading"
+      },
+      {
+        "kind": "test",
+        "title": "holds for generated passwords with their own hints, and leaves made-up cards alone"
+      }
+    ]
+  },
+  {
     "file": "src/lib/keyboard.test.ts",
     "titles": [
       {
@@ -1800,7 +1845,15 @@
       },
       {
         "kind": "test",
-        "title": "counts unknown letters as English-like text and free digits and symbols as full choices"
+        "title": "scores a password exactly as the cold score does with the hint read off its text"
+      },
+      {
+        "kind": "test",
+        "title": "reads a swapped spelling back to its word through the mapping table"
+      },
+      {
+        "kind": "test",
+        "title": "counts unknown letters as English-like text and digits as choices unless memorable"
       },
       {
         "kind": "group",

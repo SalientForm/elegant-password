@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements } from './generate';
 import { fromSentence } from './fromSentence';
-import { isMemorableDigits, scoreAlone, scoreCold, twistsToTry, wordBitsFromText } from './score';
+import { inferredHint, isMemorableDigits, scoreAlone, scoreCold, twistsToTry, wordBitsFromText } from './score';
 import { BUILT_IN_MAPPINGS, twistOutcomes } from './twists';
 import { initialsOf, pools } from './grammar';
 import { seeded } from './testRandom';
@@ -23,8 +23,13 @@ describe('scoreCold', () => {
     expect(a.sentenceBits).toBeGreaterThan(40);
     expect(a.bits).toBe(a.sentenceBits);
     expect(a.difficulty.measurements.chunks).toBe(7);
-    // The same password with a different hint is a different score: the hint is part of the input, nothing else is.
-    expect(scoreCold(password, 'something else entirely').bits).not.toBe(a.bits);
+    // The same password with a hint that describes none of it falls back to the text reading, never more. The hint is
+    // part of the input, nothing else is.
+    const wrong = scoreCold(password, 'something else entirely');
+    expect(wrong.bits).toBeLessThanOrEqual(a.bits);
+    expect(wrong.words.every((w) => w.form === 'dropped')).toBe(true);
+    expect(wrong.bits).toBeCloseTo(wrong.textBits, 9);
+    expect(wrong.leftoverBits).toBeGreaterThan(0);
   });
 
   it('stays within the plan: never above the unconstrained sentence space', () => {
@@ -74,7 +79,12 @@ describe('scoreCold', () => {
     expect(s.initialBits).toBeCloseTo(Math.log2(4)); // one random initial among jupiter, brings, leds, piece
     expect(s.twistCount).toBe(0);
     expect(s.sentenceBits).toBeGreaterThan(40); // the words themselves, scored from their text
-    expect(s.bits).toBeCloseTo(s.sentenceBits + Math.log2(4));
+    // The hint reveals whole words the password only hints at ("jr" for jupiter): the figure with it is capped at the
+    // text reading, which an attacker without the hint faces at most.
+    expect(s.capped).toBe(true);
+    expect(s.bits).toBeCloseTo(s.textBits, 9);
+    expect(s.bits).toBeCloseTo(scoreAlone('jr;B;5ls;Fpc').bits, 9);
+    expect(s.bits).toBeLessThan(s.sentenceBits + Math.log2(4));
   });
 
   it('finds twisted words, including a symbol at the start, and counts how the swaps could have landed', () => {
@@ -103,7 +113,8 @@ describe('scoreCold', () => {
     expect(s.words.map((w) => w.form)).toEqual(['word', 'dropped', 'word', 'dropped', 'dropped']);
     expect(s.aligned).toBe(false);
     expect(s.bits).toBeCloseTo(2 * Math.log2(pools('relaxed', 1).noun.length), 5); // only the two words found count
-    expect(scoreCold('x', '').bits).toBe(0);
+    expect(scoreCold('x', '').bits).toBeCloseTo(Math.log2(26), 9); // no hint word at all: the one letter is scored as text
+    expect(scoreCold('', '').bits).toBe(0);
   });
 
   it('agrees with sentence mode, which uses it for every card', () => {
@@ -140,22 +151,50 @@ describe('scoreAlone', () => {
   it('is a pure function of the text and recognises this tool\'s own words', () => {
     const a = scoreAlone('Sleepy;otters;paint;7;boats!!');
     expect(a).toEqual(scoreAlone('Sleepy;otters;paint;7;boats!!'));
+    expect(a.hint).toBe('sleepy otters paint 7 boats');
     const words = a.parts.filter((p) => p.kind === 'word');
     expect(words.map((p) => p.text)).toEqual(['Sleepy', 'otters', 'paint', 'boats']);
     expect(words.every((p) => p.poolSize! > 100 && p.bits > 6)).toBe(true);
     expect(a.parts.find((p) => p.text === '7')).toMatchObject({ kind: 'digits' });
-    expect(a.parts.find((p) => p.text === '!!')).toMatchObject({ kind: 'symbols' });
+    expect(a.parts.find((p) => p.text === '!!')).toBeUndefined(); // separators and closing marks are the tool's choices, as in the cold score
     expect(a.bits).toBeGreaterThan(30);
-    expect(a.difficulty.measurements.chunks).toBe(10); // 5 runs of letters or digits, 4 separators, the closing marks
+    expect(a.difficulty.measurements.chunks).toBe(5); // one chunk a word, as the cold score counts them
   });
 
-  it('counts unknown letters as English-like text and free digits and symbols as full choices', () => {
+  it('scores a password exactly as the cold score does with the hint read off its text', () => {
+    for (const password of ['Sleepy;otters;paint;7;boats!!', 'BlueTiger42', 'xqzv;plork;99', 'naïve;otters', 'Sally;eats;sweets!@#$', 'Sm@rt;turtles;salut3;#yenas']) {
+      const alone = scoreAlone(password);
+      const cold = scoreCold(password, alone.hint);
+      expect(alone.bits).toBe(cold.bits);
+      expect(alone.difficulty).toEqual(cold.difficulty);
+    }
+    expect(inferredHint('BlueTiger42')).toBe('blue tiger 42');
+    expect(inferredHint('bluetiger42')).toBe('bluetiger 42');
+    expect(inferredHint('RED;FOXES;RUN')).toBe('red foxes run');
+    expect(inferredHint('naïve;otters')).toBe('naive otters');
+    expect(inferredHint('!!@@##')).toBe('');
+  });
+
+  it('reads a swapped spelling back to its word through the mapping table', () => {
+    expect(inferredHint('Sm@rt;turtles;salut3;#yenas')).toBe('smart turtles salute hyenas'); // symbol and digit swaps
+    expect(inferredHint('Hils;f1ll;96;hamsters')).toBe('hills fill 96 hamsters'); // a misspelling, and a number stays a number
+    expect(inferredHint('Jugs;spur;32;tu2rz')).toBe('jugs spur 32 tutors'); // two swaps in one word
+    expect(inferredHint('no0n;4')).toBe('noon 4'); // a word on no list still has its swap undone; "4" is not "for"
+    expect(inferredHint('T!ger42')).toBe('tiger 42');
+    expect(inferredHint('Sally;eats;sweets!!')).toBe('sally eats sweets'); // closing marks are not swaps
+    expect(inferredHint('Sally!eats!sweets')).toBe('sally eats sweets'); // a twist symbol used as a separator
+    const swapped = scoreAlone('Sm@rt;turtles;salut3;#yenas');
+    expect(swapped.bits).toBeCloseTo(scoreCold('Sm@rt;turtles;salut3;#yenas', 'smart turtles salute hyenas').bits, 9);
+    expect(swapped.difficulty.measurements.chunks).toBe(7); // four words and three swaps
+  });
+
+  it('counts unknown letters as English-like text and digits as choices unless memorable', () => {
     const text = scoreAlone('xqzv');
     expect(text.parts[0]).toMatchObject({ kind: 'letters' });
     expect(text.bits).toBeCloseTo(4 * 2.3);
     expect(scoreAlone('8402').bits).toBeCloseTo(4 * Math.log2(10));
     expect(scoreAlone('1234').bits).toBeLessThan(scoreAlone('8402').bits); // a memorable run is one pick
-    expect(scoreAlone('!!!!').bits).toBeLessThan(scoreAlone('!@#$').bits); // a repeat is one symbol and a count
+    expect(scoreAlone('!!!!').bits).toBe(0); // symbols alone are not a word
     expect(scoreAlone('').bits).toBe(0);
   });
 });

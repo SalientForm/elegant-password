@@ -178,10 +178,15 @@ explanation for each:
   press Enter. Every keystroke is timed as you type, so the first run is
   scored too and becomes the password under test; corrections (Backspace,
   Delete), time, words per minute and accuracy are reported against the
-  rubric's estimate, with a strength figure estimated from the text alone
-  (`scoreAlone`). The password under test stays, through mistyped runs,
-  until the Clear button, a paste or a new list entry replaces it; one that
-  arrived without a hint can be given one. Nothing is stored.
+  rubric's estimate, with a strength figure from the text alone
+  (`scoreAlone`): the hint is read off the password's own runs of letters
+  and digits, swapped spellings read back to their words through the
+  mapping table, and the password is scored cold with it, so strength and
+  difficulty are the same whether a hint is typed in or not. A hint can
+  only help an attacker, so no hint ever scores a password above that
+  figure. The password under test stays, through mistyped runs, until the
+  Clear button, a paste or a new list entry replaces it; one that arrived
+  without a hint can be given one. Nothing is stored.
 - **Fun page** (`#/fun`): a full rebuild-the-app spec prompt, generated from
   the live constants and rendered as formatted text, with Copy and Download
   of the markdown. It embeds the algorithm flow document verbatim as a

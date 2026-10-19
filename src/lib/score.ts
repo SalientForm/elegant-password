@@ -17,6 +17,13 @@
 // word is English-like text at a fixed number of bits per letter, a capital
 // initial is one letter, a number is its digits.
 //
+// A hint can only help an attacker. So a hint word that is not in the
+// password adds nothing, letters and digits in the password that no hint
+// word accounts for are scored as text, and the strength with a hint is
+// never above the password's own text reading (scoreAlone): if the hint
+// reveals structure the text alone does not show (a swapped or shortened
+// word), the text reading is the ceiling.
+//
 // Deliberate swaps for typing ease (ease.ts) are a fixed function of the
 // word, so the scorer works them out from the hint: a word typed with its
 // deliberate swap is form 'eased' and adds no bits. It is preferred over
@@ -106,8 +113,14 @@ export function memorabilityOf(password: string, words: readonly ScoredWord[]): 
 }
 
 export interface ColdScore {
-  /** Sentence bits plus twist bits plus initial-choice bits. */
+  /** Sentence bits plus twist bits plus initial-choice bits plus leftover bits, never above textBits. */
   bits: number;
+  /** The password's own text reading (what scoreAlone gives); the ceiling for bits, since a hint can only help an attacker. */
+  textBits: number;
+  /** True when the hint's figure was above textBits and bits was brought down to it. */
+  capped: boolean;
+  /** Bits for letters and digits in the password that no hint word accounts for, scored as text. */
+  leftoverBits: number;
   /** log2 of the sentence space: the template's exact pools when the hint is one of the tool's sentences, else the words scored from their text. */
   sentenceBits: number;
   twistBits: number;
@@ -238,9 +251,10 @@ function bestMatch(rest: string, word: string, mappings: readonly Mapping[]): Sc
  * "%50"). Symbols are never skipped blindly: a twist can put one at the
  * start of a word ("apples" -> "@pples"), so matching in place always wins.
  */
-function align(password: string, words: readonly string[], mappings: readonly Mapping[]): ScoredWord[] {
+function align(password: string, words: readonly string[], mappings: readonly Mapping[]): { scored: ScoredWord[]; leftover: string } {
   let pos = 0;
   const out: ScoredWord[] = [];
+  const covered = new Array<boolean>(password.length).fill(false);
   for (const word of words) {
     let match = bestMatch(password.slice(pos), word, mappings);
     let skipped = 0;
@@ -253,9 +267,12 @@ function align(password: string, words: readonly string[], mappings: readonly Ma
       continue;
     }
     out.push(match);
+    covered.fill(true, pos + skipped, pos + skipped + match.text.length);
     pos += skipped + match.text.length;
   }
-  return out;
+  // The password's text that no hint word accounts for, with the matched runs blanked out.
+  const leftover = [...password].map((c, i) => (covered[i] ? ' ' : c)).join('');
+  return { scored: out, leftover };
 }
 
 const poolSets = new Map<string, Set<string>>();
@@ -333,6 +350,7 @@ function measureMatch(words: readonly string[], scored: readonly ScoredWord[], s
     if (isMadeUpNoun(word)) return MADE_UP_NOUNS.length;
     const pool = pools(comfort, slot === 'num' ? digitsFor(word) : 1, eased)[slot];
     const form = scored[i];
+    if (form?.form === 'dropped') return 1; // not in the password: adds nothing
     if (form?.form === 'initial') return initialsOf(pool).length;
     if (form?.form === 'short' && form.base === twoLetter(word)) return twoLettersOf(pool).length;
     return pool.length;
@@ -374,7 +392,8 @@ function smallestPoolFor(word: string): readonly string[] | undefined {
  * password whatever its origin: a number by its digits (a memorable run is
  * one pick), a word on the tool's lists as one pick from the smallest list
  * holding it (its initials list when typed as an initial), any other word as
- * English-like text, an initial of it as one letter, a dropped word nothing.
+ * English-like text (never less than one letter's pick), an initial of it as
+ * one letter, a dropped word nothing.
  */
 export function wordBitsFromText(w: ScoredWord): number {
   if (w.form === 'dropped') return 0;
@@ -382,7 +401,8 @@ export function wordBitsFromText(w: ScoredWord): number {
   const pool = smallestPoolFor(w.word);
   if (w.form === 'initial') return Math.log2(pool ? initialsOf(pool).length : 26);
   if (pool) return Math.log2(pool.length);
-  return w.word.length * BITS_PER_ENGLISH_LETTER;
+  // English-like text; a word of one or two letters is at least one pick of a letter, as an initial is.
+  return Math.max(Math.log2(26), w.word.length * BITS_PER_ENGLISH_LETTER);
 }
 
 const choose = (n: number, k: number) => {
@@ -408,7 +428,7 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
   }
 
   const words = normalizeSentence(hint);
-  const scored = align(password, words, mappings);
+  const { scored, leftover } = align(password, words, mappings);
   const match = matchTemplate(words, scored);
   if (match) {
     scored.forEach((s, i) => {
@@ -446,10 +466,19 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
 
   // One rule for every password: the exact template figure when the hint is one of the tool's sentences, else each word from its text.
   const sentenceBits = match ? match.bits : scored.reduce((sum, w) => sum + wordBitsFromText(w), 0);
+  // Letters and digits the hint does not account for are still part of the password: scored as text.
+  const leftoverBits = normalizeSentence(inferredHint(leftover, mappings)).reduce((sum, w) => sum + wordBitsFromText({ word: w, form: 'word', base: w, text: w, twists: 0 }), 0);
   // A deliberate swap is a fixed function of its word: no bits, and no memory load, since the word brings it with it.
   const easedCount = scored.filter((s) => s.form === 'eased').length;
+  // A hint can only help an attacker: the figure with it is never above the password's own text reading.
+  const own = inferredHint(password, mappings);
+  const uncapped = sentenceBits + twistBits + initialBits + leftoverBits;
+  const textBits = normalizeSentence(own).join(' ') === words.join(' ') ? uncapped : scoreCold(password, own, mappings).bits;
   const result: ColdScore = {
-    bits: sentenceBits + twistBits + initialBits,
+    bits: Math.min(uncapped, textBits),
+    textBits,
+    capped: uncapped > textBits,
+    leftoverBits,
     sentenceBits,
     twistBits,
     initialBits,
@@ -472,10 +501,10 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
 }
 
 
-/** One run of characters in a password scored on its own. */
+/** One run of letters or digits in a password scored with no hint. */
 export interface AlonePart {
   text: string;
-  kind: 'word' | 'letters' | 'digits' | 'symbols' | 'spaces';
+  kind: 'word' | 'letters' | 'digits';
   bits: number;
   /** Set when the letters are one of this tool's words (any list). */
   poolSize?: number;
@@ -484,40 +513,206 @@ export interface AlonePart {
 export interface AloneScore {
   bits: number;
   parts: AlonePart[];
+  /** The hint read off the password; see inferredHint. */
+  hint: string;
   difficulty: Difficulty;
   typing: TypingProfile;
 }
 
-/**
- * A rough strength figure for a password typed in with no hint, scored from
- * the text alone. Letters that are one of this tool's words count as one
- * choice from that list; other letters count as English-like text; digits
- * and symbols count as free choices unless they are a memorable run or a
- * repeat. It is deterministic and the same everywhere, and it is an estimate:
- * it knows nothing about where the password came from.
- */
-export function scoreAlone(password: string): AloneScore {
-  const parts: AlonePart[] = [];
-  for (const m of password.matchAll(/[A-Za-z]+|[0-9]+|\s+|[^A-Za-z0-9\s]+/g)) {
-    const text = m[0];
-    if (/^[A-Za-z]+$/.test(text)) {
-      const lower = text.toLowerCase();
-      const pool = smallestPoolFor(lower);
-      if (pool) {
-        parts.push({ text, kind: 'word', bits: Math.log2(pool.length), poolSize: pool.length });
-      } else {
-        parts.push({ text, kind: 'letters', bits: text.length * BITS_PER_ENGLISH_LETTER });
+/** The mapping table read backwards: a spelling fragment and the letters it may stand for, with the non-letter characters a twist can put into a word. */
+interface Reverse {
+  swaps: readonly { twisted: string; plain: string }[];
+  chars: Set<string>;
+}
+const reverseCache = new WeakMap<readonly Mapping[], Reverse>();
+function reverseOf(mappings: readonly Mapping[]): Reverse {
+  let r = reverseCache.get(mappings);
+  if (!r) {
+    const seen = new Set<string>();
+    const swaps: { twisted: string; plain: string }[] = [];
+    for (const m of mappings) {
+      const key = `${m.to}>${m.from}`;
+      if (m.to && !seen.has(key)) {
+        seen.add(key);
+        swaps.push({ twisted: m.to, plain: m.from });
       }
-    } else if (/^[0-9]+$/.test(text)) {
-      parts.push({ text, kind: 'digits', bits: isMemorableDigits(text) ? Math.log2(MEMORABLE_DIGITS_CHOICES) : text.length * Math.log2(10) });
-    } else if (/^\s+$/.test(text)) {
-      parts.push({ text, kind: 'spaces', bits: 0 });
-    } else {
-      const repeated = /^(.)\1*$/.test(text);
-      parts.push({ text, kind: 'symbols', bits: repeated ? Math.log2(SYMBOL_ALPHABET) + Math.log2(text.length + 1) : text.length * Math.log2(SYMBOL_ALPHABET) });
     }
+    r = { swaps, chars: new Set(mappings.flatMap((m) => [...m.to].filter((c) => !/[A-Za-z0-9]/.test(c)))) };
+    reverseCache.set(mappings, r);
   }
-  const bits = parts.reduce((sum, p) => sum + p.bits, 0);
-  const chunks = parts.filter((p) => p.kind !== 'spaces').length;
-  return { bits, parts, difficulty: scoreDifficulty(password, chunks), typing: typingProfile(password) };
+  return r;
+}
+
+/** A word on one of the tool's word lists; not a made-up noun, which almost any short letter string could be read as. */
+const isListWord = (text: string) => /^[a-z]+$/.test(text) && POOL_SLOTS.some((slot) => inPool(text, slot, 'relaxed', 1));
+
+/** What a run of the password could be a twisted spelling of: a word on the lists, or failing that plain letters. */
+interface Recovered {
+  list?: string;
+  letters?: string;
+}
+const recoverCache = new Map<string, Recovered>();
+const RECOVER_CACHE_LIMIT = 5000;
+const RECOVER_FRONTIER_LIMIT = 2000;
+
+/**
+ * Undo the fewest swaps from the mapping table (up to the number the aligner
+ * tries for a word this long) that turn `token` (lower case) into a word on
+ * the tool's lists, and separately into plain letters ("no0n" -> "noon" even
+ * though "noon" is on no list). The token itself when it is a list word.
+ */
+function recover(token: string, mappings: readonly Mapping[]): Recovered {
+  if (!token || token.length > 24) return {};
+  if (isListWord(token)) return { list: token, letters: token };
+  const cacheable = mappings === BUILT_IN_MAPPINGS;
+  if (cacheable) {
+    const hit = recoverCache.get(token);
+    if (hit) return hit;
+  }
+  const { swaps } = reverseOf(mappings);
+  let frontier = new Set([token]);
+  const seen = new Set(frontier);
+  const found: Recovered = /^[a-z]+$/.test(token) ? { letters: token } : {};
+  const max = twistsToTry(token.length);
+  for (let depth = 1; depth <= max && !found.list; depth++) {
+    const next = new Set<string>();
+    const lists: string[] = [];
+    const letters: string[] = [];
+    for (const t of frontier) {
+      // Digits and symbols are undone first; a misspelling only once the spelling is all letters.
+      const plainLetters = /^[a-z]+$/.test(t);
+      for (let i = 0; i < t.length; i++) {
+        for (const { twisted, plain } of swaps) {
+          if (!t.startsWith(twisted, i) || (!plainLetters && /^[a-z]+$/.test(twisted))) continue;
+          const cand = t.slice(0, i) + plain + t.slice(i + twisted.length);
+          if (seen.has(cand)) continue;
+          seen.add(cand);
+          if (isListWord(cand)) lists.push(cand);
+          else {
+            if (/^[a-z]+$/.test(cand)) letters.push(cand);
+            if (next.size < RECOVER_FRONTIER_LIMIT) next.add(cand);
+          }
+        }
+      }
+    }
+    if (lists.length) found.list = lists.sort()[0];
+    if (!found.letters && letters.length) found.letters = letters.sort()[0];
+    frontier = next;
+  }
+  if (cacheable) {
+    if (recoverCache.size >= RECOVER_CACHE_LIMIT) recoverCache.clear();
+    recoverCache.set(token, found);
+  }
+  return found;
+}
+
+/** Pieces of a run between its non-letters that are list words of three or more letters, with the fewest swaps undone. */
+const listPieces = (run: string, mappings: readonly Mapping[]) =>
+  run
+    .split(/[^A-Za-z]+/)
+    .filter((piece) => piece.length >= 3 && recover(piece.toLowerCase(), mappings).list !== undefined).length;
+
+/** The hint words one run of the password (letters, digits and twist symbols; no capital after a lower-case letter) stands for; see inferredHint. */
+function readRun(run: string, mappings: readonly Mapping[]): string[] {
+  if (/^[0-9]+$/.test(run)) return [run]; // a number is a number, never a swapped word ("4" is not "for")
+  // Digits against a list word are a number ("cat1", "Blue42"), not a swap in a longer word ("cati").
+  const edges = /^([0-9]*)(.*?)([0-9]*)$/.exec(run)! as unknown as [string, string, string, string];
+  if ((edges[1] || edges[3]) && isListWord(edges[2].toLowerCase())) return [edges[1], edges[2].toLowerCase(), edges[3]].filter(Boolean);
+  const whole = recover(run.toLowerCase(), mappings);
+  if (whole.list) return [whole.list];
+  // Marks around the word, not swaps in it: symbols at the end ("boats!", "sweets!!") and two or more at the start ("!!Sally"). A single opening symbol may be a swap ("$alad").
+  const bare = run.replace(/[^A-Za-z0-9]+$/, '').replace(/^[^A-Za-z0-9]{2,}/, '');
+  if (!bare) return [];
+  const bareWhole = bare === run ? whole : recover(bare.toLowerCase(), mappings);
+  if (bareWhole.list) return [bareWhole.list];
+  // A number may sit against a word ("Blue42", "7boats"): leading and trailing digits are their own words.
+  const [, lead, core, trail] = /^([0-9]*)(.*?)([0-9]*)$/.exec(bare)! as unknown as [string, string, string, string];
+  const around = (words: string[]) => [...(lead ? [lead] : []), ...words, ...(trail ? [trail] : [])];
+  if (!core) return around([]);
+  const c = core === bare ? bareWhole : recover(core.toLowerCase(), mappings);
+  if (c.list) return around([c.list]);
+  // A word on no list with swaps in it is undone to plain letters and scored as text ("no0n" -> "noon", "T!ger" -> "tiger"); a single
+  // swapped digit may open it ("0ttrs"), but a digit after it is a number ("cat1"). Not when the symbols read better as separators
+  // between list words ("Sally!eats!sweets").
+  if (bareWhole.letters && /[^A-Za-z]/.test(bare) && !trail && lead.length <= 1 && listPieces(bare, mappings) < 2) return [bareWhole.letters];
+  if (c.letters && /[^A-Za-z]/.test(core) && listPieces(core, mappings) < 2) return around([c.letters]);
+  // Plain text: a letter next to a digit ends a word, and anything that is not a letter or digit splits.
+  const pieces = core
+    .replace(/([A-Za-z])([0-9])/g, '$1 $2')
+    .replace(/([0-9])([A-Za-z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((piece) => (/^[A-Za-z]+$/.test(piece) ? (recover(piece.toLowerCase(), mappings).list ?? piece) : piece));
+  return around(pieces);
+}
+
+const inferredCache = new Map<string, string>();
+const INFERRED_CACHE_LIMIT = 1000;
+
+/**
+ * The hint a password carries in its own text, read as this tool would have
+ * written it. Each run of letters and digits is a word; a capital after a
+ * lower-case letter starts a new word and a letter next to a digit ends one
+ * ("BlueTiger42" -> "Blue Tiger 42"). A run that is a twisted spelling of a
+ * word on the lists reads as that word ("Sm@rt" -> "smart", "hils" ->
+ * "hills", "tu2rz" -> "tutors"), undoing the fewest swaps from the mapping
+ * table, so the password's swaps are counted as the generator's hint would
+ * count them; a run on no list still has its swaps undone to plain letters
+ * ("no0n" -> "noon"). A run of digits is a number. A symbol a twist can
+ * produce stays with its run, and reads as a mark around the word when
+ * undoing it gives no list word ("sweets!!"); any other symbol or a space
+ * separates words. Accents are
+ * stripped the way normalizeSentence strips them, so "naïve" reads as
+ * "naive".
+ */
+export function inferredHint(password: string, mappings: readonly Mapping[] = BUILT_IN_MAPPINGS): string {
+  const cacheable = mappings === BUILT_IN_MAPPINGS;
+  if (cacheable) {
+    const hit = inferredCache.get(password);
+    if (hit !== undefined) return hit;
+  }
+  const { chars } = reverseOf(mappings);
+  const plain = password.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Runs of letters, digits and twist symbols; anything else separates. A capital after a lower-case letter starts a
+  // new run too: a swap never changes case, so "BlueTiger" is two words.
+  const hint = plain
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .split('')
+    .map((c) => (/[A-Za-z0-9]/.test(c) || chars.has(c) ? c : ' '))
+    .join('')
+    .split(' ')
+    .filter(Boolean)
+    .flatMap((run) => readRun(run, mappings))
+    .join(' ')
+    .toLowerCase();
+  if (cacheable) {
+    if (inferredCache.size >= INFERRED_CACHE_LIMIT) inferredCache.clear();
+    inferredCache.set(password, hint);
+  }
+  return hint;
+}
+
+/**
+ * The strength figure for a password typed in with no hint. The hint is
+ * read off the password itself (inferredHint) and the password is scored
+ * cold with it, so a password scores the same whether its hint is typed in
+ * or not: the same word lists, the same templates, the same rule that
+ * separators and closing marks are the tool's choices and cost nothing, and
+ * the same memory load (one chunk a word, one a swap). It is also the
+ * ceiling for any hint's figure (see scoreCold). It is deterministic
+ * and the same everywhere, and it is an estimate: it knows nothing about
+ * where the password came from, so a word typed short or with a swap is
+ * read as the text it is, not as the word it stands for.
+ */
+export function scoreAlone(password: string, mappings: readonly Mapping[] = BUILT_IN_MAPPINGS): AloneScore {
+  const hint = inferredHint(password, mappings);
+  const cold = scoreCold(password, hint, mappings);
+  const parts: AlonePart[] = cold.words
+    .filter((w) => w.form !== 'dropped')
+    .map((w) => {
+      if (/^[0-9]+$/.test(w.word)) return { text: w.text, kind: 'digits', bits: wordBitsFromText(w) };
+      const pool = w.poolSize ?? smallestPoolFor(w.word)?.length;
+      return pool ? { text: w.text, kind: 'word', bits: Math.log2(pool), poolSize: pool } : { text: w.text, kind: 'letters', bits: wordBitsFromText(w) };
+    });
+  return { bits: cold.bits, parts, hint, difficulty: cold.difficulty, typing: cold.typing };
 }

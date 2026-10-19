@@ -48,11 +48,23 @@ export function ScoringPage() {
         <p>
           The same rule scores every password, whatever it came from; nothing about its origin goes in. A hint word on
           this tool's lists counts as one pick from the smallest list holding it. Any other word counts as English-like
-          text at 2.3 bits per letter, a capital initial of it as one letter, a number as its digits (a memorable run
-          like 123 as a single pick), a dropped word as nothing; the swaps found are counted exactly, as above. This is
+          text at 2.3 bits per letter (never less than one letter's pick), a capital initial of it as one letter, a
+          number as its digits (a memorable run like 123 as a single pick), a dropped word as nothing; the swaps found
+          are counted exactly, as above. This is
           an estimate of the text, not of how guessable your sentence is to someone who knows you: a private, slightly
           odd sentence of five or more words is good; quotes, lyrics and facts about you are weak because attackers try
           them first.
+        </p>
+        <h3>A hint only ever lowers the figure</h3>
+        <p>
+          Someone who has your hint but not your password is only helped by it. So the strength with a hint is never
+          above the strength of the password on its own, the figure the tester shows when no hint is given. That
+          figure reads a hint off the password itself: each run of letters or digits is a word, and a run that is a
+          swapped spelling of one of this tool's words is read back to that word through the mapping table (“Sm@rt”
+          is smart, “hils” is hills), so the swaps count as the generator's own hint would count them. A hint word
+          that is not in the password adds nothing, letters and digits the hint does not account for are scored as
+          text, and when the hint reveals what the text alone cannot show (a shortened word, say), the text reading
+          is the ceiling.
         </p>
         <h3>Choosing a favourite</h3>
         <p>

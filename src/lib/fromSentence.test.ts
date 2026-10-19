@@ -121,7 +121,9 @@ describe('fromSentence', () => {
     expect(plain.suggestions[0]!.bits).toBe(cold.bits);
     expect(cold.twistCount).toBe(0);
     expect(cold.initialBits).toBe(0);
-    expect(cold.bits).toBe(cold.sentenceBits);
+    // The words scored from their text, but never above the password's own text reading: a shortened word is charged by the letters typed.
+    expect(cold.bits).toBe(Math.min(cold.sentenceBits, cold.textBits));
+    expect(cold.leftoverBits).toBe(0);
     // A digit rule forces one digit twist; where it lands is random, so it counts.
     const none = fromSentence('four little words here', req({ twists: 0, count: 1 }), undefined, { rng: seeded() });
     const forced = none.suggestions[0]!;
