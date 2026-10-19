@@ -8,7 +8,7 @@ import type { Generator } from '../lib/generator';
 import { activeMappings, loadMappingSettings } from '../lib/mappingStore';
 import { SELECTED_KEY } from '../lib/selectedStore';
 import { loadSession, SESSION_KEY } from '../lib/sessionStore';
-import { REQUIREMENTS_KEY } from '../lib/settingsStore';
+import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from '../lib/settingsStore';
 import { memoryStore } from '../lib/storage';
 import { PasswordsProvider, usePasswords } from './PasswordsProvider';
 
@@ -44,6 +44,10 @@ function Probe() {
       <output data-testid="selected">{p.selected.map((e) => e.password).join('|')}</output>
       <output data-testid="problems">{p.problems.map((x) => x.message).join('|')}</output>
       <output data-testid="notice">{p.notice ?? ''}</output>
+      <output data-testid="typing-mode">{p.typingMode}</output>
+      <output data-testid="draft-comfort">{p.draft.req.comfort}</output>
+      <output data-testid="applied-comfort">{p.applied.req.comfort}</output>
+      <button onClick={() => p.setTypingMode('one-handed')}>one-handed</button>
       <button onClick={() => p.setReq({ ...p.draft.req, twists: 3 })}>twists3</button>
       <button onClick={() => p.setReq({ ...p.draft.req, minLength: 40, maxLength: 20 })}>contradict</button>
       <button onClick={() => p.setReq({ ...p.draft.req, minLength: 20 })}>fix</button>
@@ -232,6 +236,37 @@ describe('PasswordsProvider', () => {
     fireEvent.click(screen.getByText('remove'));
     await waitFor(() => expect(text('selected')).toBe(''));
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)).toEqual([]);
+  });
+
+  it('treats a typing mode as a draft that brings its options: nothing runs or is saved until applied, and Discard reverts both', async () => {
+    const gen = countingGenerator();
+    const { local, session, unmount } = mount(gen);
+    await settled();
+    fireEvent.click(screen.getByText('one-handed'));
+    expect(text('typing-mode')).toBe('one-handed'); // previewed at once
+    expect(text('dirty')).toBe('true');
+    expect(text('draft-comfort')).toBe('strict');
+    expect(text('applied-comfort')).toBe(DEFAULT_REQUIREMENTS.comfort);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(gen.runs).toHaveLength(1);
+    expect(JSON.parse(local.getItem(TYPING_MODE_KEY)!)).toBe('ten-finger');
+    fireEvent.click(screen.getByText('discard'));
+    expect(text('typing-mode')).toBe('ten-finger');
+    expect(text('draft-comfort')).toBe(DEFAULT_REQUIREMENTS.comfort);
+    const sentence = text('sentence');
+    fireEvent.click(screen.getByText('one-handed'));
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(gen.runs).toHaveLength(2));
+    expect(gen.runs[1]!.req).toMatchObject({ comfort: 'strict', shiftReach: true, separator: ' ' });
+    expect(gen.runs[1]!.generated).toBeNull(); // a new mode reshapes the sentence, so it draws a new one
+    await settled();
+    expect(text('sentence')).not.toBe(sentence);
+    expect(JSON.parse(local.getItem(TYPING_MODE_KEY)!)).toBe('one-handed');
+    expect(text('dirty')).toBe('false');
+    unmount();
+    mount(countingGenerator(), local, session);
+    expect(text('typing-mode')).toBe('one-handed');
+    expect(text('applied-comfort')).toBe('strict');
   });
 
   it('never applies a draft that contradicts itself: apply and Refresh are refused, and nothing runs, until it is fixed', async () => {

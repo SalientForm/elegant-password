@@ -175,7 +175,7 @@ test('phone: the open column fills the width under a bar with the page menu at t
   await noSideways(page, 'suggestions with Why open');
 
   await tab(page, 'Options').click();
-  await expect(page.getByText('Requirement options')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Requirement options' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Swaps', exact: true })).toBeVisible();
   await noSideways(page, 'options');
   await tab(page, 'Suggestions').click();
@@ -237,7 +237,7 @@ test('between phone and desktop widths, the other two columns shrink to buttons 
 
   await strip(page, 'Options').click();
   await expect(strips(page)).toHaveText(['Suggestions', 'Testing']);
-  await expect(page.getByText('Requirement options')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Requirement options' })).toBeVisible();
   await centred(page, 'options');
   await noSideways(page, 'options');
 
@@ -266,7 +266,7 @@ test('in the medium range two columns stay open: Options and Suggestions at firs
   await settled(page);
   await expect(page.locator('main')).toHaveClass('columns medium outer-options');
   await expect(strips(page)).toHaveText(['Testing']);
-  await expect(page.getByText('Requirement options')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Requirement options' })).toBeVisible();
   await centred(page, 'medium');
   await noSideways(page, 'medium: options and suggestions');
   await strip(page, 'Testing').click();
@@ -328,7 +328,7 @@ test('fits the narrowest flagship phone with nothing clipped in any column', asy
   await cards(page).first().getByRole('button', { name: 'Why?', exact: true }).click();
   await noSideways(page, '360: suggestions with Why open');
   await tab(page, 'Options').click();
-  await expect(page.getByText('Requirement options')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Requirement options' })).toBeVisible();
   await noSideways(page, '360: options');
   await tab(page, 'Testing').click();
   await expect(page.getByLabel('Test and practice', { exact: true })).toBeVisible();
@@ -436,7 +436,7 @@ test('phone: cards run edge to edge with square corners, one line below each and
   await settled(page);
   await cardsEdgeToEdge(page, 'suggestions');
   await tab(page, 'Options').click();
-  await expect(page.getByText('Requirement options')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Requirement options' })).toBeVisible();
   await cardsEdgeToEdge(page, 'options');
   await tab(page, 'Testing').click();
   await expect(page.getByLabel('Test and practice', { exact: true })).toBeVisible();

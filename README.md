@@ -123,6 +123,15 @@ explanation for each:
 - **Avoid pinky stretches** (on by default): the tool never picks a symbol
   more than one key from where a pinky rests (`! - _ = + ) |` ...). A
   separator you choose yourself, like `-`, is still used.
+- **Keep Shift within reach** (off by default; the One-handed mode turns it
+  on): no shifted symbol more than 4 keys from both Shift keys (`$ % ^ & *`)
+  is picked, and the opening capital goes on a word whose first letter one
+  hand can capitalise while holding Shift (not T G B Y H N U J I).
+- **Shortest that meets the target** (off by default; Minimal-quick turns it
+  on): each sentence shape is cut to the fewest characters at which it still
+  reaches the target, so the password is as short as the target allows. With
+  the **Minimal** strength preset (4 bits) that is the shortest sentence the
+  site's rules allow: 13 characters at the defaults.
 - **Shapes**: capital initials ("brings" -> `B`), two-letter words (first
   letter + last consonant, "jupiter" -> `jr`), and glue (`5ls`, `Fpc`).
   In generated mode a shaped slot's pool becomes its distinct initials or
@@ -158,8 +167,8 @@ explanation for each:
   past the right edge, past its column or with its text cut off, and on any
   horizontal scroll, at 1000, 800, 412 and 360 px.
 - **Scoring page** (`#/scoring`): how strength in bits, the difficulty
-  score and memorability are worked out, with the full rubric and
-  time-to-guess tables.
+  score and memorability are worked out, with the full rubric, the options
+  each typing mode fills in and what they measure, and time-to-guess tables.
 - **Memorability** (0-100, on every card and list entry): how closely the
   password still looks like its hint. Words that keep their full length
   score in full, shortened words the fraction kept, dropped words nothing;
@@ -199,10 +208,21 @@ explanation for each:
   same-finger moves; one-handed charges every Shift, most
   of all a capital or symbol more than 4 keys from both Shift keys;
   minimal-quick weighs rolls and staying on one row ("dadsad",
-  "you;poop"). It rescores the cards, My list and the typing test at once
-  and reorders "Difficulty"; the passwords themselves do not change. At the
-  defaults the mean difficulty is 41.8 ten-finger, 50.8 minimal-quick, 53.4
-  one-handed and 55.7 two-finger (600 suggestions).
+  "you;poop"). Picking a mode previews its difficulty on the cards, My list
+  and the typing test at once, and fills in the options that suit it
+  (strength, comfort and style; never the site's rules) as a draft, like a
+  site preset: Submit applies both and draws a new sentence, Discard
+  reverts both.
+  Ten-finger is the defaults; Two-finger takes a space separator, a
+  made-up noun, one capital initial and one two-letter word, and has no use
+  for the pinky rule or deliberate swaps (disabled, with the reason);
+  One-handed takes strict comfort, Keep Shift within reach, a space, a
+  made-up noun and a two-letter word; Minimal-quick takes the Minimal
+  target with Shortest that meets the target, strict comfort, a space and
+  made-up nouns throughout, so it makes the shortest password the site's
+  rules allow. Each value was kept only if it measured easier in the mode's
+  own rubric than the defaults; the table and the figures are on the Scoring
+  page (`pnpm measure:modes` reruns the measurement).
 - **Scroll bars** where the browser's take up room (Windows): no arrows and
   no track, a thin rounded handle shown only while the pointer is over the
   area or it scrolls, like macOS with scroll bars shown automatically.

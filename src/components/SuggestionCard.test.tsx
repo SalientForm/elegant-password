@@ -255,7 +255,8 @@ describe('strength badge', () => {
     expect(strengthWord(65)).toBe('very strong');
     expect(strengthWord(55)).toBe('strong');
     expect(strengthWord(41)).toBe('everyday');
-    expect(strengthWord(12)).toBe('weak');
+    expect(strengthWord(12)).toBe('weak'); // the Minimal preset (4 bits) is a target, not a strength
+    expect(strengthWord(4)).toBe('weak');
   });
 });
 

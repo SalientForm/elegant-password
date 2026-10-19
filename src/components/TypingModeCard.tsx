@@ -1,13 +1,19 @@
 import { TYPING_MODES } from '../lib/difficulty';
+import { matchesProfile, modeLabel, withProfile } from '../lib/modeProfiles';
 import { usePasswords } from '../state/PasswordsProvider';
 
 /**
- * How the passwords will be typed. Every difficulty score (cards, My list,
- * the typing test) is for the chosen mode, and "Difficulty" order follows
- * it; the passwords themselves do not change. Takes effect at once.
+ * How the passwords will be typed. Picking a mode fills in the options that
+ * suit it (strength, comfort and style; never the site's rules) in the
+ * Requirement options, as a draft: every difficulty score on screen (cards,
+ * My list, the typing test) previews the mode at once, and Submit applies
+ * the mode and its options together, drawing a new sentence (the options
+ * reshape it). While the options have been edited away from the mode's, a
+ * button puts them back.
  */
 export function TypingModeCard() {
-  const { typingMode, setTypingMode } = usePasswords();
+  const { typingMode, setTypingMode, draft, setReq } = usePasswords();
+  const matches = matchesProfile(draft.req, typingMode);
   return (
     <section className="panel typing-mode" aria-labelledby="typing-mode-heading">
       <h2 id="typing-mode-heading">Mode</h2>
@@ -18,7 +24,18 @@ export function TypingModeCard() {
           </button>
         ))}
       </div>
-      <p className="hint">{TYPING_MODES.find((m) => m.id === typingMode)!.hint} Difficulty scores are for this mode.</p>
+      <p className="hint">
+        {TYPING_MODES.find((m) => m.id === typingMode)!.hint} Difficulty scores are for this mode. Picking a mode fills in its options under Requirement
+        options; Submit applies them and draws a new sentence.
+      </p>
+      {!matches && (
+        <div className="mode-options-differ">
+          <p className="hint">The options differ from this mode's.</p>
+          <button type="button" className="ghost" onClick={() => setReq(withProfile(draft.req, typingMode).req)}>
+            Use {modeLabel(typingMode)} options
+          </button>
+        </div>
+      )}
     </section>
   );
 }

@@ -64,6 +64,7 @@ export const FIELD_LABELS: Record<keyof Requirements, string> = {
   separator: 'separator',
   includeNumber: 'include a number',
   targetBits: 'target strength',
+  shortest: 'shortest that meets the target',
   comfort: 'typing comfort',
   twists: 'minimum swaps',
   initials: 'capital initials',
@@ -71,6 +72,7 @@ export const FIELD_LABELS: Record<keyof Requirements, string> = {
   madeUp: 'made-up nouns',
   glue: 'glue',
   avoidPinkyStretch: 'avoid pinky stretches',
+  shiftReach: 'keep Shift within reach',
   easeSwaps: 'deliberate swaps',
   count: 'number of suggestions',
 };

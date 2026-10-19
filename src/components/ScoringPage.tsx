@@ -1,6 +1,7 @@
 import { ATTACK_SCENARIOS, crackEstimates, formatDuration, STRENGTH_PRESETS } from '../lib/generate';
 import { MEMORABILITY } from '../lib/score';
 import { RubricTable } from './Difficulty';
+import { ModeMeasuresTable, ModeOptionsTable } from './ModeOptionsTable';
 
 /** The Scoring page: how difficulty and strength are scored, in one place. */
 export function ScoringPage() {
@@ -103,10 +104,23 @@ export function ScoringPage() {
           The rubric depends on how the password will be typed, chosen in the Mode card on the Passwords page: with ten
           fingers on the home row (the standard), with two fingers hunting for keys, with one hand,
           or as quickly as possible. Each mode weighs the criteria differently, drops the ones that no longer apply and
-          has its own typing-time model, so the same password can score differently in each. The mode changes only the
-          difficulty: the passwords, their strength and memorability stay the same.
+          has its own typing-time model, so the same password can score differently in each. The mode itself changes
+          only the difficulty score; the passwords change through the options it fills in, below.
         </p>
         <RubricTable />
+        <h3>Options by mode</h3>
+        <p>
+          Picking a mode fills in the strength, comfort and style options that suit it, in the Requirement options, as a
+          draft: Submit applies them and draws a new sentence, Discard puts them back. The site's rules, the number of
+          suggestions and the swap mappings are never touched, and any option can still be changed by hand afterwards.
+          Two options exist for the modes: "Shortest that meets the target" gives Minimal-quick the shortest sentence the
+          site's rules allow, and "Keep Shift within reach" keeps every One-handed Shift stroke within reach of the
+          hand holding Shift. Strength and memorability never depend on the mode: they are scored from the password
+          and its hint alone.
+        </p>
+        <ModeOptionsTable />
+        <h3>Measured</h3>
+        <ModeMeasuresTable />
       </section>
 
       <section className="panel">

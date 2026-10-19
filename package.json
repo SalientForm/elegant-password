@@ -19,7 +19,8 @@
     "test:e2e:built": "playwright test --project built",
     "test:all": "pnpm test && pnpm test:e2e",
     "test:titles": "node scripts/testTitles.mjs",
-    "stats": "node scripts/devStats.mjs"
+    "stats": "node scripts/devStats.mjs",
+    "measure:modes": "MEASURE_MODES=1 vitest run src/lib/modeProfiles.test.ts --reporter=verbose --silent=false"
   },
   "dependencies": {
     "marked": "^18.1.1",

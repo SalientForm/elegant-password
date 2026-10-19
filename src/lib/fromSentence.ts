@@ -462,7 +462,7 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   const typed = easeWhole(state, req);
   // Capitalise next: twists only match lowercase letters, so the capitals
   // the uppercase rule needs can never be swapped away.
-  const capitalised = applyUppercase(typed.map((t) => t.text), req.minUppercase, undefined, rng); // a random word, for variety
+  const capitalised = applyUppercase(typed.map((t) => t.text), req.minUppercase, undefined, rng, req.shiftReach); // a random word, for variety
   let tokens = typed.map((t, i) => ({ ...t, text: capitalised[i]! }));
   const texts = () => tokens.map((t) => t.text);
   const glueOf = (ts: readonly Token[]) =>

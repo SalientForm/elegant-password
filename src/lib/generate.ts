@@ -21,7 +21,7 @@ import {
   type Slot,
   type Template,
 } from './grammar';
-import { isPinkyStretch, type TypingProfile } from './keyboard';
+import { isFarShift, isPinkyStretch, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
 import { scoreCold } from './score';
@@ -69,6 +69,13 @@ export interface Requirements {
   includeNumber: boolean;
   /** Minimum entropy in bits, assuming the attacker knows exactly how this tool works. */
   targetBits: number;
+  /**
+   * The shortest sentence that still meets the target: each shape's length
+   * window is cut from the top to the fewest characters at which its count
+   * reaches 2^targetBits (at a target the first length already reaches, one
+   * length). Off, the whole range counts and the strongest short plan wins.
+   */
+  shortest: boolean;
   comfort: Comfort;
   /** Minimum swaps (symbol swaps or misspellings) per password, 0-3, applied whenever the letters allow. */
   twists: number;
@@ -86,6 +93,14 @@ export interface Requirements {
    * separator. A separator the user picks explicitly is still honoured.
    */
   avoidPinkyStretch: boolean;
+  /**
+   * Keep every Shift stroke within one hand's reach: never pick a shifted
+   * symbol more than four keys from both Shift keys ("$ % ^ & *") for
+   * twists, closing marks or the automatic separator, and put the opening
+   * capital on a word whose first letter is in reach (not T G B Y H N U J I)
+   * when the sentence has one.
+   */
+  shiftReach: boolean;
   /**
    * Deliberate swaps for typing ease: a word with a same-finger jump or a
    * long reach is typed with one fixed misspelling that removes it ("wise"
@@ -110,6 +125,7 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
   separator: 'auto',
   includeNumber: true,
   targetBits: 40,
+  shortest: false,
   comfort: 'balanced',
   twists: 2,
   initials: 0,
@@ -117,6 +133,7 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
   madeUp: 0,
   glue: false,
   avoidPinkyStretch: true,
+  shiftReach: false,
   easeSwaps: true,
   count: 5,
 };
@@ -128,6 +145,7 @@ export interface StrengthPreset {
 }
 
 export const STRENGTH_PRESETS: readonly StrengthPreset[] = [
+  { label: 'Minimal', bits: 4, hint: "Just the site's rules: for Minimal-quick typing or a throwaway account" },
   { label: 'Everyday', bits: 40, hint: 'Accounts with login rate limits' },
   { label: 'Strong', bits: 50, hint: 'Email, banking, most important accounts' },
   { label: 'Very strong', bits: 60, hint: 'Accounts worth a dedicated offline attack' },
@@ -162,6 +180,10 @@ export interface Plan {
   lengthPenaltyBits: number;
   /** Awkward words were typed with their deliberate swaps (zero bits: a fixed rule). */
   easeSwaps?: boolean;
+  /** The length window was cut to the shortest that meets the target (see Requirements.shortest). */
+  shortest?: boolean;
+  /** The longest password this plan makes: the narrowed window's top when `shortest`, else the maximum length. */
+  maxLength: number;
 }
 
 /** A generated word's part of speech, 'yours' for a word from the user's own sentence, or 'fluff' for padding. */
@@ -236,10 +258,9 @@ export interface GeneratedSentence {
 export const SEPARATOR_PREFERENCE = [';', '.', '-', ',', '_'] as const;
 export const END_PREFERENCE = ['.', '!', '?'] as const;
 
-/** Allowed symbols the tool may pick on its own, honouring the pinky rule. */
+/** Allowed symbols the tool may pick on its own, honouring the pinky rule and the Shift-reach rule. */
 export function comfortableSymbols(req: Requirements): string[] {
-  const allowed = allowedSymbolSet(req);
-  return req.avoidPinkyStretch ? allowed.filter((c) => !isPinkyStretch(c)) : allowed;
+  return allowedSymbolSet(req).filter((c) => !(req.avoidPinkyStretch && isPinkyStretch(c)) && !(req.shiftReach && isFarShift(c)));
 }
 
 /**
@@ -464,6 +485,7 @@ function candidateFor(template: Template, req: Requirements, ctx: PlanContext): 
     const count = model.count(lo, hi);
     if (count > 0) variants.push({ shape, model, count, endSymbol, lo, hi });
   }
+  const maxLength = req.shortest ? narrowed(variants, req) : req.maxLength;
   const count = variants.reduce((sum, v) => sum + v.count, 0);
   if (count === 0) return { noClosing, tooFewLetters };
 
@@ -510,9 +532,40 @@ function candidateFor(template: Template, req: Requirements, ctx: PlanContext): 
         breakdown,
         lengthPenaltyBits: Math.max(0, unconstrained - bits),
         easeSwaps: req.easeSwaps,
+        shortest: req.shortest,
+        maxLength,
       },
     },
   };
+}
+
+/**
+ * The shortest window that meets the target: the variants' windows are cut,
+ * together, to the fewest characters at which their summed count reaches
+ * 2^targetBits (one length when the first that fits already does). Every
+ * variant keeps the same password length, so the sum is taken length by
+ * length. Returns the longest password the cut windows allow; when no cut
+ * reaches the target the windows stay as they are and the maximum is the
+ * rule's, so the plan is honest about falling short.
+ */
+function narrowed(variants: Variant[], req: Requirements): number {
+  const need = 2 ** req.targetBits;
+  let total = 0;
+  for (let length = req.minLength; length <= req.maxLength; length++) {
+    for (const v of variants) {
+      const letters = length - (req.minLength - v.lo); // less this variant's separators and closing marks
+      if (letters >= v.lo && letters <= v.hi) total += v.model.count(letters, letters);
+    }
+    if (total >= need) {
+      for (const v of variants) {
+        v.hi = Math.min(v.hi, length - (req.minLength - v.lo));
+        v.count = v.model.count(v.lo, v.hi);
+      }
+      for (let i = variants.length - 1; i >= 0; i--) if (variants[i]!.count === 0) variants.splice(i, 1);
+      return length;
+    }
+  }
+  return req.maxLength;
 }
 
 export function plan(req: Requirements): Candidate {
@@ -553,13 +606,19 @@ function better(a: Plan, b: Plan): boolean {
 
 export const countUpper = (text: string) => text.replace(/[^A-Z]/g, '').length;
 
+/** True when the first lowercase letter of a word capitalises within one hand's reach of a Shift key. */
+const nearCapital = (word: string) => !isFarShift((word.match(/[a-z]/)?.[0] ?? 'a').toUpperCase());
+
 /**
  * One capital goes on the first letter of a word, like a sentence. More than
  * one puts whole words in capitals ("SLEEPY-otters ..."), so Shift is held
  * once instead of the case flipping back and forth. With a random source the
  * word is chosen at random (and whole-word capitals start from a random word
  * and wrap round), so a batch does not all capitalise the same word; without
- * one it is the first eligible word. Neither choice is counted as bits.
+ * one it is the first eligible word. With `nearShift`, words whose first
+ * letter capitalises within one hand's reach of a Shift key come first, so
+ * the capital lands on one of them whenever the sentence has one. Neither
+ * choice is counted as bits.
  */
 export function applyUppercase(
   words: readonly string[],
@@ -567,12 +626,15 @@ export function applyUppercase(
   /** Words whose case is part of what was chosen (made-up nouns); never recased. */
   fixedCase: (i: number) => boolean = () => false,
   rng?: RandomSource,
+  nearShift = false,
 ): string[] {
   const out = [...words];
   // Capital initials and ALL-CAPS made-up nouns already count toward the rule.
   const existing = countUpper(out.join(''));
   if (existing >= minUppercase) return out;
-  const eligible = out.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
+  const any = out.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
+  const near = nearShift ? any.filter((j) => nearCapital(out[j]!)) : [];
+  const eligible = near.length ? near : any;
   if (eligible.length === 0) return out;
   const start = rng ? randomInt(eligible.length, rng) : 0;
   if (minUppercase === 1) {
@@ -590,8 +652,8 @@ export function applyUppercase(
   return out;
 }
 
-function render(words: string[], variant: Variant, plan: Plan, rng?: RandomSource, endSymbol = variant.endSymbol): string {
-  const cased = applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i), rng);
+function render(words: string[], variant: Variant, plan: Plan, rng?: RandomSource, endSymbol = variant.endSymbol, nearShift = false): string {
+  const cased = applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i), rng, nearShift);
   return trimSeparators(joinTokens(cased, variant.shape.glue, plan.separator) + endSymbol, plan.separator);
 }
 
@@ -734,9 +796,8 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
   const warnings: string[] = [];
   const twistMappings = usableMappings(mappings, req, chosen.separator);
   if (req.twists > 0 && twistMappings.length === 0) {
-    warnings.push(
-      `Twists are on, but every enabled mapping uses a symbol this site does not allow${req.avoidPinkyStretch ? ' or that needs a pinky stretch' : ''}.`,
-    );
+    const because = [req.avoidPinkyStretch ? 'needs a pinky stretch' : '', req.shiftReach ? "needs a Shift key out of one hand's reach" : ''].filter(Boolean);
+    warnings.push(`Twists are on, but every enabled mapping uses a symbol this site does not allow${because.length ? ` or that ${because.join(' or ')}` : ''}.`);
   }
   if (!chosen.meetsTarget) {
     warnings.push(
@@ -748,6 +809,9 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
   if (chosen.endSymbol && req.avoidPinkyStretch && isPinkyStretch(chosen.endSymbol[0]!)) {
     warnings.push(`Every allowed symbol needs a pinky stretch, so the sentence ends with "${chosen.endSymbol}".`);
   }
+  if (chosen.endSymbol && req.shiftReach && isFarShift(chosen.endSymbol[0]!)) {
+    warnings.push(`Every allowed symbol needs a Shift key out of one hand's reach, so the sentence ends with "${chosen.endSymbol}".`);
+  }
   if (chosen.separator === '' && chosen.template.slots.length > 1 && !req.glue) {
     warnings.push('No separator is available, so the words run together. Spaces or a symbol make it easier to read.');
   }
@@ -758,6 +822,13 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
   const typed = drawn?.typed ?? model.sample(variant.lo, variant.hi, rng);
   const original = typed.map((w, j) => (req.easeSwaps && isWholeWord(shape, j) ? plainOf(w) : w));
   const length = render(typed, variant, chosen).length;
+  // A kept sentence is never shortened (it stays until the user draws a new one), only said to be longer than the plan.
+  if (drawn && req.shortest && length > chosen.maxLength) {
+    warnings.push(`The kept sentence makes ${length} characters, longer than the ${chosen.maxLength} the shortest plan needs. Draw a new sentence for a shorter one.`);
+  }
+  if (req.shiftReach && req.minUppercase === 1 && countUpper(typed.join('')) === 0 && !typed.some((w, j) => !shape.madeUp.includes(j) && /[a-z]/.test(w) && nearCapital(w))) {
+    warnings.push('No word in this sentence starts with a letter one hand can capitalise while holding Shift (T G B Y H N U J I are out of reach).');
+  }
   // Twists never touch the number, initials, made-up nouns or two-letter
   // words, so what the card says about those stays true.
   const fixed = (j: number) => !isWholeWord(shape, j);
@@ -806,12 +877,14 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
         // The opening capital goes on the first ordinary word (twists skip made-up nouns and initials).
         protectFirstLetter: chosen.minUppercase === 1 && shape.initials.length === 0,
         minDelta: req.minLength - length,
-        maxDelta: req.maxLength - length,
+        // The shortest plan never lets a swap lengthen the password ("f" to "ph").
+        maxDelta: req.shortest ? 0 : req.maxLength - length,
         minLetters: Math.max(0, req.minUppercase - fixedLetters),
       },
       rng,
     );
-    const password = render(twisted.words, variant, chosen, undefined, endSymbol); // the opening capital stays: a sentence-like start
+    // The opening capital stays on the first word, a sentence-like start, unless Shift reach moves it to a word in reach.
+    const password = render(twisted.words, variant, chosen, undefined, endSymbol, req.shiftReach);
     if (seen.has(password)) continue;
     seen.add(password);
     const score = scoreCold(password, hint);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
-import { isPinkyStretch } from '../lib/keyboard';
+import { isFarShift, isPinkyStretch } from '../lib/keyboard';
 import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingStore';
 import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, validateMapping, type Mapping, type MappingKind } from '../lib/twists';
 
@@ -48,6 +48,7 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
       if (!allowed.has(c)) return `"${c}" is not an allowed symbol`;
       if (c === separator) return `"${c}" is the separator, which never comes from a swap`;
       if (req.avoidPinkyStretch && isPinkyStretch(c)) return `"${c}" needs a pinky stretch`;
+      if (req.shiftReach && isFarShift(c)) return `"${c}" needs a Shift key out of one hand's reach`;
     }
     return undefined;
   };

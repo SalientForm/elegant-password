@@ -2,17 +2,18 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
+import type { TypingMode } from '../lib/difficulty';
 import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
 import { RequirementsForm } from './RequirementsForm';
 import { SETTLE_MS } from './useShownProblems';
 
 afterEach(cleanup);
 
-function Harness({ initial = DEFAULT_REQUIREMENTS }: { initial?: Requirements }) {
+function Harness({ initial = DEFAULT_REQUIREMENTS, typingMode }: { initial?: Requirements; typingMode?: TypingMode }) {
   const [value, setValue] = useState(initial);
   return (
     <>
-      <RequirementsForm value={value} onChange={setValue} />
+      <RequirementsForm value={value} onChange={setValue} typingMode={typingMode} />
       <output data-testid="req">{JSON.stringify(value)}</output>
     </>
   );
@@ -78,6 +79,25 @@ describe('RequirementsForm', () => {
     expect(req()).toMatchObject({ initials: 2, shorthand: 2, madeUp: 2 });
     fireEvent.click(screen.getByRole('checkbox', { name: /Glue numbers/ }));
     expect(req().glue).toBe(true);
+  });
+
+  it('offers the Minimal preset, the shortest-sentence and Shift-reach options, and disables what a typing mode has no use for', () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: /^Minimal/ }));
+    expect(req().targetBits).toBe(4);
+    expect(screen.getByRole('button', { name: /^Minimal/ }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Shortest that meets the target' }));
+    expect(req().shortest).toBe(true);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Keep Shift within reach' }));
+    expect(req().shiftReach).toBe(true);
+    expect(screen.getByText(/^Skips symbols more than one key/)).toBeTruthy(); // ten-finger: every option in use
+    cleanup();
+    render(<Harness typingMode="two-finger" />);
+    const pinky = screen.getByRole('checkbox', { name: 'Avoid pinky stretches' }) as HTMLInputElement;
+    expect(pinky.disabled).toBe(true);
+    expect(screen.getByText('Two index fingers have no pinky to stretch.')).toBeTruthy();
+    expect((screen.getByRole('checkbox', { name: 'Ease awkward words with deliberate swaps' }) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole('checkbox', { name: 'Keep Shift within reach' }) as HTMLInputElement).disabled).toBe(false);
   });
 
   it('sets the site rules from a preset, leaving strength, comfort, style and swaps alone, and marks the preset that matches', () => {

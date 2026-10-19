@@ -19,9 +19,11 @@ their own step.
 | Only these symbols, spaces or not | generic (alphabet) | Every symbol the tool picks on its own (separator, closing mark, swap output) is filtered by the allowed set; closing marks and swap outputs are never the separator character, since a password never starts or ends with its separator (shapes that would need such marks are skipped; when no shape is left, the request is refused and the separator named). A separator chosen by hand must be allowed: the form will not submit one that is not (section 1a). |
 | Separator | specific | Automatic (the default) → `;` whenever it is allowed, else a space if allowed, else the first allowed and comfortable of `. - , _`, else none; never a problem, whatever the rules. Under the default rules it is `;`, the old default, so default passwords are unchanged. A chosen separator is honoured even if it is a stretch. |
 | Avoid pinky stretches | specific | Symbols more than one key from a pinky's home are removed from the set the tool may pick from (swap outputs, closing marks, automatic separator). If every allowed symbol is a stretch, one is used and a warning says so. |
+| Keep Shift within reach | specific | Shifted symbols more than 4 keys from both Shift keys (`$ % ^ & *`, `(`) are removed from the same set; the opening capital goes to a word whose first letter capitalises in reach (not T G B Y H N U J I) when the sentence has one, else a warning says so. If every allowed symbol is out of reach, one is used and a warning says so. |
 | Typing comfort | specific | Each word pool (and the number pool) is ranked by typing cost and cut to the easiest 40 / 70 / 100 %. With deliberate swaps on, words are ranked as typed with their swap. |
 | Deliberate swaps (typing ease) | specific | On by default. A whole word with a same-finger jump or a reach of 6+ key widths is typed with one fixed sound-alike misspelling that removes it (`wise` → `wyse`, `ease.ts`). A fixed function of the word: 0 bits. Planning counts words at their typed length with unchanged pool sizes; letters only, so the separator and symbol rules never meet it; sentence mode swaps the words still whole unless that leaves too few letters for the uppercase rule. |
 | Target bits | specific | Among templates that reach the target, the shortest expected length wins; otherwise the strongest, with a warning. |
+| Shortest that meets the target | specific | Before the choice, each template's length windows are cut, together, to the fewest characters at which its count reaches 2^target (one length when the first that fits already does; left alone when no cut reaches it). Bits are exact over the cut set; no swap may lengthen the password; a kept sentence is left as it is, with a warning when it is longer than the cut. |
 | Number | specific | Placed in front of a random noun phrase; the position is counted as bits. |
 | Capital initials | specific | Fixed-priority positions become one capital letter; the slot's pool becomes its distinct initials, so the count stays exact. Never swapped. |
 | Two-letter words | specific | Fixed-priority positions become first letter + last consonant; pool becomes distinct pairs. Never swapped. |
@@ -56,17 +58,18 @@ throws its first, so no password is ever made from a contradiction.
 ```mermaid
 flowchart TD
   A[Requirements] --> B[validate: ruleProblems, section 1a]
-  B --> C[resolve separator and closing mark\nallowed set ∩ comfortable set]
+  B --> C[resolve separator and closing mark\nallowed set ∩ comfortable set\n(pinky rule, Shift reach)]
   C --> D{for each template × number placement}
   D --> E[shape: initials, two-letter, made-up, glue positions]
   E --> F[overhead = separators + closing marks\nletters must fit min−overhead … max−overhead]
   F --> G{enough letters\nfor the uppercase rule?}
   G -- no --> D
   G -- yes --> H[LengthModel: count sequences by total letters,\nwords as typed with deliberate swaps when on\nbits = log2 Σ counts]
-  H --> I[choose plan: meets target → shortest;\nelse strongest + warning]
+  H --> H2[shortest option: cut each template's windows\nto the fewest characters that reach the target]
+  H2 --> I[choose plan: meets target → shortest;\nelse strongest + warning]
   I --> J[sample one sentence per batch: variant ∝ count,\ntotal length ∝ count, word lengths ∝ completions,\nword uniform; the hint keeps each word as written]
   J --> K[per card, swaps: skip number, initials, two-letter, made-up;\nkeep the first letter; stay in the length window;\nkeep enough letters; pick uniformly among outcomes]
-  K --> L[render: capitals, glue, separator, closing marks]
+  K --> L[render: capitals (a word in Shift's reach when asked),\nglue, separator, closing marks]
   L --> M[cold score from password + hint]
   M --> N[checks: every rule ✓/✗, warnings]
 ```
@@ -85,7 +88,7 @@ symbol counts no bits). A draw that repeats a password already in the batch
 is dropped, so a sentence with little to vary gives fewer cards.
 
 The sentence is kept until the user draws a new one ("New sentence", the
-button beside it). Refresh and rule changes skip the sampling step and fit
+button beside it) or applies a new typing mode, whose options reshape it. Refresh and rule changes skip the sampling step and fit
 the kept words to the rules instead: initials, two-letter words and
 deliberate swaps are worked out again from the words as written, then the
 swaps and closing marks are drawn per card as usual. When the kept sentence
@@ -161,7 +164,11 @@ do not discount; the strength panel says so in one sentence.
 
 ## 5. When the flow runs
 
-Edits are a draft. The flow above runs when the draft is applied (the
+Edits are a draft. Picking a typing mode (the Mode card) is one too: it
+fills in the mode's options (`src/lib/modeProfiles.ts`; strength, comfort
+and style, never the site's rules) in the draft, previews the mode's
+difficulty at once, and is applied with them. The generator reads the
+options, never the mode. The flow above runs when the draft is applied (the
 floating "Submit changes" bar, Ctrl+Enter, "Refresh", which applies and
 rolls new versions of the same sentence, or "New sentence", which applies
 and draws a new one), and once on load if the stored batch was not made from the

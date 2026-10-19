@@ -43,8 +43,8 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
           ))}
           {plan.lengthPenaltyBits > 0.05 && (
             <tr className="minus">
-              <td data-label="Word">Length limits</td>
-              <td data-label="Chosen from">rule out some combinations</td>
+              <td data-label="Word">{plan.shortest ? 'Shortest sentence' : 'Length limits'}</td>
+              <td data-label="Chosen from">{plan.shortest ? `keeps only the sentences of up to ${plan.maxLength} characters` : 'rule out some combinations'}</td>
               <td data-label="Adds">−{plan.lengthPenaltyBits.toFixed(1)} bits</td>
             </tr>
           )}

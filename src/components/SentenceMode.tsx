@@ -30,6 +30,7 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
   // The tag needs one of its symbols; without one the padding still reaches the minimum, just untagged, and this says so.
   const tag = options.lengthTag;
   const noTag = req && options.padding && tag !== 'none' && !lengthTagSymbol(tag, comfortableSymbols(req));
+  const comfortably = req ? [req.avoidPinkyStretch ? 'without a pinky stretch' : '', req.shiftReach ? 'with Shift within reach' : ''].filter(Boolean) : [];
   return (
     <div className="sentence">
       <label className="field">
@@ -113,7 +114,7 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
       {noTag && (
         <p className="hint">
           The site allows none of {TAG_SYMBOLS[tag].map((c) => `“${c}”`).join(' ')}
-          {req.avoidPinkyStretch ? ' (without a pinky stretch)' : ''}, so padding goes without a tag here.
+          {comfortably.length ? ` (${comfortably.join(' and ')})` : ''}, so padding goes without a tag here.
         </p>
       )}
       <p className="hint">

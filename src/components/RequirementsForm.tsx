@@ -1,6 +1,8 @@
+import { DEFAULT_TYPING_MODE, type TypingMode } from '../lib/difficulty';
 import type { Comfort } from '../lib/grammar';
 import { automaticSeparator, MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, SEPARATOR_PREFERENCE, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
-import { isPinkyStretch } from '../lib/keyboard';
+import { isFarShift, isPinkyStretch } from '../lib/keyboard';
+import { unusedIn, type ProfileKey } from '../lib/modeProfiles';
 import { ignoredSymbols, ruleProblems, type RuleProblem } from '../lib/validation';
 import { useShownProblems } from './useShownProblems';
 import { NumberField } from './NumberField';
@@ -9,6 +11,8 @@ import { SiteRules } from './SiteRules';
 interface Props {
   value: Requirements;
   onChange: (next: Requirements) => void;
+  /** The draft's typing mode: options that have no meaning in it are disabled, with the reason. */
+  typingMode?: TypingMode;
 }
 
 const MUST_CONTAIN: { key: 'minUppercase' | 'minDigits' | 'minSymbols'; label: string; max: number }[] = [
@@ -65,8 +69,10 @@ function Problems({ list, anchor }: { list: RuleProblem[]; anchor: Anchor }) {
   );
 }
 
-export function RequirementsForm({ value, onChange }: Props) {
+export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_MODE }: Props) {
   const set = <K extends keyof Requirements>(key: K, v: Requirements[K]) => onChange({ ...value, [key]: v });
+  /** Why an option has no meaning in the typing mode, when it has none; its control is disabled and the hint says why. */
+  const unused = (key: ProfileKey) => unusedIn(typingMode).find((u) => u.key === key)?.reason;
   const num = (key: 'minLength' | 'maxLength' | 'targetBits' | 'count', min: number, max: number) => ({
     value: value[key],
     min,
@@ -82,6 +88,9 @@ export function RequirementsForm({ value, onChange }: Props) {
 
   const symbolSeparator = !SEPARATORS.some((c) => c.value === value.separator);
   const separatorStretch = value.avoidPinkyStretch && symbolSeparator && isPinkyStretch(value.separator);
+  const separatorFar = value.shiftReach && symbolSeparator && isFarShift(value.separator);
+  /** Whether the tool may pick a symbol on its own under the comfort rules: the pinky rule and Shift reach. */
+  const comfortable = (c: string) => !(value.avoidPinkyStretch && isPinkyStretch(c)) && !(value.shiftReach && isFarShift(c));
   const separatorBlocked = problems.some((p) => p.fields[0] === 'separator');
   const ignored = ignoredSymbols(value.allowedSymbols);
 
@@ -179,6 +188,14 @@ export function RequirementsForm({ value, onChange }: Props) {
           <span>Custom target (bits)</span>
           <NumberField {...num('targetBits', 0, 256)} {...mark('targetBits')} />
         </label>
+        <label className="check">
+          <input type="checkbox" checked={value.shortest} onChange={(e) => set('shortest', e.target.checked)} />
+          Shortest that meets the target
+        </label>
+        <p className="hint">
+          Cuts each sentence shape to the fewest characters that still reach the target, so the password is as short as
+          the target allows. At Minimal it is the shortest sentence the site's rules allow.
+        </p>
         <Problems list={problems} anchor="strength" />
       </fieldset>
 
@@ -202,22 +219,39 @@ export function RequirementsForm({ value, onChange }: Props) {
           <input
             type="checkbox"
             checked={value.avoidPinkyStretch}
+            disabled={!!unused('avoidPinkyStretch')}
             onChange={(e) => set('avoidPinkyStretch', e.target.checked)}
           />
           Avoid pinky stretches
         </label>
         <p className="hint">
-          Skips symbols more than one key from where your pinkies rest, like <code>! - _ = + ) |</code>, in twists and
-          closing marks.
+          {unused('avoidPinkyStretch') ?? (
+            <>
+              Skips symbols more than one key from where your pinkies rest, like <code>! - _ = + ) |</code>, in twists and
+              closing marks.
+            </>
+          )}
         </p>
         <label className="check">
-          <input type="checkbox" checked={value.easeSwaps} onChange={(e) => set('easeSwaps', e.target.checked)} />
+          <input type="checkbox" checked={value.shiftReach} disabled={!!unused('shiftReach')} onChange={(e) => set('shiftReach', e.target.checked)} />
+          Keep Shift within reach
+        </label>
+        <p className="hint">
+          {unused('shiftReach') ?? (
+            <>
+              For one hand holding Shift: skips symbols more than 4 keys from both Shift keys, like <code>$ % ^ &amp; *</code>,
+              in twists and closing marks, and puts the capital on a word that does not start with <code>T G B Y H N U J I</code>{' '}
+              when the sentence has one.
+            </>
+          )}
+        </p>
+        <label className="check">
+          <input type="checkbox" checked={value.easeSwaps} disabled={!!unused('easeSwaps')} onChange={(e) => set('easeSwaps', e.target.checked)} />
           Ease awkward words with deliberate swaps
         </label>
         <p className="hint">
-          A word with a same-finger jump or a long reach gets one fixed misspelling that removes it: “wise” → wyse,
-          “cool” → cul. Comfort then ranks words as typed. A fixed rule that comes with the word, so it adds no
-          strength and nothing to remember, and the hint keeps the word as written.
+          {unused('easeSwaps') ??
+            'A word with a same-finger jump or a long reach gets one fixed misspelling that removes it: “wise” → wyse, “cool” → cul. Comfort then ranks words as typed. A fixed rule that comes with the word, so it adds no strength and nothing to remember, and the hint keeps the word as written.'}
         </p>
       </fieldset>
 
@@ -269,7 +303,7 @@ export function RequirementsForm({ value, onChange }: Props) {
           <p className="hint">
             {value.separator === 'auto'
               ? `Auto: ${describe(automaticSeparator(value))} under these rules. It is ";" whenever the site allows it (home row, no Shift, and it counts as a symbol), else a space, else the first allowed of ${SEPARATOR_PREFERENCE.slice(1)
-                  .filter((c) => !(value.avoidPinkyStretch && isPinkyStretch(c)))
+                  .filter(comfortable)
                   .map((c) => `"${c}"`)
                   .join(' ')}, else none.`
               : value.separator === ' '
@@ -278,7 +312,9 @@ export function RequirementsForm({ value, onChange }: Props) {
                   ? 'None: the words run together.'
                   : separatorStretch
                     ? `"${value.separator}" is a pinky stretch; kept because you chose it.`
-                    : `Words are joined with "${value.separator}". Clear the box for Auto.`}
+                    : separatorFar
+                      ? `"${value.separator}" needs a Shift key out of one hand's reach; kept because you chose it.`
+                      : `Words are joined with "${value.separator}". Clear the box for Auto.`}
           </p>
         )}
         <label className="check">

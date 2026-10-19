@@ -49,7 +49,10 @@ describe('App', () => {
 });
 
 describe('App: typing mode', () => {
-  it('has a Mode card at the top of the right column that rescores every difficulty at once and is remembered', { timeout: 30_000 }, async () => {
+  const passwordsShown = () => cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent!);
+  const checkbox = (name: string) => screen.getByRole('checkbox', { name }) as HTMLInputElement;
+
+  it('has a Mode card at the top of the right column that previews every difficulty at once, fills in its options as a draft, and is remembered once submitted', { timeout: 30_000 }, async () => {
     const first = render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const card = screen.getByRole('heading', { name: 'Mode' }).closest<HTMLElement>('.panel')!;
@@ -59,24 +62,64 @@ describe('App: typing mode', () => {
     expect(modes).toEqual(['Two-finger', 'Ten-finger', 'One-handed', 'Minimal-quick']);
     expect(within(card).getByRole('button', { name: 'Ten-finger' }).getAttribute('aria-pressed')).toBe('true');
 
-    const passwords = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent!);
+    const passwords = passwordsShown();
     fireEvent.click(within(card).getByRole('button', { name: 'One-handed' }));
     expect(within(card).getByRole('button', { name: 'One-handed' }).getAttribute('aria-pressed')).toBe('true');
     expect(within(card).getByText(/holds Shift too/)).toBeTruthy();
     // Every card's D badge is now the one-handed score of its password (the cards stay the same passwords).
-    const shown = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent!);
-    expect([...shown].sort()).toEqual([...passwords].sort());
+    expect([...passwordsShown()].sort()).toEqual([...passwords].sort());
     for (const c of cards()) expect(within(c).getByText(/^D \d+$/).getAttribute('aria-label')).toMatch(/^Difficulty \d+, \w+ \(one-handed\)$/);
     // Opened, a card's table is the one-handed rubric, with the one-hand Shift criterion.
     fireEvent.click(within(cards()[0]!).getByRole('button', { name: /why/i }));
     expect(within(cards()[0]!).getByText('One-hand Shift')).toBeTruthy();
     expect(within(cards()[0]!).getByRole('heading', { name: /Difficulty score: \d+ \/ 100 \(\w+\), one-handed/ })).toBeTruthy();
-    expect(window.localStorage.getItem(TYPING_MODE_KEY)).toBe('"one-handed"');
+    // The mode is a draft that brought its options with it: nothing is saved, the form shows them, and the bar floats.
+    const bar = screen.getByRole('region', { name: 'Unapplied changes' });
+    expect(window.localStorage.getItem(TYPING_MODE_KEY)).toBe('"ten-finger"');
+    expect(screen.getByRole('button', { name: 'Strict' }).getAttribute('aria-pressed')).toBe('true');
+    expect(checkbox('Keep Shift within reach').checked).toBe(true);
+    expect(screen.getByRole('button', { name: 'Space' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(card).queryByRole('button', { name: /options$/ })).toBeNull(); // the options are the mode's
+    // Discard reverts the mode and its options together.
+    fireEvent.click(within(bar).getByRole('button', { name: 'Discard' }));
+    expect(within(card).getByRole('button', { name: 'Ten-finger' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Balanced' }).getAttribute('aria-pressed')).toBe('true');
+    expect(checkbox('Keep Shift within reach').checked).toBe(false);
+    for (const c of cards()) expect(within(c).getByText(/^D \d+$/).getAttribute('aria-label')).toMatch(/\(ten-finger\)$/);
+    // Submit applies both and regenerates with the mode's options.
+    fireEvent.click(within(card).getByRole('button', { name: 'One-handed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
+    await waitFor(() => expect(window.localStorage.getItem(TYPING_MODE_KEY)).toBe('"one-handed"'));
+    expect(JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!)).toMatchObject({ comfort: 'strict', shiftReach: true, separator: ' ', madeUp: 1 });
+    await waitFor(() => expect(passwordsShown()).not.toEqual(passwords), { timeout: 10_000 });
+    // An option edited away from the mode's can be put back from the card.
+    fireEvent.click(screen.getByRole('button', { name: 'Balanced' }));
+    expect(within(card).getByText("The options differ from this mode's.")).toBeTruthy();
+    fireEvent.click(within(card).getByRole('button', { name: 'Use One-handed options' }));
+    expect(screen.getByRole('button', { name: 'Strict' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull(); // back to what is applied
 
     first.unmount();
     render(<App />);
     const again = screen.getByRole('heading', { name: 'Mode' }).closest<HTMLElement>('.panel')!;
     expect(within(again).getByRole('button', { name: 'One-handed' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Strict' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('disables the options a mode has no use for, with the reason, until the mode changes', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Two-finger' }));
+    expect(checkbox('Avoid pinky stretches').disabled).toBe(true);
+    expect(checkbox('Avoid pinky stretches').checked).toBe(false);
+    expect(screen.getByText('Two index fingers have no pinky to stretch.')).toBeTruthy();
+    expect(checkbox('Ease awkward words with deliberate swaps').disabled).toBe(true);
+    expect(screen.getByText(/are for ten fingers on the home row/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Space' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(within(screen.getByRole('region', { name: 'Unapplied changes' })).getByRole('button', { name: 'Discard' }));
+    expect(checkbox('Avoid pinky stretches').disabled).toBe(false);
+    expect(checkbox('Avoid pinky stretches').checked).toBe(true);
+    expect(screen.queryByText('Two index fingers have no pinky to stretch.')).toBeNull();
   });
 });
 
@@ -264,6 +307,22 @@ describe('App: order and pages', () => {
     expect(screen.getByText(/a deliberate swap costs nothing/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Scoring' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText(/read like a sentence/)).toBeTruthy(); // the one app description, on every page
+    // The options each mode fills in, one column per mode, and what they measure.
+    expect(screen.getByRole('heading', { name: 'Options by mode' })).toBeTruthy();
+    const options = screen.getByRole('table', { name: 'Options by mode' });
+    expect(within(options).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Option', 'Two-finger', 'Ten-finger', 'One-handed', 'Minimal-quick']);
+    const rows = within(options).getAllByRole('row').slice(1);
+    expect(rows.map((r) => r.firstElementChild!.textContent)).toEqual([
+      'Strength target', 'Shortest that meets the target', 'Typing comfort', 'Avoid pinky stretches', 'Keep Shift within reach', 'Ease awkward words with deliberate swaps',
+      'Separator', 'Include a number', 'Minimum swaps', 'Capital initials', 'Two-letter words', 'Made-up nouns', 'Glue',
+    ]);
+    expect(within(rows[0]!).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Strength target', '40 bits (Everyday)', '40 bits (Everyday)', '40 bits (Everyday)', '4 bits (Minimal)']);
+    expect(within(rows[3]!).getAllByRole('cell')[1]!.textContent).toBe('— 1'); // two-finger: not used, footnote 1
+    expect(screen.getByText('Two index fingers have no pinky to stretch.').tagName).toBe('LI');
+    expect(screen.getByRole('heading', { name: 'Measured' })).toBeTruthy();
+    const measured = screen.getByRole('table', { name: 'Measured by mode' });
+    expect(within(measured).getAllByRole('row').slice(1).map((r) => r.firstElementChild!.textContent)).toEqual(['Two-finger', 'Ten-finger', 'One-handed', 'Minimal-quick']);
+    expect(screen.getByText(/600 suggestions per mode/)).toBeTruthy();
   });
 
   it('shows the title above the tabs with the description beside it and the SalientForm credit', () => {

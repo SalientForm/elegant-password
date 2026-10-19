@@ -170,7 +170,11 @@
       },
       {
         "kind": "test",
-        "title": "has a Mode card at the top of the right column that rescores every difficulty at once and is remembered"
+        "title": "has a Mode card at the top of the right column that previews every difficulty at once, fills in its options as a draft, and is remembered once submitted"
+      },
+      {
+        "kind": "test",
+        "title": "disables the options a mode has no use for, with the reason, until the mode changes"
       },
       {
         "kind": "group",
@@ -435,6 +439,10 @@
       {
         "kind": "test",
         "title": "sets the strength preset, comfort, the pinky rule and the shape options"
+      },
+      {
+        "kind": "test",
+        "title": "offers the Minimal preset, the shortest-sentence and Shift-reach options, and disables what a typing mode has no use for"
       },
       {
         "kind": "test",
@@ -1202,6 +1210,51 @@
     ]
   },
   {
+    "file": "src/lib/generate.modes.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "shortest that meets the target"
+      },
+      {
+        "kind": "test",
+        "title": "at the Minimal target makes the shortest sentence the rules allow: one length, every password at or under it"
+      },
+      {
+        "kind": "test",
+        "title": "at 40 bits is the shortest window that still reaches 40 bits: never longer than the plan without it, honest bits"
+      },
+      {
+        "kind": "test",
+        "title": "leaves the windows alone when no cut reaches the target, and says the target is out of reach"
+      },
+      {
+        "kind": "test",
+        "title": "leaves a kept sentence as it is, with a warning when it is longer than the shortest plan"
+      },
+      {
+        "kind": "group",
+        "title": "keep Shift within reach"
+      },
+      {
+        "kind": "test",
+        "title": "never picks a shifted symbol out of one hand’s reach for swaps or closing marks, and puts the capital in reach"
+      },
+      {
+        "kind": "test",
+        "title": "prefers a word whose first letter capitalises in reach, and falls back to any word when none does"
+      },
+      {
+        "kind": "test",
+        "title": "drops the mappings whose output needs a far Shift key"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the automatic separator in reach: a space before a far symbol, and the closing mark with a warning when every symbol is far"
+      }
+    ]
+  },
+  {
     "file": "src/lib/generate.test.ts",
     "titles": [
       {
@@ -1511,6 +1564,43 @@
       {
         "kind": "test",
         "title": "neither loads nor saves through a localStorage whose getter throws: an undefined store means defaults, quietly"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/modeProfiles.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "mode profiles"
+      },
+      {
+        "kind": "test",
+        "title": "ten-finger is exactly the defaults, so nothing changes for anyone who never picks a mode"
+      },
+      {
+        "kind": "test",
+        "title": "set only strength, comfort and style: the site rules, the count and the rest stay as they were"
+      },
+      {
+        "kind": "test",
+        "title": "are valid at every site preset and make passwords that meet its rules"
+      },
+      {
+        "kind": "test",
+        "title": "match until one option is edited away, and the other modes never match"
+      },
+      {
+        "kind": "test",
+        "title": "two-finger has no use for the pinky rule or deliberate swaps; the other modes use every option"
+      },
+      {
+        "kind": "test",
+        "title": "Minimal-quick's target is the Minimal preset, below the yellow band, and the measured figures are filled in"
+      },
+      {
+        "kind": "group",
+        "title": "measured"
       }
     ]
   },
@@ -2240,6 +2330,10 @@
       {
         "kind": "test",
         "title": "persists applied settings, the mode, the applied sentence and the list; drafts are not persisted"
+      },
+      {
+        "kind": "test",
+        "title": "treats a typing mode as a draft that brings its options: nothing runs or is saved until applied, and Discard reverts both"
       },
       {
         "kind": "test",

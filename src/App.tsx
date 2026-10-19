@@ -262,7 +262,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
             {p.notice}
           </p>
         )}
-        <RequirementsForm value={draft.req} onChange={p.setReq} />
+        <RequirementsForm value={draft.req} onChange={p.setReq} typingMode={draft.typingMode} />
         <TwistsPanel req={draft.req} onReqChange={p.setReq} settings={draft.mappingSettings} onSettingsChange={p.setMappingSettings} relevant={relevant} />
     </>
   );
@@ -291,7 +291,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
             </div>
             <p className="hint">
               The sentence behind every suggestion below, drawn at random from the word lists. It stays the same until you
-              draw a new one with the button beside it; changing the rules or refreshing the suggestions keeps it.
+              draw a new one with the button beside it or apply a new Mode; changing the rules or refreshing the suggestions keeps it.
             </p>
           </div>
         </TabPanel>

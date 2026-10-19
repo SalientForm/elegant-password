@@ -43,8 +43,13 @@ export const memorabilityLevel = (score: number) => (score > MEMORABILITY_BANDS.
 
 /** Colour band for strength in bits: green from the "Strong" preset up, yellow from "Everyday", red below. */
 export const strengthLevel = (bits: number) => (bits >= STRENGTH_BANDS.green ? 'high' : bits >= STRENGTH_BANDS.yellow ? 'mid' : 'low');
-/** The preset a strength reaches, for the tooltip: "master password", "very strong", "strong", "everyday", or "weak". */
-export const strengthWord = (bits: number) => [...STRENGTH_PRESETS].reverse().find((p) => bits >= p.bits)?.label.toLowerCase() ?? 'weak';
+/** The preset a strength reaches, for the tooltip: "master password", "very strong", "strong", "everyday", or "weak" (below the yellow band; the Minimal preset is not a strength). */
+export const strengthWord = (bits: number) =>
+  [...STRENGTH_PRESETS]
+    .filter((p) => p.bits >= STRENGTH_BANDS.yellow)
+    .reverse()
+    .find((p) => bits >= p.bits)
+    ?.label.toLowerCase() ?? 'weak';
 
 interface BadgeProps {
   bits: number;

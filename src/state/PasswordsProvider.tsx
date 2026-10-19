@@ -1,9 +1,11 @@
-// One provider owns everything the app knows: the settings, the mode, the
-// typing mode, the sentence, the current passwords, and the user's own list. Edits are a
-// draft until the user applies them; applied settings are what generation
-// uses and what is persisted, so a reload brings back exactly what was
-// applied. Generation runs off the render path (in a worker when the browser
-// has one), keeping the old passwords on screen until the new batch is ready.
+// One provider owns everything the app knows: the settings (the typing mode
+// among them), the mode, the sentence, the current passwords, and the user's
+// own list. Edits are a draft until the user applies them; applied settings
+// are what generation uses and what is persisted, so a reload brings back
+// exactly what was applied. Picking a typing mode is a draft too: it fills
+// in the options that suit the mode, and Submit applies both. Generation
+// runs off the render path (in a worker when the browser has one), keeping
+// the old passwords on screen until the new batch is ready.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { TypingMode } from '../lib/difficulty';
@@ -12,6 +14,7 @@ import type { SentenceOptions } from '../lib/fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
 import { createGenerator, type Generator } from '../lib/generator';
 import { activeMappings, loadMappingSettings, saveMappingSettings, type MappingSettings } from '../lib/mappingStore';
+import { withProfile } from '../lib/modeProfiles';
 import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from '../lib/selectedStore';
 import { loadSession, saveSession } from '../lib/sessionStore';
 import {
@@ -38,6 +41,8 @@ export interface Settings {
   sentenceOptions: SentenceOptions;
   mappingSettings: MappingSettings;
   sentence: string;
+  /** How the passwords will be typed. Generation never reads it; the options it fills in are what change the passwords. */
+  typingMode: TypingMode;
 }
 
 export interface PasswordsContextValue {
@@ -67,7 +72,11 @@ export interface PasswordsContextValue {
   /** How suggestions are ordered on screen. Takes effect at once. */
   sort: SortOrder;
   setSort: (next: SortOrder) => void;
-  /** How the passwords will be typed, which every difficulty score is for. Takes effect at once; generation does not depend on it. */
+  /**
+   * The draft's typing mode, which every difficulty score on screen is for
+   * (shown at once, a preview). Picking one also fills in the options that
+   * suit it, in the draft; Submit applies both, Discard reverts both.
+   */
   typingMode: TypingMode;
   setTypingMode: (next: TypingMode) => void;
   /** The last finished batch, kept on screen while the next one is made. */
@@ -123,11 +132,11 @@ export function PasswordsProvider({ children, generator: given, local, session, 
     sentenceOptions: loadSentenceOptions(localStore),
     mappingSettings: loadMappingSettings(localStore),
     sentence: restored?.sentence ?? '',
+    typingMode: loadTypingMode(localStore),
   }));
   const [draft, setDraft] = useState<Settings>(applied);
   const [mode, setMode] = useState(() => loadMode(localStore));
   const [sort, setSort] = useState(() => loadSort(localStore));
-  const [typingMode, setTypingMode] = useState(() => loadTypingMode(localStore));
   const [selected, setSelected] = useState(() => loadSelected(localStore));
   const [round, setRound] = useState(restored?.round ?? 0);
   const [generated, setGenerated] = useState<GeneratedSentence | null>(restored?.generated ?? null);
@@ -148,10 +157,14 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const problems = useMemo(() => ruleProblems(draft.req), [draft.req]);
   const draftRef = useRef(draft);
   draftRef.current = draft;
+  const appliedRef = useRef(applied);
+  appliedRef.current = applied;
   // The applied settings never hold a contradiction: a draft with one stays a draft, and the form says why.
   const apply = useCallback(() => {
     const next = draftRef.current;
     if (ruleProblems(next.req).length) return false;
+    // A new typing mode reshapes the sentence (its made-up nouns, its number), so it draws a new one rather than refusing the kept one.
+    if (next.typingMode !== appliedRef.current.typingMode) setGenerated(null);
     setApplied((current) => (sameSettings(current, next) ? current : next));
     setNotice(null);
     return true;
@@ -162,6 +175,8 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const setSentenceOptions = useCallback((next: SentenceOptions) => edit('sentenceOptions', next), [edit]);
   const setMappingSettings = useCallback((next: MappingSettings) => edit('mappingSettings', next), [edit]);
   const setSentence = useCallback((next: string) => edit('sentence', next), [edit]);
+  // A mode brings its options with it: the strength, comfort and style that suit it, over whatever the draft held (visible in the form, undone by Discard).
+  const setTypingMode = useCallback((next: TypingMode) => setDraft((d) => ({ ...d, typingMode: next, req: withProfile(d.req, next).req })), []);
 
   const mappings = useMemo(() => activeMappings(draft.mappingSettings), [draft.mappingSettings]);
   const appliedMappings = useMemo(() => activeMappings(applied.mappingSettings), [applied.mappingSettings]);
@@ -177,7 +192,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   useEffect(() => saveMappingSettings(applied.mappingSettings, localStore), [localStore, applied.mappingSettings]);
   useEffect(() => void saveMode(localStore, mode), [localStore, mode]);
   useEffect(() => void saveSort(localStore, sort), [localStore, sort]);
-  useEffect(() => void saveTypingMode(localStore, typingMode), [localStore, typingMode]);
+  useEffect(() => void saveTypingMode(localStore, applied.typingMode), [localStore, applied.typingMode]);
   useEffect(() => void saveSelected(localStore, selected), [localStore, selected]);
 
   // Generate when the applied inputs or the round change, unless the batch on
@@ -255,7 +270,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       setMode,
       sort,
       setSort,
-      typingMode,
+      typingMode: draft.typingMode,
       setTypingMode,
       outcome: result?.outcome ?? null,
       busy,
@@ -269,7 +284,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       clearSelected,
       isSelected,
     }),
-    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, mappings, mode, sort, typingMode, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, setTypingMode, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;
