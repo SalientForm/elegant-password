@@ -65,19 +65,19 @@ describe('SuggestionCard', () => {
     expect(screen.getByText(/It is your own sentence/)).toBeTruthy();
     expect(screen.queryByText(/your word/)).toBeNull(); // chips carry no "your word" label
     for (const step of s.steps) expect(screen.getByText(step)).toBeTruthy();
-    fireEvent.mouseEnter(screen.getByText(`S ${s.bits.toFixed(0)}`).parentElement!);
+    fireEvent.mouseEnter(screen.getByText(`Strength ${s.bits.toFixed(0)}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, .*scored from the password and its hint alone$/); // the same wording as any password
-    fireEvent.mouseLeave(screen.getByText(`S ${s.bits.toFixed(0)}`).parentElement!);
+    fireEvent.mouseLeave(screen.getByText(`Strength ${s.bits.toFixed(0)}`).parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.queryByText(/random bits/)).toBeNull();
     fireEvent.mouseEnter(screen.getByText(s.password).parentElement!);
     expect(screen.queryByRole('tooltip')).toBeNull(); // it fits, so no tip
-    fireEvent.mouseEnter(screen.getByText(`D ${s.difficulty.score}`).parentElement!);
+    fireEvent.mouseEnter(screen.getByText(`Difficulty ${s.difficulty.score}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()} (ten-finger)`);
-    fireEvent.mouseLeave(screen.getByText(`D ${s.difficulty.score}`).parentElement!);
+    fireEvent.mouseLeave(screen.getByText(`Difficulty ${s.difficulty.score}`).parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
-    expect(screen.getByText(`M ${s.memorability}`)).toBeTruthy();
-    fireEvent.mouseEnter(screen.getByText(`S ${s.bits.toFixed(0)}`).parentElement!);
+    expect(screen.getByText(`Memory ${s.memorability}`)).toBeTruthy();
+    fireEvent.mouseEnter(screen.getByText(`Strength ${s.bits.toFixed(0)}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak); scored from the password and its hint alone$/);
   });
 

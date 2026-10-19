@@ -68,7 +68,7 @@ describe('App: typing mode', () => {
     expect(within(card).getByText(/holds Shift too/)).toBeTruthy();
     // Every card's D badge is now the one-handed score of its password (the cards stay the same passwords).
     expect([...passwordsShown()].sort()).toEqual([...passwords].sort());
-    for (const c of cards()) expect(within(c).getByText(/^D \d+$/).getAttribute('aria-label')).toMatch(/^Difficulty \d+, \w+ \(one-handed\)$/);
+    for (const c of cards()) expect(within(c).getByText(/^Difficulty \d+$/).getAttribute('aria-label')).toMatch(/^Difficulty \d+, \w+ \(one-handed\)$/);
     // Opened, a card's table is the one-handed rubric, with the one-hand Shift criterion.
     fireEvent.click(within(cards()[0]!).getByRole('button', { name: /why/i }));
     expect(within(cards()[0]!).getByText('One-hand Shift')).toBeTruthy();
@@ -85,7 +85,7 @@ describe('App: typing mode', () => {
     expect(within(card).getByRole('button', { name: 'Ten-finger' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Balanced' }).getAttribute('aria-pressed')).toBe('true');
     expect(checkbox('Keep Shift within reach').checked).toBe(false);
-    for (const c of cards()) expect(within(c).getByText(/^D \d+$/).getAttribute('aria-label')).toMatch(/\(ten-finger\)$/);
+    for (const c of cards()) expect(within(c).getByText(/^Difficulty \d+$/).getAttribute('aria-label')).toMatch(/\(ten-finger\)$/);
     // Submit applies both and regenerates with the mode's options.
     fireEvent.click(within(card).getByRole('button', { name: 'One-handed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
@@ -218,8 +218,8 @@ describe('App: apply changes', () => {
 });
 
 describe('App: order and pages', () => {
-  const scores = () => cards().map((c) => Number(within(c).getByText(/^D \d+$/).textContent!.match(/\d+/)![0]));
-  const bits = () => cards().map((c) => Number(within(c).getByText(/^S \d+$/).textContent!.match(/\d+/)![0]));
+  const scores = () => cards().map((c) => Number(within(c).getByText(/^Difficulty \d+$/).textContent!.match(/\d+/)![0]));
+  const bits = () => cards().map((c) => Number(within(c).getByText(/^Strength \d+$/).textContent!.match(/\d+/)![0]));
 
   it('orders by difficulty by default, and by strength or memorability on request', { timeout: 30_000 }, async () => {
     render(<App />);
@@ -232,7 +232,7 @@ describe('App: order and pages', () => {
     expect([...strong].sort((a, b) => b - a)).toEqual(strong);
     expect(JSON.parse(window.localStorage.getItem('elegant-passwords:sort:v1')!)).toBe('strength');
     fireEvent.click(screen.getByRole('button', { name: 'Memorability' }));
-    const memo = cards().map((c) => Number(within(c).getByText(/^M \d+$/).textContent!.match(/\d+/)![0]));
+    const memo = cards().map((c) => Number(within(c).getByText(/^Memory \d+$/).textContent!.match(/\d+/)![0]));
     expect([...memo].sort((a, b) => b - a)).toEqual(memo);
   });
 

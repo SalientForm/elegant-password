@@ -45,11 +45,11 @@ describe('PasswordTip', () => {
     render(
       <div style={{ overflow: 'hidden' }}>
         <InstantTip content="Difficulty 44, demanding">
-          <span>D 44</span>
+          <span>Difficulty 44</span>
         </InstantTip>
       </div>,
     );
-    const anchor = screen.getByText('D 44').parentElement!;
+    const anchor = screen.getByText('Difficulty 44').parentElement!;
     fireEvent.mouseEnter(anchor);
     const tip = screen.getByRole('tooltip');
     expect(tip.parentElement).toBe(document.body); // a portal: no card or column can clip it

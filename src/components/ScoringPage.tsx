@@ -15,7 +15,7 @@ export function ScoringPage() {
           only the random choices count. Which words were drawn, where the number went, which spellings the swaps
           chose: those add bits. Fixed rules add nothing: capitalising the first letter, the separator, which words
           become initials, and the deliberate swaps that ease awkward words. The closing symbol is drawn at random
-          for each password, for variety, but counts nothing either. 40 bits means about a trillion equally likely passwords. The "S" badge on
+          for each password, for variety, but counts nothing either. 40 bits means about a trillion equally likely passwords. The "Strength" badge on
           each card is green from the Strong preset at 50 bits, yellow from Everyday at 40, and red below.
         </p>
         <h3>The plan: exact</h3>

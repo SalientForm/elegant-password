@@ -48,18 +48,18 @@ describe('SelectedList', () => {
     delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
-    const s = first.getByText(`S ${score.bits.toFixed(0)}`);
+    const s = first.getByText(`Strength ${score.bits.toFixed(0)}`);
     expect(s.getAttribute('title')).toBeNull(); // the app's instant tip, not the browser's
     fireEvent.mouseEnter(s.parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
     fireEvent.mouseLeave(s.parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
-    const d = first.getByText(`D ${score.difficulty.score}`);
+    const d = first.getByText(`Difficulty ${score.difficulty.score}`);
     fireEvent.mouseEnter(d.parentElement!);
     expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()} (ten-finger)`); // the full reading, at once, for the typing mode
     fireEvent.mouseLeave(d.parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
-    fireEvent.mouseEnter(first.getByText(`M ${score.memorability.score}`).parentElement!);
+    fireEvent.mouseEnter(first.getByText(`Memory ${score.memorability.score}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Memorability \d+ of 100/);
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
@@ -90,7 +90,7 @@ describe('SelectedList with characters off the US keyboard', () => {
     const item = within(screen.getByRole('list', { name: 'My passwords' })).getByRole('listitem');
     expect(within(item).getByText('naïve;otters')).toBeTruthy();
     const score = scoreCold('naïve;otters', 'naive otters');
-    expect(within(item).getByText(`D ${score.difficulty.score}`)).toBeTruthy();
-    expect(within(item).getByText(`M ${score.memorability.score}`)).toBeTruthy();
+    expect(within(item).getByText(`Difficulty ${score.difficulty.score}`)).toBeTruthy();
+    expect(within(item).getByText(`Memory ${score.memorability.score}`)).toBeTruthy();
   });
 });
