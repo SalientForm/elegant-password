@@ -324,6 +324,139 @@
     ]
   },
   {
+    "file": "src/cli/config.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "parseConfig: what a valid file says"
+      },
+      {
+        "kind": "test",
+        "title": "reads every section into the engine's terms, with the line each key is on"
+      },
+      {
+        "kind": "test",
+        "title": "becomes a layer whose sources are the file and line"
+      },
+      {
+        "kind": "test",
+        "title": "takes options: preset, or no options at all, as the mode's preset"
+      },
+      {
+        "kind": "test",
+        "title": "accepts a mode by its alias and empty sections"
+      },
+      {
+        "kind": "group",
+        "title": "parseConfig: every way a file can be wrong, each with its line"
+      },
+      {
+        "kind": "test",
+        "title": "YAML that does not parse, with the line quoted"
+      },
+      {
+        "kind": "test",
+        "title": "a key twice in one section"
+      },
+      {
+        "kind": "test",
+        "title": "unquoted symbols read as a YAML tag, which would silently mean none: refused, with how to quote them"
+      },
+      {
+        "kind": "test",
+        "title": "a separator of \"#\" unquoted, which YAML reads as a comment"
+      },
+      {
+        "kind": "test",
+        "title": "an empty file"
+      },
+      {
+        "kind": "test",
+        "title": "a file that is not a map"
+      },
+      {
+        "kind": "test",
+        "title": "no version, a newer version, a wrong version"
+      },
+      {
+        "kind": "test",
+        "title": "unknown keys, at the top and in a section, with the likeliest one meant and the ones there are"
+      },
+      {
+        "kind": "test",
+        "title": "a section that is not a map"
+      },
+      {
+        "kind": "test",
+        "title": "an unknown mode or site preset, with the names there are"
+      },
+      {
+        "kind": "test",
+        "title": "values out of range or of the wrong kind, with the key, what was found and what is expected"
+      },
+      {
+        "kind": "test",
+        "title": "every problem at once, in line order, each followed by its line"
+      },
+      {
+        "kind": "test",
+        "title": "bad swaps: not a built-in, a malformed entry, a custom swap the core refuses, a duplicate"
+      },
+      {
+        "kind": "group",
+        "title": "serializeConfig"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips: written, then read, gives the same model"
+      },
+      {
+        "kind": "test",
+        "title": "writes the header, the mode with the choices, the preset's note and quoted symbols"
+      },
+      {
+        "kind": "test",
+        "title": "resolves to the same requirements as the model it came from"
+      },
+      {
+        "kind": "group",
+        "title": "files on disk"
+      },
+      {
+        "kind": "test",
+        "title": "loads a file"
+      },
+      {
+        "kind": "test",
+        "title": "a missing file says so and how to make it"
+      },
+      {
+        "kind": "test",
+        "title": "a directory says to name the file"
+      },
+      {
+        "kind": "test",
+        "title": "a file far too big to be a config is refused without reading it"
+      },
+      {
+        "kind": "test",
+        "title": "writes atomically, leaving no temporary file, mode 0644"
+      },
+      {
+        "kind": "test",
+        "title": "a failed write leaves the old file as it was, removes the temporary file, and says why"
+      },
+      {
+        "kind": "test",
+        "title": "a directory that does not exist says so"
+      },
+      {
+        "kind": "test",
+        "title": "the defaults written out are the defaults read back"
+      }
+    ]
+  },
+  {
     "file": "src/cli/fields.test.ts",
     "titles": [
       {
@@ -1962,6 +2095,27 @@
       {
         "kind": "test",
         "title": "refuses an impossible range"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/mappingSettings.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "mapping settings"
+      },
+      {
+        "kind": "test",
+        "title": "turns the defaults into every built-in mapping"
+      },
+      {
+        "kind": "test",
+        "title": "knows the built-in keys"
+      },
+      {
+        "kind": "test",
+        "title": "finds every unusable entry, with where it is"
       }
     ]
   },

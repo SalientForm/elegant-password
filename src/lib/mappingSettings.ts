@@ -16,9 +16,11 @@ export const DEFAULT_MAPPING_SETTINGS: MappingSettings = { disabled: [], custom:
 export const isBuiltInKey = (key: string): boolean => BUILT_IN_MAPPINGS.some((m) => mappingKey(m) === key);
 
 export interface MappingProblem {
-  /** Where in the settings: ['disabled', 2] or ['custom', 0, 'to']. */
-  path: (string | number)[];
+  /** Where in the settings: ['disabled', 2] or ['custom', 0]. */
+  path: ['disabled' | 'custom', number];
   message: string;
+  /** For a custom mapping listed twice, the index of its first listing. */
+  duplicateOf?: number;
 }
 
 /**
@@ -37,7 +39,7 @@ export function mappingSettingsProblems(settings: MappingSettings): MappingProbl
     if (problem) out.push({ path: ['custom', i], message: `${m.from}>${m.to}: ${problem}` });
     const key = mappingKey(m);
     const first = seen.get(key);
-    if (first !== undefined) out.push({ path: ['custom', i], message: `${key} is listed twice (also entry ${first + 1}).` });
+    if (first !== undefined) out.push({ path: ['custom', i], message: `${key} is listed twice.`, duplicateOf: first });
     else seen.set(key, i);
   });
   return out;
