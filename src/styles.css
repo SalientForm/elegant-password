@@ -140,7 +140,7 @@ main.columns > .sidebar, main.columns > .results, main.columns > .aside {
 main.columns > .sidebar::after, main.columns > .results::after, main.columns > .aside::after { content: ''; display: block; height: 1rem; }
 main.columns > .sidebar::after, main.columns > .aside::after { margin-top: -1rem; }
 main.columns > .results::after { margin-top: -0.9rem; }
-main.columns:has(.apply-bar) > .results::after { height: 6.5rem; } /* room under the column's end for the snackbar, a problem's two lines included */
+main.columns:has(.apply-bar) > .results::after { height: 7rem; } /* room under the column's end for the snackbar, a problem's two lines included */
 main.columns { padding-bottom: 0; }
 /*
  * Fewer than three columns fit (the app decides): between 800 and 1100 px two
@@ -515,9 +515,9 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
 .actions .status { font-size: 0.75rem; }
 
 /* Floating submit / discard buttons: no backdrop, just the two buttons over the page, and what blocks Submit above them */
-/* The unapplied-changes snackbar: a card 1 rem above the bottom (plus the safe-area inset), the state or the first problem at its left and the buttons at its right, like a Material snackbar. */
-.apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); z-index: 20; width: max-content; max-width: min(48rem, calc(100vw - 2rem)); pointer-events: none; }
-.snackbar { pointer-events: auto; display: flex; align-items: center; gap: 0.5rem 1rem; min-height: 3rem; padding: 0.5rem 0.6rem 0.5rem 1rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 0.75rem 8rem rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.3), 0 2px 6px rgb(0 0 0 / 0.2); } /* a wide 8 rem blur lifts it off whatever it floats over */
+/* The unapplied-changes snackbar: a card 1.5 rem above the bottom (plus the safe-area inset), the state or the first problem at its left and the buttons at its right, like a Material snackbar. */
+.apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); z-index: 20; width: max-content; max-width: min(48rem, calc(100vw - 2rem)); pointer-events: none; }
+.snackbar { pointer-events: auto; display: flex; align-items: center; gap: 0.5rem 1rem; min-height: 3rem; padding: 0.5rem 0.6rem 0.5rem 1rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 1.25rem 12rem rgb(0 0 0 / 0.55), 0 16px 48px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.25); } /* a wide 12 rem blur lifts it well off whatever it floats over */
 .snackbar.blocked { border-color: var(--bad); }
 .snackbar-text { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 0.85rem; overflow-wrap: anywhere; }
 .snackbar.blocked .snackbar-text { color: var(--bad); }
@@ -571,7 +571,7 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
   .prose th, .prose td { overflow-wrap: anywhere; padding: 0.25rem 0.3rem; font-size: 0.78rem; }
   .prose pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: visible; }
   .crack { grid-template-columns: 1fr; }
-  .app { padding: 0.75rem max(0.9rem, env(safe-area-inset-right, 0px)) calc(5rem + env(safe-area-inset-bottom, 0px)) max(0.9rem, env(safe-area-inset-left, 0px)); }
+  .app { padding: 0.75rem max(0.9rem, env(safe-area-inset-right, 0px)) calc(5.5rem + env(safe-area-inset-bottom, 0px)) max(0.9rem, env(safe-area-inset-left, 0px)); }
   .app-header .header-inner { padding: 0 max(0.9rem, env(safe-area-inset-right, 0px)) 0 max(0.9rem, env(safe-area-inset-left, 0px)); }
 }
 @media (pointer: coarse) {
