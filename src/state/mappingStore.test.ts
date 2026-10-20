@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { activeMappings, loadMappingSettings, parseMappingSettings, saveMappingSettings, STORAGE_KEY } from './mappingStore';
-import { BUILT_IN_MAPPINGS } from './twists';
+import { activeMappings } from '../lib/mappingSettings';
+import { BUILT_IN_MAPPINGS } from '../lib/twists';
+import { loadMappingSettings, parseMappingSettings, saveMappingSettings, STORAGE_KEY } from './mappingStore';
 
 describe('mapping settings', () => {
   it('round-trips through storage', () => {

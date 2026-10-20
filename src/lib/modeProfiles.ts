@@ -5,8 +5,10 @@
 // them to their neutral value and the form disables them, with the reason.
 // The generator never reads the mode: it reads these options.
 
+import { comfortLabel } from './choices';
 import { TYPING_MODES, type TypingMode } from './difficulty';
 import { DEFAULT_REQUIREMENTS, STRENGTH_PRESETS, type Requirements } from './generate';
+import type { Comfort } from './grammar';
 import { settleRules, type Settled } from './sitePresets';
 
 /** The options a mode sets, in the order the Scoring page lists them. */
@@ -130,7 +132,6 @@ export function matchesProfile(req: Requirements, mode: TypingMode): boolean {
 /** The options that have no meaning in a mode, with the reason. */
 export const unusedIn = (mode: TypingMode): readonly Unused[] => MODE_PROFILES[mode].unused;
 
-const COMFORT_LABELS = { strict: 'Strict', balanced: 'Balanced', relaxed: 'Relaxed' } as const;
 
 /** How a profile's value reads in the Scoring page's table; "—" for an option the mode does not use. */
 export function formatProfileValue(key: ProfileKey, mode: TypingMode): string {
@@ -142,7 +143,7 @@ export function formatProfileValue(key: ProfileKey, mode: TypingMode): string {
       return preset ? `${value} bits (${preset.label})` : `${value} bits`;
     }
     case 'comfort':
-      return COMFORT_LABELS[value as keyof typeof COMFORT_LABELS];
+      return comfortLabel(value as Comfort);
     case 'separator':
       return value === 'space-if-allowed' ? 'Space if allowed, else Auto' : 'Auto';
     case 'initials':

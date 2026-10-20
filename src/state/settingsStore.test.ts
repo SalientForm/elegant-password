@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SENTENCE_OPTIONS } from './fromSentence';
-import { DEFAULT_REQUIREMENTS } from './generate';
-import { ruleProblems } from './validation';
+import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
+import { DEFAULT_REQUIREMENTS } from '../lib/generate';
+import { ruleProblems } from '../lib/validation';
 import {
   loadMode,
   loadSort,
@@ -21,7 +21,7 @@ import {
   readRequirements,
   resetNotice,
 } from './settingsStore';
-import { DEFAULT_SORT } from './sort';
+import { DEFAULT_SORT } from '../lib/sort';
 import { memoryStore } from './storage';
 
 /** Requirements as this version saves them. */

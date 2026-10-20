@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
-import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from './lib/settingsStore';
+import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from './state/settingsStore';
 import { MEDIUM, NARROW, PHONE } from './components/useMediaQuery';
 
 afterEach(cleanup);

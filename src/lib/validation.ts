@@ -77,7 +77,27 @@ export const FIELD_LABELS: Record<keyof Requirements, string> = {
   count: 'number of suggestions',
 };
 
+/**
+ * Which kind of contradiction, so a front end can word it its own way (the
+ * CLI names flags and config keys, not form fields) without matching the
+ * message text.
+ */
+export type RuleProblemCode =
+  /** One field holds a value outside what it can be. */
+  | 'range'
+  /** The minimum length is above the maximum. */
+  | 'min-above-max'
+  /** The required uppercase letters, digits and symbols together need more characters than the maximum. */
+  | 'counts-exceed-max'
+  /** A symbol is required but no keyboard symbol is allowed. */
+  | 'symbols-none-allowed'
+  /** The chosen separator is a space or symbol the rules do not allow. */
+  | 'separator-not-allowed'
+  /** The chosen separator could never be one: a letter, a digit, more than one character, off the keyboard. */
+  | 'separator-invalid';
+
 export interface RuleProblem {
+  code: RuleProblemCode;
   /** The fields at fault; the message belongs beside the first. */
   fields: (keyof Requirements)[];
   message: string;
@@ -89,15 +109,15 @@ const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 /** Every contradiction in these requirements, in form order. Empty when they can be submitted. */
 export function ruleProblems(req: Requirements): RuleProblem[] {
   const out: RuleProblem[] = [];
-  const add = (message: string, ...fields: (keyof Requirements)[]) => out.push({ fields, message });
+  const add = (code: RuleProblemCode, message: string, ...fields: (keyof Requirements)[]) => out.push({ code, fields, message });
 
   // Length.
   const minOk = whole(req.minLength, 1, MAX_LENGTH);
   const maxOk = whole(req.maxLength, 1, MAX_LENGTH);
-  if (!minOk) add(`The minimum length must be a whole number from 1 to ${MAX_LENGTH}.`, 'minLength');
-  if (!maxOk) add(`The maximum length must be a whole number from 1 to ${MAX_LENGTH}.`, 'maxLength');
+  if (!minOk) add('range', `The minimum length must be a whole number from 1 to ${MAX_LENGTH}.`, 'minLength');
+  if (!maxOk) add('range', `The maximum length must be a whole number from 1 to ${MAX_LENGTH}.`, 'maxLength');
   if (minOk && maxOk && req.minLength > req.maxLength) {
-    add(`The minimum length (${req.minLength}) is above the maximum (${req.maxLength}).`, 'minLength', 'maxLength');
+    add('min-above-max', `The minimum length (${req.minLength}) is above the maximum (${req.maxLength}).`, 'minLength', 'maxLength');
   }
 
   // Must contain: each count in range, and together within the maximum (one character can meet only one of them).
@@ -108,7 +128,7 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
   ];
   const countsOk = counts.every(([key, label, , max]) => {
     if (whole(req[key], 0, max)) return true;
-    add(`${label} must be a whole number from 0 to ${max}.`, key);
+    add('range', `${label} must be a whole number from 0 to ${max}.`, key);
     return false;
   });
   if (countsOk && maxOk) {
@@ -116,6 +136,7 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
     const sum = needed.reduce((n, [key]) => n + req[key], 0);
     if (sum > req.maxLength) {
       add(
+        'counts-exceed-max',
         `${needed.map(([key, , one]) => plural(req[key], one)).join(' + ')} need at least ${sum} characters, more than the maximum of ${req.maxLength}.`,
         'maxLength',
         ...needed.map(([key]) => key),
@@ -124,10 +145,11 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
   }
 
   // Site allows: required symbols need at least one the tool can type.
-  if (typeof req.allowedSymbols !== 'string') add('The allowed symbols must be text.', 'allowedSymbols');
+  if (typeof req.allowedSymbols !== 'string') add('range', 'The allowed symbols must be text.', 'allowedSymbols');
   else if (whole(req.minSymbols, 1, MAX_SYMBOLS) && allowedSymbolSet(req).length === 0) {
     const listed = req.allowedSymbols.trim() ? ` (none of ${req.allowedSymbols.trim()} is a keyboard symbol)` : '';
     add(
+      'symbols-none-allowed',
       `${req.minSymbols === 1 ? 'A symbol is' : `${req.minSymbols} symbols are`} required, but no symbols are allowed${listed}. ` +
         'List the symbols the site accepts, or untick Symbols under Must contain.',
       'allowedSymbols',
@@ -137,15 +159,18 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
 
   // Strength and comfort.
   if (!(typeof req.targetBits === 'number' && req.targetBits >= 0 && req.targetBits <= MAX_TARGET_BITS)) {
-    add(`The target strength must be from 0 to ${MAX_TARGET_BITS} bits.`, 'targetBits');
+    add('range', `The target strength must be from 0 to ${MAX_TARGET_BITS} bits.`, 'targetBits');
   }
-  if (!COMFORTS.includes(req.comfort)) add('Typing comfort must be strict, balanced or relaxed.', 'comfort');
+  if (!COMFORTS.includes(req.comfort)) add('range', 'Typing comfort must be strict, balanced or relaxed.', 'comfort');
 
   // Style.
-  if (typeof req.separator !== 'string') add('The separator must be text.', 'separator');
+  if (typeof req.separator !== 'string') add('separator-invalid', 'The separator must be text.', 'separator');
   else if (typeof req.allowedSymbols === 'string') {
     const problem = separatorProblem(req.separator, req);
-    if (problem) add(/not allowed|not an allowed/.test(problem) ? `${problem} Choose Auto to use one the site allows.` : problem, 'separator');
+    if (problem) {
+      const notAllowed = /not allowed|not an allowed/.test(problem);
+      add(notAllowed ? 'separator-not-allowed' : 'separator-invalid', notAllowed ? `${problem} Choose Auto to use one the site allows.` : problem, 'separator');
+    }
   }
   const shapes: ['initials' | 'shorthand' | 'madeUp' | 'twists', string, number][] = [
     ['initials', 'Capital initials', MAX_INITIALS],
@@ -153,8 +178,8 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
     ['madeUp', 'Made-up nouns', MAX_MADE_UP],
     ['twists', 'Minimum swaps', MAX_TWISTS],
   ];
-  for (const [key, label, max] of shapes) if (!whole(req[key], 0, max)) add(`${label} must be between 0 and ${max}.`, key);
-  if (!whole(req.count, 1, MAX_COUNT)) add(`The number of suggestions must be between 1 and ${MAX_COUNT}.`, 'count');
+  for (const [key, label, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${label} must be between 0 and ${max}.`, key);
+  if (!whole(req.count, 1, MAX_COUNT)) add('range', `The number of suggestions must be between 1 and ${MAX_COUNT}.`, 'count');
   return out;
 }
 

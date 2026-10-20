@@ -581,17 +581,64 @@ export function plan(req: Requirements): Candidate {
     tooFewLetters ||= t.tooFewLetters;
     if (t.candidate && (!best || better(t.candidate.plan, best.plan))) best = t.candidate;
   }
-  if (!best) {
-    if (noClosing) throw new RequirementsError(noClosingProblem(ctx.allowed, ctx.separator));
-    throw new RequirementsError(
-      tooFewLetters
-        ? `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase} letters to capitalise. ` +
-          'Raise the maximum length or use fewer initials, two-letter words and made-up nouns.'
-        : `No sentence fits between ${req.minLength} and ${req.maxLength} characters. Try widening the length range, ` +
-          'or use your own sentence (Use my sentence), which can be shortened further.',
-    );
-  }
+  if (!best) throw new RequirementsError(noPlan(req, ctx, noClosing, tooFewLetters).message);
   return best;
+}
+
+/** Why no shape fits, for plan's error and planProblem. */
+function noPlan(req: Requirements, ctx: PlanContext, noClosing: boolean, tooFewLetters: boolean): PlanProblem {
+  if (noClosing) return { code: 'no-closing', message: noClosingProblem(ctx.allowed, ctx.separator) };
+  return tooFewLetters
+    ? {
+        code: 'too-few-letters',
+        message:
+          `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase} letters to capitalise. ` +
+          'Raise the maximum length or use fewer initials, two-letter words and made-up nouns.',
+      }
+    : {
+        code: 'no-fit',
+        message:
+          `No sentence fits between ${req.minLength} and ${req.maxLength} characters. Try widening the length range, ` +
+          'or use your own sentence (Use my sentence), which can be shortened further.',
+      };
+}
+
+/** Why requirements that pass ruleProblems still cannot be planned. */
+export interface PlanProblem {
+  /**
+   * 'no-fit': no sentence fits the length window; 'too-few-letters': none
+   * has enough letters to capitalise; 'no-closing': symbols are required
+   * and the only allowed one is the separator, which cannot end a
+   * password; 'rules': ruleProblems would have said it first.
+   */
+  code: 'no-fit' | 'too-few-letters' | 'no-closing' | 'rules';
+  message: string;
+}
+
+/**
+ * Why `plan(req)` would throw, or undefined when it would not: the same
+ * message, found faster, since it stops at the first shape that fits
+ * instead of comparing them all. For callers that only need to know
+ * whether the requirements can be planned at all (the CLI's wizard asks
+ * this of every choice it offers).
+ */
+export function planProblem(req: Requirements): PlanProblem | undefined {
+  let ctx: PlanContext;
+  try {
+    ctx = planContext(req);
+  } catch (e) {
+    if (e instanceof RequirementsError) return { code: 'rules', message: e.message };
+    throw e;
+  }
+  let noClosing = false;
+  let tooFewLetters = false;
+  for (const template of templates()) {
+    const t = candidateFor(template, req, ctx);
+    if (t.candidate) return undefined;
+    noClosing ||= t.noClosing;
+    tooFewLetters ||= t.tooFewLetters;
+  }
+  return noPlan(req, ctx, noClosing, tooFewLetters);
 }
 
 /** Prefer plans that meet the target; among those, the shortest; otherwise the strongest. */

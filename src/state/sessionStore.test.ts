@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { inputsKey, runInputs, type GenerateInputs } from './engine';
-import { DEFAULT_SENTENCE_OPTIONS } from './fromSentence';
-import { DEFAULT_REQUIREMENTS } from './generate';
+import { inputsKey, runInputs, type GenerateInputs } from '../lib/engine';
+import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
+import { DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { clearSession, isOutcome, isSuggestion, loadSession, parseSession, saveSession } from './sessionStore';
 import { memoryStore } from './storage';
-import { BUILT_IN_MAPPINGS } from './twists';
+import { BUILT_IN_MAPPINGS } from '../lib/twists';
 
 const inputs: GenerateInputs = { mode: 'generated', req: DEFAULT_REQUIREMENTS, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: BUILT_IN_MAPPINGS };
 

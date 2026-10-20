@@ -4,9 +4,9 @@
 // of the inputs that made it, so on reload the app shows it again instead
 // of rolling fresh passwords.
 
-import type { Outcome } from './engine';
-import type { GeneratedSentence, Suggestion } from './generate';
-import { SLOT_LABELS } from './grammar';
+import type { Outcome } from '../lib/engine';
+import type { GeneratedSentence, Suggestion } from '../lib/generate';
+import { SLOT_LABELS } from '../lib/grammar';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, removeKey, writeJson, type KeyValueStore } from './storage';
 
 export const SESSION_KEY = 'elegant-passwords:session:v1';

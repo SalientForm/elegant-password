@@ -5,7 +5,7 @@ import { fromSentence } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements, type Suggestion } from '../lib/generate';
 import { seeded } from '../lib/testRandom';
 import { watchedCount } from './resize';
-import { memorabilityLevel, needsStack, strengthLevel, strengthWord, SuggestionCard, type CardContext } from './SuggestionCard';
+import { needsStack, SuggestionCard, type CardContext } from './SuggestionCard';
 
 afterEach(cleanup);
 
@@ -230,33 +230,6 @@ describe('after the rows tests', () => {
     expect(document.createElement('div').offsetWidth).toBe(0); // jsdom's own answer, not undefined
     expect(Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')).toBeUndefined(); // Element.prototype's again
     expect(document.createElement('div').clientWidth).toBe(0);
-  });
-});
-
-describe('memorability badge colours', () => {
-  it('is green above 75, yellow above 45, red at or below 45', () => {
-    expect(memorabilityLevel(100)).toBe('high');
-    expect(memorabilityLevel(76)).toBe('high');
-    expect(memorabilityLevel(75)).toBe('mid');
-    expect(memorabilityLevel(46)).toBe('mid');
-    expect(memorabilityLevel(45)).toBe('low');
-    expect(memorabilityLevel(0)).toBe('low');
-  });
-});
-
-describe('strength badge', () => {
-  it('is green from 50 bits, yellow from 40, red below, and names the preset reached', () => {
-    expect(strengthLevel(72)).toBe('high');
-    expect(strengthLevel(50)).toBe('high');
-    expect(strengthLevel(49)).toBe('mid');
-    expect(strengthLevel(40)).toBe('mid');
-    expect(strengthLevel(39)).toBe('low');
-    expect(strengthWord(80)).toBe('master password');
-    expect(strengthWord(65)).toBe('very strong');
-    expect(strengthWord(55)).toBe('strong');
-    expect(strengthWord(41)).toBe('everyday');
-    expect(strengthWord(12)).toBe('weak'); // the Minimal preset (4 bits) is a target, not a strength
-    expect(strengthWord(4)).toBe('weak');
   });
 });
 

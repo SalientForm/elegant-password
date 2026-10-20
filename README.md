@@ -264,23 +264,41 @@ to GitHub Pages at https://salientform.github.io/elegant-password/.
 
 ## Layout
 
-- `src/lib/words.ts`: word pools per part of speech
-- `src/lib/keyboard.ts`: QWERTY model and typing cost
-- `src/lib/ease.ts`: deliberate swaps for typing ease
-- `src/lib/grammar.ts`: sentence templates and comfort-filtered pools
-- `src/lib/lengthModel.ts`: exact counting and uniform sampling under length limits
-- `src/lib/generate.ts`: requirements, plan selection, explanations
-- `src/lib/validation.ts`: every contradiction in a set of requirements, for the form, the store and the engine
-- `src/lib/twists.ts`: the 64 mappings and exact twist counting
-- `src/lib/mappingStore.ts`: localStorage persistence for mappings
-- `src/lib/fromSentence.ts`: "Use my sentence" mode
-- `src/lib/sitePresets.ts`, `ruleText.ts`: site rule presets and the pasted-rules parser
-- `src/lib/difficulty.ts`: the difficulty rubric
-- `src/lib/score.ts`: cold scoring of a password from its hint
-- `src/lib/engine.ts`, `src/lib/generator.ts`, `src/worker.ts`: generation as one pure function, in a worker or inline
-- `src/lib/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`: persistence with untrusted-input parsing
-- `src/lib/specPrompt.ts`: the Fun page prompt
+The web app and the command line share one core, `src/lib/`: every
+algorithm, rule, preset, label and reading lives there once, in plain
+TypeScript with no browser, Node or React, and both front ends reach the
+engine through the same calls (`inputsFor`, `runInputs`,
+`presentSuggestions`, `scoreReadings`). `src/boundaries.test.ts` fails if
+either front end imports past that line or does a step its own way.
+
+Shared core, `src/lib/`:
+
+- `words.ts`: word pools per part of speech
+- `keyboard.ts`: QWERTY model and typing cost
+- `ease.ts`: deliberate swaps for typing ease
+- `grammar.ts`: sentence templates and comfort-filtered pools
+- `lengthModel.ts`: exact counting and uniform sampling under length limits
+- `generate.ts`: requirements, plan selection, explanations
+- `validation.ts`: every contradiction in a set of requirements, each with a code
+- `consistency.ts`: contradictions including what only planning finds, and the unreachable-target warning
+- `twists.ts`, `mappingSettings.ts`: the 64 mappings, exact twist counting, and which are on
+- `fromSentence.ts`: "Use my sentence" mode
+- `sitePresets.ts`, `ruleText.ts`: site rule presets and the pasted-rules parser
+- `modeProfiles.ts`: the options each typing mode fills in
+- `difficulty.ts`: the difficulty rubric
+- `score.ts`: cold scoring of a password from its hint
+- `engine.ts`: generation as one pure function of plain inputs
+- `pipeline.ts`: settings to engine inputs, and suggestions as shown (rescored for the typing mode, ordered)
+- `readings.ts`: how the three scores read (badge label, figure, band, sentence)
+- `choices.ts`: the choice lists and their words (comfort, separators, sort orders)
+
+Web app:
+
 - `src/state/PasswordsProvider.tsx`: the provider that owns state, persistence and generation
+- `src/state/generator.ts`, `src/worker.ts`: generation in a worker or inline
+- `src/state/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`, `mappingStore.ts`: persistence with untrusted-input parsing
 - `src/components/`: React UI
+- `src/prompts/specPrompt.ts`: the Fun page prompt
 - `build/csp.ts`: the Content-Security-Policy added at build time
+
 - `docs/algorithm-flow.md`: the algorithm flow

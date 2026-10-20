@@ -1,17 +1,11 @@
 // Persists which built-in mappings are switched off and the user's own
-// mappings in localStorage.
+// mappings in localStorage. What the settings mean is shared core
+// (src/lib/mappingSettings.ts); only the storage is the web app's.
 
-import { BUILT_IN_MAPPINGS, mappingKey, validateMapping, type Mapping } from './twists';
+import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
+import { BUILT_IN_MAPPINGS, mappingKey, validateMapping } from '../lib/twists';
 
 export const STORAGE_KEY = 'elegant-passwords:mappings:v1';
-
-export interface MappingSettings {
-  /** Keys (see mappingKey) of built-in mappings the user switched off. */
-  disabled: string[];
-  custom: { from: string; to: string }[];
-}
-
-export const DEFAULT_MAPPING_SETTINGS: MappingSettings = { disabled: [], custom: [] };
 
 /** Parse stored settings, dropping anything malformed rather than failing. */
 export function parseMappingSettings(raw: string | null): MappingSettings {
@@ -51,13 +45,4 @@ export function saveMappingSettings(
   } catch {
     // Storage full or blocked: settings simply will not persist.
   }
-}
-
-/** Every mapping currently switched on, built-in first. */
-export function activeMappings(settings: MappingSettings): Mapping[] {
-  const off = new Set(settings.disabled);
-  return [
-    ...BUILT_IN_MAPPINGS.filter((m) => !off.has(mappingKey(m))),
-    ...settings.custom.map((m) => ({ ...m, kind: 'custom' as const })),
-  ];
 }

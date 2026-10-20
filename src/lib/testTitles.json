@@ -275,6 +275,55 @@
     ]
   },
   {
+    "file": "src/boundaries.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "src/lib, the shared core"
+      },
+      {
+        "kind": "test",
+        "title": "imports only from src/lib"
+      },
+      {
+        "kind": "test",
+        "title": "uses no browser or Node global, so it runs in both"
+      },
+      {
+        "kind": "test",
+        "title": "has tests that reach into neither front end"
+      },
+      {
+        "kind": "group",
+        "title": "the front ends"
+      },
+      {
+        "kind": "test",
+        "title": "keep apart: the web never imports the CLI"
+      },
+      {
+        "kind": "test",
+        "title": "keep apart: the CLI imports only src/lib, Node, its own packages and package.json"
+      },
+      {
+        "kind": "test",
+        "title": "the CLI reaches the engine only through the shared pipeline"
+      },
+      {
+        "kind": "test",
+        "title": "the web builds its inputs, orders its suggestions and reads its badges through the same shared calls"
+      },
+      {
+        "kind": "group",
+        "title": "this test"
+      },
+      {
+        "kind": "test",
+        "title": "reads imports of every shape the code uses"
+      }
+    ]
+  },
+  {
     "file": "src/components/ApplyBar.test.tsx",
     "titles": [
       {
@@ -609,22 +658,6 @@
       },
       {
         "kind": "group",
-        "title": "memorability badge colours"
-      },
-      {
-        "kind": "test",
-        "title": "is green above 75, yellow above 45, red at or below 45"
-      },
-      {
-        "kind": "group",
-        "title": "strength badge"
-      },
-      {
-        "kind": "test",
-        "title": "is green from 50 bits, yellow from 40, red below, and names the preset reached"
-      },
-      {
-        "kind": "group",
         "title": "tab stops on a card"
       },
       {
@@ -779,6 +812,100 @@
       {
         "kind": "test",
         "title": "shows an area’s bar while the pointer is over it, and the page’s while it scrolls"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/choices.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "choice lists"
+      },
+      {
+        "kind": "test",
+        "title": "cover every comfort level and every order, in the order the form shows them"
+      },
+      {
+        "kind": "test",
+        "title": "tell a symbol separator from Auto, Space and None"
+      },
+      {
+        "kind": "group",
+        "title": "separatorChoices"
+      },
+      {
+        "kind": "test",
+        "title": "offers Auto, Space, None and each allowed keyboard symbol once, each with why the rules rule it out"
+      },
+      {
+        "kind": "group",
+        "title": "separatorNote"
+      },
+      {
+        "kind": "test",
+        "title": "reads the same as the form: Auto resolved, space, none, a stretch, a far Shift, a plain symbol"
+      },
+      {
+        "kind": "test",
+        "title": "lists only the comfortable fallbacks for Auto"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/consistency.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "problemsOf"
+      },
+      {
+        "kind": "test",
+        "title": "finds nothing in the defaults or any mode-free preset of them"
+      },
+      {
+        "kind": "test",
+        "title": "reports every rule problem, tagged as the rules, before planning is tried"
+      },
+      {
+        "kind": "test",
+        "title": "reports a planning problem (${code}) once the rules agree, naming the fields it comes down to"
+      },
+      {
+        "kind": "test",
+        "title": "agrees with plan() on whether requirements can be planned, across a sweep of length windows and shapes"
+      },
+      {
+        "kind": "group",
+        "title": "warningsOf"
+      },
+      {
+        "kind": "test",
+        "title": "says nothing when the target is within reach"
+      },
+      {
+        "kind": "test",
+        "title": "warns when the rules cannot reach the target, with the bits they do reach, and is not a problem"
+      },
+      {
+        "kind": "test",
+        "title": "says nothing about requirements that have problems: those are reported, not warned about"
+      },
+      {
+        "kind": "group",
+        "title": "reachableBits"
+      },
+      {
+        "kind": "test",
+        "title": "is the bits of the strongest plan, whatever the target or Shortest"
+      },
+      {
+        "kind": "test",
+        "title": "decides which strength targets warn: at or below it none, above it one"
+      },
+      {
+        "kind": "test",
+        "title": "is undefined when the requirements cannot be planned"
       }
     ]
   },
@@ -1432,47 +1559,6 @@
     ]
   },
   {
-    "file": "src/lib/generator.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "generators"
-      },
-      {
-        "kind": "test",
-        "title": "runs inline"
-      },
-      {
-        "kind": "test",
-        "title": "matches worker answers to requests by id, in any order"
-      },
-      {
-        "kind": "test",
-        "title": "ignores answers it did not ask for"
-      },
-      {
-        "kind": "test",
-        "title": "makes the worker on first use and again after dispose, so a StrictMode cleanup cannot strand it"
-      },
-      {
-        "kind": "test",
-        "title": "falls back to running inline when the worker fails"
-      },
-      {
-        "kind": "test",
-        "title": "falls back to running inline when the worker stays silent"
-      },
-      {
-        "kind": "test",
-        "title": "forgets outstanding requests on dispose and ignores a late answer from the old worker"
-      },
-      {
-        "kind": "test",
-        "title": "creates an inline generator where there are no workers"
-      }
-    ]
-  },
-  {
     "file": "src/lib/hintConsistency.test.ts",
     "titles": [
       {
@@ -1584,35 +1670,6 @@
     ]
   },
   {
-    "file": "src/lib/mappingStore.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "mapping settings"
-      },
-      {
-        "kind": "test",
-        "title": "round-trips through storage"
-      },
-      {
-        "kind": "test",
-        "title": "drops malformed data instead of failing"
-      },
-      {
-        "kind": "test",
-        "title": "survives blocked storage"
-      },
-      {
-        "kind": "group",
-        "title": "mapping settings when the browser blocks storage"
-      },
-      {
-        "kind": "test",
-        "title": "neither loads nor saves through a localStorage whose getter throws: an undefined store means defaults, quietly"
-      }
-    ]
-  },
-  {
     "file": "src/lib/modeProfiles.test.ts",
     "titles": [
       {
@@ -1650,6 +1707,35 @@
     ]
   },
   {
+    "file": "src/lib/pipeline.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "inputsFor"
+      },
+      {
+        "kind": "test",
+        "title": "passes the settings through and turns mapping settings into the active mappings"
+      },
+      {
+        "kind": "test",
+        "title": "keeps a made-up sentence when given one"
+      },
+      {
+        "kind": "group",
+        "title": "presentSuggestions"
+      },
+      {
+        "kind": "test",
+        "title": "rescores difficulty for the typing mode, then orders by it"
+      },
+      {
+        "kind": "test",
+        "title": "leaves ten-finger scores as the engine made them"
+      }
+    ]
+  },
+  {
     "file": "src/lib/random.test.ts",
     "titles": [
       {
@@ -1683,6 +1769,43 @@
       {
         "kind": "test",
         "title": "never picks zero-weight entries and follows the weights"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/readings.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "memorability badge colours"
+      },
+      {
+        "kind": "test",
+        "title": "is green above 75, yellow above 45, red at or below 45"
+      },
+      {
+        "kind": "group",
+        "title": "strength badge"
+      },
+      {
+        "kind": "test",
+        "title": "is green from 50 bits, yellow from 40, red below, and names the preset reached"
+      },
+      {
+        "kind": "group",
+        "title": "score readings"
+      },
+      {
+        "kind": "test",
+        "title": "reads each score as its badge shows it: label, figure, band and the full sentence"
+      },
+      {
+        "kind": "test",
+        "title": "says memorability needs a hint when there is none, with no band to colour"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the labels the web badges and the CLI table both print"
       }
     ]
   },
@@ -1926,125 +2049,6 @@
     ]
   },
   {
-    "file": "src/lib/selectedStore.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "selected passwords"
-      },
-      {
-        "kind": "test",
-        "title": "adds one at a time, never the same password twice, and removes by password"
-      },
-      {
-        "kind": "test",
-        "title": "stores only the password and hint (and when it was added)"
-      },
-      {
-        "kind": "test",
-        "title": "drops malformed entries and repeats"
-      }
-    ]
-  },
-  {
-    "file": "src/lib/sessionStore.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "session store"
-      },
-      {
-        "kind": "test",
-        "title": "round-trips a real outcome so the current passwords survive a reload"
-      },
-      {
-        "kind": "test",
-        "title": "keeps a stored error outcome and an empty outcome"
-      },
-      {
-        "kind": "test",
-        "title": "keeps the made-up sentence, and drops only that when it is malformed"
-      },
-      {
-        "kind": "test",
-        "title": "rejects anything malformed rather than trusting it"
-      },
-      {
-        "kind": "group",
-        "title": "session records the cards cannot read"
-      },
-      {
-        "kind": "test",
-        "title": "rejects a suggestion whose typing profile or plan breakdown lacks the fields a card reads, instead of crashing a render"
-      }
-    ]
-  },
-  {
-    "file": "src/lib/settingsStore.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "settings store"
-      },
-      {
-        "kind": "test",
-        "title": "keeps valid fields and falls back per field for odd ones"
-      },
-      {
-        "kind": "test",
-        "title": "gives settings saved before \"Ease awkward words\" existed the new default, on, and keeps a stored choice"
-      },
-      {
-        "kind": "test",
-        "title": "returns the defaults for anything that does not validate"
-      },
-      {
-        "kind": "test",
-        "title": "parses sentence options and the mode"
-      },
-      {
-        "kind": "test",
-        "title": "round-trips through a store and survives a missing store"
-      },
-      {
-        "kind": "group",
-        "title": "stored requirements that fail validation as a whole"
-      },
-      {
-        "kind": "test",
-        "title": "are repaired field by field, so a minimum above the maximum never wipes every other setting on reload"
-      },
-      {
-        "kind": "test",
-        "title": "treats prototype keys as odd data: a stored \"toString\" is neither a comfort level nor an order"
-      },
-      {
-        "kind": "group",
-        "title": "stored requirements: contradictions, the reset report and older versions"
-      },
-      {
-        "kind": "test",
-        "title": "load every contradiction the form blocks as a set that validates, keeping what it can and naming what was reset"
-      },
-      {
-        "kind": "test",
-        "title": "put a separator the rules forbid back to Automatic rather than loosen the rules"
-      },
-      {
-        "kind": "test",
-        "title": "report nothing for a clean record, for no record, or for fields saved before they existed"
-      },
-      {
-        "kind": "test",
-        "title": "say which saved settings were reset, in words, or nothing at all"
-      },
-      {
-        "kind": "test",
-        "title": "read an older \";\" (the old default) as Automatic, and an older \"auto\" (a space first) as a space where spaces are allowed, so no passwords change"
-      }
-    ]
-  },
-  {
     "file": "src/lib/sitePresets.test.ts",
     "titles": [
       {
@@ -2111,44 +2115,6 @@
       {
         "kind": "test",
         "title": "strength: equal bits fall back to the lower difficulty, then the higher memorability"
-      }
-    ]
-  },
-  {
-    "file": "src/lib/specPrompt.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "spec prompt"
-      },
-      {
-        "kind": "test",
-        "title": "covers every page, mode and option"
-      },
-      {
-        "kind": "test",
-        "title": "lists every mapping and rubric criterion from the live constants"
-      }
-    ]
-  },
-  {
-    "file": "src/lib/storage.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "storage"
-      },
-      {
-        "kind": "test",
-        "title": "round-trips JSON through a store"
-      },
-      {
-        "kind": "test",
-        "title": "treats missing, malformed and blocked storage as nothing stored"
-      },
-      {
-        "kind": "test",
-        "title": "reports no browser storage outside a browser"
       }
     ]
   },
@@ -2358,6 +2324,23 @@
     ]
   },
   {
+    "file": "src/prompts/specPrompt.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "spec prompt"
+      },
+      {
+        "kind": "test",
+        "title": "covers every page, mode and option"
+      },
+      {
+        "kind": "test",
+        "title": "lists every mapping and rubric criterion from the live constants"
+      }
+    ]
+  },
+  {
     "file": "src/state/PasswordsProvider.test.tsx",
     "titles": [
       {
@@ -2407,6 +2390,216 @@
       {
         "kind": "test",
         "title": "saved before this check existed, is repaired on load, keeping every other setting, and says what was reset until the next submit"
+      }
+    ]
+  },
+  {
+    "file": "src/state/generator.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "generators"
+      },
+      {
+        "kind": "test",
+        "title": "runs inline"
+      },
+      {
+        "kind": "test",
+        "title": "matches worker answers to requests by id, in any order"
+      },
+      {
+        "kind": "test",
+        "title": "ignores answers it did not ask for"
+      },
+      {
+        "kind": "test",
+        "title": "makes the worker on first use and again after dispose, so a StrictMode cleanup cannot strand it"
+      },
+      {
+        "kind": "test",
+        "title": "falls back to running inline when the worker fails"
+      },
+      {
+        "kind": "test",
+        "title": "falls back to running inline when the worker stays silent"
+      },
+      {
+        "kind": "test",
+        "title": "forgets outstanding requests on dispose and ignores a late answer from the old worker"
+      },
+      {
+        "kind": "test",
+        "title": "creates an inline generator where there are no workers"
+      }
+    ]
+  },
+  {
+    "file": "src/state/mappingStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "mapping settings"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips through storage"
+      },
+      {
+        "kind": "test",
+        "title": "drops malformed data instead of failing"
+      },
+      {
+        "kind": "test",
+        "title": "survives blocked storage"
+      },
+      {
+        "kind": "group",
+        "title": "mapping settings when the browser blocks storage"
+      },
+      {
+        "kind": "test",
+        "title": "neither loads nor saves through a localStorage whose getter throws: an undefined store means defaults, quietly"
+      }
+    ]
+  },
+  {
+    "file": "src/state/selectedStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "selected passwords"
+      },
+      {
+        "kind": "test",
+        "title": "adds one at a time, never the same password twice, and removes by password"
+      },
+      {
+        "kind": "test",
+        "title": "stores only the password and hint (and when it was added)"
+      },
+      {
+        "kind": "test",
+        "title": "drops malformed entries and repeats"
+      }
+    ]
+  },
+  {
+    "file": "src/state/sessionStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "session store"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips a real outcome so the current passwords survive a reload"
+      },
+      {
+        "kind": "test",
+        "title": "keeps a stored error outcome and an empty outcome"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the made-up sentence, and drops only that when it is malformed"
+      },
+      {
+        "kind": "test",
+        "title": "rejects anything malformed rather than trusting it"
+      },
+      {
+        "kind": "group",
+        "title": "session records the cards cannot read"
+      },
+      {
+        "kind": "test",
+        "title": "rejects a suggestion whose typing profile or plan breakdown lacks the fields a card reads, instead of crashing a render"
+      }
+    ]
+  },
+  {
+    "file": "src/state/settingsStore.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "settings store"
+      },
+      {
+        "kind": "test",
+        "title": "keeps valid fields and falls back per field for odd ones"
+      },
+      {
+        "kind": "test",
+        "title": "gives settings saved before \"Ease awkward words\" existed the new default, on, and keeps a stored choice"
+      },
+      {
+        "kind": "test",
+        "title": "returns the defaults for anything that does not validate"
+      },
+      {
+        "kind": "test",
+        "title": "parses sentence options and the mode"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips through a store and survives a missing store"
+      },
+      {
+        "kind": "group",
+        "title": "stored requirements that fail validation as a whole"
+      },
+      {
+        "kind": "test",
+        "title": "are repaired field by field, so a minimum above the maximum never wipes every other setting on reload"
+      },
+      {
+        "kind": "test",
+        "title": "treats prototype keys as odd data: a stored \"toString\" is neither a comfort level nor an order"
+      },
+      {
+        "kind": "group",
+        "title": "stored requirements: contradictions, the reset report and older versions"
+      },
+      {
+        "kind": "test",
+        "title": "load every contradiction the form blocks as a set that validates, keeping what it can and naming what was reset"
+      },
+      {
+        "kind": "test",
+        "title": "put a separator the rules forbid back to Automatic rather than loosen the rules"
+      },
+      {
+        "kind": "test",
+        "title": "report nothing for a clean record, for no record, or for fields saved before they existed"
+      },
+      {
+        "kind": "test",
+        "title": "say which saved settings were reset, in words, or nothing at all"
+      },
+      {
+        "kind": "test",
+        "title": "read an older \";\" (the old default) as Automatic, and an older \"auto\" (a space first) as a space where spaces are allowed, so no passwords change"
+      }
+    ]
+  },
+  {
+    "file": "src/state/storage.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "storage"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips JSON through a store"
+      },
+      {
+        "kind": "test",
+        "title": "treats missing, malformed and blocked storage as nothing stored"
+      },
+      {
+        "kind": "test",
+        "title": "reports no browser storage outside a browser"
       }
     ]
   }

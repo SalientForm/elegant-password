@@ -9,7 +9,7 @@
 // silent past the timeout, every outstanding request and all later ones run
 // inline instead: the app always answers.
 
-import { runInputs, type GenerateRequest, type GenerateResponse, type Outcome } from './engine';
+import { runInputs, type GenerateRequest, type GenerateResponse, type Outcome } from '../lib/engine';
 
 export interface Generator {
   run(request: GenerateRequest): Promise<Outcome>;

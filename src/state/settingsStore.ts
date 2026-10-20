@@ -2,15 +2,15 @@
 // options, which mode is open and the typing mode difficulty is scored for. None of these is a secret, so they live
 // in localStorage. Anything malformed falls back to the default.
 
-import { DEFAULT_TYPING_MODE, TYPING_MODE_IDS, type TypingMode } from './difficulty';
-import { MODES, type Mode } from './engine';
-import type { LengthTag } from './fluff';
-import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from './fromSentence';
-import { DEFAULT_REQUIREMENTS, type Requirements } from './generate';
-import { COMFORT_SHARE } from './grammar';
-import { DEFAULT_SORT, SORT_ORDERS, type SortOrder } from './sort';
+import { DEFAULT_TYPING_MODE, TYPING_MODE_IDS, type TypingMode } from '../lib/difficulty';
+import { MODES, type Mode } from '../lib/engine';
+import type { LengthTag } from '../lib/fluff';
+import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from '../lib/fromSentence';
+import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
+import { COMFORT_SHARE } from '../lib/grammar';
+import { DEFAULT_SORT, SORT_ORDERS, type SortOrder } from '../lib/sort';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, writeJson, type KeyValueStore } from './storage';
-import { FIELD_LABELS, ruleProblems } from './validation';
+import { FIELD_LABELS, ruleProblems } from '../lib/validation';
 
 export const REQUIREMENTS_KEY = 'elegant-passwords:requirements:v1';
 export const SENTENCE_OPTIONS_KEY = 'elegant-passwords:sentence-options:v1';

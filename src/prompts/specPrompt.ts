@@ -2,10 +2,10 @@
 // developer or model could rebuild it from. It is assembled from the live
 // constants, so it always matches the code.
 
-import { ONE_HAND_SECONDS, RUBRICS, SECONDS, LEVELS, LEVEL_WIDTH, TWO_FINGER_SECONDS, TYPING_MODES, type TypingMode } from './difficulty';
-import { ONE_HAND_SHIFT_REACH } from './keyboard';
-import { EASE_EXCLUDED, EASE_RULES, LONG_REACH } from './ease';
-import { DEFAULT_SENTENCE_OPTIONS, SMALL_WORDS } from './fromSentence';
+import { ONE_HAND_SECONDS, RUBRICS, SECONDS, LEVELS, LEVEL_WIDTH, TWO_FINGER_SECONDS, TYPING_MODES, type TypingMode } from '../lib/difficulty';
+import { ONE_HAND_SHIFT_REACH } from '../lib/keyboard';
+import { EASE_EXCLUDED, EASE_RULES, LONG_REACH } from '../lib/ease';
+import { DEFAULT_SENTENCE_OPTIONS, SMALL_WORDS } from '../lib/fromSentence';
 import {
   ATTACK_SCENARIOS,
   DEFAULT_REQUIREMENTS,
@@ -19,7 +19,7 @@ import {
   MAX_UPPERCASE,
   SEPARATOR_PREFERENCE,
   STRENGTH_PRESETS,
-} from './generate';
+} from '../lib/generate';
 import {
   CLAUSES,
   COMFORT_SHARE,
@@ -30,20 +30,20 @@ import {
   SHORTHAND_PRIORITY,
   SLOT_LABELS,
   SMALL_SLOTS,
-} from './grammar';
-import { COST, PINKY_REACH } from './keyboard';
-import { STORAGE_KEY } from './mappingStore';
-import { formatProfileValue, MODE_MEASURES, MODE_PROFILES, PROFILE_KEYS, PROFILE_LABELS, unusedIn } from './modeProfiles';
-import { BITS_PER_ENGLISH_LETTER, MAX_TWISTS_PER_WORD, MEMORABILITY, MEMORABILITY_BANDS, MEMORABLE_DIGITS_CHOICES, STRENGTH_BANDS } from './score';
-import { SELECTED_KEY } from './selectedStore';
-import { SESSION_KEY } from './sessionStore';
-import { DEFAULT_WORKER_TIMEOUT_MS } from './generator';
-import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY, SORT_KEY, TYPING_MODE_KEY } from './settingsStore';
-import { RULE_KEYS, SITE_PRESETS } from './sitePresets';
-import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, type MappingKind } from './twists';
-import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from './words';
+} from '../lib/grammar';
+import { COST, PINKY_REACH } from '../lib/keyboard';
+import { STORAGE_KEY } from '../state/mappingStore';
+import { formatProfileValue, MODE_MEASURES, MODE_PROFILES, PROFILE_KEYS, PROFILE_LABELS, unusedIn } from '../lib/modeProfiles';
+import { BITS_PER_ENGLISH_LETTER, MAX_TWISTS_PER_WORD, MEMORABILITY, MEMORABILITY_BANDS, MEMORABLE_DIGITS_CHOICES, STRENGTH_BANDS } from '../lib/score';
+import { SELECTED_KEY } from '../state/selectedStore';
+import { SESSION_KEY } from '../state/sessionStore';
+import { DEFAULT_WORKER_TIMEOUT_MS } from '../state/generator';
+import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY, SORT_KEY, TYPING_MODE_KEY } from '../state/settingsStore';
+import { RULE_KEYS, SITE_PRESETS } from '../lib/sitePresets';
+import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, type MappingKind } from '../lib/twists';
+import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from '../lib/words';
 import algorithmFlow from '../../docs/algorithm-flow.md?raw';
-import testTitles from './testTitles.json';
+import testTitles from '../lib/testTitles.json';
 
 
 const code = (s: string) => `\`${s}\``;

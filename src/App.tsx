@@ -15,9 +15,9 @@ import { panelId, TabPanel, Tabs, tabId } from './components/Tabs';
 import { relevantTo, TwistsPanel } from './components/TwistsPanel';
 import { TypingModeCard } from './components/TypingModeCard';
 import { TypingTest } from './components/TypingTest';
-import { difficultyIn } from './lib/difficulty';
 import type { Mode } from './lib/engine';
-import { sortSuggestions, type SortOrder } from './lib/sort';
+import { SORT_CHOICES } from './lib/choices';
+import { presentSuggestions } from './lib/pipeline';
 import { normalizeSentence } from './lib/text';
 import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
 
@@ -43,12 +43,6 @@ const COLUMNS: { id: Column; label: string }[] = [
 ];
 /** A column's element id: the panel the matching tab in the phone bar controls. */
 const columnId = (id: Column) => panelId('section', id);
-
-const SORTS: { id: SortOrder; label: string; title: string }[] = [
-  { id: 'memorability', label: 'Memorability', title: 'Most memorable first' },
-  { id: 'difficulty', label: 'Difficulty', title: 'Easiest to type first' },
-  { id: 'strength', label: 'Strength', title: 'Strongest first' },
-];
 
 const MODE_TABS: { id: Mode; label: string }[] = [
   { id: 'generated', label: 'Make up a sentence' },
@@ -239,11 +233,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
   const nothingToRun = p.mode === 'sentence' && !draft.sentence.trim();
   // Difficulty is for the chosen typing mode, so "Difficulty" order follows it too.
   const typingMode = p.typingMode;
-  const scored = useMemo(
-    () => (outcome?.ok ? outcome.suggestions.map((s) => ({ ...s, difficulty: difficultyIn(s.password, s.difficulty, typingMode) })) : []),
-    [outcome, typingMode],
-  );
-  const ordered = sortSuggestions(scored, p.sort);
+  const ordered = useMemo(() => (outcome?.ok ? presentSuggestions(outcome.suggestions, typingMode, p.sort) : []), [outcome, typingMode, p.sort]);
   // In sentence mode, swaps whose letters are not in the sentence cannot apply; show them disabled.
   const sentenceWords = p.mode === 'sentence' ? normalizeSentence(draft.sentence) : [];
   const relevant = sentenceWords.length ? relevantTo(sentenceWords) : undefined;
@@ -305,8 +295,8 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
         <h2>Suggestions</h2>
         <div className="results-tools">
           <div className="segmented sort" role="group" aria-label="Order">
-            {SORTS.map((s) => (
-              <button type="button" key={s.id} className={p.sort === s.id ? 'active' : ''} aria-pressed={p.sort === s.id} title={s.title} onClick={() => p.setSort(s.id)}>
+            {SORT_CHOICES.map((s) => (
+              <button type="button" key={s.value} className={p.sort === s.value ? 'active' : ''} aria-pressed={p.sort === s.value} title={s.hint} onClick={() => p.setSort(s.value)}>
                 {s.label}
               </button>
             ))}

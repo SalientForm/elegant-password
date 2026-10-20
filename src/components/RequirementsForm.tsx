@@ -1,7 +1,6 @@
 import { DEFAULT_TYPING_MODE, type TypingMode } from '../lib/difficulty';
-import type { Comfort } from '../lib/grammar';
-import { automaticSeparator, MAX_DIGITS, MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_UPPERCASE, SEPARATOR_PREFERENCE, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
-import { isFarShift, isPinkyStretch } from '../lib/keyboard';
+import { COMFORT_CHOICES, isSymbolSeparator, MUST_CONTAIN, SEPARATOR_KINDS, separatorNote } from '../lib/choices';
+import { MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
 import { unusedIn, type ProfileKey } from '../lib/modeProfiles';
 import { ignoredSymbols, ruleProblems, type RuleProblem } from '../lib/validation';
 import { useShownProblems } from './useShownProblems';
@@ -14,27 +13,6 @@ interface Props {
   /** The draft's typing mode: options that have no meaning in it are disabled, with the reason. */
   typingMode?: TypingMode;
 }
-
-const MUST_CONTAIN: { key: 'minUppercase' | 'minDigits' | 'minSymbols'; label: string; max: number }[] = [
-  { key: 'minUppercase', label: 'Uppercase letters', max: MAX_UPPERCASE },
-  { key: 'minDigits', label: 'Digits', max: MAX_DIGITS },
-  { key: 'minSymbols', label: 'Symbols', max: MAX_SYMBOLS },
-];
-
-const COMFORT: { value: Comfort; label: string; hint: string }[] = [
-  { value: 'strict', label: 'Strict', hint: 'Only the easiest 40% of words. Smoothest to type, a little longer.' },
-  { value: 'balanced', label: 'Balanced', hint: 'Drops the 30% of words with the most awkward reaches.' },
-  { value: 'relaxed', label: 'Relaxed', hint: 'Every word. Shortest for a given strength.' },
-];
-
-const SEPARATORS: { value: string; label: string; title: string }[] = [
-  { value: 'auto', label: 'Auto', title: 'Automatic: whatever the site allows: ";" if it can, else a space, else "." or ","' },
-  { value: ' ', label: 'Space', title: 'A space, typed with the thumb' },
-  { value: '', label: 'None', title: 'The words run together' },
-];
-
-/** How a resolved separator reads in a sentence. */
-const describe = (separator: string) => (separator === ' ' ? 'a space' : separator === '' ? 'none, so the words run together' : `"${separator}"`);
 
 /** Where in the form a problem shows: beside the first field it names. */
 type Anchor = 'length' | 'must' | 'allows' | 'strength' | 'separator' | 'style' | 'other';
@@ -86,11 +64,8 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
     return p ? { 'aria-invalid': true as const, 'aria-describedby': `problems-${anchorOf(p)}`, 'data-field': field } : {};
   };
 
-  const symbolSeparator = !SEPARATORS.some((c) => c.value === value.separator);
-  const separatorStretch = value.avoidPinkyStretch && symbolSeparator && isPinkyStretch(value.separator);
-  const separatorFar = value.shiftReach && symbolSeparator && isFarShift(value.separator);
-  /** Whether the tool may pick a symbol on its own under the comfort rules: the pinky rule and Shift reach. */
-  const comfortable = (c: string) => !(value.avoidPinkyStretch && isPinkyStretch(c)) && !(value.shiftReach && isFarShift(c));
+  const symbolSeparator = isSymbolSeparator(value.separator);
+  const note = separatorNote(value);
   const separatorBlocked = problems.some((p) => p.fields[0] === 'separator');
   const ignored = ignoredSymbols(value.allowedSymbols);
 
@@ -202,7 +177,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
       <fieldset>
         <legend>Typing comfort</legend>
         <div className="segmented">
-          {COMFORT.map((c) => (
+          {COMFORT_CHOICES.map((c) => (
             <button
               type="button"
               key={c.value}
@@ -214,7 +189,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
             </button>
           ))}
         </div>
-        <p className="hint">{COMFORT.find((c) => c.value === value.comfort)?.hint}</p>
+        <p className="hint">{COMFORT_CHOICES.find((c) => c.value === value.comfort)?.hint}</p>
         <label className="check">
           <input
             type="checkbox"
@@ -262,7 +237,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
         </span>
         <div className="separator-row">
           <div className="segmented" role="group" aria-labelledby="separator-label">
-            {SEPARATORS.map((c) => {
+            {SEPARATOR_KINDS.map((c) => {
               const chosen = value.separator === c.value;
               // A space the site forbids cannot be picked; one picked before spaces were ruled out stays, with the error below.
               const ruledOut = c.value === ' ' && !value.allowSpaces;
@@ -273,7 +248,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
                   className={chosen ? 'active' : ''}
                   aria-pressed={chosen}
                   disabled={ruledOut && !chosen}
-                  title={ruledOut ? 'The site does not allow spaces' : c.title}
+                  title={ruledOut ? 'The site does not allow spaces' : c.hint}
                   onClick={() => set('separator', c.value)}
                   {...(chosen ? mark('separator') : {})}
                 >
@@ -301,20 +276,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
         <Problems list={problems} anchor="separator" />
         {!separatorBlocked && (
           <p className="hint">
-            {value.separator === 'auto'
-              ? `Auto: ${describe(automaticSeparator(value))} under these rules. It is ";" whenever the site allows it (home row, no Shift, and it counts as a symbol), else a space, else the first allowed of ${SEPARATOR_PREFERENCE.slice(1)
-                  .filter(comfortable)
-                  .map((c) => `"${c}"`)
-                  .join(' ')}, else none.`
-              : value.separator === ' '
-                ? 'A space: typed with the thumb.'
-                : value.separator === ''
-                  ? 'None: the words run together.'
-                  : separatorStretch
-                    ? `"${value.separator}" is a pinky stretch; kept because you chose it.`
-                    : separatorFar
-                      ? `"${value.separator}" needs a Shift key out of one hand's reach; kept because you chose it.`
-                      : `Words are joined with "${value.separator}". Clear the box for Auto.`}
+            {note.kind === 'symbol' ? `${note.text} Clear the box for Auto.` : note.text}
           </p>
         )}
         <label className="check">

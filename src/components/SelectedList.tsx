@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { difficultyIn } from '../lib/difficulty';
 import { scoreCold } from '../lib/score';
-import type { SelectedEntry } from '../lib/selectedStore';
+import type { SelectedEntry } from '../state/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
 import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';

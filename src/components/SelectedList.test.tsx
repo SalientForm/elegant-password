@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { syncGenerator } from '../lib/generator';
+import { syncGenerator } from '../state/generator';
 import { scoreCold } from '../lib/score';
-import { SELECTED_KEY } from '../lib/selectedStore';
-import { memoryStore } from '../lib/storage';
+import { SELECTED_KEY } from '../state/selectedStore';
+import { memoryStore } from '../state/storage';
 import { PasswordsProvider } from '../state/PasswordsProvider';
 import { SelectedList } from './SelectedList';
 

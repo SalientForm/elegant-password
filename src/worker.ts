@@ -1,5 +1,5 @@
 // Web Worker entry: generation off the main thread. One request in, one
-// response out, matched by id. See src/lib/generator.ts.
+// response out, matched by id. See src/state/generator.ts.
 
 import { runInputs, type GenerateRequest, type GenerateResponse } from './lib/engine';
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildSpecPrompt } from './specPrompt';
-import { BUILT_IN_MAPPINGS } from './twists';
-import { RUBRIC } from './difficulty';
+import { BUILT_IN_MAPPINGS } from '../lib/twists';
+import { RUBRIC } from '../lib/difficulty';
 
 describe('spec prompt', () => {
   const prompt = buildSpecPrompt();

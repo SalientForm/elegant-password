@@ -12,11 +12,13 @@ import type { TypingMode } from '../lib/difficulty';
 import { inputsKey, type GenerateInputs, type Mode, type Outcome } from '../lib/engine';
 import type { SentenceOptions } from '../lib/fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
-import { createGenerator, type Generator } from '../lib/generator';
-import { activeMappings, loadMappingSettings, saveMappingSettings, type MappingSettings } from '../lib/mappingStore';
+import { createGenerator, type Generator } from './generator';
+import { activeMappings, type MappingSettings } from '../lib/mappingSettings';
+import { loadMappingSettings, saveMappingSettings } from './mappingStore';
 import { withProfile } from '../lib/modeProfiles';
-import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from '../lib/selectedStore';
-import { loadSession, saveSession } from '../lib/sessionStore';
+import { inputsFor } from '../lib/pipeline';
+import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from './selectedStore';
+import { loadSession, saveSession } from './sessionStore';
 import {
   loadMode,
   loadRequirementsReport,
@@ -29,9 +31,9 @@ import {
   saveSentenceOptions,
   saveSort,
   saveTypingMode,
-} from '../lib/settingsStore';
+} from './settingsStore';
 import type { SortOrder } from '../lib/sort';
-import { browserStore, type KeyValueStore } from '../lib/storage';
+import { browserStore, type KeyValueStore } from './storage';
 import type { Mapping } from '../lib/twists';
 import { ruleProblems, type RuleProblem } from '../lib/validation';
 
@@ -179,11 +181,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const setTypingMode = useCallback((next: TypingMode) => setDraft((d) => ({ ...d, typingMode: next, req: withProfile(d.req, next).req })), []);
 
   const mappings = useMemo(() => activeMappings(draft.mappingSettings), [draft.mappingSettings]);
-  const appliedMappings = useMemo(() => activeMappings(applied.mappingSettings), [applied.mappingSettings]);
-  const inputs = useMemo<GenerateInputs>(
-    () => ({ mode, req: applied.req, sentence: applied.sentence, sentenceOptions: applied.sentenceOptions, mappings: appliedMappings, generated }),
-    [mode, applied, appliedMappings, generated],
-  );
+  const inputs = useMemo<GenerateInputs>(() => inputsFor({ ...applied, mode }, generated), [mode, applied, generated]);
   const key = useMemo(() => inputsKey(inputs), [inputs]);
 
   // Applied settings and the list survive for good; they hold no secrets.

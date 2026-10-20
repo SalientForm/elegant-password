@@ -1,12 +1,11 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { typingModeLabel, type Difficulty } from '../lib/difficulty';
 import { describeRemoved, easeOf } from '../lib/ease';
-import { roleLabel, STRENGTH_PRESETS, type Suggestion } from '../lib/generate';
+import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { isPinkyStretch } from '../lib/keyboard';
-import { MEMORABILITY, MEMORABILITY_BANDS, scoreCold, STRENGTH_BANDS } from '../lib/score';
-
-export { MEMORABILITY_BANDS, STRENGTH_BANDS };
+import { scoreReadings } from '../lib/readings';
+import { MEMORABILITY, scoreCold } from '../lib/score';
 import { MAPPING_KIND_LABELS } from '../lib/twists';
 import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
@@ -38,19 +37,6 @@ function separatorPhrase(sep: string): string {
   return `Words are joined with "${sep}", the same key every time, so it becomes a rhythm.${stretch}`;
 }
 
-/** Colour band for a memorability score: green above 75, yellow above 45, red below. */
-export const memorabilityLevel = (score: number) => (score > MEMORABILITY_BANDS.green ? 'high' : score > MEMORABILITY_BANDS.yellow ? 'mid' : 'low');
-
-/** Colour band for strength in bits: green from the "Strong" preset up, yellow from "Everyday", red below. */
-export const strengthLevel = (bits: number) => (bits >= STRENGTH_BANDS.green ? 'high' : bits >= STRENGTH_BANDS.yellow ? 'mid' : 'low');
-/** The preset a strength reaches, for the tooltip: "master password", "very strong", "strong", "everyday", or "weak" (below the yellow band; the Minimal preset is not a strength). */
-export const strengthWord = (bits: number) =>
-  [...STRENGTH_PRESETS]
-    .filter((p) => p.bits >= STRENGTH_BANDS.yellow)
-    .reverse()
-    .find((p) => bits >= p.bits)
-    ?.label.toLowerCase() ?? 'weak';
-
 interface BadgeProps {
   bits: number;
   difficulty: Pick<Difficulty, 'score' | 'level' | 'label' | 'mode'>;
@@ -60,31 +46,26 @@ interface BadgeProps {
   mine?: boolean;
 }
 
-/** The three score badges: "Strength 48", "Difficulty 44" and "Memory 71", with the full reading in each tooltip. */
+/** The three score badges: "Strength 48", "Difficulty 44" and "Memory 71", with the full reading in each tooltip (src/lib/readings.ts). */
 export function ScoreBadges({ bits, difficulty, memorability, mine = false }: BadgeProps) {
   void mine; // the same rule scores every password; nothing about its origin goes in
-  const strength = `Strength ${bits.toFixed(0)} bits, ${strengthWord(bits)}; scored from the password and its hint alone`;
-  const diff = `Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()} (${typingModeLabel(difficulty.mode).toLowerCase()})`;
-  const memo =
-    memorability === undefined
-      ? 'Memorability needs a hint: it measures how closely the password still looks like its sentence'
-      : `Memorability ${memorability} of 100: how closely it still looks like its hint`;
+  const r = scoreReadings({ bits, difficulty, memorability });
   // Each badge opens the app's instant tip with its full reading; no browser tooltip.
   return (
     <>
-      <InstantTip content={strength} className="badge-tip">
-        <span className={`badge strength memo-${strengthLevel(bits)}`} aria-label={strength}>
-          Strength {bits.toFixed(0)}
+      <InstantTip content={r.strength.text} className="badge-tip">
+        <span className={`badge strength memo-${r.strength.band}`} aria-label={r.strength.text}>
+          {r.strength.label} {r.strength.value}
         </span>
       </InstantTip>
-      <InstantTip content={diff} className="badge-tip">
-        <span className={`badge difficulty level-${difficulty.level}`} aria-label={diff}>
-          Difficulty {difficulty.score}
+      <InstantTip content={r.difficulty.text} className="badge-tip">
+        <span className={`badge difficulty level-${r.difficulty.level}`} aria-label={r.difficulty.text}>
+          {r.difficulty.label} {r.difficulty.value}
         </span>
       </InstantTip>
-      <InstantTip content={memo} className="badge-tip">
-        <span className={`badge memorability memo-${memorability === undefined ? 'none' : memorabilityLevel(memorability)}`} aria-label={memo}>
-          Memory {memorability ?? 'n/a'}
+      <InstantTip content={r.memorability.text} className="badge-tip">
+        <span className={`badge memorability memo-${r.memorability.band ?? 'none'}`} aria-label={r.memorability.text}>
+          {r.memorability.label} {r.memorability.value}
         </span>
       </InstantTip>
     </>

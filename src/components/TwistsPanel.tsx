@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
 import { isFarShift, isPinkyStretch } from '../lib/keyboard';
-import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingStore';
+import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
 import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, validateMapping, type Mapping, type MappingKind } from '../lib/twists';
 
 interface Props {

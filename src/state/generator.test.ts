@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runInputs, type GenerateRequest } from './engine';
-import { DEFAULT_SENTENCE_OPTIONS } from './fromSentence';
-import { DEFAULT_REQUIREMENTS } from './generate';
+import { runInputs, type GenerateRequest } from '../lib/engine';
+import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
+import { DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { createGenerator, syncGenerator, workerGenerator, type WorkerLike } from './generator';
-import { BUILT_IN_MAPPINGS } from './twists';
+import { BUILT_IN_MAPPINGS } from '../lib/twists';
 
 const request = (id: number, over: Partial<GenerateRequest> = {}): GenerateRequest => ({
   id,

@@ -2,9 +2,9 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
-import { syncGenerator } from '../lib/generator';
-import { REQUIREMENTS_KEY } from '../lib/settingsStore';
-import { memoryStore } from '../lib/storage';
+import { syncGenerator } from '../state/generator';
+import { REQUIREMENTS_KEY } from '../state/settingsStore';
+import { memoryStore } from '../state/storage';
 import { PasswordsProvider, usePasswords } from '../state/PasswordsProvider';
 import { ApplyBar } from './ApplyBar';
 
