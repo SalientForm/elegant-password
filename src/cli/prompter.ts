@@ -49,6 +49,10 @@ export function clackPrompter(): Prompter {
       return unwrap(await clack.confirm({ message: q.message, ...(q.initialValue !== undefined ? { initialValue: q.initialValue } : {}), output }));
     },
     note: (message, title) => clack.note(message, title, { output }),
+    // clack's box takes 6 columns: its bar and two spaces on each side.
+    get noteWidth() {
+      return (output.columns || 80) - 6;
+    },
     warn: (message) => clack.log.warn(message, { output }),
     error: (message) => clack.log.error(message, { output }),
     info: (message) => clack.log.info(message, { output }),

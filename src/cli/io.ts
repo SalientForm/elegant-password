@@ -54,6 +54,8 @@ export interface Prompter {
   confirm(q: { message: string; initialValue?: boolean }): Promise<boolean>;
   /** A block of information, with an optional title. */
   note(message: string, title?: string): void;
+  /** The columns a note's lines can use. A longer line is wrapped at the box's left edge, so callers wrap first (wrap.ts) to keep their columns. */
+  readonly noteWidth: number;
   warn(message: string): void;
   error(message: string): void;
   info(message: string): void;

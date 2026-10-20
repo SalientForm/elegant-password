@@ -43,6 +43,7 @@ import type { Prompter } from './io';
 import { explainProblem, explainWarning } from './messages';
 import { SITE_NAMES } from './names';
 import { badges, PLAIN } from './output';
+import { wrapHanging } from './wrap';
 
 const ISSUES = 'https://github.com/SalientForm/elegant-password/issues';
 
@@ -113,11 +114,24 @@ export function reviewLines(a: Answers): ReviewLine[] {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** The review's lines as shown: number, label and value in columns. */
-export function formatReview(lines: ReviewLine[]): string[] {
-  const width = Math.max(...lines.map((l) => l.label.length));
+/** The review's lines as shown: number, label and value in columns, a value that runs past `width` wrapped under its column. */
+export function formatReview(lines: ReviewLine[], width = Number.POSITIVE_INFINITY): string[] {
+  const labels = Math.max(...lines.map((l) => l.label.length));
   const index = String(lines.length).length;
-  return lines.map((l) => `${String(l.n).padStart(index)}  ${l.label.padEnd(width)}  ${l.value}`);
+  const column = index + 2 + labels + 2;
+  return lines.flatMap((l) => wrapHanging(`${String(l.n).padStart(index)}  ${l.label.padEnd(labels)}  ${l.value}`, width, column));
+}
+
+/**
+ * The question under the review. The prompter does not wrap a prompt's
+ * title, and where the terminal wraps it the rest starts at the left edge,
+ * outside the prompter's guide bar, so a narrow terminal gets the short
+ * form. The box's width plus its 6 columns is the terminal's; the title's
+ * mark and spaces take 3.
+ */
+export function reviewPrompt(count: number, noteWidth: number): string {
+  const full = `Change a line (1-${count}), s to save, q to quit without saving`;
+  return full.length + 3 <= noteWidth + 6 ? full : `Change a line (1-${count}), s save, q quit`;
 }
 
 /** Where each field is on the review screen. */
@@ -403,15 +417,16 @@ export class Wizard {
   // ------------------------------------------------------------ review
 
   private show(a: Answers, lines: ReviewLine[]) {
-    const body = formatReview(lines);
+    const width = this.p.noteWidth;
+    const body = formatReview(lines, width);
     const req = reqOf(a);
     const where = whereIn(lines);
     for (const w of warningsOf(req)) {
       const e = explainWarning(w, req, { source: (f) => ({ kind: 'wizard', line: where.lineOf(f) ?? 0, label: f.label }) });
-      body.push('', `Warning: ${e.title}`, `  ${e.fix}`);
+      body.push('', ...wrapHanging(`Warning: ${e.title}`, width, 'Warning: '.length), ...wrapHanging(`  ${e.fix}`, width, 2));
     }
     const sample = this.sample(a);
-    if (sample) body.push('', `Sample: ${sample.password}   ${sample.badges}`, `        hint: ${sample.hint}`);
+    if (sample) body.push('', ...wrapHanging(`Sample: ${sample.password}   ${sample.badges}`, width, 'Sample: '.length), ...wrapHanging(`        hint: ${sample.hint}`, width, '        hint: '.length));
     this.p.note(body.join('\n'), `Your answers, for ${this.opts.file}`);
   }
 
@@ -431,7 +446,7 @@ export class Wizard {
       this.show(a, lines);
       const choice = (
         await this.p.text({
-          message: `Change a line (1-${lines.length}), s to save, q to quit without saving`,
+          message: reviewPrompt(lines.length, this.p.noteWidth),
           validate: (v) => {
             const t = v.trim().toLowerCase();
             if (t === 's' || t === 'q') return undefined;

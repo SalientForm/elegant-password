@@ -1178,7 +1178,7 @@
       },
       {
         "kind": "test",
-        "title": "never meet a contradiction, never reach a dead end, and save a file tep g can use"
+        "title": "never meet a contradiction, never reach a dead end, fit the review to the box, and save a file tep g can use"
       }
     ]
   },
@@ -1204,6 +1204,10 @@
       {
         "kind": "test",
         "title": "shows every answer on a numbered review, with a sample password"
+      },
+      {
+        "kind": "test",
+        "title": "wraps the review to the box, each value that runs on kept under its column"
       },
       {
         "kind": "test",
@@ -1336,6 +1340,43 @@
       {
         "kind": "test",
         "title": "refuses a directory, or a file in a directory that does not exist"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/wrap.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "wrapHanging"
+      },
+      {
+        "kind": "test",
+        "title": "leaves a line that fits, or any line at an unbounded width, whole"
+      },
+      {
+        "kind": "test",
+        "title": "breaks at spaces and starts each run-on line under the column"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the first line's leading spaces and the gaps between its columns"
+      },
+      {
+        "kind": "test",
+        "title": "drops the gap at a break, so no line ends or starts with stray spaces"
+      },
+      {
+        "kind": "test",
+        "title": "splits a word longer than a line, still under the column"
+      },
+      {
+        "kind": "test",
+        "title": "starts run-on lines at the left when the column leaves too little room"
+      },
+      {
+        "kind": "test",
+        "title": "never loses or reorders a word, at any width"
       }
     ]
   },

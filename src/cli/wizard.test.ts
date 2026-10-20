@@ -15,9 +15,10 @@ import { answersOf, reviewLines } from './wizard';
 
 const dir = () => mkdtempSync(join(tmpdir(), 'tep-config-'));
 
-async function wizard(steps: Step[], over: { cwd?: string; args?: string[] } = {}) {
+async function wizard(steps: Step[], over: { cwd?: string; args?: string[]; noteWidth?: number } = {}) {
   const cwd = over.cwd ?? dir();
   const io = fakeIo({ stdinTTY: true, cwd, steps });
+  if (over.noteWidth) io.prompts.noteWidth = over.noteWidth;
   const code = await main(['config', ...(over.args ?? [])], io);
   const file = join(cwd, over.args?.[0] ?? 'tep.yml');
   return { code, io, cwd, file, text: existsSync(file) ? readFileSync(file, 'utf8') : undefined };
@@ -76,6 +77,27 @@ describe('tep config: a new file', () => {
       expect.stringMatching(/^Sample: .+ {3}Strength \d+ {2}Difficulty \d+ {2}Memorability \d+$/),
       expect.stringMatching(/^ {8}hint: /),
     ]);
+  });
+
+  it('wraps the review to the box, each value that runs on kept under its column', async () => {
+    // As in a 56-column terminal: the box leaves 50 columns for text.
+    const { io } = await wizard([...quick('One-handed', 'NIST passphrase'), { text: 's' }], { noteWidth: 50 });
+    const lines = io.prompts.said.find((s) => s.kind === 'note')!.message.split('\n');
+    for (const l of lines) expect(l.length, l).toBeLessThanOrEqual(50);
+    const site = lines.indexOf('2  Site rules   NIST passphrase (15-64, no');
+    expect(lines[site + 1]).toBe(' '.repeat(16) + 'must-haves)');
+    const options = lines.findIndex((l) => l.startsWith('3  Options'));
+    const passwords = lines.findIndex((l) => l.startsWith('4  Passwords'));
+    expect(passwords - options).toBeGreaterThan(3);
+    for (const l of lines.slice(options + 1, passwords)) expect(l).toMatch(/^ {16}\S/);
+    const sample = lines.findIndex((l) => l.startsWith('Sample: '));
+    for (const l of lines.slice(sample + 1)) expect(l).toMatch(/^ {8}\S/);
+    // The answers' words are the ones the full-width review shows, in order.
+    const full = (await wizard([...quick('One-handed', 'NIST passphrase'), { text: 's' }])).io.prompts.said.find((s) => s.kind === 'note')!.message.split('\n');
+    const words = (ls: string[]) => ls.slice(0, ls.findIndex((l) => l.startsWith('Sample: '))).join(' ').split(/\s+/).filter(Boolean);
+    expect(words(lines)).toEqual(words(full));
+    // The question under it is short enough not to wrap either.
+    expect(asked(io, /^Change a line/)[0]!.message).toBe('Change a line (1-5), s save, q quit');
   });
 
   it('q quits without writing anything', async () => {

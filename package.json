@@ -13,6 +13,8 @@
     "build": "tsc -b && vite build",
     "build:cli": "tsdown && chmod +x dist-cli/tep.mjs",
     "tep": "node dist-cli/tep.mjs",
+    "link:cli": "pnpm build:cli && node scripts/linkCli.mjs",
+    "unlink:cli": "node scripts/linkCli.mjs --remove",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

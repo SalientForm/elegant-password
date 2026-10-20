@@ -44,13 +44,19 @@ class RandomPrompter implements Prompter {
   readonly errors: string[] = [];
   readonly deadEnds: string[] = [];
   readonly gaps: { message: string; ms: number }[] = [];
+  /** Review lines wider than the box: the review wraps its own lines, so none should be. */
+  readonly overflows: string[] = [];
+  /** A box from a phone-narrow terminal to a wide one. */
+  readonly noteWidth: number;
   private last = cpuMs();
   private edits = 0;
 
   constructor(
     private readonly rng: RandomSource,
     private readonly maxEdits: number,
-  ) {}
+  ) {
+    this.noteWidth = 24 + randomInt(100, rng);
+  }
 
   private pick<T>(items: readonly T[]): T {
     return items[randomInt(items.length, this.rng)]!;
@@ -101,7 +107,9 @@ class RandomPrompter implements Prompter {
   async confirm(): Promise<boolean> {
     return this.done(randomInt(2, this.rng) === 0);
   }
-  note() {}
+  note(message: string) {
+    this.overflows.push(...message.split('\n').filter((l) => l.length > this.noteWidth));
+  }
   warn() {}
   info() {}
   error(message: string) {
@@ -110,7 +118,7 @@ class RandomPrompter implements Prompter {
 }
 
 describe('random walks through tep config', () => {
-  it('never meet a contradiction, never reach a dead end, and save a file tep g can use', async () => {
+  it('never meet a contradiction, never reach a dead end, fit the review to the box, and save a file tep g can use', async () => {
     const slow: { message: string; ms: number }[] = [];
     for (let seed = 1; seed <= 40; seed++) {
       const cwd = mkdtempSync(join(tmpdir(), 'tep-walk-'));
@@ -120,6 +128,7 @@ describe('random walks through tep config', () => {
       const code = await configCommand([], io);
       expect(prompter.errors, `seed ${seed}`).toEqual([]);
       expect(prompter.deadEnds, `seed ${seed}`).toEqual([]);
+      expect(prompter.overflows, `seed ${seed}: review lines wider than ${prompter.noteWidth}`).toEqual([]);
       expect(code, `seed ${seed}: ${io.err()}`).toBe(EXIT.ok);
       // Saved, or quit by a "no" to overwriting (only when a file exists, so never here): either way, a saved file is consistent.
       const loaded = loadConfig(join(cwd, 'tep.yml'), 'tep.yml');

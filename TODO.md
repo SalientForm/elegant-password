@@ -108,7 +108,7 @@ Still open:
 - **Arrow-key menus** for the questions and a typed line number on the
   review screen (§8). Two input styles in one wizard.
 - **No clipboard clearing** after `--copy` (§5.4).
-- **Not on npm; `pnpm link --global`** (§8). Publishing would need a
+- **Not on npm; `pnpm link:cli` links a checkout's build** (§8). Publishing would need a
   scoped name (`tep` is taken).
 - **Commands left out of v1** (§4): `tep score <password>`, `tep list`,
   `tep config show`, shell completions.

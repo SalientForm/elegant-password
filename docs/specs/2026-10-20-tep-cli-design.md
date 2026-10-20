@@ -376,8 +376,10 @@ Change a line (1-5), s to save, q to quit without saving:
   imports to hold that.
 - Bundled with tsdown to one ESM file with a `#!/usr/bin/env node`
   line, `bin: { tep }` in `package.json`, built by `pnpm build:cli`.
-  Not published to npm (the package stays private); installed by a
-  symlink to `dist-cli/tep.mjs` from a directory on the PATH (pnpm 10+'s
+  Not published to npm (the package stays private); `pnpm link:cli`
+  builds it and links `~/.local/bin/tep` (or `$TEP_BIN_DIR/tep`) to
+  `dist-cli/tep.mjs`, saying if that directory is off the PATH or another
+  `tep` comes first; `pnpm unlink:cli` removes the link (pnpm 10+'s
   `pnpm link` takes a directory and makes it a dependency of the project,
   so it does not install anything globally).
 - Dependencies: `node:util` `parseArgs` for flags, `yaml`, `zod`, and

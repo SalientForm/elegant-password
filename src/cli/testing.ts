@@ -49,6 +49,8 @@ export interface Asked {
 export class ScriptedPrompter implements Prompter {
   readonly asked: Asked[] = [];
   readonly said: { kind: 'note' | 'warn' | 'error' | 'info'; message: string; title?: string }[] = [];
+  /** As wide as any line, unless a test narrows it to see the wrapping. */
+  noteWidth = Number.POSITIVE_INFINITY;
   private i = 0;
 
   constructor(private readonly steps: Step[]) {}

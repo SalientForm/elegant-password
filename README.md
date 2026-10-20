@@ -238,19 +238,23 @@ explanation for each:
 same shared core as the web app, so a password from `tep` is made and scored
 exactly as the app would make and score it.
 
-    pnpm build:cli               # dist-cli/tep.mjs: one file, needs only Node 24
-    ln -s "$PWD/dist-cli/tep.mjs" ~/.local/bin/tep   # puts tep on your PATH
+    pnpm link:cli                # builds dist-cli/tep.mjs (one file, needs only Node 24)
+                                 # and links ~/.local/bin/tep to it
     tep g                        # ./tep.yml if there is one, else the defaults
     tep g --site short-max-16 --mode two-finger -n 3
     tep g --rules "8-20 characters, at least one number" --format json
     tep g --sentence - < sentence.txt
     tep config bank.yml          # a few questions, then tep g -c bank.yml
 
-Any directory on your PATH will do in place of `~/.local/bin`; the link
-follows the file, so a rebuild needs no relinking. Without the link, run
-`pnpm tep g …` or `node dist-cli/tep.mjs g …` from the project. Not
-`pnpm link`: from pnpm 10 on it takes a directory and adds it as a
-dependency of this project instead of installing anything globally.
+`TEP_BIN_DIR=<dir> pnpm link:cli` links from another directory on your
+PATH instead; it says if that directory is not on the PATH or another `tep`
+comes first. The link follows the file, so `pnpm build:cli` after a change
+needs no relinking; `pnpm unlink:cli` removes it. Without the link, run
+`pnpm tep g …` from the project. Not `pnpm link`: from pnpm 10 on it takes a
+directory and adds it to this project's dependencies, which puts
+`node_modules` out of step with the lockfile, so every later `pnpm` script
+stops to reinstall. If that happened, undo it with
+`git checkout -- package.json pnpm-lock.yaml && rm -f pnpm-workspace.yaml && pnpm install`.
 
 - **Settings** come from the defaults, then a config file (`./tep.yml`, or
   `-c`), then flags: a site preset, the site's rules (or their wording with
