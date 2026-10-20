@@ -43,9 +43,9 @@ explanation for each:
   lose it, and is never sent anywhere; it is only kept longer if you add a
   password to your list, as that password's hint.
 - **Submit, then it sticks.** Edits to the rules, swaps or sentence are a
-  draft: "Discard" and "Submit changes" float over the page (Ctrl+Enter
-  also submits; Escape discards, or in a text field first leaves the field)
-  and disappear once there is nothing to submit. Submitting saves the
+  draft: a snackbar at the foot of the page holds "Discard" and "Submit
+  changes" (Ctrl+Enter also submits; Escape discards, or in a text field
+  first leaves the field) and goes once there is nothing to submit. Submitting saves the
   settings and regenerates; "Refresh" submits any draft too.
 - **The sentence stays put.** A made-up sentence is kept until you press
   the refresh icon beside it. Refresh under Suggestions, the order and rule
