@@ -164,7 +164,7 @@ do not discount; the strength panel says so in one sentence.
 
 ## 5. When the flow runs
 
-Edits are a draft. Picking a typing mode (the Mode card) is one too: it
+Edits are a draft. Picking a typing mode (Mode, in the Presets card) is one too: it
 fills in the mode's options (`src/lib/modeProfiles.ts`; strength, comfort
 and style, never the site's rules) in the draft, previews the mode's
 difficulty at once, and is applied with them. The generator reads the

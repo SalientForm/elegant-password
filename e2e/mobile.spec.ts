@@ -108,7 +108,7 @@ async function barLaidOut(page: Page, where: string) {
   expect(menu.x, `${where}: hamburger at the left`).toBeLessThanOrEqual(bar.x + barPadding + 1);
   expect(Math.abs(tabs.x + tabs.width / 2 - width / 2), `${where}: tabs centred`).toBeLessThanOrEqual(1);
   expect(menu.x + menu.width, `${where}: hamburger clear of the tabs`).toBeLessThanOrEqual(tabs.x);
-  // Opaque, slightly lighter than the top of the page gradient it covers, with a drop shadow.
+  // Opaque, slightly lighter than the top of the page gradient it covers, with no shadow.
   const look = await page.evaluate(() => {
     const probe = (background: string) => {
       const el = document.createElement('div');
@@ -126,7 +126,7 @@ async function barLaidOut(page: Page, where: string) {
   expect(look.alpha, `${where}: bar opaque`).toBe(1);
   expect(look.bar, `${where}: bar lighter than the top of the gradient`).toBeGreaterThan(look.top);
   expect(look.bar - look.top, `${where}: only slightly lighter`).toBeLessThan(0.15);
-  expect(look.shadow, `${where}: bar drop shadow`).not.toBe('none');
+  expect(look.shadow, `${where}: no shadow`).toBe('none');
 }
 
 /** Fails unless every visible card is stacked exactly when its password at full width and its buttons cannot share a row. */
@@ -398,7 +398,14 @@ test('phone: the section tabs fit their text at 320 and 390 px and the page neve
     await page.reload();
     await settled(page);
     const tabs = await page.getByRole('tablist', { name: 'Sections' }).getByRole('tab').evaluateAll((buttons) =>
-      buttons.map((b) => ({ tab: b.textContent, overflows: b.scrollWidth > b.clientWidth })),
+      buttons.map((b) => {
+        // The label's own bounds against the tab's: the open tab's feet reach past its sides, so its scrollWidth is no guide.
+        const range = document.createRange();
+        range.selectNodeContents(b);
+        const text = range.getBoundingClientRect();
+        const box = b.getBoundingClientRect();
+        return { tab: b.textContent, overflows: text.left < box.left - 0.5 || text.right > box.right + 0.5 };
+      }),
     );
     expect(tabs, `${width}: no tab's text overflows`).toEqual(['Options', 'Suggestions', 'Testing'].map((tab) => ({ tab, overflows: false })));
     for (const name of ['Options', 'Testing', 'Suggestions']) {

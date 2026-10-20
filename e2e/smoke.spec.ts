@@ -99,19 +99,19 @@ test('"Refresh" rolls a fresh batch and applies any draft', async ({ page }) => 
 test('the sentence stays through Refresh, a rule change and a reload; only "New sentence" draws another', async ({ page }) => {
   const before = await settledPasswords(page);
   const sentence = page.getByTestId('generated-sentence');
-  const shown = await sentence.textContent();
+  const shown = await sentence.inputValue();
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await expect.poll(async () => passwords(page)).not.toEqual(before);
-  await expect(sentence).toHaveText(shown!);
+  await expect(sentence).toHaveValue(shown);
   await page.getByRole('button', { name: 'Relaxed', exact: true }).click();
   await page.getByRole('button', { name: 'Submit changes', exact: true }).click();
   await expect(applyBar(page)).toHaveCount(0);
-  await expect(sentence).toHaveText(shown!);
+  await expect(sentence).toHaveValue(shown);
   await page.reload();
   await settledPasswords(page);
-  await expect(sentence).toHaveText(shown!);
+  await expect(sentence).toHaveValue(shown);
   await page.getByRole('button', { name: 'New sentence', exact: true }).click();
-  await expect(sentence).not.toHaveText(shown!);
+  await expect(sentence).not.toHaveValue(shown);
 });
 
 test('adds a password to my list, scores it the same, and keeps the list across a reload', async ({ page }) => {
@@ -131,7 +131,7 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   await expect(practice).toContainText('Hint:'); // shown as text: a known hint cannot be edited
   await expect(page.getByLabel('Hint for the password under test', { exact: true })).toHaveCount(0);
   await expect(practice.locator('.badge.strength')).toHaveText(`Strength ${bits}`);
-  await expect(practice.locator('.badge.memorability')).toHaveText(/^Memory \d+$/);
+  await expect(practice.locator('.badge.memorability')).toHaveText(/^Memorability \d+$/);
 
   await page.reload();
   expect(await settledPasswords(page)).toEqual(shown);
@@ -317,9 +317,9 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
   await expect(hintField).toHaveValue(''); // typed by hand: no hint yet
   await expect(status.locator('.badge.strength')).toHaveText(/^Strength \d+$/);
   await expect(status.locator('.badge.difficulty')).toHaveText(/^Difficulty \d+$/);
-  await expect(status.locator('.badge.memorability')).toHaveText('Memory n/a');
+  await expect(status.locator('.badge.memorability')).toHaveText('Memorability n/a');
   await hintField.fill('sleepy otters');
-  await expect(status.locator('.badge.memorability')).toHaveText(/^Memory \d+$/); // a hint added by hand scores memorability
+  await expect(status.locator('.badge.memorability')).toHaveText(/^Memorability \d+$/); // a hint added by hand scores memorability
   // Pasting into the field chooses that password to test instead of typing it.
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.evaluate(() => navigator.clipboard.writeText('Pasted;words;77'));
@@ -341,7 +341,7 @@ test('tests a typed password in the masthead: speed, corrections, strength, and 
 test('orders suggestions by difficulty by default, and by strength or memorability on request', async ({ page }) => {
   await settledPasswords(page);
   const numbers = async (badge: string) => (await page.locator(`article.card .badge.${badge}`).allTextContents()).map((t) => Number(t.match(/\d+/)![0]));
-  await expect(cards(page).first().locator('.badge.memorability')).toHaveText(/^Memory \d+$/);
+  await expect(cards(page).first().locator('.badge.memorability')).toHaveText(/^Memorability \d+$/);
   await cards(page).first().locator('.badge.difficulty').hover();
   await expect(page.getByRole('tooltip')).toHaveText(/^Difficulty \d+, /); // at once, the app's own tip
   await page.mouse.move(0, 0);

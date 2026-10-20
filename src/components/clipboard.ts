@@ -1,6 +1,11 @@
 /** Select an element's text so the user can copy it by hand. */
 export function selectText(el: Element | null): void {
   if (!el || typeof document === 'undefined') return;
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    el.focus();
+    el.select(); // a field's text is its value, not its contents
+    return;
+  }
   const range = document.createRange();
   range.selectNodeContents(el);
   const selection = window.getSelection();

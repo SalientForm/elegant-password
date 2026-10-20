@@ -52,12 +52,14 @@ describe('App: typing mode', () => {
   const passwordsShown = () => cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent!);
   const checkbox = (name: string) => screen.getByRole('checkbox', { name }) as HTMLInputElement;
 
-  it('has a Mode card at the top of the right column that previews every difficulty at once, fills in its options as a draft, and is remembered once submitted', { timeout: 30_000 }, async () => {
+  it('has Mode at the top of the Presets card, first in the options column, that previews every difficulty at once, fills in its options as a draft, and is remembered once submitted', { timeout: 30_000 }, async () => {
     const first = render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
-    const card = screen.getByRole('heading', { name: 'Mode' }).closest<HTMLElement>('.panel')!;
-    expect(card.parentElement!.className).toBe('aside');
-    expect(card.parentElement!.firstElementChild).toBe(card);
+    const card = screen.getByRole('region', { name: 'Mode' });
+    const presets = screen.getByRole('region', { name: 'Presets' });
+    expect(presets.parentElement!.className).toBe('sidebar');
+    expect(presets.parentElement!.firstElementChild).toBe(presets);
+    expect(presets.querySelector('section')).toBe(card); // first in the card
     const modes = within(card).getAllByRole('button').map((b) => b.textContent);
     expect(modes).toEqual(['Two-finger', 'Ten-finger', 'One-handed', 'Minimal-quick']);
     expect(within(card).getByRole('button', { name: 'Ten-finger' }).getAttribute('aria-pressed')).toBe('true');
@@ -101,7 +103,7 @@ describe('App: typing mode', () => {
 
     first.unmount();
     render(<App />);
-    const again = screen.getByRole('heading', { name: 'Mode' }).closest<HTMLElement>('.panel')!;
+    const again = screen.getByRole('region', { name: 'Mode' });
     expect(within(again).getByRole('button', { name: 'One-handed' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Strict' }).getAttribute('aria-pressed')).toBe('true');
   });
@@ -161,7 +163,6 @@ describe('App: apply changes', () => {
     fireEvent.click(within(bar).getByRole('button', { name: 'Discard' }));
     expect(screen.getByRole('button', { name: /Typical site/ }).getAttribute('aria-pressed')).toBe('true');
 
-    fireEvent.click(screen.getByRole('button', { name: "Paste the site's rules" }));
     const box = screen.getByRole('textbox', { name: "The site's password rules" });
     fireEvent.paste(box);
     fireEvent.change(box, { target: { value: 'Password must be 14-40 characters and contain at least 2 numbers.' } });
@@ -232,14 +233,14 @@ describe('App: order and pages', () => {
     expect([...strong].sort((a, b) => b - a)).toEqual(strong);
     expect(JSON.parse(window.localStorage.getItem('elegant-passwords:sort:v1')!)).toBe('strength');
     fireEvent.click(screen.getByRole('button', { name: 'Memorability' }));
-    const memo = cards().map((c) => Number(within(c).getByText(/^Memory \d+$/).textContent!.match(/\d+/)![0]));
+    const memo = cards().map((c) => Number(within(c).getByText(/^Memorability \d+$/).textContent!.match(/\d+/)![0]));
     expect([...memo].sort((a, b) => b - a)).toEqual(memo);
   });
 
   it('shows the batch\'s one sentence under the mode tabs while making one up, whatever the order', async () => {
     render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
-    const shown = screen.getByTestId('generated-sentence').textContent;
+    const shown = (screen.getByTestId('generated-sentence') as HTMLTextAreaElement).value;
     expect(screen.queryByText('Fast to type')).toBeNull(); // every "Why?" starts closed
     const hints = () =>
       cards().map((c) => {
@@ -251,7 +252,7 @@ describe('App: order and pages', () => {
     const before = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent);
     for (const order of ['Strength', 'Memorability', 'Difficulty']) {
       fireEvent.click(screen.getByRole('button', { name: order }));
-      expect(screen.getByTestId('generated-sentence').textContent).toBe(shown); // the order never changes it
+      expect((screen.getByTestId('generated-sentence') as HTMLTextAreaElement).value).toBe(shown); // the order never changes it
       expect(new Set(hints())).toEqual(new Set([shown]));
       const now = cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent);
       expect([...now].sort()).toEqual([...before].sort()); // the same cards, only reordered
@@ -261,7 +262,7 @@ describe('App: order and pages', () => {
   it('keeps the sentence when Refresh makes new passwords; only the button beside the sentence draws a new one', { timeout: 30_000 }, async () => {
     render(<App />);
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
-    const sentence = () => screen.getByTestId('generated-sentence').textContent;
+    const sentence = () => (screen.getByTestId('generated-sentence') as HTMLTextAreaElement).value;
     const passwords = () => cards().map((c) => within(c).getByText((_, el) => el?.classList.contains('password') === true).textContent).join('|');
     const shown = sentence();
     const before = passwords();
@@ -281,15 +282,58 @@ describe('App: order and pages', () => {
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const sentenceCard = screen.getByRole('tablist', { name: 'How to make the sentence' }).closest('.panel')!;
     expect(sentenceCard.className).toBe('panel sentence-card');
+    expect(screen.getByRole('region', { name: 'Source Text' })).toBe(sentenceCard);
     expect(sentenceCard.contains(screen.getByTestId('generated-sentence'))).toBe(true);
     const suggestions = screen.getByRole('heading', { name: 'Suggestions' }).closest('.panel')!;
     expect(suggestions.className).toBe('panel suggestions');
-    expect(suggestions.contains(screen.getByRole('group', { name: 'Order' }))).toBe(true);
+    expect(suggestions.contains(screen.getByRole('group', { name: 'Order by' }))).toBe(true);
     expect(suggestions.contains(screen.getByRole('button', { name: 'Refresh' }))).toBe(true);
     for (const c of cards()) expect(suggestions.contains(c)).toBe(true);
     const strength = screen.getByRole('heading', { name: 'Why this sentence is strong' }).closest('.panel')!;
     expect(suggestions.contains(strength)).toBe(false);
     expect(sentenceCard.contains(strength)).toBe(false);
+  });
+
+  it('puts the site presets and the open paste box in the Presets card under Mode, above the Requirement options', () => {
+    render(<App />);
+    const presets = screen.getByRole('region', { name: 'Presets' });
+    const mode = within(presets).getByRole('region', { name: 'Mode' });
+    const site = within(presets).getByRole('region', { name: 'Site rules' });
+    expect(mode.compareDocumentPosition(site) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const form = screen.getByRole('heading', { name: 'Requirement options' }).closest('.panel')!;
+    expect(form.contains(presets)).toBe(false);
+    expect(presets.nextElementSibling).toBe(form);
+    expect(within(presets).getByRole('button', { name: /Typical site/ })).toBeTruthy();
+    expect(within(presets).getByRole('textbox', { name: "The site's password rules" })).toBeTruthy(); // no disclosure to open
+  });
+
+  it('lets the made-up sentence be edited, built as your own once submitted, copied, and replaced by a new draw', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
+    const field = screen.getByLabelText('Generated sentence') as HTMLTextAreaElement;
+    const drawn = field.value;
+    const hints = () =>
+      cards().map((c) => {
+        const why = within(c).queryByRole('button', { name: 'Why?' });
+        if (why) fireEvent.click(why); // the hint shows with the card's "Why?"
+        return within(c).getByText((_, el) => el?.classList.contains('hint-line') === true).textContent!.replace('Hint: ', '');
+      });
+    expect(screen.getByRole('button', { name: 'Copy sentence' }).parentElement).toBe(field.parentElement); // beside the sentence, with New sentence
+    fireEvent.change(field, { target: { value: 'Sally eats sweets on Sundays' } });
+    expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // a draft, like any other edit
+    fireEvent.keyDown(field, { key: 'Enter' });
+    await waitFor(() => expect(hints().every((h) => /sally/i.test(h))).toBe(true), { timeout: 10_000 });
+    expect(screen.queryByRole('heading', { name: 'Why this sentence is strong' })).toBeNull(); // scored as text, not as a draw
+    expect(screen.getByRole('heading', { name: 'How strong is this sentence?' })).toBeTruthy();
+    // Back to the words as drawn, it is unedited again: nothing to submit.
+    fireEvent.change(field, { target: { value: drawn } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    await waitFor(() => expect(new Set(hints())).toEqual(new Set([drawn])), { timeout: 10_000 });
+    fireEvent.change(field, { target: { value: 'Sally eats sweets on Sundays' } });
+    fireEvent.click(screen.getByRole('button', { name: 'New sentence' })); // a new draw replaces the edit
+    await waitFor(() => expect(field.value).not.toMatch(/Sally|^$/), { timeout: 10_000 });
+    expect(field.value).not.toBe(drawn);
+    expect(screen.queryByRole('region', { name: 'Unapplied changes' })).toBeNull();
   });
 
   it('has a Scoring page with the rubric and the bits explanation, and keeps the typing test and list in the right column', async () => {

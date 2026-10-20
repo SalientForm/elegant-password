@@ -1,7 +1,9 @@
+import { useEffect, useLayoutEffect, useRef, type Ref } from 'react';
 import type { LengthTag } from '../lib/fluff';
 import { lengthTagSymbol, TAG_SYMBOLS, type SentenceOptions, type ShrinkStyle } from '../lib/fromSentence';
 import { comfortableSymbols, type Requirements, type Suggestion } from '../lib/generate';
 import { NumberField } from './NumberField';
+import { observeResize } from './resize';
 
 interface InputProps {
   value: string;
@@ -142,6 +144,72 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
         password to your list, as that password’s hint.
       </p>
     </div>
+  );
+}
+
+interface GeneratedFieldProps {
+  /** The made-up sentence as it stands in the draft: as drawn, or as edited. */
+  value: string;
+  onChange: (next: string) => void;
+  /** Called on Enter: submit the edit at once. A sentence is one line, so Enter never adds a break. */
+  onSubmit?: () => void;
+  disabled?: boolean;
+  ref?: Ref<HTMLTextAreaElement>;
+}
+
+/** The made-up sentence, editable in place: a box that wraps like the text it holds and grows to fit it. */
+export function GeneratedSentenceField({ value, onChange, onSubmit, disabled, ref }: GeneratedFieldProps) {
+  const own = useRef<HTMLTextAreaElement>(null);
+  const fit = () => {
+    const el = own.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    if (el.scrollHeight) el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`; // no layout (as in tests): leave it to the rows
+  };
+  useLayoutEffect(fit, [value]);
+  // A narrower column wraps the sentence onto more lines. Refitted in the next frame, not inside the observer's callback, so the new height is not a resize it has to report again in the same frame.
+  useEffect(() => {
+    const el = own.current;
+    if (!el) return undefined;
+    let width = el.clientWidth;
+    let frame = 0;
+    const stop = observeResize(el, () => {
+      if (el.clientWidth === width) return;
+      width = el.clientWidth;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
+    });
+    return () => {
+      stop();
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  return (
+    <textarea
+      ref={(el) => {
+        own.current = el;
+        if (typeof ref === 'function') ref(el);
+        else if (ref) ref.current = el;
+      }}
+      id="generated-sentence"
+      className="generated-sentence"
+      data-testid="generated-sentence"
+      rows={1}
+      spellCheck={false}
+      autoComplete="off"
+      autoCapitalize="off"
+      placeholder="…"
+      disabled={disabled}
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/\s*\n\s*/g, ' '))}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          onSubmit?.();
+        }
+      }}
+    />
   );
 }
 

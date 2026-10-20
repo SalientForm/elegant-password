@@ -7,13 +7,15 @@ import { FunPage } from './components/FunPage';
 import { RequirementsForm } from './components/RequirementsForm';
 import { ScoringPage } from './components/ScoringPage';
 import { SelectedList } from './components/SelectedList';
-import { SentenceInput, SentenceStrength } from './components/SentenceMode';
+import { SiteRules } from './components/SiteRules';
+import { CopyButton } from './components/CopyButton';
+import { GeneratedSentenceField, SentenceInput, SentenceStrength } from './components/SentenceMode';
 import { StrengthPanel } from './components/StrengthPanel';
 import { SuggestionCard, type CardContext } from './components/SuggestionCard';
 import { MenuIcon, RefreshIcon } from './components/icons';
 import { panelId, TabPanel, Tabs, tabId } from './components/Tabs';
 import { relevantTo, TwistsPanel } from './components/TwistsPanel';
-import { TypingModeCard } from './components/TypingModeCard';
+import { TypingMode } from './components/TypingMode';
 import { TypingTest } from './components/TypingTest';
 import { difficultyIn } from './lib/difficulty';
 import type { Mode } from './lib/engine';
@@ -122,7 +124,7 @@ function PageLinks({ page, onPick }: { page: Page; onPick?: () => void }) {
 /**
  * On a phone a bar stuck to the top acts as the header: the page links fold
  * into a menu behind a hamburger at its left, and the three column tabs sit
- * centred. On the Scoring and Fun pages the page's name stands where the
+ * centred, index tabs standing on its bottom edge. On the Scoring and Fun pages the page's name stands where the
  * tabs would be.
  */
 function PhoneBar({ page, column, onColumn }: { page: Page; column: Column; onColumn: (next: Column) => void }) {
@@ -235,6 +237,9 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
   );
   const context: CardContext | undefined =
     outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
+  // The made-up sentence as the draft holds it: as drawn, or as the user edited it.
+  const madeUp = draft.editedSentence ?? p.generated?.words.join(' ') ?? '';
+  const madeUpField = useRef<HTMLTextAreaElement>(null);
   const emptySentence = p.mode === 'sentence' && !applied.sentence.trim();
   const nothingToRun = p.mode === 'sentence' && !draft.sentence.trim();
   // Difficulty is for the chosen typing mode, so "Difficulty" order follows it too.
@@ -262,6 +267,12 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
             {p.notice}
           </p>
         )}
+        {/* The Presets card: the typing mode, then the site's rules (one tap, or pasted); each fills in the options below. */}
+        <section className="panel presets-card" aria-labelledby="presets-heading">
+          <h2 id="presets-heading">Presets</h2>
+          <TypingMode />
+          <SiteRules value={draft.req} onChange={p.setReq} />
+        </section>
         <RequirementsForm value={draft.req} onChange={p.setReq} typingMode={draft.typingMode} />
         <TwistsPanel req={draft.req} onReqChange={p.setReq} settings={draft.mappingSettings} onSettingsChange={p.setMappingSettings} relevant={relevant} />
     </>
@@ -269,15 +280,23 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
   const centre = (
     <>
       {/* The sentence card: how to make the sentence, and the sentence itself (generated, or the user's own). */}
-      <section className="panel sentence-card" aria-label="Sentence">
+      <section className="panel sentence-card" aria-labelledby="source-text">
+        <h2 id="source-text">Source Text</h2>
         <Tabs tabs={MODE_TABS} value={p.mode} onChange={p.setMode} label="How to make the sentence" idPrefix="mode" />
         <TabPanel idPrefix="mode" id="generated" active={p.mode === 'generated'}>
           <div className="sentence">
-            <span className="field-label">Generated sentence</span>
+            <label className="field-label" htmlFor="generated-sentence">
+              Generated sentence
+            </label>
             <div className="generated-row">
-              <p className="generated-sentence" data-testid="generated-sentence" aria-live="polite">
-                {p.generated?.words.join(' ') ?? '…'}
-              </p>
+              <GeneratedSentenceField
+                value={madeUp}
+                disabled={!p.generated}
+                onChange={p.setEditedSentence}
+                onSubmit={p.apply}
+                ref={madeUpField}
+              />
+              <CopyButton text={madeUp} fallback={madeUpField} label="Copy sentence" icon />
               <button
                 type="button"
                 className="icon-button"
@@ -292,6 +311,8 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
             <p className="hint">
               The sentence behind every suggestion below, drawn at random from the word lists. It stays the same until you
               draw a new one with the button beside it or apply a new Mode; changing the rules or refreshing the suggestions keeps it.
+              You can edit it and apply the change (Enter submits): an edited sentence is no longer a random draw, so it is built and
+              scored like your own sentence, with the options under “Use my sentence”. Clear it and submit to go back to the drawn one.
             </p>
           </div>
         </TabPanel>
@@ -304,7 +325,10 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
       <section className="panel suggestions">
         <h2>Suggestions</h2>
         <div className="results-tools">
-          <div className="segmented sort" role="group" aria-label="Order">
+          <span className="field-label" id="order-by">
+            Order by
+          </span>
+          <div className="segmented sort" role="group" aria-labelledby="order-by">
             {SORTS.map((s) => (
               <button type="button" key={s.id} className={p.sort === s.id ? 'active' : ''} aria-pressed={p.sort === s.id} title={s.title} onClick={() => p.setSort(s.id)}>
                 {s.label}
@@ -376,7 +400,6 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
   );
   const aside = (
     <>
-      <TypingModeCard />
       <TypingTest />
       <SelectedList />
     </>

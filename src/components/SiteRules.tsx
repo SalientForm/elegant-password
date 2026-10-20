@@ -22,7 +22,8 @@ interface PresetNote {
 }
 
 /**
- * One-tap rule sets, and a box for the site's own wording. Both change the
+ * The site's rules, in the Presets card under the typing mode: one-tap rule
+ * sets, and a box for the site's own wording, always open. Both change the
  * rule fields, and only in the draft, like any other edit: nothing sticks
  * until it is submitted. Neither ever leaves the form contradicting itself:
  * a separator the new rules forbid becomes Automatic, and each such fix is
@@ -30,7 +31,6 @@ interface PresetNote {
  */
 export function SiteRules({ value, onChange }: Props) {
   const active = matchingPreset(value);
-  const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [filled, setFilled] = useState<Filled | null>(null);
   const pasting = useRef(false);
@@ -60,8 +60,8 @@ export function SiteRules({ value, onChange }: Props) {
         : 'No password rules recognised yet.';
 
   return (
-    <fieldset className="site-rules">
-      <legend>Site rule presets</legend>
+    <section className="site-rules" aria-labelledby="site-rules-heading">
+      <h3 id="site-rules-heading">Site rules</h3>
       <div className="presets">
         {SITE_PRESETS.map((p) => (
           <button
@@ -86,35 +86,31 @@ export function SiteRules({ value, onChange }: Props) {
           {note}
         </p>
       )}
-      <button type="button" className="ghost paste-toggle" aria-expanded={open} aria-controls={open ? 'paste-rules' : undefined} onClick={() => setOpen(!open)}>
-        <span aria-hidden="true">{open ? '▾' : '▸'}</span> Paste the site's rules
-      </button>
-      {open && (
-        <div className="paste-rules" id="paste-rules">
-          <textarea
-            aria-label="The site's password rules"
-            rows={3}
-            spellCheck={false}
-            placeholder="Must be 8-20 characters and include at least one number and one of !@#$%"
-            value={text}
-            onPaste={() => (pasting.current = true)}
-            onChange={(e) => {
-              setText(e.target.value);
-              // A paste fills the form at once; typed text waits for "Fill in".
-              if (pasting.current) fill(e.target.value);
-              pasting.current = false;
-            }}
-          />
-          <div className="paste-actions">
-            <p className={shown && !shown.found ? 'field-error' : 'hint'} role="status">
-              {status}
-            </p>
-            <button type="button" disabled={!text.trim()} onClick={() => fill(text)}>
-              Fill in
-            </button>
-          </div>
+      <div className="paste-rules" id="paste-rules">
+        <h3>Paste the site's rules</h3>
+        <textarea
+          aria-label="The site's password rules"
+          rows={3}
+          spellCheck={false}
+          placeholder="Must be 8-20 characters and include at least one number and one of !@#$%"
+          value={text}
+          onPaste={() => (pasting.current = true)}
+          onChange={(e) => {
+            setText(e.target.value);
+            // A paste fills the form at once; typed text waits for "Fill in".
+            if (pasting.current) fill(e.target.value);
+            pasting.current = false;
+          }}
+        />
+        <div className="paste-actions">
+          <p className={shown && !shown.found ? 'field-error' : 'hint'} role="status">
+            {status}
+          </p>
+          <button type="button" disabled={!text.trim()} onClick={() => fill(text)}>
+            Fill in
+          </button>
         </div>
-      )}
-    </fieldset>
+      </div>
+    </section>
   );
 }

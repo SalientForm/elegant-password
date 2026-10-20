@@ -17,6 +17,12 @@ export interface GenerateInputs {
   mappings: readonly Mapping[];
   /** The made-up sentence to keep (generated mode); null draws a new one. */
   generated?: GeneratedSentence | null;
+  /**
+   * The made-up sentence as the user edited it (generated mode); null or
+   * blank while it is as drawn. An edited sentence is no longer a random
+   * draw, so it is built and scored as the user's own sentence.
+   */
+  edited?: string | null;
 }
 
 export interface GenerateRequest extends GenerateInputs {
@@ -51,8 +57,9 @@ export interface GenerateResponse {
 /** Run the generator for these inputs. Never throws: problems come back as an outcome. */
 export function runInputs(inputs: GenerateInputs): Outcome {
   try {
-    if (inputs.mode === 'sentence') {
-      const r = fromSentence(inputs.sentence, inputs.req, inputs.sentenceOptions, { mappings: inputs.mappings });
+    const own = ownSentence(inputs);
+    if (own !== null) {
+      const r = fromSentence(own, inputs.req, inputs.sentenceOptions, { mappings: inputs.mappings });
       return { ok: true, source: 'sentence', separator: r.separator, suggestions: r.suggestions, warnings: r.warnings };
     }
     const r = generate(inputs.req, { mappings: inputs.mappings, sentence: inputs.generated ?? undefined });
@@ -61,6 +68,12 @@ export function runInputs(inputs: GenerateInputs): Outcome {
     if (e instanceof RequirementsError) return { ok: false, error: e.message };
     return { ok: false, error: e instanceof Error ? e.message : String(e), unexpected: true };
   }
+}
+
+/** The text to build from as the user's own sentence: theirs, or the made-up one they edited; null to make one up. */
+function ownSentence(inputs: GenerateInputs): string | null {
+  if (inputs.mode === 'sentence') return inputs.sentence;
+  return inputs.edited?.trim() ? inputs.edited : null;
 }
 
 /**
@@ -72,7 +85,8 @@ export function runInputs(inputs: GenerateInputs): Outcome {
 export function inputsKey(inputs: GenerateInputs): string {
   const req = Object.fromEntries(Object.entries(inputs.req).sort(([a], [b]) => a.localeCompare(b)));
   const mappings = inputs.mappings.map(mappingKey);
+  const edited = inputs.edited?.trim() ? { edited: inputs.edited, sentenceOptions: inputs.sentenceOptions } : {};
   const sentence =
-    inputs.mode === 'sentence' ? { sentence: inputs.sentence, sentenceOptions: inputs.sentenceOptions } : { generated: inputs.generated ?? null };
+    inputs.mode === 'sentence' ? { sentence: inputs.sentence, sentenceOptions: inputs.sentenceOptions } : { generated: inputs.generated ?? null, ...edited };
   return JSON.stringify({ mode: inputs.mode, req, mappings, ...sentence });
 }

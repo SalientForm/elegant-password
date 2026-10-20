@@ -20,6 +20,8 @@ export interface StoredSession {
   outcome: Outcome | null;
   /** The made-up sentence the user keeps until they draw a new one. */
   generated?: GeneratedSentence;
+  /** The made-up sentence as the user edited it, when they have. */
+  edited?: string;
 }
 
 const isStringArray = (x: unknown): x is string[] => Array.isArray(x) && x.every(isString);
@@ -87,7 +89,8 @@ export function parseSession(raw: unknown): StoredSession | undefined {
   if (raw.outcome !== null && !isOutcome(raw.outcome)) return undefined;
   // A made-up sentence that does not parse is dropped on its own: the app draws a new one.
   const generated = isGeneratedSentence(raw.generated) ? { generated: raw.generated } : {};
-  return { key: raw.key, round: raw.round, sentence: raw.sentence, outcome: raw.outcome as Outcome | null, ...generated };
+  const edited = generated.generated && isString(raw.edited) ? { edited: raw.edited } : {}; // an edit only means something with its sentence
+  return { key: raw.key, round: raw.round, sentence: raw.sentence, outcome: raw.outcome as Outcome | null, ...generated, ...edited };
 }
 
 export const loadSession = (store: KeyValueStore | undefined) => parseSession(readJson(store, SESSION_KEY));

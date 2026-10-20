@@ -60,7 +60,7 @@ interface BadgeProps {
   mine?: boolean;
 }
 
-/** The three score badges: "Strength 48", "Difficulty 44" and "Memory 71", with the full reading in each tooltip. */
+/** The three score badges: "Strength 48", "Difficulty 44" and "Memorability 71", with the full reading in each tooltip. */
 export function ScoreBadges({ bits, difficulty, memorability, mine = false }: BadgeProps) {
   void mine; // the same rule scores every password; nothing about its origin goes in
   const strength = `Strength ${bits.toFixed(0)} bits, ${strengthWord(bits)}; scored from the password and its hint alone`;
@@ -84,7 +84,7 @@ export function ScoreBadges({ bits, difficulty, memorability, mine = false }: Ba
       </InstantTip>
       <InstantTip content={memo} className="badge-tip">
         <span className={`badge memorability memo-${memorability === undefined ? 'none' : memorabilityLevel(memorability)}`} aria-label={memo}>
-          Memory {memorability ?? 'n/a'}
+          Memorability {memorability ?? 'n/a'}
         </span>
       </InstantTip>
     </>
