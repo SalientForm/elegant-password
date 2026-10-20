@@ -1,5 +1,6 @@
+import { LENGTH_TAG_CHOICES, SHRINK_CHOICES } from '../lib/choices';
 import type { LengthTag } from '../lib/fluff';
-import { lengthTagSymbol, TAG_SYMBOLS, type SentenceOptions, type ShrinkStyle } from '../lib/fromSentence';
+import { lengthTagSymbol, SHRINK_FROM_RANGE, TAG_SYMBOLS, TARGET_LENGTH_RANGE, type SentenceOptions } from '../lib/fromSentence';
 import { comfortableSymbols, type Requirements, type Suggestion } from '../lib/generate';
 import { NumberField } from './NumberField';
 
@@ -13,18 +14,6 @@ interface InputProps {
   /** The rules in the draft, to say when the chosen length tag cannot be used under them. */
   req?: Requirements;
 }
-
-const TAGS: { value: LengthTag; label: string }[] = [
-  { value: 'total', label: '%total: the whole length (%50 = 50 characters in all)' },
-  { value: 'factor', label: '@factor: a number that divides the length before it (@3)' },
-  { value: 'none', label: 'None' },
-];
-
-const SHRINK: { value: ShrinkStyle; label: string; example: string }[] = [
-  { value: 'none', label: 'Keep', example: 'Words stay whole unless the target length needs them shorter.' },
-  { value: 'vowels', label: 'Drop vowels', example: 'sweets → swts, jupiter → jptr' },
-  { value: 'ends', label: 'First + last', example: 'Two letters, first and last consonant: jupiter → jr, piece → pc' },
-];
 
 export function SentenceInput({ value, onChange, options, onOptionsChange, onSubmit, req }: InputProps) {
   // The tag needs one of its symbols; without one the padding still reaches the minimum, just untagged, and this says so.
@@ -60,27 +49,27 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
         <NumberField
           id="shrink-from"
           value={options.shrinkFrom}
-          min={2}
-          max={20}
+          min={SHRINK_FROM_RANGE.min}
+          max={SHRINK_FROM_RANGE.max}
           onCommit={(n) => n !== null && onOptionsChange({ ...options, shrinkFrom: n })}
         />
         <span className="field-label">+ letters</span>
         <div className="segmented">
-          {SHRINK.map((s) => (
+          {SHRINK_CHOICES.map((s) => (
             <button
               type="button"
               key={s.value}
               className={options.shrink === s.value ? 'active' : ''}
               aria-pressed={options.shrink === s.value}
               onClick={() => onOptionsChange({ ...options, shrink: s.value })}
-              title={s.example}
+              title={s.hint}
             >
               {s.label}
             </button>
           ))}
         </div>
       </div>
-      <p className="hint">{SHRINK.find((s) => s.value === options.shrink)?.example}</p>
+      <p className="hint">{SHRINK_CHOICES.find((s) => s.value === options.shrink)?.hint}</p>
       <label className="check">
         <input
           type="checkbox"
@@ -104,7 +93,7 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
       <label className="field">
         <span>Length tag at the end of the padding</span>
         <select value={options.lengthTag} disabled={!options.padding} onChange={(e) => onOptionsChange({ ...options, lengthTag: e.target.value as LengthTag })}>
-          {TAGS.map((t) => (
+          {LENGTH_TAG_CHOICES.map((t) => (
             <option key={t.value} value={t.value}>
               {t.label}
             </option>
@@ -126,8 +115,8 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
         <span>Compress toward (characters)</span>
         <NumberField
           value={options.targetLength}
-          min={1}
-          max={256}
+          min={TARGET_LENGTH_RANGE.min}
+          max={TARGET_LENGTH_RANGE.max}
           allowEmpty
           placeholder="max"
           onCommit={(n) => onOptionsChange({ ...options, targetLength: n })}

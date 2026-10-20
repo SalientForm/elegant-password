@@ -2,7 +2,7 @@ import { DEFAULT_TYPING_MODE, type TypingMode } from '../lib/difficulty';
 import { COMFORT_CHOICES, isSymbolSeparator, MUST_CONTAIN, SEPARATOR_KINDS, separatorNote } from '../lib/choices';
 import { MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
 import { unusedIn, type ProfileKey } from '../lib/modeProfiles';
-import { ignoredSymbols, ruleProblems, type RuleProblem } from '../lib/validation';
+import { ignoredSymbols, MAX_COUNT, MAX_LENGTH, MAX_TARGET_BITS, ruleProblems, type RuleProblem } from '../lib/validation';
 import { useShownProblems } from './useShownProblems';
 import { NumberField } from './NumberField';
 import { SiteRules } from './SiteRules';
@@ -81,11 +81,11 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
         <div className="row">
           <label className="field">
             <span>Minimum</span>
-            <NumberField {...num('minLength', 1, 256)} {...mark('minLength')} />
+            <NumberField {...num('minLength', 1, MAX_LENGTH)} {...mark('minLength')} />
           </label>
           <label className="field">
             <span>Maximum</span>
-            <NumberField {...num('maxLength', 1, 256)} {...mark('maxLength')} />
+            <NumberField {...num('maxLength', 1, MAX_LENGTH)} {...mark('maxLength')} />
           </label>
         </div>
         <Problems list={problems} anchor="length" />
@@ -161,7 +161,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
         </div>
         <label className="field inline">
           <span>Custom target (bits)</span>
-          <NumberField {...num('targetBits', 0, 256)} {...mark('targetBits')} />
+          <NumberField {...num('targetBits', 0, MAX_TARGET_BITS)} {...mark('targetBits')} />
         </label>
         <label className="check">
           <input type="checkbox" checked={value.shortest} onChange={(e) => set('shortest', e.target.checked)} />
@@ -324,7 +324,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
         </label>
         <label className="field inline">
           <span>Suggestions</span>
-          <NumberField {...num('count', 1, 20)} {...mark('count')} />
+          <NumberField {...num('count', 1, MAX_COUNT)} {...mark('count')} />
         </label>
         <Problems list={problems} anchor="style" />
       </fieldset>

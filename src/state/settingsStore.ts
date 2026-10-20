@@ -2,6 +2,7 @@
 // options, which mode is open and the typing mode difficulty is scored for. None of these is a secret, so they live
 // in localStorage. Anything malformed falls back to the default.
 
+import { LENGTH_TAG_CHOICES, SHRINK_CHOICES } from '../lib/choices';
 import { DEFAULT_TYPING_MODE, TYPING_MODE_IDS, type TypingMode } from '../lib/difficulty';
 import { MODES, type Mode } from '../lib/engine';
 import type { LengthTag } from '../lib/fluff';
@@ -18,8 +19,8 @@ export const MODE_KEY = 'elegant-passwords:mode:v1';
 export const SORT_KEY = 'elegant-passwords:sort:v1';
 export const TYPING_MODE_KEY = 'elegant-passwords:typing-mode:v1';
 
-const SHRINK_STYLES: readonly ShrinkStyle[] = ['none', 'vowels', 'ends'];
-const LENGTH_TAGS: readonly LengthTag[] = ['total', 'factor', 'none'];
+const SHRINK_STYLES: readonly ShrinkStyle[] = SHRINK_CHOICES.map((c) => c.value);
+const LENGTH_TAGS: readonly LengthTag[] = LENGTH_TAG_CHOICES.map((c) => c.value);
 
 /**
  * Saved with the requirements. Before version 2 there was no Automatic

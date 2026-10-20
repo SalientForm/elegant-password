@@ -82,6 +82,10 @@ export interface SentenceOptions {
   lengthTag: LengthTag;
 }
 
+/** The range of "Shrink words of N+ letters" and of "Compress toward N characters", for every front end. */
+export const SHRINK_FROM_RANGE = { min: 2, max: 20 } as const;
+export const TARGET_LENGTH_RANGE = { min: 1, max: 256 } as const;
+
 export const DEFAULT_SENTENCE_OPTIONS: SentenceOptions = {
   shrink: 'vowels',
   shrinkFrom: 6,

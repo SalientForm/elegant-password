@@ -324,6 +324,302 @@
     ]
   },
   {
+    "file": "src/cli/fields.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the field table"
+      },
+      {
+        "kind": "test",
+        "title": "covers every rule, every option a mode fills in, every sentence option, the count and the order, once each"
+      },
+      {
+        "kind": "test",
+        "title": "gives every field a label and a description, and a config key under its group"
+      },
+      {
+        "kind": "test",
+        "title": "names the strength presets as the spec lists them"
+      },
+      {
+        "kind": "group",
+        "title": "parseValue"
+      },
+      {
+        "kind": "test",
+        "title": "whole numbers: from text or YAML, in range"
+      },
+      {
+        "kind": "test",
+        "title": "true or false"
+      },
+      {
+        "kind": "test",
+        "title": "a choice, with the likeliest one meant"
+      },
+      {
+        "kind": "test",
+        "title": "allowed symbols: keyboard symbols only, each once, or none"
+      },
+      {
+        "kind": "test",
+        "title": "separator: auto, space, none, or one keyboard symbol"
+      },
+      {
+        "kind": "test",
+        "title": "strength: a preset name, \"master\", or bits from 0 to 256"
+      },
+      {
+        "kind": "test",
+        "title": "target length: none or 1-256"
+      },
+      {
+        "kind": "test",
+        "title": "symbolProblem says why a character cannot be a symbol, or nothing when it can"
+      },
+      {
+        "kind": "group",
+        "title": "formatValue and describeValue"
+      },
+      {
+        "kind": "test",
+        "title": "write values back the way they are typed"
+      },
+      {
+        "kind": "test",
+        "title": "and read them out in messages"
+      },
+      {
+        "kind": "test",
+        "title": "round-trips every field: written back and parsed again is the same value"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/messages.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "every contradiction, explained"
+      },
+      {
+        "kind": "test",
+        "title": "min-above-max: both values, where each came from, and how far to move either"
+      },
+      {
+        "kind": "test",
+        "title": "counts-exceed-max: the counts that need the room, the total, and each way out"
+      },
+      {
+        "kind": "test",
+        "title": "counts-exceed-max names a preset's values as the preset's, changed where the preset was chosen"
+      },
+      {
+        "kind": "test",
+        "title": "symbols-none-allowed"
+      },
+      {
+        "kind": "test",
+        "title": "separator-not-allowed: a space where spaces are not allowed"
+      },
+      {
+        "kind": "test",
+        "title": "separator-not-allowed: a symbol the site does not take, listing the ones it does"
+      },
+      {
+        "kind": "test",
+        "title": "separator-invalid: the core's reason, and what a separator can be"
+      },
+      {
+        "kind": "test",
+        "title": "no-fit: the length window, and the nearest window that works, found by the engine"
+      },
+      {
+        "kind": "test",
+        "title": "too-few-letters: every way to free letters, each with where to change it"
+      },
+      {
+        "kind": "test",
+        "title": "no-closing: the separator is the only symbol, so nothing can close the password"
+      },
+      {
+        "kind": "test",
+        "title": "range: a value out of range, named with where it came from"
+      },
+      {
+        "kind": "test",
+        "title": "renders as a title, then each value and the fix, indented"
+      },
+      {
+        "kind": "group",
+        "title": "the unreachable target, explained"
+      },
+      {
+        "kind": "test",
+        "title": "says how many bits the rules reach and the maximum length that would reach the target"
+      },
+      {
+        "kind": "test",
+        "title": "only suggests lowering the target when no length reaches it"
+      },
+      {
+        "kind": "group",
+        "title": "the searches behind the fixes"
+      },
+      {
+        "kind": "test",
+        "title": "smallestWorkingMax and largestWorkingMin agree with trying every length"
+      },
+      {
+        "kind": "test",
+        "title": "largestWorkingCount steps down to the first count that works"
+      },
+      {
+        "kind": "group",
+        "title": "sources"
+      },
+      {
+        "kind": "test",
+        "title": "read as phrases"
+      },
+      {
+        "kind": "test",
+        "title": "say how to change a value in the terms it was set in"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/names.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "names"
+      },
+      {
+        "kind": "test",
+        "title": "derives the site preset names from their labels, as the spec lists them"
+      },
+      {
+        "kind": "test",
+        "title": "names the typing modes by id, with Minimal-quick also accepted for quick"
+      },
+      {
+        "kind": "test",
+        "title": "never gives two things one name"
+      },
+      {
+        "kind": "test",
+        "title": "slugs labels to lowercase words joined by hyphens"
+      },
+      {
+        "kind": "test",
+        "title": "looks up names and aliases, case and spaces aside"
+      },
+      {
+        "kind": "test",
+        "title": "refuses an unknown name with every name there is and the likeliest one meant"
+      },
+      {
+        "kind": "test",
+        "title": "finds the closest candidate within a third of its length, or by a unique prefix"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/resolve.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "resolve: the layers"
+      },
+      {
+        "kind": "test",
+        "title": "with nothing given is the defaults, ten-finger, difficulty order, 5 passwords at a terminal"
+      },
+      {
+        "kind": "test",
+        "title": "makes 1 password when output is piped, and says the default came from that"
+      },
+      {
+        "kind": "test",
+        "title": "applies a site preset, then rule values over it; the file first, the flags over the file"
+      },
+      {
+        "kind": "test",
+        "title": "a site preset on the command line replaces the file's rules"
+      },
+      {
+        "kind": "test",
+        "title": "gives the same requirements as the web app for every site preset and mode (the web settles, but these need no fixing)"
+      },
+      {
+        "kind": "test",
+        "title": "fills in the mode's preset, resolving \"space if allowed\" by the rules"
+      },
+      {
+        "kind": "test",
+        "title": "takes the mode from the flags, else the file, else ten-finger"
+      },
+      {
+        "kind": "test",
+        "title": "applies the file's options over its mode's preset, and the flags' options over both"
+      },
+      {
+        "kind": "test",
+        "title": "a mode on the command line replaces the file's own options, as picking a mode does in the web app"
+      },
+      {
+        "kind": "test",
+        "title": "applies sentence options and output from the file, then the flags"
+      },
+      {
+        "kind": "test",
+        "title": "switches to sentence mode when given a sentence"
+      },
+      {
+        "kind": "test",
+        "title": "takes the mappings from the file"
+      },
+      {
+        "kind": "group",
+        "title": "resolve: rules in words"
+      },
+      {
+        "kind": "test",
+        "title": "sets the fields the text states and nothing else, says what it read, and names the text as the source"
+      },
+      {
+        "kind": "test",
+        "title": "comes after --site and before the rule flags"
+      },
+      {
+        "kind": "test",
+        "title": "removes symbols the text rules out"
+      },
+      {
+        "kind": "test",
+        "title": "refuses text with no rules in it, as a usage error that says what rules text looks like"
+      },
+      {
+        "kind": "group",
+        "title": "resolve: options a mode has no use for"
+      },
+      {
+        "kind": "test",
+        "title": "warns when one is set by hand, naming where, the value, the mode and why"
+      },
+      {
+        "kind": "test",
+        "title": "says nothing when the mode's own preset set it"
+      },
+      {
+        "kind": "test",
+        "title": "warns about a file's value too"
+      }
+    ]
+  },
+  {
     "file": "src/components/ApplyBar.test.tsx",
     "titles": [
       {
