@@ -1,12 +1,18 @@
-import { lstatSync, mkdirSync, mkdtempSync, readlinkSync, symlinkSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { linkCli } from './linkCli.mjs';
+
+const made = [];
+afterAll(() => {
+  for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
 
 /** A project with a built tep, a home, and a bin directory on the PATH unless said otherwise. */
 function setup({ built = true, onPath = true } = {}) {
   const base = mkdtempSync(join(tmpdir(), 'tep-link-'));
+  made.push(base);
   const root = join(base, 'project');
   mkdirSync(join(root, 'dist-cli'), { recursive: true });
   if (built) writeFileSync(join(root, 'dist-cli/tep.mjs'), '#!/usr/bin/env node\n', { mode: 0o755 });
@@ -38,6 +44,16 @@ describe('pnpm link:cli', () => {
     const r = linkCli({ root: s.root, env: s.env });
     expect(readlinkSync(s.link)).toBe(s.target);
     expect(r.lines[0]).toBe(`Linked ${s.link} -> ${s.target} (it pointed to /gone/worktree/dist-cli/tep.mjs).`);
+  });
+
+  it('leaves a link to anything but a built tep alone, as it would a file', () => {
+    const s = setup();
+    mkdirSync(s.bin, { recursive: true });
+    symlinkSync('/usr/bin/true', s.link);
+    const r = linkCli({ root: s.root, env: s.env });
+    expect(r.code).toBe(1);
+    expect(readlinkSync(s.link)).toBe('/usr/bin/true');
+    expect(r.lines[0]).toBe(`${s.link} is a link to /usr/bin/true, not to a built tep; tep left it alone.`);
   });
 
   it('leaves a real file named tep alone and says what to do', () => {

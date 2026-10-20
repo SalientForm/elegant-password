@@ -12,10 +12,10 @@ export interface ClipboardTool {
 export function clipboardTools(platform: NodeJS.Platform, env: Record<string, string | undefined>): ClipboardTool[] {
   if (platform === 'darwin') return [{ command: ['pbcopy'], when: 'macOS' }];
   const tools: ClipboardTool[] = [];
-  if (env.WAYLAND_DISPLAY) tools.push({ command: ['wl-copy'], when: 'Wayland (package wl-clipboard)' });
+  if (env.WAYLAND_DISPLAY) tools.push({ command: ['wl-copy'], when: 'Wayland, package wl-clipboard' });
   if (env.DISPLAY) {
-    tools.push({ command: ['xclip', '-selection', 'clipboard'], when: 'X11 (package xclip)' });
-    tools.push({ command: ['xsel', '--clipboard', '--input'], when: 'X11 (package xsel)' });
+    tools.push({ command: ['xclip', '-selection', 'clipboard'], when: 'X11, package xclip' });
+    tools.push({ command: ['xsel', '--clipboard', '--input'], when: 'X11, package xsel' });
   }
   if (env.WSL_DISTRO_NAME) tools.push({ command: ['clip.exe'], when: 'WSL' });
   return tools;

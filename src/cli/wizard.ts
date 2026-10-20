@@ -28,24 +28,21 @@ import {
   reqOf,
   rulesHowShape,
   rulesOf,
+  valueIn,
   type Answers,
   type Choice,
   type NumberShape,
-  type RulesHow,
   type SelectShape,
-  type Shape,
   type TextShape,
   type Where,
 } from './constraints';
-import { CliError, EXIT } from './errors';
+import { CliError, EXIT, ISSUES } from './errors';
 import { describeValue, fieldNamed, fieldsIn, reqField, type CliField } from './fields';
-import type { Prompter } from './io';
+import { Cancelled, type Prompter } from './io';
 import { explainProblem, explainWarning } from './messages';
 import { SITE_NAMES } from './names';
 import { badges, PLAIN } from './output';
 import { wrapHanging } from './wrap';
-
-const ISSUES = 'https://github.com/SalientForm/elegant-password/issues';
 
 /** The order rules are asked in, each limiting the next (spec §7.1). */
 const RULE_ORDER = ['min-length', 'max-length', 'symbols', 'spaces', 'min-uppercase', 'min-digits', 'min-symbols'];
@@ -108,7 +105,7 @@ export function reviewLines(a: Answers): ReviewLine[] {
       .join(', ');
     lines.push({ label: 'Options', value: `the ${modeLabel(mode)} preset: ${summary}`, edit: { kind: 'options-how' }, fields: options.map((f) => f.name) });
   }
-  for (const f of fieldsIn('output')) lines.push({ label: cap(f.name === 'count' ? 'passwords' : f.label), value: f.name === 'count' && !('count' in a.output) ? `${value(f)} at a terminal, 1 when piped` : value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
+  for (const f of fieldsIn('output')) lines.push({ label: cap(f.name === 'count' ? 'count' : f.label), value: f.name === 'count' && !('count' in a.output) ? `${value(f)} at a terminal, 1 when piped` : value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
   return lines.map((l, i) => ({ ...l, n: i + 1 }));
 }
 
@@ -138,14 +135,15 @@ export function reviewPrompt(count: number, noteWidth: number): string {
 const whereIn = (lines: ReviewLine[]): Where => ({ lineOf: (f) => lines.find((l) => l.fields.includes(f.name))?.n });
 const BEFORE_REVIEW: Where = { lineOf: () => undefined };
 
-/** The settings to save, from the answers. */
+/** The settings to save, from the answers. Options the typing mode has no use for are left out (the preset fills them in when read), so tep g never warns about a file tep config wrote. */
 export function modelOf(a: Answers): ConfigModel {
   const mode = a.mode ?? DEFAULT_TYPING_MODE;
+  const unused = new Set(unusedIn(mode).map((u) => reqField(u.key)!.name));
   return {
     mode,
     ...(a.site ? { site: a.site } : {}),
     rules: a.site ? { ...a.rules } : rulesOf(a),
-    options: a.optionsHow === 'each' ? Object.fromEntries(fieldsIn('options').map((f) => [f.name, reqOf(a)[f.target.key as keyof Requirements]])) : 'preset',
+    options: a.optionsHow === 'each' ? Object.fromEntries(fieldsIn('options').filter((f) => !unused.has(f.name)).map((f) => [f.name, reqOf(a)[f.target.key as keyof Requirements]])) : 'preset',
     sentence: { ...a.sentence },
     ...(a.swaps ? { swaps: a.swaps } : {}),
     output: { ...a.output },
@@ -211,7 +209,7 @@ export class Wizard {
    * choice is stated, not asked; one with none is a bug. Answers that let a
    * contradiction through are refused at once and the question asked again.
    */
-  private async select<T>(a: Answers, shape: SelectShape<T>, where: Where, opts: { review?: boolean } = {}): Promise<{ answers: Answers; value: T } | undefined> {
+  private async select<T>(a: Answers, shape: SelectShape<T>, where: Where, opts: { review?: boolean } = {}): Promise<{ answers: Answers; value: T }> {
     const excluded: { value: T; reason: string }[] = [];
     for (;;) {
       const choices: Choice<T>[] = shape.choices.map((c) => {
@@ -224,7 +222,7 @@ export class Wizard {
         const only = allowed[0]!;
         const why = choices.find((c) => c.blocked)?.blocked;
         this.p.info(`${shape.message}: ${only.label}, the only choice left${why ? `: the others are ruled out (${lowerFirst(why)})` : ''}.`);
-        return this.accept(a, shape, only.value, only.label, where, excluded);
+        return this.accept(a, shape, only.value, only.label, where);
       }
       const initial = allowed.some((c) => c.value === shape.initial) ? shape.initial : allowed[0]!.value;
       const value = await this.p.select<T>({
@@ -247,11 +245,10 @@ export class Wizard {
     }
   }
 
-  private accept<T>(a: Answers, shape: SelectShape<T>, value: T, label: string, where: Where, excluded: { value: T; reason: string }[]) {
+  private accept<T>(a: Answers, shape: SelectShape<T>, value: T, label: string, where: Where) {
     const next = shape.apply(a, value);
     if (problemsWith(next).length) {
       this.bug(next, shape.message, label, where, shape.own);
-      excluded.push({ value, reason: 'it contradicts your other answers (a bug in tep)' });
       throw this.deadEnd(shape.message, []);
     }
     return { answers: next, value };
@@ -283,8 +280,13 @@ export class Wizard {
           if (!/^\d+$/.test(t)) return `Type a whole number from ${shape.min} to ${shape.max}.`;
           const n = Number(t);
           if (n < shape.limits.min || n > shape.limits.max) return `${n} is out of range: it must be from ${shape.min} to ${shape.max}.`;
-          if (n < shape.min) return `${n} is too low: ${shape.below ?? `the lowest that fits is ${shape.min}`}. The lowest that fits is ${shape.min}.`;
-          if (n > shape.max) return `${n} is too high: ${shape.above ?? `the highest that fits is ${shape.max}`}. The highest that fits is ${shape.max}.`;
+          if (n < shape.min || n > shape.max) {
+            // The reason for the value typed, not for the value just outside the range, so no number the user never typed is quoted.
+            const tried = shape.apply(a, n);
+            const problems = problemsWith(tried);
+            const why = problems.length ? lowerFirst(reasonFor(problems, tried, shape.own ?? [], where)) : undefined;
+            return n < shape.min ? `${n} is too low${why ? `: ${why}` : ''}. The lowest that fits is ${shape.min}.` : `${n} is too high${why ? `: ${why}` : ''}. The highest that fits is ${shape.max}.`;
+          }
           if (excluded.has(n)) return `${n} contradicts your other answers (a bug in tep); pick another.`;
           return undefined;
         },
@@ -319,13 +321,27 @@ export class Wizard {
     }
   }
 
-  /** Ask one field's question. */
-  private async field(a: Answers, f: CliField, where: Where, defaults: Record<string, unknown> = {}, review = false): Promise<Answers> {
-    const shape = this.shapeField(f, a, where, defaults) as Shape;
+  /** Ask one field's question. A value `defaults` asks for (from pasted rules or a loaded file) that the question cannot take is named as dropped, never passed over in silence. */
+  private async field(a: Answers, f: CliField, where: Where, defaults: Record<string, unknown> = {}, review = false, from = 'the file'): Promise<Answers> {
+    const shape = this.shapeField(f, a, where, defaults);
+    const wanted = defaults[f.name];
+    if (wanted !== undefined && !(f.name in (f.group === 'rules' ? a.rules : f.group === 'options' ? a.options : a.output))) {
+      const reason =
+        shape.kind === 'number'
+          ? typeof wanted === 'number' && (wanted < shape.min || wanted > shape.max)
+            ? ((wanted < shape.min ? shape.below : shape.above) ?? `only ${shape.min} to ${shape.max} fit the other rules`)
+            : undefined
+          : shape.kind === 'text'
+            ? shape.validate(String(wanted))
+            : shape.choices.find((c) => c.value === wanted)?.blocked;
+      if (reason) {
+        this.p.warn(`Dropped ${from === 'the pasted rules' ? 'the pasted rule for' : `${from}'s value for`} ${f.label}, ${describeValue(f, wanted)}: ${lowerFirst(reason)}. tep's passwords will not meet it; check what the site accepts.`);
+        a = { ...a, dropped: [...(a.dropped ?? []), { field: f.name, value: wanted, from, reason }] };
+      }
+    }
     if (shape.kind === 'number') return this.number(a, shape, where);
     if (shape.kind === 'text') return this.text(a, shape, where);
     const r = await this.select(a, shape, where, { review });
-    if (!r) return a;
     if (f.name === 'strength' && r.value === OTHER_BITS) {
       const current = reqOf(a).targetBits;
       return this.number(a, bitsShape(current), where);
@@ -339,11 +355,11 @@ export class Wizard {
     let a = start;
     const stages = ['mode', 'rules', 'options', 'output'] as const;
     for (const stage of stages.slice(stages.indexOf(from))) {
-      if (stage === 'mode') a = (await this.select(a, modeShape(a, BEFORE_REVIEW), BEFORE_REVIEW))!.answers;
+      if (stage === 'mode') a = (await this.select(a, modeShape(a, BEFORE_REVIEW), BEFORE_REVIEW)).answers;
       if (stage === 'rules') a = await this.askRules(a, BEFORE_REVIEW, defaults);
       if (stage === 'options') a = await this.askOptions(a, BEFORE_REVIEW, defaults);
       if (stage === 'output') {
-        const change = (await this.select(a, outputHowShape(), BEFORE_REVIEW))!.value;
+        const change = (await this.select(a, outputHowShape(), BEFORE_REVIEW)).value;
         if (change) for (const f of fieldsIn('output')) a = await this.field(a, f, BEFORE_REVIEW);
       }
     }
@@ -352,16 +368,16 @@ export class Wizard {
 
   /** Where the site's rules come from, and then any rule to ask. */
   private async askRules(a: Answers, where: Where, defaults: Record<string, unknown> = {}): Promise<Answers> {
-    const r = (await this.select(a, rulesHowShape(a, where), where))!;
-    const how = r.value as RulesHow;
+    const r = await this.select(a, rulesHowShape(a, where), where);
+    const how = r.value;
     if (how.kind === 'site') return r.answers;
     if (how.kind === 'paste') return this.paste(r.answers, where);
     return this.askEachRule({ ...r.answers, site: undefined, rules: {} }, where, defaults);
   }
 
-  private async askEachRule(a: Answers, where: Where, defaults: Record<string, unknown>): Promise<Answers> {
+  private async askEachRule(a: Answers, where: Where, defaults: Record<string, unknown>, from = 'the file'): Promise<Answers> {
     let x: Answers = { ...a, rulesAnswered: true };
-    for (const name of RULE_ORDER) x = await this.field(x, fieldNamed(name)!, where, defaults);
+    for (const name of RULE_ORDER) x = await this.field(x, fieldNamed(name)!, where, defaults, false, from);
     return x;
   }
 
@@ -382,12 +398,12 @@ export class Wizard {
     const next: Answers = { ...a, site: undefined, rules: values, rulesAnswered: true };
     const problems = problemsWith(next);
     if (!problems.length) return next;
-    this.p.warn(`Those rules do not fit together: ${reasonFor(problems, next, [], where)}. Asking each rule, starting from what the text said where that fits.`);
-    return this.askEachRule({ ...a, site: undefined, rules: {} }, where, values);
+    this.p.warn(`Those rules do not fit together: ${reasonFor(problems, next, [], where)}. Asking each rule, starting from what the text said where that fits; a rule that cannot be kept is named as it is dropped.`);
+    return this.askEachRule({ ...a, site: undefined, rules: {} }, where, values, 'the pasted rules');
   }
 
   private async askOptions(a: Answers, where: Where, defaults: Record<string, unknown> = {}): Promise<Answers> {
-    const r = (await this.select(a, optionsHowShape(a, where), where))!;
+    const r = await this.select(a, optionsHowShape(a, where), where);
     let x = r.answers;
     if (r.value === 'preset') return x;
     const unused = new Set(unusedIn(x.mode ?? DEFAULT_TYPING_MODE).map((u) => reqField(u.key)!.name));
@@ -425,6 +441,11 @@ export class Wizard {
       const e = explainWarning(w, req, { source: (f) => ({ kind: 'wizard', line: where.lineOf(f) ?? 0, label: f.label }) });
       body.push('', ...wrapHanging(`Warning: ${e.title}`, width, 'Warning: '.length), ...wrapHanging(`  ${e.fix}`, width, 2));
     }
+    const dropped = (a.dropped ?? []).filter((d) => valueIn(a, fieldNamed(d.field)!) !== d.value);
+    for (const d of dropped) {
+      const f = fieldNamed(d.field)!;
+      body.push('', ...wrapHanging(`Dropped: ${f.label} ${describeValue(f, d.value)} (${d.from} asked for it): ${lowerFirst(d.reason)}.`, width, 'Dropped: '.length));
+    }
     const sample = this.sample(a);
     if (sample) body.push('', ...wrapHanging(`Sample: ${sample.password}   ${sample.badges}`, width, 'Sample: '.length), ...wrapHanging(`        hint: ${sample.hint}`, width, '        hint: '.length));
     this.p.note(body.join('\n'), `Your answers, for ${this.opts.file}`);
@@ -444,19 +465,25 @@ export class Wizard {
     for (;;) {
       const lines = reviewLines(a);
       this.show(a, lines);
-      const choice = (
-        await this.p.text({
-          message: reviewPrompt(lines.length, this.p.noteWidth),
-          validate: (v) => {
-            const t = v.trim().toLowerCase();
-            if (t === 's' || t === 'q') return undefined;
-            if (/^\d+$/.test(t) && Number(t) >= 1 && Number(t) <= lines.length) return undefined;
-            return `Type a line number from 1 to ${lines.length}, s to save or q to quit.`;
-          },
-        })
-      )
-        .trim()
-        .toLowerCase();
+      let choice: string;
+      try {
+        choice = (
+          await this.p.text({
+            message: reviewPrompt(lines.length, this.p.noteWidth),
+            validate: (v) => {
+              const t = v.trim().toLowerCase();
+              if (t === 's' || t === 'q') return undefined;
+              if (/^\d+$/.test(t) && Number(t) >= 1 && Number(t) <= lines.length) return undefined;
+              return `Type a line number from 1 to ${lines.length}, s to save or q to quit.`;
+            },
+          })
+        )
+          .trim()
+          .toLowerCase();
+      } catch (e) {
+        if (e instanceof Cancelled && e.key === 'escape') return { kind: 'quit' }; // Esc means back: out of the review, nothing written
+        throw e;
+      }
       if (choice === 'q') return { kind: 'quit' };
       if (choice === 's') {
         const problems = problemsWith(a);
@@ -469,7 +496,12 @@ export class Wizard {
         if (this.opts.confirmSave && !(await this.opts.confirmSave())) continue;
         return { kind: 'save', answers: a };
       }
-      a = await this.edit(a, lines.find((l) => l.n === Number(choice))!, lines);
+      try {
+        a = await this.edit(a, lines.find((l) => l.n === Number(choice))!, lines);
+      } catch (e) {
+        if (!(e instanceof Cancelled) || e.key !== 'escape') throw e;
+        this.p.info(`Back to the review; line ${choice} is unchanged.`); // Esc means back; Ctrl+C would have stopped
+      }
     }
   }
 
@@ -491,7 +523,6 @@ export class Wizard {
           return a;
         }
         const r = await this.select(a, shape, where, { review: true });
-        if (!r) return a;
         let next = r.answers;
         if (next.optionsHow === 'each' && next.mode !== a.mode) {
           const presetShape = optionsHowShape(next, where, true);
@@ -505,19 +536,19 @@ export class Wizard {
       }
       case 'rules-how': {
         const shape = rulesHowShape(a, where);
-        const r = (await this.select(a, shape as SelectShape<RulesHow>, where, { review: true }))!;
+        const r = await this.select(a, shape, where, { review: true });
         if (r.value.kind === 'paste') return this.paste(r.answers, where);
         return r.answers;
       }
       case 'options-how': {
         const shape = optionsHowShape(a, where, true);
-        return (await this.select(a, shape, where, { review: true }))!.answers;
+        return (await this.select(a, shape, where, { review: true })).answers;
       }
       case 'field': {
         const f = line.edit.field;
-        const shape = this.shapeField(f, a, where) as Shape;
+        const shape = this.shapeField(f, a, where);
         if (shape.kind === 'select') {
-          const why = blocked(shape, (shape as SelectShape<unknown>).initial);
+          const why = blocked(shape, shape.initial);
           if (why) {
             holdIt(why);
             return a;

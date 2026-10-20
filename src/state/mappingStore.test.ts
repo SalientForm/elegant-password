@@ -6,7 +6,7 @@ import { loadMappingSettings, parseMappingSettings, saveMappingSettings, STORAGE
 describe('mapping settings', () => {
   it('round-trips through storage', () => {
     const store = new Map<string, string>();
-    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) };
     saveMappingSettings({ disabled: ['a>@'], custom: [{ from: 'cat', to: 'k@' }] }, storage);
     expect(store.has(STORAGE_KEY)).toBe(true);
     const loaded = loadMappingSettings(storage);
@@ -18,14 +18,15 @@ describe('mapping settings', () => {
 
   it('drops malformed data instead of failing', () => {
     expect(parseMappingSettings('not json')).toEqual({ disabled: [], custom: [] });
-    expect(parseMappingSettings(JSON.stringify({ disabled: ['nope', 'a>@', 3], custom: [{ from: 'A', to: '4' }, { from: 'b', to: '8' }] }))).toEqual({
+    expect(parseMappingSettings(undefined)).toEqual({ disabled: [], custom: [] });
+    expect(parseMappingSettings({ disabled: ['nope', 'a>@', 3], custom: [{ from: 'A', to: '4' }, { from: 'b', to: '8' }] })).toEqual({
       disabled: ['a>@'],
       custom: [{ from: 'b', to: '8' }],
     });
   });
 
   it('survives blocked storage', () => {
-    const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+    const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); }, removeItem: () => { throw new Error('blocked'); } };
     expect(loadMappingSettings(broken)).toEqual({ disabled: [], custom: [] });
     expect(() => saveMappingSettings({ disabled: [], custom: [] }, broken)).not.toThrow();
   });

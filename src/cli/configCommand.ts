@@ -4,26 +4,19 @@
 
 import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve as resolvePath } from 'node:path';
-import { parseArgs } from 'node:util';
 import { DEFAULT_CONFIG_FILE, loadConfig, writeAtomic } from './config';
 import { serializeConfig } from './configText';
+import { parseCommandArgs } from './args';
 import { CliError, configError, EXIT, usageError } from './errors';
 import { CONFIG_HELP } from './help';
 import type { Io } from './io';
-import { closest } from './names';
 import { answersOf, modelOf, runHint, Wizard, type WizardHooks } from './wizard';
 
 /** A date as the config's header writes it: 2026-10-20, local time. */
 export const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export async function configCommand(argv: string[], io: Io, hooks?: WizardHooks): Promise<number> {
-  let parsed: ReturnType<typeof parseArgs>;
-  try {
-    parsed = parseArgs({ args: argv, options: { help: { type: 'boolean', short: 'h' } }, allowPositionals: true, strict: true });
-  } catch (e) {
-    const flag = (e as Error).message.match(/Unknown option '([^']+)'/)?.[1];
-    throw usageError(flag ? `unknown flag ${flag}.${closest(flag, ['--help']) ? ' Did you mean --help?' : ''}` : (e as Error).message, 'tep config takes a file name and nothing else: tep config bank.yml');
-  }
+  const parsed = parseCommandArgs(argv, { help: { type: 'boolean', short: 'h' } }, 'tep config', 'tep config takes a file name and nothing else: tep config bank.yml', true);
   if (parsed.values.help) {
     io.stdout.write(CONFIG_HELP);
     return EXIT.ok;
@@ -71,7 +64,7 @@ export async function configCommand(argv: string[], io: Io, hooks?: WizardHooks)
     prompter.info('Quit; nothing was written.');
     return EXIT.ok;
   }
-  writeAtomic(abs, serializeConfig(modelOf(result.answers), isoDay(io.now())));
+  writeAtomic(abs, serializeConfig(modelOf(result.answers), isoDay(io.now())), undefined, file);
   prompter.info(`Saved ${file}. Make passwords with: ${runHint(file)}`);
   return EXIT.ok;
 }

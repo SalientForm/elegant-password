@@ -518,7 +518,15 @@
       },
       {
         "kind": "test",
-        "title": "writes atomically, leaving no temporary file, mode 0644"
+        "title": "writes atomically, leaving no temporary file, a new file at mode 0644"
+      },
+      {
+        "kind": "test",
+        "title": "follows a symlink to the file it points to, and keeps an existing file's mode"
+      },
+      {
+        "kind": "test",
+        "title": "names the file as the user wrote it when a write fails"
       },
       {
         "kind": "test",
@@ -745,6 +753,10 @@
       },
       {
         "kind": "test",
+        "title": "offers only fixes that work, and names the required characters when they are the squeeze"
+      },
+      {
+        "kind": "test",
         "title": "names each problem, its values and where each came from, and a fix; nothing on stdout"
       },
       {
@@ -833,6 +845,14 @@
       },
       {
         "kind": "test",
+        "title": "a flag with a short form that is missing its value names the long form, and -n -5 gets a working suggestion"
+      },
+      {
+        "kind": "test",
+        "title": "--no-x is only for a setting that is on or off"
+      },
+      {
+        "kind": "test",
         "title": "rules text with no rules"
       },
       {
@@ -842,6 +862,10 @@
       {
         "kind": "test",
         "title": "reads ./tep.yml when there is one, and names its lines in messages"
+      },
+      {
+        "kind": "test",
+        "title": "always says which config file the settings came from: in the table, in the JSON, and on stderr when piped"
       },
       {
         "kind": "test",
@@ -1308,7 +1332,31 @@
       },
       {
         "kind": "group",
+        "title": "tep config: Esc means back"
+      },
+      {
+        "kind": "test",
+        "title": "while changing a line, goes back to the review with the line unchanged; Ctrl+C there still stops"
+      },
+      {
+        "kind": "test",
+        "title": "at the review itself, leaves without saving, like q; during the first questions it stops like Ctrl+C"
+      },
+      {
+        "kind": "group",
+        "title": "tep config: what it writes"
+      },
+      {
+        "kind": "test",
+        "title": "leaves out the options the typing mode has no use for, so tep g never warns about its own file"
+      },
+      {
+        "kind": "group",
         "title": "tep config: pasted rules"
+      },
+      {
+        "kind": "test",
+        "title": "names each rule it cannot keep as it is dropped, and lists them on the review"
       },
       {
         "kind": "test",

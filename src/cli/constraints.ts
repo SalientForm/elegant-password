@@ -13,13 +13,13 @@ import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
 import type { MappingSettings } from '../lib/mappingSettings';
 import { MINIMAL_BITS, modeLabel, profileValues, PROFILE_KEYS, unusedIn } from '../lib/modeProfiles';
 import { ALL_SYMBOLS, RULE_KEYS } from '../lib/sitePresets';
+import { DEFAULT_SORT } from '../lib/sort';
 import { MAX_TARGET_BITS } from '../lib/validation';
 import { explainProblem } from './messages';
-import { describeValue, fieldNamed, FIELDS, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
+import { COUNT_AT_TERMINAL, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
 import { MODE_NAMES, SITE_NAMES } from './names';
 import type { Source } from './sources';
 
-export const COUNT_DEFAULT = 5;
 
 /** How long working out one question's choices may take, in milliseconds of CPU time (user decision, 2026-10-20). src/cli/walk.test.ts holds it. */
 export const QUESTION_BUDGET_MS = 750;
@@ -40,6 +40,8 @@ export interface Answers {
   output: Record<string, unknown>;
   /** Carried over from a loaded file untouched: the wizard does not ask about these. */
   sentence: Record<string, unknown>;
+  /** Values the pasted rules or a loaded file asked for that could not be kept, for the review to show; never saved. */
+  dropped?: { field: string; value: unknown; from: string; reason: string }[];
   swaps?: MappingSettings;
 }
 
@@ -94,7 +96,7 @@ export function reqOf(a: Answers, fill: Record<string, unknown> = LOOSEST): Requ
     req[key] =
       a.optionsHow === 'preset' ? profile[key] : a.optionsHow === 'each' ? (f.name in a.options ? a.options[f.name] : fill[f.name]) : fill[f.name];
   }
-  req.count = (a.output.count as number | undefined) ?? COUNT_DEFAULT;
+  req.count = (a.output.count as number | undefined) ?? COUNT_AT_TERMINAL;
   return req as unknown as Requirements;
 }
 
@@ -167,7 +169,7 @@ export function withField(a: Answers, f: CliField, value: unknown): Answers {
 /** A field's value under these answers (answered or filled in). */
 export const valueIn = (a: Answers, f: CliField) => {
   if (f.target.kind === 'req') return reqOf(a, LOOSEST)[f.target.key];
-  if (f.target.kind === 'output') return f.target.key === 'count' ? ((a.output.count as number | undefined) ?? COUNT_DEFAULT) : (a.output.sort ?? 'difficulty');
+  if (f.target.kind === 'output') return f.target.key === 'count' ? ((a.output.count as number | undefined) ?? COUNT_AT_TERMINAL) : (a.output.sort ?? DEFAULT_SORT);
   return a.sentence[f.name];
 };
 
@@ -471,7 +473,7 @@ function symbolsShape(f: CliField, a: Answers, where: Where, message: string, fa
     placeholder: 'none',
     validate(value) {
       const parsed = parseValue(f, value);
-      if (!parsed.ok) return `The symbols ${parsed.error}.`;
+      if (!parsed.ok) return `The symbols ${parsed.error.replace('with --spaces (spaces: true)', 'by the Spaces question')}.`;
       const problems = problemsWith(apply(a, value));
       return problems.length ? reasonFor(problems, apply(a, value), [f.name], where) : undefined;
     },
@@ -492,7 +494,7 @@ export function bitsShape(initial: number): NumberShape {
 export function outputHowShape(): SelectShape<boolean> {
   return {
     kind: 'select',
-    message: `Output: ${COUNT_DEFAULT} passwords at a terminal (1 when piped), easiest to type first`,
+    message: `Output: ${COUNT_AT_TERMINAL} passwords at a terminal (1 when piped), easiest to type first`,
     choices: [
       { value: false, label: 'Keep these' },
       { value: true, label: 'Change them' },
@@ -501,9 +503,6 @@ export function outputHowShape(): SelectShape<boolean> {
     apply: (a) => a,
   };
 }
-
-/** Every field a question can ask about, in the order they are asked. */
-export const ASKED_FIELDS = FIELDS.filter((f) => f.group !== 'sentence');
 
 /** A value as the review screen shows it. */
 export const shown = (f: CliField, value: unknown) => describeValue(f, value);

@@ -186,6 +186,18 @@ describe('the browser bundle', () => {
         .map((i) => `${f} imports ${i.from}`),
     );
     expect(bad).toEqual([]);
+    // Nor may a CLI module the browser reaches name a Node global: a process.env in output.ts would pass the import check and break the page.
+    const globals = /\b(process|Buffer|__dirname|__filename)\b|\brequire\(/;
+    const uses = [...files]
+      .filter((f) => f.startsWith('src/cli/'))
+      .flatMap((f) =>
+        code(f)
+          .split('\n')
+          .map((line, i) => ({ line, n: i + 1 }))
+          .filter(({ line }) => globals.test(line))
+          .map(({ line, n }) => `${f}:${n}: ${line.trim()}`),
+      );
+    expect(uses).toEqual([]);
   });
 });
 

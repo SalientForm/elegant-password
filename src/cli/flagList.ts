@@ -4,6 +4,9 @@
 
 import { MODE_NAMES, SITE_NAMES } from './names';
 
+/** Short forms of the settings' flags: -n for --count. */
+export const SHORT_SETTINGS: Record<string, string> = { count: 'n' };
+
 export type Format = 'table' | 'plain' | 'json';
 export const FORMATS: readonly Format[] = ['table', 'plain', 'json'];
 

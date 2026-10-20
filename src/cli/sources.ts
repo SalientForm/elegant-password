@@ -32,7 +32,7 @@ export function describeSource(s: Source): string {
     case 'site':
       return `the ${s.preset} site preset${s.via.kind === 'default' ? '' : `, chosen by ${describeSource(s.via)}`}`;
     case 'mode':
-      return `the ${modeName(s.mode)} mode's preset${s.via.kind === 'default' ? ' (the default mode)' : `, chosen by ${describeSource(s.via)}`}`;
+      return `the ${modeName(s.mode)} mode's preset${s.via.kind === 'default' ? ', the default mode' : `, chosen by ${describeSource(s.via)}`}`;
     case 'rules-text':
       return `the rules text given to ${describeSource(s.via)}`;
     case 'wizard':

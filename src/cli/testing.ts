@@ -1,4 +1,10 @@
-// Helpers for the CLI's tests: layers built in one line.
+// Helpers for the CLI's tests: layers built in one line, a fake terminal, and
+// scratch directories that are removed when the test file is done.
+
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll } from 'vitest';
 
 import type { TypingMode } from '../lib/difficulty';
 import type { ClipboardRunner } from './clipboard';
@@ -6,6 +12,18 @@ import { Cancelled, type Io, type Prompter, type SelectOption } from './io';
 import { emptyLayer, type Layer } from './resolve';
 import { SITE_NAMES } from './names';
 import type { Source } from './sources';
+
+const scratchDirs: string[] = [];
+afterAll(() => {
+  for (const dir of scratchDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+/** A fresh temporary directory, removed with every other one this file made once its tests are done. */
+export function scratch(prefix: string): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  scratchDirs.push(dir);
+  return dir;
+}
 
 export const flag = (name: string): Source => ({ kind: 'flag', flag: `--${name}` });
 export const fileAt = (line: number, key: string, file = 'tep.yml'): Source => ({ kind: 'file', file, line, key });
@@ -33,8 +51,8 @@ export function fileLayer(values: Record<string, unknown>, extra: { site?: strin
 
 // ---------------------------------------------------------------- a fake terminal
 
-/** One scripted answer. A select picks the option whose label starts with the text given. */
-export type Step = { select: string } | { text: string } | { secret: string } | { confirm: boolean } | { cancel: true };
+/** One scripted answer. A select picks the option whose label starts with the text given. `first` means: from here on, the first allowed choice everywhere, a text's own initial value, and q at the review. */
+export type Step = { select: string } | { text: string } | { secret: string } | { confirm: boolean } | { cancel: true } | { escape: true } | { first: true };
 
 export interface Asked {
   kind: 'select' | 'text' | 'secret' | 'confirm';
@@ -52,13 +70,24 @@ export class ScriptedPrompter implements Prompter {
   /** As wide as any line, unless a test narrows it to see the wrapping. */
   noteWidth = Number.POSITIVE_INFINITY;
   private i = 0;
+  /** Once a `first` step is reached: every later question takes its first allowed answer. */
+  private sticky = false;
 
   constructor(private readonly steps: Step[]) {}
 
   private next(kind: Asked['kind'], message: string): Step {
+    if (!this.sticky) {
+      const step = this.steps[this.i];
+      if (step && 'first' in step) {
+        this.sticky = true;
+        this.i++;
+      }
+    }
+    if (this.sticky) return { first: true };
     const step = this.steps[this.i++];
     if (!step) throw new Error(`The script ran out at a ${kind}: "${message}". Asked so far: ${this.asked.map((a) => a.message).join(' | ')}`);
     if ('cancel' in step) throw new Cancelled();
+    if ('escape' in step) throw new Cancelled('escape');
     const want = 'select' in step ? 'select' : 'text' in step ? 'text' : 'secret' in step ? 'secret' : 'confirm';
     if (want !== kind) throw new Error(`The script expected a ${want} but tep asked a ${kind}: "${message}" (step ${this.i})`);
     return step;
@@ -66,8 +95,10 @@ export class ScriptedPrompter implements Prompter {
 
   async select<T>(q: { message: string; options: SelectOption<T>[]; initialValue?: T }): Promise<T> {
     this.asked.push({ kind: 'select', message: q.message, options: q.options as SelectOption<unknown>[], initial: q.initialValue });
-    const step = this.next('select', q.message) as { select: string };
-    const option = q.options.find((o) => o.label.startsWith(step.select));
+    const step = this.next('select', q.message) as { select: string } | { first: true };
+    const option = 'first' in step ? q.options.find((o) => !o.disabled) : q.options.find((o) => o.label.startsWith(step.select));
+    if ('first' in step && !option) throw new Error(`No allowed option in "${q.message}"`);
+    if ('first' in step) return option!.value;
     if (!option) throw new Error(`No option starting "${step.select}" in "${q.message}": ${q.options.map((o) => o.label).join(' | ')}`);
     if (option.disabled) throw new Error(`"${option.label}" is disabled in "${q.message}" (${option.hint}); a terminal would not let it be picked`);
     return option.value;
@@ -77,8 +108,8 @@ export class ScriptedPrompter implements Prompter {
     const asked: Asked = { kind, message: q.message, initial: q.initialValue, refused: [] };
     this.asked.push(asked);
     for (;;) {
-      const step = this.next(kind, q.message) as { text?: string; secret?: string };
-      const value = (kind === 'text' ? step.text : step.secret)!;
+      const step = this.next(kind, q.message) as { text?: string; secret?: string } | { first: true };
+      const value = 'first' in step ? (/^Change a line/.test(q.message) ? 'q' : (q.initialValue ?? '')) : (kind === 'text' ? step.text : step.secret)!;
       const reason = q.validate?.(value);
       if (!reason) return value;
       asked.refused!.push({ value, reason });
@@ -93,7 +124,8 @@ export class ScriptedPrompter implements Prompter {
   }
   async confirm(q: { message: string; initialValue?: boolean }): Promise<boolean> {
     this.asked.push({ kind: 'confirm', message: q.message, initial: q.initialValue });
-    return (this.next('confirm', q.message) as { confirm: boolean }).confirm;
+    const step = this.next('confirm', q.message) as { confirm: boolean } | { first: true };
+    return 'first' in step ? (q.initialValue ?? true) : step.confirm;
   }
   note(message: string, title?: string) {
     this.said.push({ kind: 'note', message, ...(title ? { title } : {}) });

@@ -2,6 +2,7 @@
 // saying what it is, symbols always quoted. Pure, with no YAML library and
 // no file system, so the Fun page's CLI prompt can show a real file.
 
+import { DEFAULT_TYPING_MODE } from '../lib/difficulty';
 import { modeLabel } from '../lib/modeProfiles';
 import { SITE_PRESETS } from '../lib/sitePresets';
 import type { ConfigModel } from './configModel';
@@ -12,9 +13,10 @@ import { MODE_NAMES, modeName, SITE_NAMES } from './names';
 /**
  * A scalar as YAML: names, numbers and booleans as they are, anything else
  * in double quotes (JSON's quoting is valid YAML), so no symbol is ever read
- * as YAML syntax.
+ * as YAML syntax. A string that starts with a digit is quoted too: a swap to
+ * "0" written bare would read back as the number 0.
  */
-const scalar = (v: unknown) => (typeof v === 'number' || typeof v === 'boolean' || (typeof v === 'string' && /^[a-z0-9][a-z0-9-]*$/.test(v) && !['true', 'false', 'null', 'yes', 'no', 'on', 'off'].includes(v)) ? String(v) : JSON.stringify(v));
+const scalar = (v: unknown) => (typeof v === 'number' || typeof v === 'boolean' || (typeof v === 'string' && /^[a-z][a-z0-9-]*$/.test(v) && !['true', 'false', 'null', 'yes', 'no', 'on', 'off'].includes(v)) ? String(v) : JSON.stringify(v));
 const pad = (s: string, width = 28) => (s.length >= width ? `${s} ` : s.padEnd(width));
 
 /** The file's text: header, then each section with a comment saying what it is. Sections the model does not state are left out. */
@@ -24,7 +26,7 @@ export function serializeConfig(model: ConfigModel, today: string): string {
     '# Run `tep g` in this directory, or `tep g -c <this file>`. Edit it by hand or run `tep config` again.',
     `version: ${CONFIG_VERSION}`,
   ];
-  const mode = model.mode ?? 'ten-finger';
+  const mode = model.mode ?? DEFAULT_TYPING_MODE;
   out.push(`${pad(`mode: ${scalar(modeName(mode))}`)}# ${MODE_NAMES.map((m) => m.name).join(' | ')}`, '');
 
   if (model.site) {

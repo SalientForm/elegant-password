@@ -3,12 +3,12 @@
 // what is expected; written back with comments, atomically, so a file is
 // never left half-written.
 
-import { closeSync, fsyncSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeSync } from 'node:fs';
+import { closeSync, fsyncSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { isMap, isPair, isScalar, isSeq, LineCounter, parseDocument, type Document, type Node } from 'yaml';
 import { z } from 'zod';
 import { mappingSettingsProblems, type MappingSettings } from '../lib/mappingSettings';
-import { configError } from './errors';
+import { CliError, configError } from './errors';
 import { fieldsIn, keyPath, parseValue, type FieldGroup } from './fields';
 import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
 import { emptyLayer, type Layer } from './resolve';
@@ -40,7 +40,10 @@ interface Issue {
 
 /** The characters YAML gives a meaning to at the start of a plain value. */
 const YAML_SPECIAL = /[!&*#{}[\],:|>'"%@`?-]/;
-const QUOTE_HINT = 'Symbols such as ! & * # { } [ ] , : have a meaning in YAML; put a value that has them in double quotes, as in symbols: "!@#$%".';
+/** How to quote a value, with an example for the key at hand. */
+const quoteHint = (key = 'symbols') => `Symbols such as ! & * # { } [ ] , : have a meaning in YAML; put a value that has them in double quotes, as in ${/separator$/.test(key) ? `${key}: ";"` : /symbols$/.test(key) ? `${key}: "!@#$%"` : `${key}: "..."`}.`;
+/** The key a line of the file sets, for an example in a hint. */
+const keyOnLine = (line: string | undefined) => line?.match(/^\s*([a-z-]+)\s*:/)?.[1];
 
 /** Read and check a config file's text. Throws a config error (exit 4) listing every problem. */
 export function parseConfig(text: string, file: string): LoadedConfig {
@@ -57,8 +60,8 @@ export function parseConfig(text: string, file: string): LoadedConfig {
       e.code === 'DUPLICATE_KEY'
         ? 'a key appears twice in the same section; keep one'
         : e.code === 'TAG_RESOLVE_FAILED'
-          ? `${e.message.split('\n')[0]}: a value starting with "!" is read as a YAML tag, not as text. ${QUOTE_HINT}`
-          : `${e.message.split('\n')[0]}${YAML_SPECIAL.test(lines[line - 1]?.split(':').slice(1).join(':') ?? '') ? `. ${QUOTE_HINT}` : ''}`;
+          ? `${e.message.split('\n')[0]}: a value starting with "!" is read as a YAML tag, not as text. ${quoteHint(keyOnLine(lines[line - 1]))}`
+          : `${e.message.split('\n')[0]}${YAML_SPECIAL.test(lines[line - 1]?.split(':').slice(1).join(':') ?? '') ? `. ${quoteHint(keyOnLine(lines[line - 1]))}` : ''}`;
     add(line, what);
   }
   if (issues.length) throw invalid(file, issues, lines);
@@ -144,7 +147,7 @@ export function parseConfig(text: string, file: string): LoadedConfig {
       if (r.ok) {
         into[f.name] = r.value;
         where[keyPath(f)] = line;
-      } else add(line, `${keyPath(f)} ${r.error}${raw === null && (f.kind.type === 'symbols' || f.kind.type === 'separator') ? `. A "#" after a space starts a comment in YAML, so the value was read as nothing. ${QUOTE_HINT}` : ''}.`);
+      } else add(line, `${keyPath(f)} ${r.error}${raw === null && (f.kind.type === 'symbols' || f.kind.type === 'separator') ? `. A "#" after a space starts a comment in YAML, so the value was read as nothing. ${quoteHint(keyPath(f))}` : ''}.`);
     }
   };
   readGroup('rules', model.rules);
@@ -186,8 +189,12 @@ export function parseConfig(text: string, file: string): LoadedConfig {
     (swaps.custom ?? []).forEach((entry, i) => {
       const e = entry as Record<string, unknown> | null;
       const keys = e && typeof e === 'object' ? Object.keys(e) : [];
-      if (!e || typeof e !== 'object' || Array.isArray(e) || typeof e.from !== 'string' || typeof e.to !== 'string' || keys.some((k) => k !== 'from' && k !== 'to')) {
+      if (!e || typeof e !== 'object' || Array.isArray(e) || keys.some((k) => k !== 'from' && k !== 'to')) {
         add(valueLine(['swaps', 'custom', i]), `swaps.custom entry ${i + 1} must be a map with "from" and "to", such as { from: ph, to: f }; found ${describeFound(nodeAt(doc, ['swaps', 'custom', i], false))}.`);
+      } else if (typeof e.from !== 'string' || typeof e.to !== 'string') {
+        // A swap to a digit written bare reads as a number: say so, with the quoting that fixes it.
+        const [k, v] = typeof e.from !== 'string' ? ['from', e.from] : ['to', e.to];
+        add(valueLine(['swaps', 'custom', i, k]), `swaps.custom entry ${i + 1}: "${k}" must be text; found ${v === undefined ? 'nothing' : JSON.stringify(v)}. Put it in double quotes, as in ${k}: "${v ?? ''}".`);
       } else {
         settings.custom.push({ from: e.from, to: e.to });
         at.custom.push(i);
@@ -269,7 +276,7 @@ export function readConfigFile(path: string, display = path): string {
     if (st.isDirectory()) throw configError(`${display} is a directory, not a config file.`, `Name the file itself, as in -c ${join(display, DEFAULT_CONFIG_FILE)}.`);
     size = st.size;
   } catch (e) {
-    if ((e as { exitCode?: number }).exitCode) throw e;
+    if (e instanceof CliError) throw e;
     throw fsError(e, display);
   }
   if (size > MAX_CONFIG_BYTES) {
@@ -301,26 +308,39 @@ export interface WriteFs {
   closeSync: typeof closeSync;
   renameSync: typeof renameSync;
   unlinkSync: typeof unlinkSync;
+  realpathSync?: typeof realpathSync;
+  statSync?: typeof statSync;
 }
 
-const realFs: WriteFs = { openSync, writeSync, fsyncSync, closeSync, renameSync, unlinkSync };
+const realFs: WriteFs = { openSync, writeSync, fsyncSync, closeSync, renameSync, unlinkSync, realpathSync, statSync };
 
 /**
  * Write `text` to `path` atomically: to a temporary file beside it, flushed
  * to disk, then renamed over the target, so a crash or Ctrl+C leaves either
- * the old file or the new one, never half of one. Mode 0644: a config holds
- * no secret.
+ * the old file or the new one, never half of one. A symlink is followed, so
+ * the file it points to is what changes; an existing file keeps its mode,
+ * a new one is 0644 (a config holds no secret). Messages name `display`,
+ * the path as the user wrote it.
  */
-export function writeAtomic(path: string, text: string, fs: WriteFs = realFs): void {
-  const tmp = join(dirname(path), `.${basename(path)}.${process.pid}.${Date.now().toString(36)}.tmp`);
+export function writeAtomic(path: string, text: string, fs: WriteFs = realFs, display = path): void {
+  let target = path;
+  let mode = 0o644;
+  try {
+    target = fs.realpathSync?.(path) ?? path;
+    const st = fs.statSync?.(target);
+    if (st) mode = st.mode & 0o777;
+  } catch {
+    // Not there yet: a new file at the path given.
+  }
+  const tmp = join(dirname(target), `.${basename(target)}.${process.pid}.${Date.now().toString(36)}.tmp`);
   let fd: number | undefined;
   try {
-    fd = fs.openSync(tmp, 'wx', 0o644);
+    fd = fs.openSync(tmp, 'wx', mode);
     fs.writeSync(fd, text);
     fs.fsyncSync(fd);
     fs.closeSync(fd);
     fd = undefined;
-    fs.renameSync(tmp, path);
+    fs.renameSync(tmp, target);
   } catch (e) {
     if (fd !== undefined) {
       try {
@@ -336,7 +356,7 @@ export function writeAtomic(path: string, text: string, fs: WriteFs = realFs): v
     }
     const code = (e as NodeJS.ErrnoException).code;
     throw configError(
-      `${path} could not be written: ${code === 'EACCES' || code === 'EPERM' ? 'permission denied' : code === 'ENOSPC' ? 'the disk is full' : code === 'ENOENT' ? 'its directory does not exist' : (e as Error).message}.`,
+      `${display} could not be written: ${code === 'EACCES' || code === 'EPERM' ? 'permission denied' : code === 'ENOSPC' ? 'the disk is full' : code === 'ENOENT' ? 'its directory does not exist' : (e as Error).message}.`,
       'Nothing was changed.',
     );
   }

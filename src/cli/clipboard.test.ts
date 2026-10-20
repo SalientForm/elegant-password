@@ -1,9 +1,9 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import {writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { systemClipboard } from './clipboard';
 import { clipboardTools } from './clipboardTools';
+import { scratch } from './testing';
 
 describe('clipboard tools', () => {
   it('macOS: pbcopy, whatever the session', () => {
@@ -16,7 +16,7 @@ describe('clipboard tools', () => {
   });
 
   it('finds a tool only when it is an executable file on the PATH', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'tep-path-'));
+    const dir = scratch('tep-path-');
     writeFileSync(join(dir, 'wl-copy'), '#!/bin/sh\n', { mode: 0o755 });
     writeFileSync(join(dir, 'xclip'), 'not executable', { mode: 0o644 });
     expect(systemClipboard.exists('wl-copy', { PATH: `/nonexistent:${dir}` })).toBe(true);

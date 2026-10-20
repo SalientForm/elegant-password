@@ -4,8 +4,7 @@
 // allowed answer, saves a file tep g can use, and shapes every question
 // within the time budget.
 
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { problemsOf } from '../lib/consistency';
@@ -17,7 +16,7 @@ import { QUESTION_BUDGET_MS } from './constraints';
 import { EXIT } from './errors';
 import type { Prompter, SelectOption } from './io';
 import { resolve } from './resolve';
-import { fakeIo, flagsLayer } from './testing';
+import { fakeIo, flagsLayer, scratch } from './testing';
 
 /**
  * The budget for shaping one question (user decision, 2026-10-20); CI
@@ -121,7 +120,7 @@ describe('random walks through tep config', () => {
   it('never meet a contradiction, never reach a dead end, fit the review to the box, and save a file tep g can use', async () => {
     const slow: { message: string; ms: number }[] = [];
     for (let seed = 1; seed <= 40; seed++) {
-      const cwd = mkdtempSync(join(tmpdir(), 'tep-walk-'));
+      const cwd = scratch('tep-walk-');
       const io = fakeIo({ stdinTTY: true, cwd });
       const prompter = new RandomPrompter(seeded(seed), seed % 7);
       io.prompter = () => prompter;

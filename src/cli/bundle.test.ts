@@ -1,19 +1,21 @@
-// The built executable, run as a user would: pnpm build:cli, then node
-// dist-cli/tep.mjs in a scratch directory. Checks the bundle starts with
-// only Node (its dependencies inlined) and that exit codes and streams are
-// what the spec says.
+// The built executable, run as a user would: bundled into a scratch
+// directory (never over dist-cli, which the tep on the PATH may link to),
+// then node tep.mjs in another scratch directory. Checks the bundle starts
+// with only Node (its dependencies inlined) and that exit codes and
+// streams are what the spec says.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { checkRequirements, DEFAULT_REQUIREMENTS } from '../lib/generate';
 import pkg from '../../package.json';
+import { scratch } from './testing';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
-const BIN = join(ROOT, 'dist-cli', 'tep.mjs');
-const cwd = mkdtempSync(join(tmpdir(), 'tep-bundle-'));
+const out = scratch('tep-bundle-out-');
+const BIN = join(out, 'tep.mjs');
+const cwd = scratch('tep-bundle-');
 
 const tep = (args: string[], input?: string) => {
   const r = spawnSync(process.execPath, [BIN, ...args], { cwd, input: input ?? '', encoding: 'utf8', env: { PATH: process.env.PATH ?? '', NO_COLOR: '1' } });
@@ -21,7 +23,7 @@ const tep = (args: string[], input?: string) => {
 };
 
 beforeAll(() => {
-  execFileSync('pnpm', ['build:cli'], { cwd: ROOT, stdio: 'pipe' });
+  execFileSync('pnpm', ['exec', 'tsdown'], { cwd: ROOT, stdio: 'pipe', env: { ...process.env, TEP_OUT_DIR: out } });
 }, 120_000);
 
 describe('the tep bundle', () => {
@@ -33,7 +35,7 @@ describe('the tep bundle', () => {
   it('piped, prints one password that keeps the default rules', () => {
     const r = tep(['g']);
     expect(r.code).toBe(0);
-    expect(r.err).toBe('');
+    expect(r.err).toBe(`tep g: note: Config: none (no tep.yml in ${cwd})\n`);
     const [pw, ...rest] = r.out.trimEnd().split('\n');
     expect(rest).toEqual([]);
     expect(checkRequirements(pw!, DEFAULT_REQUIREMENTS).filter((c) => !c.met)).toEqual([]);
@@ -71,7 +73,7 @@ describe('the tep bundle', () => {
   });
 
   it('stops quietly when the reader goes away (tep g | head -1)', () => {
-    const r = spawnSync('sh', ['-c', `"${process.execPath}" "${BIN}" g -n 20 | head -1`], { cwd, encoding: 'utf8' });
+    const r = spawnSync('sh', ['-c', `"${process.execPath}" "${BIN}" g -n 20 -q | head -1`], { cwd, encoding: 'utf8' });
     expect(r.status).toBe(0);
     expect(r.stderr).toBe('');
     expect(r.stdout.trimEnd().split('\n')).toHaveLength(1);

@@ -1,14 +1,14 @@
 // Help, generated from the field table and the flag list, so it always
 // lists exactly the flags tep takes.
 
-import { EXIT } from './errors';
+import { EXIT_MEANINGS } from './errors';
 import { FIELDS, fieldsIn, type CliField, type FieldGroup } from './fields';
-import { META_FLAGS } from './flagList';
+import { META_FLAGS, SHORT_SETTINGS } from './flagList';
 
 const pad = (s: string, width: number) => (s.length >= width ? `${s}  ` : s.padEnd(width));
 
 function fieldFlag(f: CliField): string {
-  const short = f.name === 'count' ? '-n, ' : '    ';
+  const short = SHORT_SETTINGS[f.name] ? `-${SHORT_SETTINGS[f.name]}, ` : '    ';
   if (f.kind.type === 'bool') return `${short}--${f.name}, --no-${f.name}`;
   const value =
     f.kind.type === 'int' ? `<${f.kind.min}-${f.kind.max}>` : f.kind.type === 'choice' ? `<${f.kind.choices.map((c) => c.value).join('|')}>` : f.kind.type === 'symbols' ? '<symbols>' : f.kind.type === 'separator' ? '<auto|space|none|symbol>' : f.kind.type === 'strength' ? '<preset|bits>' : '<n|none>';
@@ -39,7 +39,7 @@ Examples:
   tep g --sentence - < sentence.txt
   tep config bank.yml
 
-Exit codes: ${EXIT.ok} done, ${EXIT.unexpected} a bug or a failed clipboard tool, ${EXIT.usage} the command line, ${EXIT.contradiction} settings that contradict each other, ${EXIT.config} a config file, ${EXIT.interrupted} interrupted.
+Exit codes: ${EXIT_MEANINGS.map((e) => `${e.code} ${e.short}`).join(', ')}.
 `;
 
 export function generateHelp(): string {
@@ -62,13 +62,25 @@ export const CONFIG_HELP = `Usage: tep config [file]
 
 Asks the questions that make a config file, then shows every answer with a
 line number: pick a line to change it, s to save, q to quit without saving.
+Esc goes back to the review from a line; Ctrl+C stops, writing nothing.
 Writes ./tep.yml, or the file named. An existing file is loaded first.
 
 Choices that would contradict an earlier answer are shown but cannot be
 picked, with the reason. Needs a terminal.
+
+The file, which can also be written by hand (YAML; every key is optional
+except version; the keys are tep g's flags without their dashes):
+  version: 1
+  mode: two-finger          # ten-finger, two-finger, one-handed or quick
+  site: typical-site        # a site preset, or rules: with min-length, max-length, ...
+  rules:
+    symbols: "!@#$%"        # symbols are quoted, as YAML gives many a meaning
+  options: preset           # the mode's own options, or a map: strength, comfort, ...
+  output:
+    count: 3
 `;
 
-export const UNINSTALL_HELP = `Usage: tep uninstall [--yes]
+export const UNINSTALL_HELP = `Usage: tep uninstall [--yes | -y]
 
 Removes the links that put tep on your PATH: each tep in $TEP_BIN_DIR,
 ~/.local/bin or a directory on the PATH that links to a built tep (as

@@ -113,7 +113,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
       const typed = value;
       if (!typed) return;
       // The password under test stays until cleared: the first run sets it, later runs are checked against it.
-      const checkAgainst = nextTarget(target, typed, true);
+      const checkAgainst = nextTarget(target, typed);
       const attempt = finishAttempt(recording.current, typed, checkAgainst, at);
       if (target === undefined) {
         setHint(undefined); // a password typed in by hand has no hint until one is added

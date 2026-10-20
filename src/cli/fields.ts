@@ -46,6 +46,10 @@ export interface CliField {
   kind: FieldKind;
 }
 
+/** How many passwords tep g makes when the count is not set: at a terminal, and when its output is piped. */
+export const COUNT_AT_TERMINAL = 5;
+export const COUNT_PIPED = 1;
+
 const int = (min: number, max: number): FieldKind => ({ type: 'int', min, max });
 const bool: FieldKind = { type: 'bool' };
 const req = (key: Exclude<keyof Requirements, 'count'>): FieldTarget => ({ kind: 'req', key });
@@ -76,20 +80,19 @@ export const FIELDS: readonly CliField[] = [
   { name: 'made-up', group: 'options', target: req('madeUp'), label: lower(PROFILE_LABELS.madeUp), description: 'Nouns replaced by made-up key rolls', kind: int(0, MAX_MADE_UP) },
   { name: 'glue', group: 'options', target: req('glue'), label: lower(PROFILE_LABELS.glue), description: 'Attach numbers and small-word initials to the next word', kind: bool },
   // "Use my sentence" (--sentence).
-  { name: 'shrink', group: 'sentence', target: sentence('shrink'), label: 'shrink style', description: 'How long words are shrunk', kind: { type: 'choice', choices: SHRINK_CHOICES } },
+  { name: 'shrink', group: 'sentence', target: sentence('shrink'), label: 'shrink style', description: 'How long words are shrunk: none (or keep: whole unless the target needs them shorter), vowels, ends', kind: { type: 'choice', choices: SHRINK_CHOICES } },
   { name: 'shrink-from', group: 'sentence', target: sentence('shrinkFrom'), label: 'shrink words from', description: 'Shrink words of this many letters or more', kind: int(SHRINK_FROM_RANGE.min, SHRINK_FROM_RANGE.max) },
-  { name: 'target-length', group: 'sentence', target: sentence('targetLength'), label: 'target length', description: 'Compress toward this many characters, or none', kind: { type: 'target-length' } },
+  { name: 'target-length', group: 'sentence', target: sentence('targetLength'), label: 'target length', description: 'Compress toward this many characters, or none (or max): toward the maximum length', kind: { type: 'target-length' } },
   { name: 'drop', group: 'sentence', target: sentence('allowDropping'), label: 'dropping words', description: 'Words may be dropped to fit', kind: bool },
   { name: 'small-initials', group: 'sentence', target: sentence('smallWordInitials'), label: 'small-word initials', description: 'Small words ("for", "the") become one capital letter', kind: bool },
   { name: 'padding', group: 'sentence', target: sentence('padding'), label: 'padding', description: 'Pad a sentence under the minimum length', kind: bool },
   { name: 'length-tag', group: 'sentence', target: sentence('lengthTag'), label: 'length tag', description: 'The tag that ends padding', kind: { type: 'choice', choices: LENGTH_TAG_CHOICES } },
   // Output.
-  { name: 'count', group: 'output', target: { kind: 'output', key: 'count' }, label: FIELD_LABELS.count, description: `How many passwords (1-${MAX_COUNT}); 5 at a terminal, 1 when piped`, kind: int(1, MAX_COUNT) },
+  { name: 'count', group: 'output', target: { kind: 'output', key: 'count' }, label: FIELD_LABELS.count, description: `How many passwords (1-${MAX_COUNT}); ${COUNT_AT_TERMINAL} at a terminal, ${COUNT_PIPED} when piped`, kind: int(1, MAX_COUNT) },
   { name: 'sort', group: 'output', target: { kind: 'output', key: 'sort' }, label: 'order', description: 'Order: difficulty (easiest first), memorability or strength', kind: { type: 'choice', choices: SORT_CHOICES } },
 ];
 
 export const fieldNamed = (name: string) => FIELDS.find((f) => f.name === name);
-export const fieldFor = (target: FieldTarget) => FIELDS.find((f) => f.target.kind === target.kind && f.target.key === target.key)!;
 export const reqField = (key: keyof Requirements) => FIELDS.find((f) => f.target.kind === 'req' && f.target.key === key);
 export const fieldsIn = (group: FieldGroup) => FIELDS.filter((f) => f.group === group);
 
@@ -133,8 +136,10 @@ export function parseValue(f: CliField, raw: unknown): Parsed<unknown> {
       return { ok: false, error: `must be true or false; found ${shown}` };
     case 'choice': {
       const values = k.choices.map((c) => c.value);
-      if (typeof raw === 'string' && values.includes(raw)) return { ok: true, value: raw };
-      const near = typeof raw === 'string' ? closest(raw, values) : undefined;
+      const typed = typeof raw === 'string' ? raw.trim().toLowerCase() : undefined;
+      if (typed !== undefined && values.includes(typed)) return { ok: true, value: typed };
+      if (typed !== undefined && f.name === 'shrink' && typed === 'keep') return { ok: true, value: 'none' }; // the app's word for it
+      const near = typed !== undefined ? closest(typed, values) : undefined;
       return { ok: false, error: `must be one of ${values.join(', ')}; found ${shown}${near ? `. Did you mean ${near}?` : ''}` };
     }
     case 'symbols': {
@@ -176,7 +181,7 @@ export function parseValue(f: CliField, raw: unknown): Parsed<unknown> {
       return { ok: true, value: n };
     }
     case 'target-length': {
-      if (raw === 'none' || raw === null) return { ok: true, value: null };
+      if (raw === 'none' || raw === 'max' || raw === null) return { ok: true, value: null }; // none: toward the maximum length, as the app's "max" says
       const { min, max } = TARGET_LENGTH_RANGE;
       const n = typeof raw === 'number' ? raw : typeof raw === 'string' && /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : Number.NaN;
       if (!Number.isInteger(n) || n < min || n > max) return { ok: false, error: `must be none or a whole number from ${min} to ${max}; found ${shown}` };
@@ -208,7 +213,7 @@ export function describeValue(f: CliField, value: unknown): string {
       if (f.name === 'spaces') return value ? 'allowed' : 'not allowed';
       return value ? 'on' : 'off';
     case 'separator':
-      return value === 'auto' ? 'auto' : value === ' ' ? 'a space' : value === '' ? 'none' : `"${value}"`;
+      return value === 'auto' ? 'Auto' : value === ' ' ? 'a space' : value === '' ? 'none' : `"${value}"`;
     case 'symbols':
       return value === '' ? 'none' : `"${value}"`;
     case 'strength': {

@@ -169,7 +169,7 @@ describe('sources', () => {
     expect(describeSource(flag('max-length'))).toBe('--max-length');
     expect(describeSource(fileAt(7, 'rules.max-length'))).toBe('tep.yml line 7 (rules.max-length)');
     expect(describeSource({ kind: 'site', preset: 'no-spaces', via: { kind: 'default' } })).toBe('the no-spaces site preset');
-    expect(describeSource({ kind: 'mode', mode: 'quick', via: { kind: 'default' } })).toBe("the quick mode's preset (the default mode)");
+    expect(describeSource({ kind: 'mode', mode: 'quick', via: { kind: 'default' } })).toBe("the quick mode's preset, the default mode");
     expect(describeSource({ kind: 'mode', mode: 'quick', via: flag('mode') })).toBe("the quick mode's preset, chosen by --mode");
     expect(describeSource({ kind: 'rules-text', via: flag('rules') })).toBe('the rules text given to --rules');
     expect(describeSource({ kind: 'wizard', line: 3, label: 'Maximum length' })).toBe('line 3 (Maximum length)');

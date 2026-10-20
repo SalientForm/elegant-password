@@ -36,9 +36,9 @@ export interface SelectOption<T> {
   disabled?: boolean;
 }
 
-/** The user pressed Ctrl+C (or Escape) at a prompt. */
+/** The user left a prompt: Ctrl+C stops everything; Escape means back, where there is a back to go to (the wizard's review). */
 export class Cancelled extends Error {
-  constructor() {
+  constructor(readonly key: 'ctrl-c' | 'escape' = 'ctrl-c') {
     super('Cancelled');
     this.name = 'Cancelled';
   }

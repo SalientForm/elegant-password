@@ -19,15 +19,21 @@ export const EXIT = {
 
 export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
 
-/** Each exit code and what it means, for help and the Fun page's CLI prompt. */
-export const EXIT_MEANINGS: readonly { code: ExitCode; meaning: string }[] = [
-  { code: EXIT.ok, meaning: 'Passwords printed, or the config saved (or the wizard quit with q)' },
-  { code: EXIT.unexpected, meaning: 'A bug: the engine failed in a way no setting explains; or the clipboard tool failed, or a link tep uninstall could not remove' },
-  { code: EXIT.usage, meaning: 'The command line: an unknown flag, a bad value, an unknown preset, flags that contradict each other, no terminal for tep config or tep uninstall without --yes, no clipboard tool' },
-  { code: EXIT.contradiction, meaning: 'Settings that contradict each other, or a sentence that cannot be made to fit' },
-  { code: EXIT.config, meaning: 'A config file that cannot be read or is not valid' },
-  { code: EXIT.interrupted, meaning: 'Interrupted (Ctrl+C)' },
+/** Each exit code and what it means, in full for the Fun page's CLI prompt and in short for the help line. The help line is built from this list, so the two cannot drift. */
+export const EXIT_MEANINGS: readonly { code: ExitCode; meaning: string; short: string }[] = [
+  { code: EXIT.ok, meaning: 'Passwords printed, or the config saved (or the wizard quit with q or Esc)', short: 'done' },
+  { code: EXIT.unexpected, meaning: 'A bug: the engine failed in a way no setting explains; or the clipboard tool failed, or a link tep uninstall could not remove', short: 'a bug, a failed clipboard tool or a link that could not be removed' },
+  { code: EXIT.usage, meaning: 'The command line: an unknown flag, a bad value, an unknown preset, flags that contradict each other, no terminal for tep config or tep uninstall without --yes, no clipboard tool', short: 'the command line' },
+  { code: EXIT.contradiction, meaning: 'Settings that contradict each other, or a sentence that cannot be made to fit', short: 'settings that contradict each other' },
+  { code: EXIT.config, meaning: 'A config file that cannot be read or is not valid', short: 'a config file' },
+  { code: EXIT.interrupted, meaning: 'Interrupted (Ctrl+C)', short: 'interrupted' },
 ];
+
+/** `text` ending in a full stop, unless it already ends a sentence (a "Did you mean x?" keeps its question mark). */
+export const punctuated = (text: string) => (/[.?!]$/.test(text) ? text : `${text}.`);
+
+/** Where to report a bug, named wherever one is suspected. */
+export const ISSUES = 'https://github.com/SalientForm/elegant-password/issues';
 
 export class CliError extends Error {
   constructor(

@@ -6,15 +6,13 @@
 
 import { parseArgs } from 'node:util';
 import type { TypingMode } from '../lib/difficulty';
-import { usageError } from './errors';
+import { flagNamed } from './args';
+import { punctuated, usageError } from './errors';
 import { FIELDS, fieldNamed, fieldsIn, parseValue } from './fields';
-import { FORMATS, META_FLAGS, type Format } from './flagList';
+import { FORMATS, META_FLAGS, SHORT_SETTINGS as SHORT, type Format } from './flagList';
 import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
-
-/** Short forms of settings. */
-const SHORT: Record<string, string> = { count: 'n' };
 
 export interface GenerateFlags {
   layer: Layer;
@@ -75,7 +73,7 @@ function example(name: string): string {
 function reword(e: unknown, args: string[]): never {
   const err = e as { code?: string; message: string };
   const message = err.message ?? String(e);
-  const named = message.match(/Option '(-{1,2}[^' ]+)/)?.[1] ?? message.match(/Unknown option '([^']+)'/)?.[1];
+  const named = flagNamed(message);
   switch (err.code) {
     case 'ERR_PARSE_ARGS_UNKNOWN_OPTION': {
       const flag = named ?? '?';
@@ -94,11 +92,15 @@ function reword(e: unknown, args: string[]): never {
         );
       }
       if (/ambiguous/.test(message)) {
-        const i = args.findIndex((a) => a === flag);
+        // The flag as typed may be the short form ("-n -5"); the message names the long one.
+        const meta = META_FLAGS.find((m) => m.name === long);
+        const short = SHORT[long] ?? (meta && 'short' in meta ? meta.short : undefined);
+        const i = args.findIndex((a) => a === flag || (short !== undefined && a === `-${short}`));
         const value = i >= 0 ? args[i + 1] : undefined;
+        // The suggestion uses the long form: "-n=-5" would not parse, "--count=-5" does.
         throw usageError(
-          `the value after ${flag}${value ? `, "${value}",` : ''} starts with a dash, so it reads as another flag.`,
-          value ? `If it is the value, join them with "=": ${flag}=${value}` : `Give ${flag} a value, as in ${example(long)}.`,
+          `the value after ${flag === `--${long}` ? flag : `${flag} (--${long})`}${value ? `, "${value}",` : ''} starts with a dash, so it reads as another flag.`,
+          value ? `If it is the value, join them with "=": --${long}=${value}` : `Give --${long} a value, as in ${example(long)}.`,
         );
       }
       throw usageError(`${flag} needs a value, as in ${example(long)}.`);
@@ -129,10 +131,14 @@ export function parseGenerateArgs(argv: string[]): GenerateFlags {
   }
   const values = parsed.values as Record<string, string | boolean | undefined>;
 
-  // A flag given twice, or on and off, is a contradiction on the command line itself.
+  // A flag given twice, or on and off, is a contradiction on the command line itself. And --no-x is only for a setting
+  // that is on or off: Node would take --no-copy quietly, as copy off.
   const seen = new Map<string, string[]>();
   for (const t of parsed.tokens ?? []) {
     if (t.kind !== 'option') continue;
+    if (t.rawName.startsWith('--no-') && fieldNamed(t.name)?.kind.type !== 'bool') {
+      throw usageError(`unknown flag ${t.rawName}.`, `${t.name} is off unless --${t.name} is given; there is no --no-${t.name}.`);
+    }
     const forms = seen.get(t.name) ?? [];
     forms.push(t.value !== undefined ? `${t.rawName} ${t.value}` : t.rawName);
     seen.set(t.name, forms);
@@ -160,18 +166,18 @@ export function parseGenerateArgs(argv: string[]): GenerateFlags {
     const raw = values[f.name];
     if (raw === undefined) continue;
     const r = parseValue(f, raw);
-    if (!r.ok) throw usageError(`--${f.name} ${r.error}.`, `For example: ${example(f.name)}`);
+    if (!r.ok) throw usageError(punctuated(`--${f.name} ${r.error}`), `For example: ${example(f.name)}`);
     layer.values[f.name] = { value: r.value, source: flagSource(f.name) };
   }
 
   if (typeof values.mode === 'string') {
     const r = lookup('typing mode', MODE_NAMES, values.mode);
-    if (!r.ok) throw usageError(`--mode: ${r.error}`);
+    if (!r.ok) throw usageError(`--mode ${r.error}`, `For example: ${example('mode')}`);
     layer.mode = { value: r.value as TypingMode, source: flagSource('mode') };
   }
   if (typeof values.site === 'string') {
     const r = lookup('site preset', SITE_NAMES, values.site);
-    if (!r.ok) throw usageError(`--site: ${r.error}`);
+    if (!r.ok) throw usageError(`--site ${r.error}`, `For example: ${example('site')}`);
     layer.site = { value: r.value, source: flagSource('site') };
   }
   if (typeof values.rules === 'string') layer.rulesText = { value: values.rules, source: flagSource('rules') };
@@ -194,11 +200,12 @@ export function parseGenerateArgs(argv: string[]): GenerateFlags {
 
   let format: Format | undefined;
   if (typeof values.format === 'string') {
-    if (!FORMATS.includes(values.format as Format)) {
-      const near = closest(values.format, FORMATS);
-      throw usageError(`--format must be ${FORMATS.join(', ')}; found "${values.format}".${near ? ` Did you mean ${near}?` : ''}`);
+    const typed = values.format.toLowerCase();
+    if (!FORMATS.includes(typed as Format)) {
+      const near = closest(typed, FORMATS);
+      throw usageError(`--format must be one of ${FORMATS.join(', ')}; found "${values.format}".${near ? ` Did you mean ${near}?` : ''}`, `For example: ${example('format')}`);
     }
-    format = values.format as Format;
+    format = typed as Format;
   }
   if (values.explain && format === 'plain') {
     throw usageError('--explain and --format plain contradict each other: plain output is the passwords alone.', 'Use --format table or --format json with --explain.');

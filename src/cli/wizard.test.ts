@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import {existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { problemsOf } from '../lib/consistency';
@@ -10,10 +9,11 @@ import { fieldShape, type SelectShape } from './constraints';
 import { EXIT } from './errors';
 import { main } from './main';
 import { resolve } from './resolve';
-import { fakeIo, flagsLayer, type Step } from './testing';
-import { answersOf, reviewLines } from './wizard';
+import { fakeIo, flagsLayer, scratch, type Step } from './testing';
+import { answersOf, modelOf, reviewLines } from './wizard';
+import { serializeConfig } from './configText';
 
-const dir = () => mkdtempSync(join(tmpdir(), 'tep-config-'));
+const dir = () => scratch('tep-config-');
 
 async function wizard(steps: Step[], over: { cwd?: string; args?: string[]; noteWidth?: number } = {}) {
   const cwd = over.cwd ?? dir();
@@ -71,7 +71,7 @@ describe('tep config: a new file', () => {
       '1  Typing mode  Two-finger',
       '2  Site rules   Typical site (12-32, A + 1 + #)',
       expect.stringMatching(/^3 {2}Options {6}the Two-finger preset: strength target Everyday \(40 bits\), shortest that meets the target off, typing comfort Balanced, keep Shift within reach off, separator a space, include a number on, minimum swaps 1, capital initials 1, two-letter words 1, made-up nouns 1, glue on$/),
-      '4  Passwords    5 at a terminal, 1 when piped',
+      '4  Count        5 at a terminal, 1 when piped',
       '5  Order        Difficulty',
       '',
       expect.stringMatching(/^Sample: .+ {3}Strength \d+ {2}Raw \d+ {2}Difficulty \d+ {2}Memorability \d+$/),
@@ -87,7 +87,7 @@ describe('tep config: a new file', () => {
     const site = lines.indexOf('2  Site rules   NIST passphrase (15-64, no');
     expect(lines[site + 1]).toBe(' '.repeat(16) + 'must-haves)');
     const options = lines.findIndex((l) => l.startsWith('3  Options'));
-    const passwords = lines.findIndex((l) => l.startsWith('4  Passwords'));
+    const passwords = lines.findIndex((l) => l.startsWith('4  Count'));
     expect(passwords - options).toBeGreaterThan(3);
     for (const l of lines.slice(options + 1, passwords)) expect(l).toMatch(/^ {16}\S/);
     const sample = lines.findIndex((l) => l.startsWith('Sample: '));
@@ -205,7 +205,51 @@ describe('tep config: questions shaped by earlier answers', () => {
   });
 });
 
+describe('tep config: Esc means back', () => {
+  it('while changing a line, goes back to the review with the line unchanged; Ctrl+C there still stops', async () => {
+    const { code, io, text } = await wizard([...quick(), { text: '1' }, { escape: true }, { text: 's' }]);
+    expect(code).toBe(EXIT.ok);
+    expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Back to the review; line 1 is unchanged.' });
+    expect(text).toContain('mode: two-finger'); // the mode question was left with Esc: the answer stands
+    const stopped = await wizard([...quick(), { text: '1' }, { cancel: true }]);
+    expect(stopped.code).toBe(EXIT.interrupted);
+    expect(stopped.text).toBeUndefined();
+  });
+
+  it('at the review itself, leaves without saving, like q; during the first questions it stops like Ctrl+C', async () => {
+    const out = await wizard([...quick(), { escape: true }]);
+    expect(out.code).toBe(EXIT.ok);
+    expect(out.text).toBeUndefined();
+    expect(out.io.prompts.said.at(-1)!.message).toBe('Quit; nothing was written.');
+    const early = await wizard([{ select: 'Two-finger' }, { escape: true }]);
+    expect(early.code).toBe(EXIT.interrupted);
+    expect(early.io.err()).toBe('tep config: cancelled; nothing was written.\n');
+  });
+});
+
+describe('tep config: what it writes', () => {
+  it('leaves out the options the typing mode has no use for, so tep g never warns about its own file', async () => {
+    const answers = { ...answersOf({ mode: 'two-finger', site: 'typical-site', rules: {}, options: 'preset', sentence: {}, output: {} }), optionsHow: 'each' as const, options: {} };
+    const model = modelOf(answers);
+    expect(Object.keys(model.options)).not.toContain('avoid-pinky'); // two index fingers have no pinky to stretch
+    expect(Object.keys(model.options)).toContain('comfort');
+    const r = resolve(layerOf(parseConfig(serializeConfig(model, '2026-10-20'), 'tep.yml')), flagsLayer({}), { tty: true });
+    expect(r.warnings).toEqual([]);
+  });
+});
+
 describe('tep config: pasted rules', () => {
+  it('names each rule it cannot keep as it is dropped, and lists them on the review', async () => {
+    // "at least 3 symbols" cannot be met in 8-10 characters with everything else the rules need: tep says so instead of quietly writing 0.
+    const { code, io, text } = await wizard([{ select: 'Ten-finger' }, { select: 'Paste' }, { text: '8-10 characters, at least 3 symbols, no spaces' }, { text: '8' }, { text: '10' }, { text: '!@#$%' }, { select: 'Not allowed' }, { select: '1' }, { select: '1' }, { first: true }]);
+    expect(code).toBe(EXIT.ok); // the first allowed answer everywhere after that, then q at the review
+    expect(text).toBeUndefined();
+    const warn = io.prompts.said.find((s) => s.kind === 'warn' && /^Dropped the pasted rule for/.test(s.message));
+    expect(warn?.message).toMatch(/^Dropped the pasted rule for required symbols, 3: .+\. tep's passwords will not meet it; check what the site accepts\.$/);
+    const review = io.prompts.said.find((s) => s.kind === 'note');
+    expect(review?.message).toMatch(/Dropped: required symbols 3 \(the pasted rules asked for it\): /);
+  });
+
   it('reads them, says how, and keeps the rest from the Typical site', async () => {
     const { io, text } = await wizard([{ select: 'Ten-finger' }, { select: 'Paste' }, { text: '' }, { text: 'hello' }, { text: 'Must be 8-20 characters and include at least one number' }, { select: 'Use the' }, { select: 'Keep' }, { text: 's' }]);
     const paste = asked(io, 'Paste the site\'s rules (one line)')[0]!;
@@ -216,7 +260,7 @@ describe('tep config: pasted rules', () => {
 
   it('rules that do not fit together: says why, then asks each rule from the text\'s values', async () => {
     const { io } = await wizard([{ select: 'Ten-finger' }, { select: 'Paste' }, { text: 'Must be 4-6 characters' }, { cancel: true }]);
-    expect(io.prompts.said).toContainEqual({ kind: 'warn', message: expect.stringMatching(/^Those rules do not fit together: No made-up sentence fits between 4 and 6 characters.*Asking each rule, starting from what the text said where that fits\.$/) });
+    expect(io.prompts.said).toContainEqual({ kind: 'warn', message: expect.stringMatching(/^Those rules do not fit together: No made-up sentence fits between 4 and 6 characters.*Asking each rule, starting from what the text said where that fits; a rule that cannot be kept is named as it is dropped\.$/) });
     expect(asked(io, /^Minimum length/)[0]!.initial).toBe('4');
   });
 });

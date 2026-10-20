@@ -147,7 +147,7 @@ describe('resolve: options a mode has no use for', () => {
   it('warns when one is set by hand, naming where, the value, the mode and why', () => {
     const r = resolve(undefined, flagsLayer({ 'avoid-pinky': true }, { mode: 'two-finger' }), tty);
     expect(r.warnings).toEqual([
-      '--avoid-pinky sets avoid pinky stretches to on, which means nothing for Two-finger typing: Two index fingers have no pinky to stretch. The setting still applies to how passwords are made.',
+      '--avoid-pinky sets avoid pinky stretches to on, which Two-finger typing has no use for (two index fingers have no pinky to stretch). It still shapes the passwords as set.',
     ]);
     expect(r.generation.req.avoidPinkyStretch).toBe(true);
   });

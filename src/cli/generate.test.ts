@@ -1,11 +1,10 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import {writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { checkRequirements, DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { EXIT } from './errors';
 import { main, VERSION } from './main';
-import { fakeIo, type FakeIo } from './testing';
+import { fakeIo, scratch, type FakeIo } from './testing';
 
 async function run(args: string[], over: Parameters<typeof fakeIo>[0] = {}): Promise<{ code: number; io: FakeIo }> {
   const io = fakeIo(over);
@@ -22,16 +21,18 @@ describe('tep g: output', () => {
     const lines = io.out().trimEnd().split('\n');
     expect(lines).toHaveLength(1);
     expect(checkRequirements(lines[0]!, DEFAULT_REQUIREMENTS).every((c) => c.met)).toBe(true);
-    expect(io.err()).toBe('');
+    expect(io.err()).toBe('tep g: note: Config: none (no tep.yml in /nonexistent-tep-test-dir)\n'); // which config the settings came from is always said; piped, on stderr
+    expect((await run(['g', '--quiet'])).io.err()).toBe('');
   });
 
   it('at a terminal, prints a table of 5: each password with its badges and hint', async () => {
     const { code, io } = await run(['g', '--no-color'], { stdoutTTY: true });
     expect(code).toBe(EXIT.ok);
     const lines = io.out().trimEnd().split('\n');
-    expect(lines).toHaveLength(10);
-    expect(lines[0]).toMatch(/^1 {2}\S.* {3}Strength \d+ {2}Raw \d+ {2}Difficulty \d+ {2}Memorability \d+ {2}[\d.]+ bits$/);
-    expect(lines[1]).toMatch(/^ {3}hint: /);
+    expect(lines).toHaveLength(11);
+    expect(lines[0]).toBe('Config: none (no tep.yml in /nonexistent-tep-test-dir)'); // the table's first line says where the settings came from
+    expect(lines[1]).toMatch(/^1 {2}\S.* {3}Strength \d+ {2}Raw \d+ {2}Difficulty \d+ {2}Memorability \d+ {2}[\d.]+ bits$/);
+    expect(lines[2]).toMatch(/^ {3}hint: /);
     expect(io.out()).not.toContain(ESC);
   });
 
@@ -57,7 +58,8 @@ describe('tep g: output', () => {
     const { code, io } = await run(['g', '-n', '2', '--mode', 'two-finger', '--format', 'json']);
     expect(code).toBe(0);
     const data = JSON.parse(io.out());
-    expect(Object.keys(data)).toEqual(['mode', 'typingMode', 'separator', 'sort', 'warnings', 'suggestions']);
+    expect(Object.keys(data)).toEqual(['mode', 'typingMode', 'separator', 'sort', 'config', 'warnings', 'suggestions']);
+    expect(data.config).toEqual({ file: null, path: null, why: 'no tep.yml in /nonexistent-tep-test-dir' });
     expect(data).toMatchObject({ mode: 'generated', typingMode: 'two-finger', separator: ' ', sort: 'difficulty' });
     expect(Object.keys(data.suggestions[0])).toEqual(['password', 'hint', 'strength', 'raw', 'bits', 'difficulty', 'difficultyLabel', 'memorability', 'readings']);
     expect(Object.keys(data.suggestions[0].readings)).toEqual(['strength', 'raw', 'difficulty', 'memorability']);
@@ -66,7 +68,8 @@ describe('tep g: output', () => {
 
   it('--explain adds the plan and each password\'s why, in a table or JSON', async () => {
     const table = (await run(['g', '-n', '1', '--explain', '--format', 'table'])).io.out();
-    expect(table).toMatch(/^Plan: [\d.]+ bits for anyone who knows exactly how tep works, meeting the target\./);
+    expect(table).toMatch(/^Config: none .*\nPlan: [\d.]+ bits for anyone who knows exactly how tep works, meeting the target\./);
+    expect((await run(['g', '-n', '1', '--explain'])).io.out()).toMatch(/^Config: /); // piped, --explain still gets the table: plain output could not carry the why
     for (const part of ['Words: ', 'Fast to type:', 'Rules:', '  met: ']) expect(table).toContain(part);
     const json = JSON.parse((await run(['g', '-n', '1', '--explain', '--format', 'json'])).io.out());
     expect(json.plan.breakdown.length).toBeGreaterThan(2);
@@ -84,7 +87,10 @@ describe('tep g: warnings and notes on stderr', () => {
     expect(err).not.toContain('The length limits allow at most'); // the engine's shorter warning is not repeated
     expect(err).toMatch(/tep g: warning: The strength target, Strong \(50 bits\), is out of reach: these rules allow at most [\d.]+ bits/);
     expect(err).toMatch(/maximum length: 16 \(from the short-max-16 site preset, chosen by --site\)/);
-    expect(err).toMatch(/Fix: A maximum length of \d+ would reach it \(--max-length\), or lower the target \(--strength\)\./);
+    // The maximum is the site's own rule: raising it is not offered, since a longer password would be refused.
+    expect(err).toMatch(/Fix: Lower the target \(--strength\); the maximum length of 16 is the site's own rule, so a longer password would be refused\./);
+    const own = (await run(['g', '--max-length', '16', '--strength', 'strong'])).io.err();
+    expect(own).toMatch(/Fix: A maximum length of \d+ would reach it \(--max-length\), or lower the target \(--strength\)\./); // a maximum set by hand can be raised
   });
 
   it('puts the warnings in the JSON too, and --quiet keeps stderr empty', async () => {
@@ -96,17 +102,30 @@ describe('tep g: warnings and notes on stderr', () => {
   it('an option set by hand that the mode has no use for', async () => {
     const { code, io } = await run(['g', '--mode', 'two-finger', '--avoid-pinky']);
     expect(code).toBe(0);
-    expect(io.err()).toContain('tep g: warning: --avoid-pinky sets avoid pinky stretches to on, which means nothing for Two-finger typing');
+    expect(io.err()).toContain('tep g: warning: --avoid-pinky sets avoid pinky stretches to on, which Two-finger typing has no use for');
   });
 
   it('says how it read --rules', async () => {
     const { code, io } = await run(['g', '--rules', 'Must be 8-20 characters and include at least one number']);
     expect(code).toBe(0);
-    expect(io.err()).toMatch(/^tep g: note: Read the rules text \(--rules\) as: 8-20 characters/);
+    expect(io.err()).toMatch(/^tep g: note: Config: none .*\ntep g: note: Read the rules text \(--rules\) as: 8-20 characters/);
   });
 });
 
 describe('tep g: contradictions (exit 3)', () => {
+  it('offers only fixes that work, and names the required characters when they are the squeeze', async () => {
+    // Lowering the minimum to 4 would not help: no sentence fits in 4 characters, so only raising the maximum is offered.
+    const short = await run(['g', '--max-length', '4']);
+    expect(short.code).toBe(EXIT.contradiction);
+    expect(short.io.err()).toMatch(/Fix: Raise the maximum length to \d+ or more \(--max-length\)\./); // found by the engine: 12 alone would not fit the default counts either
+    expect(short.io.err()).not.toContain('Lower the minimum length');
+    const squeeze = await run(['g', '--min-uppercase', '8', '--max-length', '12']);
+    expect(squeeze.code).toBe(EXIT.contradiction);
+    expect(squeeze.io.err()).toMatch(/No made-up sentence fits between 12 and 12 characters with 8 uppercase letters, 1 digit and 1 symbol\./);
+    expect(squeeze.io.err()).toMatch(/required uppercase letters: 8 \(from --min-uppercase\)/); // the counts are among the values, with their sources
+    expect(squeeze.io.err()).toMatch(/Fix: Raise the maximum length to \d+ or more \(--max-length\)\./); // fewer capitals alone would not help here, so that is not offered
+  });
+
   it('names each problem, its values and where each came from, and a fix; nothing on stdout', async () => {
     const { code, io } = await run(['g', '--min-length', '20', '--max-length', '16']);
     expect(code).toBe(EXIT.contradiction);
@@ -153,7 +172,7 @@ describe('tep g: the command line (exit 2)', () => {
     const [first, ...rest] = io.err().trimEnd().split('\n');
     if (typeof title === 'string') expect(first).toBe(`tep g: error: ${title}`);
     else expect(first).toMatch(title);
-    if (detail) expect(rest.join('\n')).toMatch(detail);
+    if (detail) expect(rest.map((l) => l.replace(/^  /, '')).join('\n')).toMatch(detail);
     expect(io.out()).toBe('');
   };
 
@@ -171,19 +190,34 @@ describe('tep g: the command line (exit 2)', () => {
   it('a value of the wrong kind', () => usage(['--comfort', 'loose'], '--comfort must be one of strict, balanced, relaxed; found "loose".'));
   it('a symbol that is not one', () => usage(['--symbols', '!a'], /^tep g: error: --symbols cannot include the letter "a"/));
   it('an unknown mode, preset or format', async () => {
-    await usage(['--mode', 'two'], /^tep g: error: --mode: "two" is not a typing mode\. The typing modes are: /);
-    await usage(['--site', 'banks'], /^tep g: error: --site: "banks" is not a site preset\./);
-    await usage(['--format', 'yaml'], '--format must be table, plain, json; found "yaml".');
+    await usage(['--mode', 'two'], /^tep g: error: --mode "two" is not a typing mode\. The typing modes are: /, /^For example: --mode two-finger$/);
+    await usage(['--site', 'banks'], /^tep g: error: --site "banks" is not a site preset\./, /^For example: --site typical-site$/);
+    await usage(['--format', 'yaml'], '--format must be one of table, plain, json; found "yaml".', /^For example: --format json$/);
+    expect((await run(['g', '-n', '1', '--format', 'JSON'])).io.out()).toMatch(/^\{/); // a choice is matched regardless of case
+    expect((await run(['g', '-n', '1', '--comfort', 'Strict', '--sort', 'Strength'])).code).toBe(EXIT.ok);
   });
   it('sentence options without --sentence', () => usage(['--shrink', 'ends', '--no-padding'], '--shrink, --padding are for your own sentence, and --sentence - is not given.'));
   it('the sentence as an argument, refused with why', () =>
     usage(['--sentence', 'Sally eats sweets'], '--sentence takes "-", not the sentence itself.', /shell history .* ps/));
   it('--explain with plain output', () => usage(['--explain', '--format', 'plain'], '--explain and --format plain contradict each other: plain output is the passwords alone.'));
+  it('a flag with a short form that is missing its value names the long form, and -n -5 gets a working suggestion', async () => {
+    await usage(['--format'], '--format needs a value, as in --format json.');
+    await usage(['-c'], '--config needs a value, as in --config bank.yml.');
+    await usage(['-m'], '--mode needs a value, as in --mode two-finger.');
+    await usage(['-n', '-5'], 'the value after -n (--count), "-5", starts with a dash, so it reads as another flag.', /^If it is the value, join them with "=": --count=-5$/);
+    expect((await run(['g', '--count=-5'])).io.err()).toMatch(/^tep g: error: --count must be from 1 to \d+; found -5\./); // and that suggestion parses
+    await usage(['--strength', 'strng'], '--strength must be minimal, everyday, strong, very-strong, master-password, or a number of bits from 0 to 256; found "strng". Did you mean strong?'); // one question mark, no full stop after it
+  });
+  it('--no-x is only for a setting that is on or off', async () => {
+    await usage(['--no-copy'], 'unknown flag --no-copy.', /^copy is off unless --copy is given; there is no --no-copy\.$/);
+    await usage(['--no-explain'], 'unknown flag --no-explain.');
+    expect((await run(['g', '-n', '1', '--no-number'])).code).toBe(EXIT.ok); // a setting: fine
+  });
   it('rules text with no rules', () => usage(['--rules', 'hello'], '--rules: no password rules found in "hello".'));
 });
 
 describe('tep g: config files', () => {
-  const dir = () => mkdtempSync(join(tmpdir(), 'tep-g-'));
+  const dir = () => scratch('tep-g-');
 
   it('reads ./tep.yml when there is one, and names its lines in messages', async () => {
     const cwd = dir();
@@ -192,6 +226,20 @@ describe('tep g: config files', () => {
     expect(code).toBe(EXIT.contradiction);
     expect(io.err()).toContain('minimum length: 20 (from tep.yml line 3 (rules.min-length))');
     expect(io.err()).toContain('Fix: Lower the minimum length to 16 or less (rules.min-length in tep.yml (line 3)), or raise the maximum length to 20 or more (rules.max-length in tep.yml (line 4)).');
+  });
+
+  it('always says which config file the settings came from: in the table, in the JSON, and on stderr when piped', async () => {
+    const cwd = dir();
+    writeFileSync(join(cwd, 'tep.yml'), 'version: 1\noutput:\n  count: 2\n');
+    const table = await run(['g', '-n', '1', '--no-color'], { cwd, stdoutTTY: true });
+    expect(table.io.out().split('\n')[0]).toBe(`Config: tep.yml (${join(cwd, 'tep.yml')})`);
+    expect(table.io.err()).not.toContain('Config:'); // at a terminal the table says it; no note as well
+    const piped = await run(['g', '-n', '1'], { cwd });
+    expect(piped.io.err()).toBe(`tep g: note: Config: tep.yml (${join(cwd, 'tep.yml')})\n`);
+    const json = JSON.parse((await run(['g', '-n', '1', '--format', 'json', '-c', 'tep.yml'], { cwd })).io.out());
+    expect(json.config).toEqual({ file: 'tep.yml', path: join(cwd, 'tep.yml'), why: null });
+    const none = JSON.parse((await run(['g', '-n', '1', '--format', 'json', '--no-config'], { cwd })).io.out());
+    expect(none.config).toEqual({ file: null, path: null, why: '--no-config' });
   });
 
   it('flags win over the file', async () => {
@@ -255,7 +303,7 @@ describe('tep g: your own sentence', () => {
   it('Ctrl+C at the prompt is exit 130', async () => {
     const { code, io } = await run(['g', '--sentence', '-'], { stdinTTY: true, steps: [{ cancel: true }] });
     expect(code).toBe(EXIT.interrupted);
-    expect(io.err()).toBe('tep g: cancelled; nothing was written.\n');
+    expect(io.err()).toBe('tep g: cancelled; no passwords were made.\n');
   });
 });
 
@@ -264,7 +312,7 @@ describe('tep g: --copy', () => {
     const { code, io } = await run(['g', '-n', '3', '--copy'], { env: { WAYLAND_DISPLAY: 'wayland-0' }, tools: ['wl-copy'] });
     expect(code).toBe(0);
     expect(io.copied).toEqual([{ command: ['wl-copy'], input: io.out().split('\n')[0] }]);
-    expect(io.err()).toBe('tep g: copied password 1 to the clipboard (wl-copy).\n');
+    expect(io.err()).toBe('tep g: note: Config: none (no tep.yml in /nonexistent-tep-test-dir)\ntep g: copied password 1 to the clipboard (wl-copy).\n');
   });
 
   it('uses pbcopy on macOS, xclip or xsel on X11, clip.exe on WSL', async () => {
@@ -279,7 +327,7 @@ describe('tep g: --copy', () => {
     expect(code).toBe(EXIT.usage);
     expect(io.out().trim()).not.toBe('');
     expect(io.err()).toBe(
-      'tep g: error: --copy found no clipboard tool, so nothing was copied.\n  Tried xclip (X11 (package xclip)), xsel (X11 (package xsel)); none is installed.\n  Install wl-clipboard (Wayland) or xclip (X11), or leave out --copy and pipe instead: tep g | wl-copy\n',
+      'tep g: note: Config: none (no tep.yml in /nonexistent-tep-test-dir)\ntep g: error: --copy found no clipboard tool, so nothing was copied.\n  Tried xclip (X11, package xclip), xsel (X11, package xsel); none is installed.\n  Install wl-clipboard (Wayland) or xclip (X11), or leave out --copy and pipe instead: tep g | wl-copy\n',
     );
     expect((await run(['g', '--copy'])).io.err()).toContain('This session has no display');
   });
@@ -310,8 +358,14 @@ describe('tep: commands, help and version', () => {
     const r = await run(['generat']);
     expect(r.code).toBe(EXIT.usage);
     expect(r.io.err()).toBe('tep: error: "generat" is not a tep command. Did you mean generate?\n  The commands are g (generate), config, uninstall and help.\n');
-    expect((await run(['help', 'x'])).io.err()).toBe('tep help: error: there is no command "x".\n  The commands are g (generate), config and uninstall.\n');
+    expect((await run(['help', 'x'])).io.err()).toBe('tep help: error: there is no command "x".\n  The commands are g (generate), config, uninstall and help.\n');
     expect((await run(['--max-length', '3'])).io.err()).toMatch(/^tep: error: a command comes before the flags, as in: tep g --max-length 3/);
+    expect((await run(['-v'])).io.err()).toBe('tep: error: "-v" is not a flag of tep. Did you mean -V?\n  tep --version prints the version.\n'); // not "tep g -v", which would fail too
+    expect((await run(['--bogus'])).io.err()).toBe('tep: error: "--bogus" is not a flag of tep.\n  Run "tep help" for the commands, or "tep help g" for the flags of tep g.\n');
+    const helpHelp = await run(['help', 'help']);
+    expect(helpHelp.code).toBe(EXIT.ok);
+    expect(helpHelp.io.out()).toMatch(/^tep: the elegant passwords generator/);
+    expect(helpHelp.io.out()).toMatch(/^Exit codes: 0 done, 1 a bug, a failed clipboard tool or a link that could not be removed, 2 the command line, 3 settings that contradict each other, 4 a config file, 130 interrupted\.$/m);
   });
 
   it('turns anything unexpected into exit 1 and asks for a report', async () => {

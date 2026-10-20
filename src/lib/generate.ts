@@ -468,7 +468,7 @@ function shortestIn(pool: readonly string[]): number {
  * are not counted on either. A shape below the rule is never planned, so
  * every password can meet it.
  */
-export function minLettersOf(shape: Shape, comfort: Comfort, minDigits: number, eased = false): number {
+function minLettersOf(shape: Shape, comfort: Comfort, minDigits: number, eased = false): number {
   return shape.slots.reduce((sum, slot, i) => {
     if (slot === 'num' || shape.madeUp.includes(i)) return sum;
     if (shape.initials.includes(i)) return sum + 1;
@@ -632,6 +632,18 @@ export function plan(req: Requirements): Candidate {
   return best;
 }
 
+/** " with 8 uppercase letters and a digit": the required characters that take room in the window, or nothing. */
+function withCounts(req: Requirements): string {
+  const parts = [
+    [req.minUppercase, 'uppercase letter'],
+    [req.minDigits, 'digit'],
+    [req.minSymbols, 'symbol'],
+  ]
+    .filter(([n]) => (n as number) > 0)
+    .map(([n, one]) => (n === 1 ? `${one === 'uppercase letter' ? 'an' : 'a'} ${one}` : `${n} ${one}s`));
+  return parts.length ? ` with ${parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]}` : '';
+}
+
 /** Why no shape fits, for plan's error and planProblem. */
 function noPlan(req: Requirements, ctx: PlanContext, noClosing: boolean, tooFewLetters: boolean): PlanProblem {
   if (noClosing) return { code: 'no-closing', message: noClosingProblem(ctx.allowed, ctx.separator) };
@@ -645,7 +657,7 @@ function noPlan(req: Requirements, ctx: PlanContext, noClosing: boolean, tooFewL
     : {
         code: 'no-fit',
         message:
-          `No sentence fits between ${req.minLength} and ${req.maxLength} characters. Try widening the length range, ` +
+          `No sentence fits between ${req.minLength} and ${req.maxLength} characters${withCounts(req)}. Try widening the length range${req.minUppercase + req.minDigits + req.minSymbols > 0 ? ' or requiring fewer characters' : ''}, ` +
           'or use your own sentence (Use my sentence), which can be shortened further.',
       };
 }

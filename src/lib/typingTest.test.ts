@@ -42,10 +42,8 @@ describe('typing test', () => {
   });
 
   it('locks the target when asked: a mistyped Enter does not replace it', () => {
-    expect(nextTarget(undefined, 'first', false)).toBe('first'); // the first entry is always the target
-    expect(nextTarget(undefined, 'first', true)).toBe('first');
-    expect(nextTarget('first', 'second', false)).toBe('second');
-    expect(nextTarget('first', 'secnod', true)).toBe('first');
+    expect(nextTarget(undefined, 'first')).toBe('first'); // the first entry is always the target
+    expect(nextTarget('first', 'secnod')).toBe('first'); // and it stays, mistyped runs included, until cleared
   });
 });
 

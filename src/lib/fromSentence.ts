@@ -369,7 +369,6 @@ interface Problem {
 }
 
 /** How many ladder states a fit finished; exposed for tests of the search. */
-export const searchStats = { finishes: 0, states: 0 };
 
 function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
   const { req, opts, separator, ladderCache } = ctx;
@@ -394,7 +393,6 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
   const candidates = states.filter((st) => bare(st) <= limit + slack);
   // If every state is far too long, finish the most compressed one for an exact message.
   if (candidates.length === 0) candidates.push(states.at(-1)!);
-  searchStats.states += candidates.length;
 
   // Binary search for the least-compressed state that fits. Each state is
   // finished at most once (finishing places swaps at random, so the result
@@ -410,7 +408,6 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
   const fin = (i: number): Finished | Problem => {
     let f = finished.get(i);
     if (!f) {
-      searchStats.finishes++;
       f = finish(candidates[i]!, limit, ctx, pad);
       finished.set(i, f);
     }
@@ -642,7 +639,7 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
 }
 
 /** The sentence as the user typed it, with whitespace tidied: what they should remember. */
-export const hintOf = (sentence: string) => sentence.trim().replace(/\s+/g, ' ');
+const hintOf = (sentence: string) => sentence.trim().replace(/\s+/g, ' ');
 
 export function fromSentence(
   sentence: string,

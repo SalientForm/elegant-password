@@ -8,6 +8,7 @@ import { existsSync, lstatSync, mkdirSync, readlinkSync, rmSync, statSync, symli
 import { homedir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { BUILT_TEP, isTepLink } from '../src/cli/tepLink.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/\/$/, '');
 
@@ -43,12 +44,12 @@ function firstOnPath(path) {
 export function linkCli({ root = ROOT, env = process.env, remove = false } = {}) {
   const dir = resolve(env.TEP_BIN_DIR || join(env.HOME || homedir(), '.local/bin'));
   const link = join(dir, 'tep');
-  const target = join(root, 'dist-cli/tep.mjs');
+  const target = join(root, BUILT_TEP);
   const ours = occupied(link) && lstatSync(link).isSymbolicLink() ? readlinkSync(link) : undefined;
 
   if (remove) {
     if (!occupied(link)) return { code: 0, lines: [`There is no ${link}; nothing to remove.`] };
-    if (ours === undefined || !ours.endsWith('dist-cli/tep.mjs')) return { code: 1, lines: [`${link} is not a link to a built tep (${ours ?? 'a file'}); left as it is.`] };
+    if (ours === undefined || !isTepLink(ours)) return { code: 1, lines: [`${link} is not a link to a built tep (${ours ?? 'a file'}); left as it is.`] };
     rmSync(link);
     return { code: 0, lines: [`Removed ${link} (it pointed to ${ours}).`] };
   }
@@ -56,6 +57,10 @@ export function linkCli({ root = ROOT, env = process.env, remove = false } = {})
   if (!existsSync(target)) return { code: 1, lines: [`${target} is not built yet. Run pnpm build:cli first (pnpm link:cli does both).`] };
   if (occupied(link) && ours === undefined) {
     return { code: 1, lines: [`${link} is already there and is not a link; tep left it alone.`, `  Move it away, or set TEP_BIN_DIR to another directory on your PATH, and run this again.`] };
+  }
+  // A link to another checkout's tep is moved here; a link to anything else is someone else's, as a file would be.
+  if (ours !== undefined && ours !== target && !isTepLink(ours)) {
+    return { code: 1, lines: [`${link} is a link to ${ours}, not to a built tep; tep left it alone.`, `  Move it away, or set TEP_BIN_DIR to another directory on your PATH, and run this again.`] };
   }
 
   const lines = [];

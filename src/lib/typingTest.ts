@@ -37,7 +37,6 @@ export interface Attempt {
 
 export const CORRECTION_KEYS = new Set(['Backspace', 'Delete']);
 
-/** Keys that are not typing at all (modifiers, navigation) and are not recorded. */
 /** Keys that are not typing: modifiers, navigation, AltGr, dead and IME keys, function keys. Every named key except Backspace and Delete, which are corrections. */
 const ignored = (key: string) => key.length > 1 && key !== 'Backspace' && key !== 'Delete';
 
@@ -82,7 +81,6 @@ export function finishAttempt(recording: Recording, typed: string, target: strin
  * just entered becomes the target. Locked: the target stays, mistakes or
  * not. Before any run, the first entry is the target either way.
  */
-export function nextTarget(current: string | undefined, typed: string, locked: boolean): string {
-  if (!current) return typed;
-  return locked ? current : typed;
+export function nextTarget(current: string | undefined, typed: string): string {
+  return current || typed;
 }

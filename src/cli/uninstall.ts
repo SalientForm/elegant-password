@@ -5,15 +5,12 @@
 import { lstatSync, readlinkSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
-import { parseArgs } from 'node:util';
+import { parseCommandArgs } from './args';
 import { CliError, EXIT, usageError } from './errors';
 import { UNINSTALL_HELP } from './help';
 import type { Io } from './io';
-import { closest } from './names';
+import { isTepLink } from './tepLink';
 import { wrapHanging } from './wrap';
-
-/** What a link made by pnpm link:cli points to; the same test as pnpm unlink:cli. */
-const BUILT = 'dist-cli/tep.mjs';
 
 export interface TepLink {
   /** The link: a directory's `tep`. */
@@ -36,7 +33,7 @@ export function findLinks(env: Record<string, string | undefined>): TepLink[] {
     try {
       if (!lstatSync(link).isSymbolicLink()) continue;
       const target = resolve(dir, readlinkSync(link));
-      if (target.endsWith(BUILT)) found.push({ link, target });
+      if (isTepLink(target)) found.push({ link, target });
     } catch {
       // no tep here
     }
@@ -45,14 +42,7 @@ export function findLinks(env: Record<string, string | undefined>): TepLink[] {
 }
 
 export async function uninstallCommand(argv: string[], io: Io): Promise<number> {
-  let parsed: ReturnType<typeof parseArgs>;
-  try {
-    parsed = parseArgs({ args: argv, options: { yes: { type: 'boolean', short: 'y' }, help: { type: 'boolean', short: 'h' } }, strict: true });
-  } catch (e) {
-    const flag = (e as Error).message.match(/Unknown option '([^']+)'/)?.[1];
-    const near = flag ? closest(flag, ['--yes', '--help']) : undefined;
-    throw usageError(flag ? `unknown flag ${flag}.${near ? ` Did you mean ${near}?` : ''}` : (e as Error).message, 'tep uninstall takes --yes and nothing else.');
-  }
+  const parsed = parseCommandArgs(argv, { yes: { type: 'boolean', short: 'y' }, help: { type: 'boolean', short: 'h' } }, 'tep uninstall', 'tep uninstall takes --yes (-y) and nothing else.');
   if (parsed.values.help) {
     io.stdout.write(UNINSTALL_HELP);
     return EXIT.ok;

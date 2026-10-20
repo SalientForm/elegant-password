@@ -13,16 +13,15 @@ import { normalizeSentence } from '../lib/text';
 import { ruleProblems } from '../lib/validation';
 import { copyToClipboard } from './clipboard';
 import { DEFAULT_CONFIG_FILE, layerOf, loadConfig } from './config';
-import { CliError, EXIT, usageError } from './errors';
+import { CliError, EXIT, ISSUES, usageError } from './errors';
 import { parseGenerateArgs } from './flags';
 import { generateHelp } from './help';
 import type { Io } from './io';
 import { explainWarning, renderExplained, type Refer } from './messages';
 import { contradictionError, renderNotice } from './report';
-import { COLOR, PLAIN, render, useColor } from './output';
+import { COLOR, configLine, PLAIN, render, useColor, type Config } from './output';
 import { resolve, type Layer } from './resolve';
 
-const ISSUES = 'https://github.com/SalientForm/elegant-password/issues';
 /** Longer than any sentence anyone types. */
 const MAX_SENTENCE = 500;
 
@@ -57,11 +56,16 @@ export async function generateCommand(argv: string[], io: Io): Promise<number> {
     return EXIT.ok;
   }
 
+  // Which config file the settings come from is always said: a stray ./tep.yml changes everything quietly otherwise.
   let file: Layer | undefined;
+  let config: Config = { file: null, path: null, why: '--no-config' };
   if (!flags.noConfig) {
     const path = flags.config ?? DEFAULT_CONFIG_FILE;
     const abs = resolvePath(io.cwd, path);
-    if (flags.config !== undefined || existsSync(abs)) file = layerOf(loadConfig(abs, path));
+    if (flags.config !== undefined || existsSync(abs)) {
+      file = layerOf(loadConfig(abs, path));
+      config = { file: path, path: abs, why: null };
+    } else config = { file: null, path: null, why: `no ${DEFAULT_CONFIG_FILE} in ${io.cwd}` };
   }
 
   const sentence = flags.sentence ? await readSentence(io) : undefined;
@@ -104,11 +108,14 @@ export async function generateCommand(argv: string[], io: Io): Promise<number> {
     typingMode: r.typingMode,
     sort: r.sort,
     minUppercase: req.minUppercase,
-    warnings: [...r.warnings, ...targetWarnings.map((w) => w.join(' ')), ...engineWarnings],
+    config,
+    warnings: [...r.warnings, ...targetWarnings.map((w) => w.join('\n')), ...engineWarnings],
   };
-  const format = flags.format ?? (io.stdout.isTTY ? 'table' : 'plain');
+  // --explain asks for the why of each password, which plain output (the passwords alone) cannot carry: piped, it gets the table.
+  const format = flags.format ?? (io.stdout.isTTY || flags.explain ? 'table' : 'plain');
   io.stdout.write(render(format, shown, useColor(io.stdout.isTTY, io.env, flags.color) ? COLOR : PLAIN, flags.explain));
 
+  if (format === 'plain') say('note', [configLine(config)]);
   say('note', r.notes);
   for (const w of r.warnings) say('warning', [w]);
   for (const w of targetWarnings) say('warning', w);

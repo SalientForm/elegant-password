@@ -1,10 +1,9 @@
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import {existsSync, lstatSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { EXIT } from './errors';
 import { main } from './main';
-import { fakeIo, type Step } from './testing';
+import { fakeIo, scratch, type Step } from './testing';
 import { findLinks } from './uninstall';
 
 let root: string;
@@ -29,7 +28,7 @@ function linkIn(dir: string, target = built()) {
 }
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'tep-uninstall-'));
+  root = scratch('tep-uninstall-');
   home = join(root, 'home');
   checkout = join(root, 'checkout');
   mkdirSync(join(checkout, 'dist-cli'), { recursive: true });
@@ -143,12 +142,16 @@ describe('tep uninstall', () => {
   });
 
   it('has help, and refuses an unknown flag with the likeliest one meant', async () => {
-    expect((await uninstall(['--help'])).io.out()).toMatch(/^Usage: tep uninstall \[--yes\]/);
+    expect((await uninstall(['--help'])).io.out()).toMatch(/^Usage: tep uninstall \[--yes \| -y\]/);
     const help = fakeIo();
     expect(await main(['help', 'uninstall'], help)).toBe(EXIT.ok);
     expect(help.out()).toMatch(/^Usage: tep uninstall/);
     const r = await uninstall(['--ye']);
     expect(r.code).toBe(EXIT.usage);
-    expect(r.io.err()).toBe('tep uninstall: error: unknown flag --ye. Did you mean --yes?\n  tep uninstall takes --yes and nothing else.\n');
+    expect(r.io.err()).toBe('tep uninstall: error: unknown flag --ye. Did you mean --yes?\n  tep uninstall takes --yes (-y) and nothing else.\n');
+    const extra = await uninstall(['extra']);
+    expect(extra.code).toBe(EXIT.usage);
+    expect(extra.io.err()).toBe('tep uninstall: error: "extra" is not a flag: tep uninstall takes only flags.\n  tep uninstall takes --yes (-y) and nothing else.\n'); // never Node\'s own wording
+    expect((await uninstall(['--no-color'])).code).toBe(EXIT.ok); // every command takes --no-color
   });
 });

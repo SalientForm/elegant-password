@@ -36,8 +36,22 @@ export function badges(r: ScoreReadings, p: Paint): string {
   return READING_ORDER.map((key) => (key === 'difficulty' ? byLevel(p, r.difficulty.level) : byBand(p, r[key].band))(`${r[key].label} ${r[key].value}`)).join('  ');
 }
 
+/** Which config file the settings came from, or why none did. */
+export interface Config {
+  /** The file as named (-c, or ./tep.yml); null when none was read. */
+  file: string | null;
+  /** Its absolute path; null when none was read. */
+  path: string | null;
+  /** Why none was read: "--no-config", or no ./tep.yml in the directory; null when one was. */
+  why: string | null;
+}
+
+/** The one line that says where the settings came from. */
+export const configLine = (c: Config) => (c.file ? `Config: ${c.file} (${c.path})` : `Config: none (${c.why})`);
+
 export interface Shown {
   outcome: Extract<Outcome, { ok: true }>;
+  config: Config;
   /** The suggestions as shown: rescored for the typing mode and ordered. */
   suggestions: Suggestion[];
   typingMode: TypingMode;
@@ -80,7 +94,7 @@ export function renderTable(shown: Shown, p: Paint, explain: boolean): string {
   const width = Math.max(...suggestions.map((s) => [...s.password].length));
   const index = String(suggestions.length).length;
   const context = { separator: outcome.separator, minUppercase: shown.minUppercase };
-  const lines: string[] = [];
+  const lines: string[] = [p.dim(configLine(shown.config))];
   if (explain && outcome.plan) lines.push(...planLines(outcome.plan).map((l) => p.dim(l)), '');
   suggestions.forEach((s, i) => {
     const n = String(i + 1).padStart(index);
@@ -107,6 +121,7 @@ export function renderJson(shown: Shown, explain: boolean): string {
       typingMode: shown.typingMode,
       separator: outcome.separator,
       sort: shown.sort,
+      config: shown.config,
       warnings: shown.warnings,
       ...(explain && outcome.plan ? { plan: { bits: outcome.plan.bits, meetsTarget: outcome.plan.meetsTarget, breakdown: outcome.plan.breakdown } } : {}),
       suggestions: shown.suggestions.map((s) => {

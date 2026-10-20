@@ -15,7 +15,7 @@ import { parseRuleText } from '../lib/ruleText';
 import { RULE_KEYS, type SitePreset } from '../lib/sitePresets';
 import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
 import { usageError } from './errors';
-import { describeValue, FIELDS, reqField, type CliField } from './fields';
+import { COUNT_AT_TERMINAL, COUNT_PIPED, describeValue, FIELDS, reqField, type CliField } from './fields';
 import { siteName } from './names';
 import { describeSource, isExplicit, type Source } from './sources';
 
@@ -57,8 +57,6 @@ export interface ResolveEnv {
   sentence?: string;
 }
 
-const COUNT_AT_TERMINAL = 5;
-const COUNT_PIPED = 1;
 
 export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv): Resolved {
   const req: Requirements = { ...DEFAULT_REQUIREMENTS };
@@ -127,7 +125,7 @@ export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv):
     .filter(({ f }) => isExplicit(sources[f.name]!))
     .map(
       ({ u, f }) =>
-        `${describeSource(sources[f.name]!)} sets ${f.label} to ${describeValue(f, (req as unknown as Record<string, unknown>)[u.key])}, which means nothing for ${modeLabel(typingMode)} typing: ${u.reason} The setting still applies to how passwords are made.`,
+        `${describeSource(sources[f.name]!)} sets ${f.label} to ${describeValue(f, (req as unknown as Record<string, unknown>)[u.key])}, which ${modeLabel(typingMode)} typing has no use for (${u.reason.replace(/\.$/, '').replace(/^./, (c) => c.toLowerCase())}). It still shapes the passwords as set.`,
     );
 
   const mappingSettings = flags.mappings?.value ?? file?.mappings?.value ?? DEFAULT_MAPPING_SETTINGS;
@@ -148,11 +146,4 @@ export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv):
     notes,
     warnings,
   };
-}
-
-/** A field's current value in resolved settings. */
-export function valueOf(r: Pick<Resolved, 'generation' | 'sort' | 'count'>, f: CliField): unknown {
-  if (f.target.kind === 'req') return r.generation.req[f.target.key];
-  if (f.target.kind === 'sentence') return r.generation.sentenceOptions[f.target.key];
-  return f.target.key === 'count' ? r.count : r.sort;
 }

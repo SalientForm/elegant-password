@@ -90,12 +90,20 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
   const counts = (['minUppercase', 'minDigits', 'minSymbols'] as const).filter((k) => req[k] > 0);
 
   switch (problem.code) {
-    case 'min-above-max':
+    case 'min-above-max': {
+      // Each way out is checked with the engine before it is offered: a minimum lowered to a maximum no sentence fits is no way out.
+      const lowerTo = ok({ ...req, minLength: req.maxLength }) ? req.maxLength : largestWorkingMin({ ...req, minLength: req.maxLength });
+      const raiseTo = ok({ ...req, maxLength: req.minLength }) ? req.minLength : smallestWorkingMax({ ...req, maxLength: req.minLength });
+      const ways = [
+        ...(lowerTo !== undefined ? [`lower the minimum length to ${lowerTo} or less (${change('minLength')})`] : []),
+        ...(raiseTo !== undefined ? [`raise the maximum length to ${raiseTo} or more (${change('maxLength')})`] : []),
+      ];
       return {
         title: `The minimum length (${req.minLength}) is above the maximum length (${req.maxLength}).`,
         values: values('minLength', 'maxLength'),
-        fix: `Lower the minimum length to ${req.maxLength} or less (${change('minLength')}), or raise the maximum length to ${req.minLength} or more (${change('maxLength')}).`,
+        fix: ways.length ? `${(ways.length === 2 ? `${ways[0]}, or ${ways[1]}` : list(ways)).replace(/^./, (c) => c.toUpperCase())}.` : `Widen the length range (${change('minLength')}, ${change('maxLength')}).`,
       };
+    }
     case 'counts-exceed-max': {
       const sum = counts.reduce((n, k) => n + req[k], 0);
       return {
@@ -130,15 +138,22 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
         fix: `Set the separator to auto, space, none or one keyboard symbol (${change('separator')}).`,
       };
     case 'no-fit': {
+      // The required characters take room too: they are named when they are part of the squeeze, with a way to require fewer.
       const max = smallestWorkingMax(req);
       const min = largestWorkingMin(req);
+      const fewer = counts.flatMap((k) => {
+        const n = largestWorkingCount(req, k);
+        return n !== undefined ? [`require at most ${plural(n, F(k).label.replace(/^required /, '').replace(/s$/, ''))} (${change(k)})`] : [];
+      });
       const ways = [
         ...(max !== undefined ? [`raise the maximum length to ${max} or more (${change('maxLength')})`] : []),
         ...(min !== undefined ? [`lower the minimum length to ${min} or less (${change('minLength')})`] : []),
+        ...fewer,
       ];
+      const withCounts = counts.length ? ` with ${list(counts.map((k) => plural(req[k], F(k).label.replace(/^required /, '').replace(/s$/, ''))), 'and')}` : '';
       return {
-        title: `No made-up sentence fits between ${req.minLength} and ${req.maxLength} characters.`,
-        values: values('minLength', 'maxLength'),
+        title: `No made-up sentence fits between ${req.minLength} and ${req.maxLength} characters${withCounts}.`,
+        values: values('minLength', 'maxLength', ...counts),
         fix: `${ways.length ? `${list(ways).replace(/^./, (c) => c.toUpperCase())}. ` : 'Widen the length range. '}Or use your own sentence with --sentence -, which can be shortened further.`,
       };
     }
@@ -178,15 +193,22 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
   }
 }
 
-/** The unreachable-target warning in full. */
+/** The unreachable-target warning in full. A maximum the site's own rules set (a preset, or the pasted wording) is not offered for raising: a longer password would be refused. */
 export function explainWarning(w: TargetWarning, req: Requirements, refer: Refer): Explained {
   const strength = reqField('targetBits')!;
   const maxLength = reqField('maxLength')!;
-  const reach = smallestMaxForTarget(req);
+  const maxSource = refer.source(maxLength);
+  const sitesRule = maxSource.kind === 'site' || maxSource.kind === 'rules-text';
+  const reach = sitesRule ? undefined : smallestMaxForTarget(req);
+  const lower = `lower the target (${howToChange(strength, refer.source(strength))})`;
   return {
     title: `The strength target, ${describeValue(strength, w.target)}, is out of reach: these rules allow at most ${w.reached.toFixed(1)} bits, so tep makes the strongest passwords they allow.`,
     values: [valueLine(req, strength, refer), valueLine(req, maxLength, refer)],
-    fix: `${reach !== undefined ? `A maximum length of ${reach} would reach it (${howToChange(maxLength, refer.source(maxLength))}), or lower` : 'Lower'} the target (${howToChange(strength, refer.source(strength))}).`,
+    fix: reach !== undefined
+      ? `A maximum length of ${reach} would reach it (${howToChange(maxLength, maxSource)}), or ${lower}.`
+      : sitesRule
+        ? `${lower.replace(/^./, (c) => c.toUpperCase())}; the maximum length of ${req.maxLength} is the site's own rule, so a longer password would be refused.`
+        : `${lower.replace(/^./, (c) => c.toUpperCase())}.`,
   };
 }
 

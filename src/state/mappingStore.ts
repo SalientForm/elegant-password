@@ -4,45 +4,21 @@
 
 import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
 import { BUILT_IN_MAPPINGS, mappingKey, validateMapping } from '../lib/twists';
+import { isRecord, isString, readJson, writeJson, type KeyValueStore } from './storage';
 
 export const STORAGE_KEY = 'elegant-passwords:mappings:v1';
 
-/** Parse stored settings, dropping anything malformed rather than failing. */
-export function parseMappingSettings(raw: string | null): MappingSettings {
-  if (!raw) return DEFAULT_MAPPING_SETTINGS;
-  try {
-    const data = JSON.parse(raw) as Partial<MappingSettings>;
-    const builtIn = new Set(BUILT_IN_MAPPINGS.map(mappingKey));
-    const disabled = Array.isArray(data.disabled)
-      ? data.disabled.filter((k): k is string => typeof k === 'string' && builtIn.has(k))
-      : [];
-    const custom = Array.isArray(data.custom)
-      ? data.custom.filter(
-          (m): m is { from: string; to: string } =>
-            typeof m?.from === 'string' && typeof m?.to === 'string' && !validateMapping(m.from, m.to),
-        )
-      : [];
-    return { disabled, custom };
-  } catch {
-    return DEFAULT_MAPPING_SETTINGS;
-  }
+/** Stored settings as parsed JSON, dropping anything malformed rather than failing. */
+export function parseMappingSettings(raw: unknown): MappingSettings {
+  if (!isRecord(raw)) return DEFAULT_MAPPING_SETTINGS;
+  const builtIn = new Set(BUILT_IN_MAPPINGS.map(mappingKey));
+  const disabled = Array.isArray(raw.disabled) ? raw.disabled.filter((k): k is string => isString(k) && builtIn.has(k)) : [];
+  const custom = Array.isArray(raw.custom)
+    ? raw.custom.filter((m): m is { from: string; to: string } => isRecord(m) && isString(m.from) && isString(m.to) && !validateMapping(m.from, m.to)).map((m) => ({ from: m.from, to: m.to }))
+    : [];
+  return { disabled, custom };
 }
 
-export function loadMappingSettings(storage: Pick<Storage, 'getItem'> | undefined): MappingSettings {
-  try {
-    return parseMappingSettings(storage?.getItem(STORAGE_KEY) ?? null);
-  } catch {
-    return DEFAULT_MAPPING_SETTINGS; // storage blocked, e.g. private mode
-  }
-}
+export const loadMappingSettings = (store: KeyValueStore | undefined): MappingSettings => parseMappingSettings(readJson(store, STORAGE_KEY));
 
-export function saveMappingSettings(
-  settings: MappingSettings,
-  storage: Pick<Storage, 'setItem'> | undefined,
-): void {
-  try {
-    storage?.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch {
-    // Storage full or blocked: settings simply will not persist.
-  }
-}
+export const saveMappingSettings = (settings: MappingSettings, store: KeyValueStore | undefined): void => void writeJson(store, STORAGE_KEY, settings);

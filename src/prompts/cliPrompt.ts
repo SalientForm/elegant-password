@@ -58,7 +58,8 @@ export const SHARED_CORE: readonly { module: string; names: string[]; for: strin
 /** The CLI's files and what each is for. */
 export const CLI_FILES: readonly [string, string][] = [
   ['bin.ts', 'the executable: the real terminal, environment and clipboard, handed to main'],
-  ['main.ts', 'picks the command, prints any error under the command\'s name, returns the exit code'],
+  ['main.ts', 'the command table: picks the command, prints any error under the command\'s name, returns the exit code'],
+  ['args.ts', 'one parser for the small commands\' flags, Node\'s errors reworded in tep\'s terms'],
   ['errors.ts', 'the exit codes, what each means, and the one error type every command throws'],
   ['io.ts', 'everything outside: streams, stdin, environment, clock, prompts, clipboard (a fake in tests)'],
   ['names.ts', 'mode, site preset and strength names derived from the core\'s labels; "did you mean"'],
@@ -78,6 +79,7 @@ export const CLI_FILES: readonly [string, string][] = [
   ['wizard.ts', 'the questions, the bug path, the review (wrapped to the box\'s width)'],
   ['prompter.ts', '@clack/prompts behind the Prompter interface, drawn on stderr'],
   ['configCommand.ts', 'tep config: load, ask, confirm, write'],
+  ['tepLink.ts', 'what a link to a built tep is, shared with pnpm link:cli'],
   ['uninstall.ts', 'tep uninstall: finds the links to a built tep, asks, removes them'],
   ['help.ts', 'help text, generated from the field table and the flag list'],
 ];

@@ -1,5 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import {lstatSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
@@ -7,7 +6,7 @@ import { emptyModel, layerOf, loadConfig, MAX_CONFIG_BYTES, parseConfig, readCon
 import { serializeConfig } from './configText';
 import { CliError, EXIT } from './errors';
 import { resolve } from './resolve';
-import { flagsLayer } from './testing';
+import { flagsLayer, scratch } from './testing';
 
 /** The error a config text raises: its title and detail lines. */
 function problems(text: string, file = 'tep.yml') {
@@ -173,6 +172,7 @@ swaps:
     - ph
     - { from: ph, to: f }
     - { from: ph, to: f }
+    - { from: o, to: 0 }
 `),
     ).toEqual([
       'tep.yml:3: swaps.off entry 2 must be a built-in swap written "from>to", such as "a>@"; found 3.',
@@ -180,6 +180,7 @@ swaps:
       'tep.yml:5: swaps.custom entry 1: PH>f: Replace: 1-8 lowercase letters.',
       'tep.yml:6: swaps.custom entry 2 must be a map with "from" and "to", such as { from: ph, to: f }; found the text "ph".',
       'tep.yml:8: swaps.custom entry 4: ph>f is listed twice (also entry 3).',
+      'tep.yml:9: swaps.custom entry 5: "to" must be text; found 0. Put it in double quotes, as in to: "0".',
     ]);
   });
 });
@@ -193,7 +194,7 @@ describe('serializeConfig', () => {
       rules: { 'min-length': 10, 'max-length': 20, 'min-uppercase': 1, 'min-digits': 1, 'min-symbols': 1, symbols: '!#&*,:', spaces: false },
       options: { strength: 45, shortest: true, comfort: 'strict', separator: '#', swaps: 1 },
       sentence: { 'target-length': null, shrink: 'vowels' },
-      swaps: { disabled: ['a>@'], custom: [{ from: 'ph', to: 'f' }] },
+      swaps: { disabled: ['a>@'], custom: [{ from: 'ph', to: 'f' }, { from: 'o', to: '0' }, { from: 'e', to: '1e3' }] }, // a swap to a digit must come back as text
       output: { count: 3, sort: 'memorability' },
     },
     { ...emptyModel(), site: 'nist-passphrase', rules: { 'max-length': 40 }, options: { separator: ' ' } },
@@ -220,6 +221,7 @@ describe('serializeConfig', () => {
     expect(text).toContain('options: preset             # the Two-finger options as tep sets them, now and as they change');
     expect(serializeConfig(models[1]!, today)).toContain('  symbols: "!#&*,:"');
     expect(serializeConfig(models[1]!, today)).toContain('  separator: "#"');
+    expect(serializeConfig(models[1]!, today)).toContain('    - { from: o, to: "0" }'); // bare, 0 would read back as a number
   });
 
   it('resolves to the same requirements as the model it came from', () => {
@@ -233,7 +235,7 @@ describe('serializeConfig', () => {
 });
 
 describe('files on disk', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'tep-config-'));
+  const dir = scratch('tep-config-');
 
   it('loads a file', () => {
     const path = join(dir, 'ok.yml');
@@ -256,13 +258,29 @@ describe('files on disk', () => {
     expect(() => readConfigFile(path, 'big.yml')).toThrow(expect.objectContaining({ title: 'big.yml is 64 KB, too big to be a tep config (they are a few hundred bytes).' }));
   });
 
-  it('writes atomically, leaving no temporary file, mode 0644', () => {
+  it('writes atomically, leaving no temporary file, a new file at mode 0644', () => {
     const path = join(dir, 'w.yml');
     writeAtomic(path, 'version: 1\n');
     expect(readFileSync(path, 'utf8')).toBe('version: 1\n');
+    expect(statSync(path).mode & 0o777).toBe(0o644);
     writeAtomic(path, 'version: 1\nmode: quick\n');
     expect(readFileSync(path, 'utf8')).toBe('version: 1\nmode: quick\n');
     expect(readdirSync(dir).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('follows a symlink to the file it points to, and keeps an existing file\'s mode', () => {
+    const real = join(dir, 'real.yml');
+    writeFileSync(real, 'version: 1\n', { mode: 0o600 });
+    const link = join(dir, 'link.yml');
+    symlinkSync(real, link);
+    writeAtomic(link, 'version: 1\nmode: quick\n', undefined, 'link.yml');
+    expect(lstatSync(link).isSymbolicLink()).toBe(true); // the link is still a link
+    expect(readFileSync(real, 'utf8')).toBe('version: 1\nmode: quick\n'); // and the real file is what changed
+    expect(statSync(real).mode & 0o777).toBe(0o600);
+  });
+
+  it('names the file as the user wrote it when a write fails', () => {
+    expect(() => writeAtomic(join(dir, 'missing-dir', 'x.yml'), 'version: 1\n', undefined, 'missing-dir/x.yml')).toThrow(expect.objectContaining({ title: 'missing-dir/x.yml could not be written: its directory does not exist.' }));
   });
 
   it('a failed write leaves the old file as it was, removes the temporary file, and says why', () => {

@@ -125,7 +125,7 @@ describe('formatValue and describeValue', () => {
     expect(describeValue(F('spaces'), true)).toBe('allowed');
     expect(describeValue(F('glue'), false)).toBe('off');
     expect(describeValue(F('separator'), ' ')).toBe('a space');
-    expect(describeValue(F('separator'), 'auto')).toBe('auto');
+    expect(describeValue(F('separator'), 'auto')).toBe('Auto');
     expect(describeValue(F('symbols'), '')).toBe('none');
     expect(describeValue(F('symbols'), '!@')).toBe('"!@"');
     expect(describeValue(F('strength'), 50)).toBe('Strong (50 bits)');
