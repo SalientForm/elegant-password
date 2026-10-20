@@ -1,12 +1,11 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { typingModeLabel, type Difficulty } from '../lib/difficulty';
-import { describeRemoved, easeOf } from '../lib/ease';
+import { describeRemoved } from '../lib/ease';
+import { changedWordsOf, easedOf, twistKind, twistOptionsLine, typingLines } from '../lib/explain';
 import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
-import { isPinkyStretch } from '../lib/keyboard';
 import { scoreReadings } from '../lib/readings';
 import { MEMORABILITY, scoreCold } from '../lib/score';
-import { MAPPING_KIND_LABELS } from '../lib/twists';
 import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
@@ -14,28 +13,6 @@ import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
 import { InstantTip, PasswordTip } from './PasswordTip';
 import { observeResize } from './resize';
-
-const ROW_NAMES = ['number row', 'top row', 'home row', 'bottom row', 'space bar'];
-
-function shiftReasons(password: string, minUppercase: number, initials: number): string {
-  const reasons = initials
-    ? [`${initials} capital initial${initials > 1 ? 's' : ''}`]
-    : minUppercase === 1
-      ? ['the opening capital']
-      : minUppercase > 1
-        ? ['held once for the word in capitals']
-        : [];
-  const shiftedSymbols = [...new Set(password.match(/[!@#$%^&*()_+{}|:"<>?~]/g) ?? [])];
-  if (shiftedSymbols.length) reasons.push(shiftedSymbols.map((c) => `"${c}"`).join(' '));
-  return reasons.join(' and ');
-}
-
-function separatorPhrase(sep: string): string {
-  if (sep === ' ') return 'Spaces between words go to your thumb, so your fingers never leave the letters.';
-  if (sep === '') return 'Words run together with no separator keys at all.';
-  const stretch = isPinkyStretch(sep) ? ' It is a pinky stretch, kept because you chose it.' : '';
-  return `Words are joined with "${sep}", the same key every time, so it becomes a rhythm.${stretch}`;
-}
 
 interface BadgeProps {
   bits: number;
@@ -116,7 +93,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   const [open, setOpen] = useState(false); // every "Why?" starts closed
   const code = useRef<HTMLElement>(null);
   const head = useRef<HTMLDivElement>(null);
-  const { password, hint, words, typing, checks, twists, difficulty } = suggestion;
+  const { password, hint, words, checks, twists, difficulty } = suggestion;
   // Too narrow for the password and its buttons on one row: the password, the badges and the buttons each take a row, centred.
   const [stacked, setStacked] = useState(false);
   useLayoutEffect(() => {
@@ -134,14 +111,9 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   const cold = useMemo(() => scoreCold(password, hint), [password, hint]);
   const memo = cold.memorability;
   // A deliberately swapped word is whole as typed ("cool" as "cul"), so only shortened and dropped words count as changed.
-  const changedWords = cold.words.filter((w) => w.form === 'dropped' || [...w.text].length < [...(w.form === 'eased' ? w.base : w.word)].length);
+  const changedWords = changedWordsOf(cold.words);
   // Deliberate swaps are read from the password and hint, like everything else the card says.
-  const eased = cold.words.flatMap((w) => {
-    const e = w.form === 'eased' ? easeOf(w.word) : undefined;
-    return e ? [e] : [];
-  });
-
-  const letterRows = typing.rowsUsed.filter((r) => r > 0 && r < 4);
+  const eased = easedOf(cold.words);
 
   return (
     <article className="card" aria-label={`Suggestion ${index + 1}`}>
@@ -262,37 +234,20 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
                 {twists.map((t, i) => (
                   <li key={i}>
                     <code>{t.mapping.from}</code> → <code>{t.mapping.to || '–'}</code> in “{t.before}”
-                    <small> ({MAPPING_KIND_LABELS[t.mapping.kind].toLowerCase().replace(/s$/, '')})</small>
+                    <small> ({twistKind(t)})</small>
                   </li>
                 ))}
               </ul>
             )}
-            {suggestion.twistOptions > 1 && (
-              <p>
-                Remember the sentence first, then the swaps. Where they landed was one of{' '}
-                {suggestion.twistOptions.toLocaleString('en')} possibilities, which adds {suggestion.twistBits.toFixed(1)} bits.
-              </p>
-            )}
+            {twistOptionsLine(suggestion) && <p>{twistOptionsLine(suggestion)}</p>}
           </section>
 
           <section>
             <h3>Fast to type</h3>
             <ul>
-              <li>
-                {typing.shiftPresses === 0
-                  ? 'All lowercase: no Shift key at all.'
-                  : `${typing.shiftPresses} Shift press${typing.shiftPresses > 1 ? 'es' : ''} (${shiftReasons(password, context.minUppercase, words.filter((w) => /^[A-Z]$/.test(w.text)).length)}).${typing.caseChanges <= 1 ? ' Case never alternates.' : ` Capital initials flip the case ${typing.caseChanges} times.`}`}
-              </li>
-              <li>{Math.round(typing.sameRowShare * 100)}% of letter-to-letter moves stay on the same keyboard row.</li>
-              <li>
-                Average reach is {typing.averageDistance.toFixed(1)} key widths, with {typing.sameFingerPairs} same-finger
-                {typing.sameFingerPairs === 1 ? ' pair' : ' pairs'}.
-              </li>
-              <li>
-                Letters come from the {letterRows.map((r) => ROW_NAMES[r]).join(', ')}
-                {typing.rowsUsed.includes(0) ? ', plus short trips to the number row' : ''}.
-              </li>
-              <li>{separatorPhrase(context.separator)}</li>
+              {typingLines(suggestion, context).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
             </ul>
             <KeyboardMap text={password} />
           </section>

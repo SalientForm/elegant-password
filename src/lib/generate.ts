@@ -357,13 +357,51 @@ function modelFor(shape: Shape, comfort: Comfort, minDigits: number, eased: bool
 const isWholeWord = (shape: Shape, i: number) =>
   shape.slots[i] !== 'num' && !shape.madeUp.includes(i) && !shape.initials.includes(i) && !shape.shorthand.includes(i);
 
+const initialsCache = new WeakMap<readonly string[], readonly string[]>();
+const twoLettersCache = new WeakMap<readonly string[], readonly string[]>();
+const derived = (cache: WeakMap<readonly string[], readonly string[]>, pool: readonly string[], make: (p: readonly string[]) => string[]) => {
+  let out = cache.get(pool);
+  if (!out) {
+    out = make(pool);
+    cache.set(pool, out);
+  }
+  return out;
+};
+
 /** What a slot really chooses from, as typed: whole words (with their deliberate swaps when on), initials or two-letter forms. */
 function slotPool(shape: Shape, i: number, comfort: Comfort, minDigits: number, eased = false): readonly string[] {
   const pool = pools(comfort, minDigits, eased)[shape.slots[i]!];
   if (shape.madeUp.includes(i)) return MADE_UP_NOUNS;
-  if (shape.initials.includes(i)) return initialsOf(pool);
-  if (shape.shorthand.includes(i)) return twoLettersOf(pool);
+  if (shape.initials.includes(i)) return derived(initialsCache, pool, initialsOf);
+  if (shape.shorthand.includes(i)) return derived(twoLettersCache, pool, twoLettersOf);
   return eased && isWholeWord(shape, i) ? typedPool(pool) : pool;
+}
+
+const boundsCache = new WeakMap<readonly string[], [number, number]>();
+/** The shortest and longest word in a pool, as the length model counts them. */
+function boundsOf(pool: readonly string[]): [number, number] {
+  let b = boundsCache.get(pool);
+  if (!b) {
+    b = pool.reduce<[number, number]>(([lo, hi], w) => [Math.min(lo, w.length), Math.max(hi, w.length)], [Infinity, 0]);
+    boundsCache.set(pool, b);
+  }
+  return b;
+}
+
+/**
+ * Whether any sentence of this shape can be between lo and hi letters long:
+ * false when even the shortest words overshoot or the longest fall short, in
+ * which case its count is 0 and its length model need not be built.
+ */
+function mayFit(shape: Shape, lo: number, hi: number, comfort: Comfort, minDigits: number, eased: boolean): boolean {
+  let min = 0;
+  let max = 0;
+  for (let i = 0; i < shape.slots.length; i++) {
+    const [a, b] = boundsOf(slotPool(shape, i, comfort, minDigits, eased));
+    min += a;
+    max += b;
+  }
+  return min <= hi && max >= lo;
 }
 
 /** A template with its number placed, initials chosen and glue decided. */
@@ -481,6 +519,7 @@ function candidateFor(template: Template, req: Requirements, ctx: PlanContext): 
       tooFewLetters = true;
       continue;
     }
+    if (!mayFit(shape, lo, hi, req.comfort, req.minDigits, req.easeSwaps)) continue; // its count would be 0
     const model = modelFor(shape, req.comfort, req.minDigits, req.easeSwaps);
     const count = model.count(lo, hi);
     if (count > 0) variants.push({ shape, model, count, endSymbol, lo, hi });
@@ -846,13 +885,7 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
     const because = [req.avoidPinkyStretch ? 'needs a pinky stretch' : '', req.shiftReach ? "needs a Shift key out of one hand's reach" : ''].filter(Boolean);
     warnings.push(`Twists are on, but every enabled mapping uses a symbol this site does not allow${because.length ? ` or that ${because.join(' or ')}` : ''}.`);
   }
-  if (!chosen.meetsTarget) {
-    warnings.push(
-      `The length limits allow at most ${chosen.bits.toFixed(1)} bits, below the ${req.targetBits}-bit target. ` +
-        `Raise the maximum length${req.comfort === 'relaxed' ? '' : ', relax typing comfort'}` +
-        `${req.includeNumber || req.minDigits > 0 ? '' : ', or add a leading number'}.`,
-    );
-  }
+  if (!chosen.meetsTarget) warnings.push(shortfallWarning(chosen.bits, req));
   if (chosen.endSymbol && req.avoidPinkyStretch && isPinkyStretch(chosen.endSymbol[0]!)) {
     warnings.push(`Every allowed symbol needs a pinky stretch, so the sentence ends with "${chosen.endSymbol}".`);
   }
@@ -974,6 +1007,15 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
   const short = suggestions.filter((s) => s.twists.length < req.twists).length;
   if (short) warnings.push(fewerSwapsWarning(short, req.twists));
   return { plan: chosen, suggestions, warnings, sentence: { slots: [...shape.slots], words: [...pictured] } };
+}
+
+/** The warning for a plan short of the target, so a front end that says it its own way can tell it apart. */
+export function shortfallWarning(bits: number, req: Requirements): string {
+  return (
+    `The length limits allow at most ${bits.toFixed(1)} bits, below the ${req.targetBits}-bit target. ` +
+    `Raise the maximum length${req.comfort === 'relaxed' ? '' : ', relax typing comfort'}` +
+    `${req.includeNumber || req.minDigits > 0 ? '' : ', or add a leading number'}.`
+  );
 }
 
 export function fewerSwapsWarning(count: number, minimum: number): string {
