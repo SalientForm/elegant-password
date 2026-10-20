@@ -653,7 +653,11 @@ export function fromSentence(
   const { rng = cryptoRandom, mappings = BUILT_IN_MAPPINGS } = options;
   validate(req);
   const words = normalizeSentence(sentence);
-  if (words.length === 0) throw new RequirementsError('Type a sentence to turn into a password.');
+  if (words.length === 0) {
+    throw new RequirementsError(
+      sentence.trim() ? 'The sentence has no words made of the letters a-z or digits, which are what the keyboard model types; letters with accents are fine.' : 'Type a sentence to turn into a password.',
+    );
+  }
 
   const allowed = allowedSymbolSet(req);
   const separator = resolveSeparator(req);

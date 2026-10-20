@@ -2629,6 +2629,10 @@
       },
       {
         "kind": "test",
+        "title": "meets the uppercase rule with Shift reach on, when the words in reach have too few letters for it"
+      },
+      {
+        "kind": "test",
         "title": "meets every rule across random requirement combinations"
       },
       {
@@ -2997,7 +3001,7 @@
       },
       {
         "kind": "test",
-        "title": "needs a letter or digit to work with"
+        "title": "needs a letter or digit to work with, and says so for another script"
       }
     ]
   },
@@ -3011,6 +3015,10 @@
       {
         "kind": "test",
         "title": "reads $name"
+      },
+      {
+        "kind": "test",
+        "title": "does not read a count of character classes as a length"
       },
       {
         "kind": "test",
@@ -3654,6 +3662,14 @@
       },
       {
         "kind": "group",
+        "title": "PasswordsProvider: a request still in flight for inputs no longer wanted"
+      },
+      {
+        "kind": "test",
+        "title": "never lands on top of the batch the inputs went back to"
+      },
+      {
+        "kind": "group",
         "title": "PasswordsProvider: a contradictory requirement set"
       },
       {
@@ -3675,7 +3691,7 @@
       },
       {
         "kind": "test",
-        "title": "matches worker answers to requests by id, in any order"
+        "title": "matches worker answers to requests by id, and a newer request supersedes an older one at once"
       },
       {
         "kind": "test",

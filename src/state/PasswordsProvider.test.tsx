@@ -62,6 +62,7 @@ function Probe() {
       <button onClick={() => first && p.addSelected(first)}>add</button>
       <button onClick={() => p.selected[0] && p.removeSelected(p.selected[0].password)}>remove</button>
       <button onClick={() => p.setMode('sentence')}>sentence-mode</button>
+      <button onClick={() => p.setMode('generated')}>generated-mode</button>
       <button onClick={() => p.setSentence('Sally eats sweets on Sundays')}>type</button>
     </div>
   );
@@ -346,6 +347,36 @@ describe('PasswordsProvider', () => {
     await act(async () => resolvers[1]!(fresh));
     await act(async () => resolvers[0]!(late));
     expect(text('first')).toBe(fresh.ok ? fresh.suggestions[0]!.password : '');
+  });
+});
+
+describe('PasswordsProvider: a request still in flight for inputs no longer wanted', () => {
+  it('never lands on top of the batch the inputs went back to', async () => {
+    const resolvers: ((o: ReturnType<typeof runInputs>) => void)[] = [];
+    const requests: GenerateRequest[] = [];
+    const slow: Generator = {
+      run: (request) => {
+        requests.push(request);
+        return new Promise((resolve) => resolvers.push(resolve));
+      },
+      dispose: vi.fn(),
+    };
+    mount(slow);
+    await waitFor(() => expect(requests).toHaveLength(1));
+    await act(async () => resolvers[0]!(runInputs(requests[0]!)));
+    const shown = text('first');
+    expect(shown).not.toBe('');
+    // To "Use my sentence" (an empty one: the engine says so) and straight back before the answer arrives.
+    fireEvent.click(screen.getByText('sentence-mode'));
+    await waitFor(() => expect(requests).toHaveLength(2));
+    fireEvent.click(screen.getByText('generated-mode'));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(requests).toHaveLength(2); // the batch on screen was made from these inputs: nothing to run
+    expect(text('busy')).toBe('false');
+    await act(async () => resolvers[1]!(runInputs(requests[1]!))); // the late answer for the other inputs
+    expect(text('first')).toBe(shown);
+    expect(text('error')).toBe('');
+    expect(text('stale')).toBe('false');
   });
 });
 

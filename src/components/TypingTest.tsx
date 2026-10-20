@@ -176,8 +176,10 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               <input
                 type="text"
                 aria-label="Hint for the password under test"
-                placeholder="(hint n/a)"
+                placeholder="none yet: type one to score memorability"
                 autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
                 spellCheck={false}
                 value={hint ?? ''}
                 onChange={(e) => setHint(e.target.value)}
@@ -192,7 +194,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
             </label>
           ) : (
             <p className="hint entry-hint">
-              <span className="field-label">Hint:</span> {hintText ?? '(hint n/a)'}
+              <span className="field-label">Hint:</span> {hintText ?? <em>none</em>}
             </p>
           )}
           <div className="actions">

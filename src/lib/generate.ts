@@ -342,6 +342,8 @@ function endSymbolFor(separators: number, separator: string, req: Requirements, 
 }
 
 const modelCache = new Map<string, LengthModel>();
+/** Length models are about a megabyte each; the cache is emptied once it holds this many, like the scorer's caches. */
+const MODEL_CACHE_LIMIT = 400;
 
 // The length model counts words as typed: with deliberate swaps on, a whole
 // word's pool holds its swapped spellings, so a swap that shortens a word
@@ -353,6 +355,7 @@ function modelFor(shape: Shape, comfort: Comfort, minDigits: number, eased: bool
   let model = modelCache.get(key);
   if (!model) {
     model = new LengthModel(shape.slots.map((_, i) => slotPool(shape, i, comfort, minDigits, eased)));
+    if (modelCache.size >= MODEL_CACHE_LIMIT) modelCache.clear();
     modelCache.set(key, model);
   }
   return model;
@@ -724,17 +727,20 @@ export function applyUppercase(
   const existing = countUpper(out.join(''));
   if (existing >= minUppercase) return out;
   const any = out.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
+  // With Shift reach on, the words one hand can capitalise come first, from a random one of them; the rest follow, so
+  // the uppercase rule is met even when the words in reach have too few letters for it.
   const near = nearShift ? any.filter((j) => nearCapital(out[j]!)) : [];
-  const eligible = near.length ? near : any;
-  if (eligible.length === 0) return out;
-  const start = rng ? randomInt(eligible.length, rng) : 0;
+  const preferred = near.length ? near : any;
+  if (preferred.length === 0) return out;
+  const start = rng ? randomInt(preferred.length, rng) : 0;
+  const order = [...preferred.slice(start), ...preferred.slice(0, start), ...any.filter((j) => !preferred.includes(j))];
   if (minUppercase === 1) {
-    const i = eligible[start]!;
+    const i = order[0]!;
     out[i] = out[i]!.replace(/[a-z]/, (c) => c.toUpperCase());
   } else {
     let upper = existing;
-    for (let k = 0; k < eligible.length && upper < minUppercase; k++) {
-      const i = eligible[(start + k) % eligible.length]!;
+    for (const i of order) {
+      if (upper >= minUppercase) break;
       upper -= countUpper(out[i]!);
       out[i] = out[i]!.toUpperCase();
       upper += countUpper(out[i]!);
@@ -979,10 +985,13 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
       uppercaseHow:
         shape.initials.length && countUpper(original.join('')) >= req.minUppercase
           ? `capital initials: ${shape.initials.map((j) => original[j]).join(' ')}`
-          : undefined,
+          : shape.madeUp.length && countUpper(shape.madeUp.map((j) => original[j]).join('')) >= req.minUppercase
+            ? `made-up nouns in capitals: ${shape.madeUp.filter((j) => /[A-Z]/.test(original[j]!)).map((j) => original[j]).join(' ')}`
+            : undefined,
     });
-    // A drawn sentence always fits; a kept one can miss a rule it was not drawn for (a 2-digit minimum and its "5").
-    if (kept && !checks.every((c) => c.met)) {
+    // A kept sentence can miss a rule it was not drawn for (a 2-digit minimum and its "5"); a drawn one should never
+    // miss one, and if it does the card is dropped rather than shown breaking a rule.
+    if (!checks.every((c) => c.met)) {
       unmet ??= checks.find((c) => !c.met)!.rule;
       continue;
     }

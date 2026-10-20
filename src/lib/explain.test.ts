@@ -6,10 +6,15 @@ import { seeded } from './testRandom';
 
 describe('the "Why?" sentences', () => {
   it('say why Shift is pressed', () => {
-    expect(shiftReasons('Sleepy otters!', 1, 0)).toBe('the opening capital and "!"');
-    expect(shiftReasons('SLEEPY otters', 2, 0)).toBe('held once for the word in capitals');
-    expect(shiftReasons('B c', 1, 2)).toBe('2 capital initials');
-    expect(shiftReasons('abc', 0, 0)).toBe('');
+    // The words carry no case (capitals go on at render), so the case is read from the password.
+    const w = (...texts: string[]) => texts.map((text) => ({ text }));
+    expect(shiftReasons('Sleepy otters!', w('sleepy', 'otters'))).toBe('the opening capital and "!"');
+    expect(shiftReasons('SLEEPY otters', w('sleepy', 'otters'))).toBe('held once for the word in capitals (SLEEPY)');
+    expect(shiftReasons('B C otters', w('B', 'C', 'otters'))).toBe('2 capital initials');
+    expect(shiftReasons('5 iop dab CVB', w('5', 'iop', 'dab', 'CVB'))).toBe('held once for the word in capitals (CVB)'); // a made-up noun in capitals, no opening capital
+    expect(shiftReasons('Ffancy;puffs', w('F', 'fancy', 'puffs'))).toBe('1 capital initial'); // glued to the next word, still an initial
+    expect(shiftReasons('Red;Foxes;Run', w('red', 'foxes', 'run'))).toBe('capitals on 3 words');
+    expect(shiftReasons('abc', w('abc'))).toBe('');
   });
 
   it('say what the separator does', () => {
@@ -22,7 +27,7 @@ describe('the "Why?" sentences', () => {
   it('give five "Fast to type" lines for any suggestion, the separator\'s last', () => {
     const r = generate({ ...DEFAULT_REQUIREMENTS, count: 3 }, { rng: seeded(3) });
     for (const s of r.suggestions) {
-      const lines = typingLines(s, { minUppercase: 1, separator: r.plan.separator });
+      const lines = typingLines(s, { separator: r.plan.separator });
       expect(lines).toHaveLength(5);
       expect(lines[1]).toMatch(/^\d+% of letter-to-letter moves stay on the same keyboard row\.$/);
       expect(lines[4]).toBe(separatorPhrase(r.plan.separator));

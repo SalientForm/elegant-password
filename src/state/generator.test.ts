@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { runInputs, type GenerateRequest } from '../lib/engine';
 import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
-import { createGenerator, syncGenerator, workerGenerator, type WorkerLike } from './generator';
+import { createGenerator, SUPERSEDED, syncGenerator, workerGenerator, type WorkerLike } from './generator';
 import { BUILT_IN_MAPPINGS } from '../lib/twists';
 
 const request = (id: number, over: Partial<GenerateRequest> = {}): GenerateRequest => ({
@@ -49,15 +49,17 @@ describe('generators', () => {
     expect(out.ok).toBe(true);
   });
 
-  it('matches worker answers to requests by id, in any order', async () => {
+  it('matches worker answers to requests by id, and a newer request supersedes an older one at once', async () => {
     const worker = fakeWorker('lifo');
-    const gen = workerGenerator(() => worker);
+    const gen = workerGenerator(() => worker, { timeoutMs: 30 });
     const a = gen.run(request(1, { req: { ...DEFAULT_REQUIREMENTS, count: 1 } }));
     const b = gen.run(request(2, { req: { ...DEFAULT_REQUIREMENTS, count: 3 } }));
-    worker.flush();
-    const [oa, ob] = await Promise.all([a, b]);
-    expect(oa.ok && oa.suggestions.length).toBe(1);
+    expect(await a).toBe(SUPERSEDED); // settled before the worker answers, and its timer is off
+    worker.flush(); // the old answer arrives too; nobody is waiting for it
+    const ob = await b;
     expect(ob.ok && ob.suggestions.length).toBe(3);
+    await new Promise((r) => setTimeout(r, 60));
+    expect(worker.terminated).toBe(false); // no timeout fired for the superseded request
     gen.dispose();
     expect(worker.terminated).toBe(true);
   });

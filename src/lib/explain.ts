@@ -12,15 +12,34 @@ import { MAPPING_KIND_LABELS, type AppliedTwist } from './twists';
 
 export const ROW_NAMES = ['number row', 'top row', 'home row', 'bottom row', 'space bar'];
 
-/** Why Shift is pressed: the capitals, then any shifted symbols. */
-export function shiftReasons(password: string, minUppercase: number, initials: number): string {
-  const reasons = initials
-    ? [`${initials} capital initial${initials > 1 ? 's' : ''}`]
-    : minUppercase === 1
-      ? ['the opening capital']
-      : minUppercase > 1
-        ? ['held once for the word in capitals']
-        : [];
+/**
+ * Why Shift is pressed: capital initials, words in capitals (a made-up noun,
+ * or a whole word for the uppercase rule), an opening capital; then any
+ * shifted symbols. The words carry no case of their own (capitals are put
+ * on at the end), so each word is found in the password, in order, and its
+ * case read there.
+ */
+export function shiftReasons(password: string, words: readonly { text: string }[]): string {
+  const lower = password.toLowerCase();
+  let pos = 0;
+  let initials = 0;
+  let opening = 0;
+  const capsWords: string[] = [];
+  for (const w of words) {
+    if (!w.text) continue;
+    const i = lower.indexOf(w.text.toLowerCase(), pos);
+    if (i < 0) continue;
+    const typed = password.slice(i, i + w.text.length);
+    pos = i + w.text.length;
+    if (/^[A-Z]$/.test(w.text)) initials++;
+    else if (typed.length > 1 && /[A-Z]/.test(typed) && typed === typed.toUpperCase()) capsWords.push(typed);
+    else if (/^[A-Z][a-z]/.test(typed)) opening++;
+  }
+  const reasons = [
+    ...(initials ? [`${initials} capital initial${initials > 1 ? 's' : ''}`] : []),
+    ...(capsWords.length ? [`held once for the word${capsWords.length > 1 ? 's' : ''} in capitals (${capsWords.join(' ')})`] : []),
+    ...(opening === 1 ? ['the opening capital'] : opening > 1 ? [`capitals on ${opening} words`] : []),
+  ];
   const shiftedSymbols = [...new Set(password.match(/[!@#$%^&*()_+{}|:"<>?~]/g) ?? [])];
   if (shiftedSymbols.length) reasons.push(shiftedSymbols.map((c) => `"${c}"`).join(' '));
   return reasons.join(' and ');
@@ -38,13 +57,13 @@ export function separatorPhrase(sep: string): string {
 export const capitalInitials = (words: Suggestion['words']) => words.filter((w) => /^[A-Z]$/.test(w.text));
 
 /** The "Fast to type" lines, in the card's order. */
-export function typingLines(s: Pick<Suggestion, 'password' | 'words'> & { typing: TypingProfile }, context: { minUppercase: number; separator: string }): string[] {
+export function typingLines(s: Pick<Suggestion, 'password' | 'words'> & { typing: TypingProfile }, context: { separator: string }): string[] {
   const { typing, password } = s;
   const letterRows = typing.rowsUsed.filter((r) => r > 0 && r < 4);
   return [
     typing.shiftPresses === 0
       ? 'All lowercase: no Shift key at all.'
-      : `${typing.shiftPresses} Shift press${typing.shiftPresses > 1 ? 'es' : ''} (${shiftReasons(password, context.minUppercase, capitalInitials(s.words).length)}).${typing.caseChanges <= 1 ? ' Case never alternates.' : ` Capital initials flip the case ${typing.caseChanges} times.`}`,
+      : `${typing.shiftPresses} Shift press${typing.shiftPresses > 1 ? 'es' : ''} (${shiftReasons(password, s.words)}).${typing.caseChanges <= 1 ? ' Case never alternates.' : ` Capital initials flip the case ${typing.caseChanges} times.`}`,
     `${Math.round(typing.sameRowShare * 100)}% of letter-to-letter moves stay on the same keyboard row.`,
     `Average reach is ${typing.averageDistance.toFixed(1)} key widths, with ${typing.sameFingerPairs} same-finger${typing.sameFingerPairs === 1 ? ' pair' : ' pairs'}.`,
     `Letters come from the ${letterRows.map((r) => ROW_NAMES[r]).join(', ')}${typing.rowsUsed.includes(0) ? ', plus short trips to the number row' : ''}.`,

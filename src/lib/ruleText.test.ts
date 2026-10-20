@@ -117,6 +117,12 @@ const CASES: Case[] = [
   { name: '"should contain" counts as a rule', text: 'Your password should contain at least one symbol and one capital.', rules: { minUppercase: 1, minSymbols: 1 } },
   { name: 'a statement of what is allowed changes nothing', text: 'Passwords may contain letters, numbers and symbols.', rules: {}, understood: [] },
   { name: 'a sign-up page sentence about a code', text: 'Thanks for signing up! We will send you a 6 character code.', rules: {}, understood: [] },
+  {
+    name: 'a maximum below the minimum: the minimum stands, never swapped',
+    text: 'Use at least 12 characters. Maximum 8 characters.',
+    rules: { minLength: 12, maxLength: 12 },
+    understood: ['exactly 12 characters (a maximum of 8 is below the minimum of 12, so the minimum stands)'],
+  },
   { name: 'text with no rules at all', text: 'Hello world, I like cats.', rules: {}, understood: [] },
   { name: 'empty text', text: '   ', rules: {}, understood: [] },
 ];
@@ -129,6 +135,18 @@ describe('parseRuleText', () => {
     expect(parsed.excludedSymbols).toBe(excluded ?? '');
     // Something was understood exactly when something will change.
     expect(parsed.understood.length > 0).toBe(Object.keys(parsed.rules).length > 0 || !!parsed.excludedSymbols);
+  });
+
+  it('does not read a count of character classes as a length', () => {
+    for (const text of [
+      'Contain at least 3 of the 4 character types: uppercase, lowercase, numbers, symbols',
+      'Include characters from 3 character classes',
+      'Use at least 2 character sets',
+      'Passwords must use 3 of the 4 character categories',
+    ]) {
+      expect(parseRuleText(text).rules.minLength, text).toBeUndefined();
+    }
+    expect(parseRuleText('Use 8 characters or more').rules.minLength).toBe(8); // a real length still reads
   });
 
   it('is deterministic: the same text always reads the same', () => {

@@ -145,7 +145,7 @@ test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps t
   await page.getByRole('tab', { name: 'Make up a sentence' }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tab', { name: 'Use my sentence' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('Type a sentence to turn into a password, then apply it.')).toBeVisible();
+  await expect(page.getByText('Type a sentence to turn into a password, then submit it.')).toBeVisible();
 
   await page.getByLabel('Your sentence', { exact: true }).fill(SENTENCE);
   await expect(applyBar(page)).toBeVisible();

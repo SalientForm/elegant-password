@@ -30,7 +30,7 @@ const MAX_SENTENCE = 500;
 function sentenceProblem(sentence: string): string | undefined {
   if (!sentence.trim()) return 'Type a sentence, such as "Sally eats sweets on Sundays".';
   if (sentence.length > MAX_SENTENCE) return `Keep it under ${MAX_SENTENCE} characters; it is ${sentence.length}.`;
-  if (!normalizeSentence(sentence).length) return 'It has no words: a sentence needs letters or digits, such as "Sally eats sweets on Sundays".';
+  if (!normalizeSentence(sentence).length) return 'It has no words made of the letters a-z or digits, which are what the keyboard model types (accents are fine), such as "Sally eats sweets on Sundays".';
   return undefined;
 }
 

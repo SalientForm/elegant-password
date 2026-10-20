@@ -5,9 +5,11 @@
 //
 // The worker is created on first use and again after dispose(), so a React
 // StrictMode mount/unmount/mount cycle (which disposes once) cannot leave the
-// app talking to a dead worker. If a worker fails to load, crashes, or stays
-// silent past the timeout, every outstanding request and all later ones run
-// inline instead: the app always answers.
+// app talking to a dead worker. Only the newest request matters: an older
+// one still in flight settles as superseded the moment a newer one is sent,
+// so its timer stops and nothing waits on it. If a worker fails to load,
+// crashes, or stays silent past the timeout, the outstanding request and all
+// later ones run inline instead: the app always answers.
 
 import { runInputs, type GenerateRequest, type GenerateResponse, type Outcome } from '../lib/engine';
 
@@ -47,6 +49,9 @@ interface Pending {
   resolve: (o: Outcome) => void;
   timer: ReturnType<typeof setTimeout>;
 }
+
+/** What an older request settles with once a newer one is sent; the caller only ever wants the newest. */
+export const SUPERSEDED: Outcome = { ok: false, error: 'Superseded by a newer request.' };
 
 /**
  * Runs the engine in a worker made by `createWorker`. Answers are matched to
@@ -95,6 +100,11 @@ export function workerGenerator(createWorker: () => WorkerLike, options: WorkerG
   return {
     run(request) {
       if (broken) return Promise.resolve(runInputs(request));
+      for (const [id, p] of pending) {
+        pending.delete(id);
+        clearTimeout(p.timer);
+        p.resolve(SUPERSEDED);
+      }
       return new Promise((resolve) => {
         const timer = setTimeout(() => {
           if (pending.has(request.id)) giveUp();

@@ -31,6 +31,7 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
           className="sentence-input"
           spellCheck={false}
           autoComplete="off"
+          autoCorrect="off"
           autoCapitalize="off"
           placeholder="Sally eats sweets on Sundays, then Enter"
           value={value}
@@ -186,6 +187,7 @@ export function GeneratedSentenceField({ value, onChange, onSubmit, disabled, re
       rows={1}
       spellCheck={false}
       autoComplete="off"
+      autoCorrect="off"
       autoCapitalize="off"
       placeholder="…"
       disabled={disabled}

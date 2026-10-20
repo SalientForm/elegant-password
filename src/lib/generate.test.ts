@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, type Requirements } from './generate';
+import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, applyUppercase, countUpper, type Requirements } from './generate';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
 import { isMadeUpNoun, pools, twoLetter } from './grammar';
@@ -227,6 +227,24 @@ describe('audit fixes', () => {
     expect(() => generate(req({ minUppercase: 8, initials: 3, shorthand: 3, minLength: 1, maxLength: 8 }))).toThrow(/more than the maximum of 8/);
   });
 
+  it('meets the uppercase rule with Shift reach on, when the words in reach have too few letters for it', () => {
+    // One-handed settings: the capitals go on words one hand can reach first, then on the rest, never short of the rule.
+    const rng = seeded(77);
+    let checked = 0;
+    for (let i = 0; i < 60; i++) {
+      const r = req({ minLength: 8, maxLength: 16, minUppercase: 3 + (i % 2), shiftReach: true, initials: 0, shorthand: 0, madeUp: 0, count: 5 });
+      const g = generate(r, { rng });
+      for (const s of g.suggestions) {
+        checked++;
+        expect(countUpper(s.password), `${JSON.stringify(r)} => ${s.password}`).toBeGreaterThanOrEqual(r.minUppercase);
+        for (const c of s.checks) expect(c.met, `${s.password}: ${c.rule}`).toBe(true);
+      }
+    }
+    expect(checked).toBeGreaterThan(100);
+    expect(applyUppercase(['722', 'us', 'gnaw', 'ds'], 4, () => false, undefined, true)).toEqual(['722', 'US', 'gnaw', 'DS']); // the words in reach ("us", "ds") first
+    expect(applyUppercase(['722', 'us', 'gnaw', 'd'], 4, () => false, undefined, true)).toEqual(['722', 'US', 'GNAW', 'D']); // too short between them: "gnaw" follows, though its G is out of reach
+  });
+
   it('meets every rule across random requirement combinations', { timeout: 60_000 }, () => {
     const rng = seeded(1234);
     const pick = <T,>(xs: readonly T[]) => xs[rng.uint32() % xs.length]!;
@@ -251,6 +269,8 @@ describe('audit fixes', () => {
         madeUp: pick([0, 1, 2]),
         glue: pick([true, false]),
         avoidPinkyStretch: pick([true, false]),
+        shiftReach: pick([true, false]),
+        shortest: pick([true, false]),
         easeSwaps: i % 2 === 0, // not drawn, so the other combinations stay the ones this test has always covered
         count: 5,
       });
@@ -259,7 +279,7 @@ describe('audit fixes', () => {
         generated++;
         for (const s of g.suggestions) {
           for (const c of s.checks) expect(c.met, `${JSON.stringify(r)} => ${s.password}: ${c.rule}`).toBe(true);
-          if (r.initials === 0 && r.madeUp === 0) expect(s.typing.caseChanges, s.password).toBeLessThanOrEqual(1);
+          if (r.initials === 0 && r.madeUp === 0 && !r.shiftReach) expect(s.typing.caseChanges, s.password).toBeLessThanOrEqual(1); // Shift reach may put the capitals on a word that is not the first
         }
       } catch (e) {
         if (!(e instanceof RequirementsError)) throw e;

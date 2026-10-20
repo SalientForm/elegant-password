@@ -267,7 +267,7 @@ A single-line field (Enter submits; never in the URL; kept in sessionStorage onc
 
 **Guarantee**: any sentence with a letter reduces to 12 characters passing every rule (up to 2 uppercase, 2 digits, 2 symbols required) with dropping allowed; property tests check hundreds of random messy sentences across all settings. Example: "jupiter brings 5 leds for piece", ${code(';')}, glue on, 1 initial, target 12 → ${code('jr;B;5ls;Fpc')}.
 
-Suggestions are distinct passwords: up to 10 × count attempts, repeats dropped. Warnings: a sentence under four words is easier to guess; some versions could not reach the compress-toward length; only N different versions fit; some passwords got fewer swaps than the minimum. An empty applied sentence shows "Type a sentence to turn into a password, then apply it." and Refresh is disabled while the sentence field is empty.
+Suggestions are distinct passwords: up to 10 × count attempts, repeats dropped. Warnings: a sentence under four words is easier to guess; some versions could not reach the compress-toward length; only N different versions fit; some passwords got fewer swaps than the minimum. An empty applied sentence shows "Type a sentence to turn into a password, then submit it." and Refresh is disabled while the sentence field is empty.
 
 Bits panel in this mode: headed "Bits for your sentence", the sentence printed beneath, the bits the batch counted (a range when they differ) and how (section 12), noting that the Strength and Raw badges assume an attacker who does not know the tool. It says this estimates the text, not how guessable the sentence is to someone who knows the user, and that quotes, lyrics and personal facts are weak.
 

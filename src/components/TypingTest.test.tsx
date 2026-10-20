@@ -69,7 +69,7 @@ describe('TypingTest', () => {
     expect(screen.getByRole('status').textContent).toContain('Testing: abc');
     // A hint can be added by hand; memorability then scores.
     const hintField = screen.getByLabelText('Hint for the password under test') as HTMLInputElement;
-    expect(hintField.placeholder).toBe('(hint n/a)');
+    expect(hintField.placeholder).toBe('none yet: type one to score memorability');
     expect(within(status).getByText('Memorability n/a')).toBeTruthy();
     fireEvent.change(hintField, { target: { value: 'a b c' } });
     expect(within(screen.getByRole('status')).getByText(/^Memorability \d+$/)).toBeTruthy();

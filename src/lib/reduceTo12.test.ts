@@ -141,7 +141,8 @@ describe('any sentence reduces to 12 characters', { timeout: 60_000 }, () => {
     }
   });
 
-  it('needs a letter or digit to work with', () => {
-    expect(() => fromSentence('日本語 !!! ...', { ...DEFAULT_REQUIREMENTS, maxLength: 12 })).toThrow(/Type a sentence/);
+  it('needs a letter or digit to work with, and says so for another script', () => {
+    expect(() => fromSentence('日本語 !!! ...', { ...DEFAULT_REQUIREMENTS, maxLength: 12 })).toThrow(/no words made of the letters a-z or digits/);
+    expect(() => fromSentence('   ', { ...DEFAULT_REQUIREMENTS, maxLength: 12 })).toThrow(/Type a sentence/);
   });
 });

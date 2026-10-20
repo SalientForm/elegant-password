@@ -232,6 +232,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   useEffect(() => {
     const current = resultRef.current;
     if (current && current.key === key && current.round === round) {
+      latest.current++; // a request still in flight for other inputs must not land on top of this batch
       setBusy(false);
       return undefined;
     }

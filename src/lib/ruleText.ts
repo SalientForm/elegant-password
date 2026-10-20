@@ -149,8 +149,10 @@ interface Lengths {
 
 const N = '(\\d{1,3})';
 const CH = '(?:characters?|chars?|long|in length)';
-// What may follow a length number: the unit, or the end of the phrase. Never "digits" or "of the following".
-const AFTER = '(?=\\s*(?:characters?\\b|chars?\\b|long\\b|in length\\b|$|[,:;()]|(?:and|or|but|with|including|includes|containing|that|which)\\b))';
+// "character types", "character sets", "character classes": a count of classes, not a length.
+const CLASS_WORD = '(?:types?|class(?:es)?|sets?|categor(?:y|ies)|groups?|kinds?)';
+// What may follow a length number: the unit, or the end of the phrase. Never "digits", "of the following" or "character types".
+const AFTER = `(?=\\s*(?:characters?\\b(?!\\s*${CLASS_WORD}\\b)|chars?\\b(?!\\s*${CLASS_WORD}\\b)|long\\b|in length\\b|$|[,:;()]|(?:and|or|but|with|including|includes|containing|that|which)\\b))`;
 const MIN_CUE = '(?:at least|minimum|min|(?:no|not) (?:fewer|less|shorter) than)';
 const MAX_CUE =
   "(?:(?:no|not) (?:more|longer) than|at most|up to|maximum|max|cannot exceed|can't exceed|can not exceed|must not exceed|may not exceed|should not exceed|not to exceed|not exceed|limited to|limit of)";
@@ -172,7 +174,7 @@ const LENGTH_PATTERNS: [RegExp, (n: number[], l: Lengths) => void, boolean][] = 
   // A range with no unit, where the clause is plainly about length: "Length: 8-64".
   [new RegExp(`\\b${N}\\s*(?:-|to)\\s*${N}${AFTER}`, 'g'), ([a, b], l) => (l.mins.push(a!), l.maxes.push(b!)), true],
 ];
-const BARE = /\b(\d{1,3})\s*(?:characters?|chars?)\b(?!\s*(?:in a row|consecutive|repeated|identical|sequential|from|of|code|pin))/g;
+const BARE = new RegExp(`\\b(\\d{1,3})\\s*(?:characters?|chars?)\\b(?!\\s*(?:in a row|consecutive|repeated|identical|sequential|from|of|code|pin|${CLASS_WORD})\\b)`, 'g');
 
 /** Records the lengths a clause states and blanks them out, so their numbers are not read again as counts. */
 function readLengths(clause: string, l: Lengths): string {
@@ -385,12 +387,17 @@ function finish(l: Lengths, f: Found): ParsedRules {
   const rules: Partial<RuleFields> = {};
   const understood: string[] = [];
 
-  let min = l.mins.length ? Math.max(...l.mins) : l.bare.length ? Math.max(...l.bare) : undefined; // "must be 8 characters" means at least 8
-  let max = l.maxes.length ? Math.min(...l.maxes) : undefined;
-  if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min];
+  const min = l.mins.length ? Math.max(...l.mins) : l.bare.length ? Math.max(...l.bare) : undefined; // "must be 8 characters" means at least 8
+  const stated = l.maxes.length ? Math.min(...l.maxes) : undefined;
+  // A maximum below the minimum is a slip in the text: the minimum stands and the maximum is raised to it, never swapped.
+  const max = min !== undefined && stated !== undefined && min > stated ? min : stated;
   if (min !== undefined) rules.minLength = Math.min(min, MAX_LENGTH);
   if (max !== undefined) rules.maxLength = Math.min(max, MAX_LENGTH);
-  if (min !== undefined && max !== undefined) understood.push(min === max ? `exactly ${min} characters` : `${min}-${max} characters`);
+  if (min !== undefined && max !== undefined) {
+    understood.push(
+      `${min === max ? `exactly ${min} characters` : `${min}-${max} characters`}${stated !== max ? ` (a maximum of ${stated} is below the minimum of ${min}, so the minimum stands)` : ''}`,
+    );
+  }
   else if (min !== undefined) understood.push(`at least ${min} characters`);
   else if (max !== undefined) understood.push(`at most ${max} characters`);
 

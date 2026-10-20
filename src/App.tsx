@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageFirstWheel } from './components/columnScroll';
 import { MEDIUM, NARROW, PHONE, useMediaQuery } from './components/useMediaQuery';
 import { ApplyBar } from './components/ApplyBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { FunPage } from './components/FunPage';
 import { RequirementsForm } from './components/RequirementsForm';
-import { ScoringPage } from './components/ScoringPage';
 import { SelectedList } from './components/SelectedList';
 import { SiteRules } from './components/SiteRules';
 import { CopyButton } from './components/CopyButton';
@@ -22,6 +20,10 @@ import { SORT_CHOICES } from './lib/choices';
 import { presentSuggestions } from './lib/pipeline';
 import { normalizeSentence } from './lib/text';
 import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
+
+// The Scoring and Fun pages carry their own text (the rubric tables, the rebuild prompts); they load when first visited.
+const ScoringPage = lazy(() => import('./components/ScoringPage').then((m) => ({ default: m.ScoringPage })));
+const FunPage = lazy(() => import('./components/FunPage').then((m) => ({ default: m.FunPage })));
 
 type Page = 'main' | 'scoring' | 'fun';
 const pageFromHash = (): Page => (window.location.hash === '#/fun' ? 'fun' : window.location.hash === '#/scoring' ? 'scoring' : 'main');
@@ -95,8 +97,10 @@ export function App() {
             <ElegantPasswords column={column} onColumn={setColumn} />
           </div>
         </PasswordsProvider>
-        {page === 'scoring' && <ScoringPage />}
-        {page === 'fun' && <FunPage />}
+        <Suspense fallback={<p className="hint">Loading…</p>}>
+          {page === 'scoring' && <ScoringPage />}
+          {page === 'fun' && <FunPage />}
+        </Suspense>
       </div>
     </ErrorBoundary>
   );
@@ -348,7 +352,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
           </div>
         </div>
 
-        {emptySentence && !outcome?.ok && <p className="hint">Type a sentence to turn into a password, then apply it.</p>}
+        {emptySentence && !outcome?.ok && <p className="hint">Type a sentence to turn into a password, then submit it.</p>}
         {outcome && !outcome.ok && !emptySentence && (
           <p className="error" role="alert">
             {outcome.unexpected ? `Unexpected error: ${outcome.error}` : outcome.error}
