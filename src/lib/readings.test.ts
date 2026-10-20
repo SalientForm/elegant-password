@@ -39,7 +39,7 @@ describe('score readings', () => {
     expect(r.difficulty.value).toBe(String(difficulty.score));
     expect(r.difficulty.level).toBe(difficulty.level);
     expect(r.difficulty.text).toBe(`Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()} (two-finger)`);
-    expect(r.memorability).toEqual({ label: 'Memory', value: '71', band: 'mid', text: 'Memorability 71 of 100: how closely it still looks like its hint' });
+    expect(r.memorability).toEqual({ label: 'Memorability', value: '71', band: 'mid', text: 'Memorability 71 of 100: how closely it still looks like its hint' });
   });
 
   it('says memorability needs a hint when there is none, with no band to colour', () => {
@@ -50,6 +50,6 @@ describe('score readings', () => {
   });
 
   it('keeps the labels the web badges and the CLI table both print', () => {
-    expect(READING_LABELS).toEqual({ strength: 'Strength', difficulty: 'Difficulty', memorability: 'Memory' });
+    expect(READING_LABELS).toEqual({ strength: 'Strength', difficulty: 'Difficulty', memorability: 'Memorability' });
   });
 });

@@ -38,4 +38,21 @@ describe('engine', () => {
     expect(inputsKey({ ...base, mode: 'sentence', sentence: 'b' })).not.toBe(s);
     expect(inputsKey({ ...base, mode: 'sentence', sentence: 'a', sentenceOptions: { ...DEFAULT_SENTENCE_OPTIONS, targetLength: 12 } })).not.toBe(s);
   });
+
+  it('builds an edited made-up sentence as the user\'s own, and goes back to the drawn one when the edit is blank', () => {
+    const drawn = runInputs(base);
+    if (!drawn.ok || !drawn.generated) throw new Error('expected a sentence');
+    const kept = { ...base, generated: drawn.generated };
+    const edited = runInputs({ ...kept, edited: 'Sally eats sweets on Sundays' });
+    expect(edited.ok && edited.source === 'sentence' && edited.plan === undefined).toBe(true);
+    expect(edited.ok && edited.suggestions.every((s) => /sally/i.test(s.hint))).toBe(true);
+    const blank = runInputs({ ...kept, edited: '  ' });
+    expect(blank.ok && blank.source === 'generated' && blank.generated).toEqual(drawn.generated);
+    // The edit is in the key (with the options it is built with); a blank one is the same as none.
+    const k = inputsKey(kept);
+    expect(inputsKey({ ...kept, edited: '  ' })).toBe(k);
+    const e = inputsKey({ ...kept, edited: 'Sally eats sweets' });
+    expect(e).not.toBe(k);
+    expect(inputsKey({ ...kept, edited: 'Sally eats sweets', sentenceOptions: { ...DEFAULT_SENTENCE_OPTIONS, targetLength: 12 } })).not.toBe(e);
+  });
 });

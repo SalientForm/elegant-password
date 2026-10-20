@@ -40,7 +40,7 @@ const block = (s: string, lang = '') => `\`\`\`${lang}\n${s.trimEnd()}\n\`\`\``;
 export const SHARED_CORE: readonly { module: string; names: string[]; for: string }[] = [
   { module: 'engine', names: ['runInputs'], for: 'generation: one pure call, the same as the web worker makes' },
   { module: 'pipeline', names: ['inputsFor', 'presentSuggestions'], for: 'settings to engine inputs, and suggestions rescored for the typing mode and ordered' },
-  { module: 'readings', names: ['scoreReadings'], for: 'the Strength, Difficulty and Memory figures, bands and sentences' },
+  { module: 'readings', names: ['scoreReadings'], for: 'the Strength, Difficulty and Memorability figures, bands and sentences' },
   { module: 'explain', names: ['typingLines', 'twistLine', 'twistOptionsLine', 'easedIn', 'easedLine'], for: 'the "Why?" sentences, for --explain' },
   { module: 'consistency', names: ['problemsOf', 'warningsOf', 'reachableBits'], for: 'contradictions (rules, then planning) and the unreachable-target warning' },
   { module: 'generate', names: ['planProblem', 'shortfallWarning', 'checkRequirements', 'DEFAULT_REQUIREMENTS', 'STRENGTH_PRESETS'], for: 'what stops planning, early exit; the engine\'s own shortfall warning, to drop as a duplicate' },
@@ -214,7 +214,7 @@ The command line itself can contradict: each of these is exit ${EXIT.usage} with
 
 ### 4.3 Output
 
-- **table** (stdout a terminal): one row per password: index, password, then "Strength n  Difficulty n  Memory n" from ${code('scoreReadings')} (strength and memory coloured by band, difficulty by level), and "hint: ..." under it. Colour only when the stream is a terminal, ${code('NO_COLOR')} is unset and ${code('--no-color')} is not given.
+- **table** (stdout a terminal): one row per password: index, password, then "Strength n  Difficulty n  Memorability n" from ${code('scoreReadings')} (strength and memorability coloured by band, difficulty by level), and "hint: ..." under it. Colour only when the stream is a terminal, ${code('NO_COLOR')} is unset and ${code('--no-color')} is not given.
 - **plain** (piped): the passwords alone, one per line, so ${code('tep g | wl-copy')} works.
 - **json**: ${code('{ mode, typingMode, separator, sort, warnings, suggestions: [{ password, hint, bits, difficulty, difficultyLabel, memorability, readings: { strength, difficulty, memorability } }] }')}; with ${code('--explain')} also ${code('plan')} and each suggestion's ${code('explain')} lines.
 - **--explain**: the plan's exact bits and where they come from, then for each password its words and roles, steps, swaps (${code('twistLine')}), where the swaps landed (${code('twistOptionsLine')}), deliberate swaps (${code('easedLine')}), the "Fast to type" lines (${code('typingLines')}) and every rule check, met or not.

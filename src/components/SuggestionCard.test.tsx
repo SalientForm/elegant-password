@@ -76,7 +76,7 @@ describe('SuggestionCard', () => {
     expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()} (ten-finger)`);
     fireEvent.mouseLeave(screen.getByText(`Difficulty ${s.difficulty.score}`).parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
-    expect(screen.getByText(`Memory ${s.memorability}`)).toBeTruthy();
+    expect(screen.getByText(`Memorability ${s.memorability}`)).toBeTruthy();
     fireEvent.mouseEnter(screen.getByText(`Strength ${s.bits.toFixed(0)}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak); scored from the password and its hint alone$/);
   });

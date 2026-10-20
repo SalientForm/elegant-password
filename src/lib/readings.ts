@@ -23,7 +23,7 @@ export const strengthWord = (bits: number) =>
     ?.label.toLowerCase() ?? 'weak';
 
 export interface Reading {
-  /** The badge's word: "Strength", "Difficulty", "Memory". */
+  /** The badge's word: "Strength", "Difficulty", "Memorability". */
   label: string;
   /** The figure as shown: "48", "44", "71", or "n/a". */
   value: string;
@@ -40,7 +40,7 @@ export interface ScoreReadings {
   memorability: Reading;
 }
 
-export const READING_LABELS = { strength: 'Strength', difficulty: 'Difficulty', memorability: 'Memory' } as const;
+export const READING_LABELS = { strength: 'Strength', difficulty: 'Difficulty', memorability: 'Memorability' } as const;
 
 /** The three readings for a password's scores. `memorability` is undefined when there is no hint to compare with. */
 export function scoreReadings({

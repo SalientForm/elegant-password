@@ -59,7 +59,7 @@ describe('SelectedList', () => {
     expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${score.difficulty.score}, ${score.difficulty.label.toLowerCase()} (ten-finger)`); // the full reading, at once, for the typing mode
     fireEvent.mouseLeave(d.parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
-    fireEvent.mouseEnter(first.getByText(`Memory ${score.memorability.score}`).parentElement!);
+    fireEvent.mouseEnter(first.getByText(`Memorability ${score.memorability.score}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Memorability \d+ of 100/);
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
@@ -91,6 +91,6 @@ describe('SelectedList with characters off the US keyboard', () => {
     expect(within(item).getByText('naïve;otters')).toBeTruthy();
     const score = scoreCold('naïve;otters', 'naive otters');
     expect(within(item).getByText(`Difficulty ${score.difficulty.score}`)).toBeTruthy();
-    expect(within(item).getByText(`Memory ${score.memorability.score}`)).toBeTruthy();
+    expect(within(item).getByText(`Memorability ${score.memorability.score}`)).toBeTruthy();
   });
 });

@@ -18,9 +18,13 @@ const settings: GenerationSettings = {
 describe('inputsFor', () => {
   it('passes the settings through and turns mapping settings into the active mappings', () => {
     const inputs = inputsFor(settings);
-    expect(inputs).toEqual({ ...settings, mappingSettings: undefined, mappings: activeMappings(settings.mappingSettings), generated: null });
+    expect(inputs).toEqual({ ...settings, mappingSettings: undefined, mappings: activeMappings(settings.mappingSettings), generated: null, edited: null });
     expect(inputs.mappings.some((m) => m.from === 'a' && m.to === '@')).toBe(false);
     expect(inputs.mappings.at(-1)).toEqual({ from: 'cat', to: 'k@', kind: 'custom' });
+  });
+
+  it('passes an edited made-up sentence on, for the engine to build as the user\'s own', () => {
+    expect(inputsFor({ ...settings, editedSentence: 'sleepy otters paint boats' }).edited).toBe('sleepy otters paint boats');
   });
 
   it('keeps a made-up sentence when given one', () => {

@@ -255,7 +255,7 @@ exactly as the app would make and score it.
   is wrong, where each value came from (a flag, a file and line, a preset),
   and how to fix it, with the value that would work where the engine can
   find it. A strength the rules cannot reach is a warning, as in the app.
-- **Output**: a table with the Strength, Difficulty and Memory badges at a
+- **Output**: a table with the Strength, Difficulty and Memorability badges at a
   terminal, the passwords alone when piped, or JSON; `--explain` adds the
   card's "Why?"; `--copy` uses the platform's clipboard tool.
 - **Your own sentence** is read from stdin or typed at a hidden prompt

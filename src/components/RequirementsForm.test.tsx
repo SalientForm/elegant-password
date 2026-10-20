@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { TypingMode } from '../lib/difficulty';
 import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
 import { RequirementsForm } from './RequirementsForm';
+import { SiteRules } from './SiteRules';
 import { SETTLE_MS } from './useShownProblems';
 
 afterEach(cleanup);
@@ -13,6 +14,7 @@ function Harness({ initial = DEFAULT_REQUIREMENTS, typingMode }: { initial?: Req
   const [value, setValue] = useState(initial);
   return (
     <>
+      <SiteRules value={value} onChange={setValue} />
       <RequirementsForm value={value} onChange={setValue} typingMode={typingMode} />
       <output data-testid="req">{JSON.stringify(value)}</output>
     </>
@@ -180,9 +182,7 @@ describe('RequirementsForm', () => {
   it('fills in the rules from pasted text, says what it understood, and leaves the rest alone', () => {
     const mine = { ...DEFAULT_REQUIREMENTS, targetBits: 50, separator: 'auto' };
     render(<Harness initial={mine} />);
-    const toggle = screen.getByRole('button', { name: "Paste the site's rules" });
-    expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    fireEvent.click(toggle);
+    expect(screen.getByRole('heading', { name: "Paste the site's rules" })).toBeTruthy(); // always open, no disclosure
     const box = screen.getByRole('textbox', { name: "The site's password rules" });
     // Typed text is previewed, not applied, until "Fill in".
     fireEvent.change(box, { target: { value: 'Must be 8-20 characters and include at least one number and one of !@#$%' } });
@@ -195,7 +195,6 @@ describe('RequirementsForm', () => {
 
   it('fills in at once when text is pasted', () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole('button', { name: "Paste the site's rules" }));
     const box = screen.getByRole('textbox', { name: "The site's password rules" });
     fireEvent.paste(box);
     fireEvent.change(box, { target: { value: '• 10-16 characters\n• No spaces' } });
@@ -208,7 +207,6 @@ describe('RequirementsForm', () => {
 
   it('never leaves pasted rules contradicting the separator: it becomes Automatic and the message says so', () => {
     render(<Harness initial={{ ...DEFAULT_REQUIREMENTS, separator: ';' }} />);
-    fireEvent.click(screen.getByRole('button', { name: "Paste the site's rules" }));
     const box = screen.getByRole('textbox', { name: "The site's password rules" });
     fireEvent.paste(box);
     fireEvent.change(box, { target: { value: 'Use letters and numbers only. No spaces.' } });
@@ -219,7 +217,6 @@ describe('RequirementsForm', () => {
 
   it('says so plainly and changes nothing when the text holds no rules', () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole('button', { name: "Paste the site's rules" }));
     const box = screen.getByRole('textbox', { name: "The site's password rules" });
     fireEvent.change(box, { target: { value: 'Welcome back! Sign in to continue.' } });
     expect(pasteStatus().textContent).toBe('No password rules recognised yet.');

@@ -43,6 +43,8 @@ export interface Settings {
   sentenceOptions: SentenceOptions;
   mappingSettings: MappingSettings;
   sentence: string;
+  /** The made-up sentence as the user edited it; null while it is as drawn. A new draw clears it. */
+  editedSentence: string | null;
   /** How the passwords will be typed. Generation never reads it; the options it fills in are what change the passwords. */
   typingMode: TypingMode;
 }
@@ -66,6 +68,8 @@ export interface PasswordsContextValue {
   setSentenceOptions: (next: SentenceOptions) => void;
   setMappingSettings: (next: MappingSettings) => void;
   setSentence: (next: string) => void;
+  /** Edit the made-up sentence, in the draft. Back to the words as drawn, it is unedited again. */
+  setEditedSentence: (next: string) => void;
   /** Every mapping switched on in the draft. */
   mappings: Mapping[];
   /** Which mode is open. Takes effect at once; it is navigation, not a setting. */
@@ -134,6 +138,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
     sentenceOptions: loadSentenceOptions(localStore),
     mappingSettings: loadMappingSettings(localStore),
     sentence: restored?.sentence ?? '',
+    editedSentence: restored?.edited ?? null,
     typingMode: loadTypingMode(localStore),
   }));
   const [draft, setDraft] = useState<Settings>(applied);
@@ -163,10 +168,16 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   appliedRef.current = applied;
   // The applied settings never hold a contradiction: a draft with one stays a draft, and the form says why.
   const apply = useCallback(() => {
-    const next = draftRef.current;
+    let next = draftRef.current;
     if (ruleProblems(next.req).length) return false;
-    // A new typing mode reshapes the sentence (its made-up nouns, its number), so it draws a new one rather than refusing the kept one.
-    if (next.typingMode !== appliedRef.current.typingMode) setGenerated(null);
+    // A new typing mode reshapes the sentence (its made-up nouns, its number), so it draws a new one rather than refusing the kept one, and drops any edit to it.
+    const redraw = next.typingMode !== appliedRef.current.typingMode;
+    if (redraw) setGenerated(null);
+    // A blank edit goes back to the sentence as drawn.
+    if (next.editedSentence !== null && (redraw || !next.editedSentence.trim())) {
+      next = { ...next, editedSentence: null };
+      setDraft(next);
+    }
     setApplied((current) => (sameSettings(current, next) ? current : next));
     setNotice(null);
     return true;
@@ -177,6 +188,12 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const setSentenceOptions = useCallback((next: SentenceOptions) => edit('sentenceOptions', next), [edit]);
   const setMappingSettings = useCallback((next: MappingSettings) => edit('mappingSettings', next), [edit]);
   const setSentence = useCallback((next: string) => edit('sentence', next), [edit]);
+  const generatedRef = useRef(generated);
+  generatedRef.current = generated;
+  const setEditedSentence = useCallback(
+    (next: string) => edit('editedSentence', next === generatedRef.current?.words.join(' ') ? null : next),
+    [edit],
+  );
   // A mode brings its options with it: the strength, comfort and style that suit it, over whatever the draft held (visible in the form, undone by Discard).
   const setTypingMode = useCallback((next: TypingMode) => setDraft((d) => ({ ...d, typingMode: next, req: withProfile(d.req, next).req })), []);
 
@@ -230,14 +247,19 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       sentence: applied.sentence,
       outcome: result?.outcome ?? null,
       ...(generated ? { generated } : {}),
+      ...(generated && applied.editedSentence !== null ? { edited: applied.editedSentence } : {}),
     });
-  }, [sessionStore, result, applied.sentence, key, round, generated]);
+  }, [sessionStore, result, applied.sentence, applied.editedSentence, key, round, generated]);
 
   const regenerate = useCallback(() => {
     if (apply()) setRound((r) => r + 1);
   }, [apply]);
   const newSentence = useCallback(() => {
     if (!apply()) return;
+    // A new draw replaces the sentence, edits and all.
+    const unedited = (s: Settings) => (s.editedSentence === null ? s : { ...s, editedSentence: null });
+    setDraft(unedited);
+    setApplied(unedited);
     setGenerated(null);
     setRound((r) => r + 1);
   }, [apply]);
@@ -263,6 +285,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       setSentenceOptions,
       setMappingSettings,
       setSentence,
+      setEditedSentence,
       mappings,
       mode,
       setMode,
@@ -282,7 +305,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       clearSelected,
       isSelected,
     }),
-    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, setTypingMode, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, setEditedSentence, setTypingMode, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;

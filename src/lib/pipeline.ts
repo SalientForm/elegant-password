@@ -20,6 +20,12 @@ export interface GenerationSettings {
   sentence: string;
   sentenceOptions: SentenceOptions;
   mappingSettings: MappingSettings;
+  /**
+   * The made-up sentence as the user edited it (generated mode); null or
+   * absent while it is as drawn. The engine builds an edited sentence as
+   * the user's own (GenerateInputs.edited).
+   */
+  editedSentence?: string | null;
 }
 
 /** The engine's inputs for these settings. `generated` keeps a made-up sentence; null draws a new one. */
@@ -31,6 +37,7 @@ export function inputsFor(settings: GenerationSettings, generated: GeneratedSent
     sentenceOptions: settings.sentenceOptions,
     mappings: activeMappings(settings.mappingSettings),
     generated,
+    edited: settings.editedSentence ?? null,
   };
 }
 

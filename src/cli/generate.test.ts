@@ -30,7 +30,7 @@ describe('tep g: output', () => {
     expect(code).toBe(EXIT.ok);
     const lines = io.out().trimEnd().split('\n');
     expect(lines).toHaveLength(10);
-    expect(lines[0]).toMatch(/^1 {2}\S.* {3}Strength \d+ {2}Difficulty \d+ {2}Memory \d+$/);
+    expect(lines[0]).toMatch(/^1 {2}\S.* {3}Strength \d+ {2}Difficulty \d+ {2}Memorability \d+$/);
     expect(lines[1]).toMatch(/^ {3}hint: /);
     expect(io.out()).not.toContain(ESC);
   });

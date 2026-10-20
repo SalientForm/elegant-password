@@ -23,7 +23,7 @@ interface BadgeProps {
   mine?: boolean;
 }
 
-/** The three score badges: "Strength 48", "Difficulty 44" and "Memory 71", with the full reading in each tooltip (src/lib/readings.ts). */
+/** The three score badges: "Strength 48", "Difficulty 44" and "Memorability 71", with the full reading in each tooltip (src/lib/readings.ts). */
 export function ScoreBadges({ bits, difficulty, memorability, mine = false }: BadgeProps) {
   void mine; // the same rule scores every password; nothing about its origin goes in
   const r = scoreReadings({ bits, difficulty, memorability });

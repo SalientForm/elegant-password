@@ -39,6 +39,13 @@ describe('session store', () => {
     }
   });
 
+  it('keeps an edit to the made-up sentence only alongside that sentence', () => {
+    const generated = { slots: ['adj', 'noun'], words: ['sleepy', 'otters'] };
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated, edited: 'sleepy owls' })?.edited).toBe('sleepy owls');
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, edited: 'sleepy owls' })?.edited).toBeUndefined();
+    expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated, edited: 3 })?.edited).toBeUndefined();
+  });
+
   it('rejects anything malformed rather than trusting it', () => {
     expect(parseSession(null)).toBeUndefined();
     expect(parseSession({ key: 'k' })).toBeUndefined();

@@ -5,7 +5,6 @@ import { unusedIn, type ProfileKey } from '../lib/modeProfiles';
 import { ignoredSymbols, MAX_COUNT, MAX_LENGTH, MAX_TARGET_BITS, ruleProblems, type RuleProblem } from '../lib/validation';
 import { useShownProblems } from './useShownProblems';
 import { NumberField } from './NumberField';
-import { SiteRules } from './SiteRules';
 
 interface Props {
   value: Requirements;
@@ -72,8 +71,6 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
   return (
     <form className="panel form" onSubmit={(e) => e.preventDefault()}>
       <h2>Requirement options</h2>
-
-      <SiteRules value={value} onChange={onChange} />
       <Problems list={problems} anchor="other" />
 
       <fieldset>

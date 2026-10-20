@@ -45,7 +45,7 @@ describe('TypingTest', () => {
     expect(result.textContent).toMatch(/1\.5 s for 13 characters/); // first key to Enter: 15 keys 100 ms apart
     expect(result.textContent).toMatch(/Strength \d+/); // strength from the text alone
     expect(result.textContent).toMatch(/Difficulty \d+/);
-    expect(result.textContent).toContain('Memory n/a'); // no hint, so no memorability
+    expect(result.textContent).toContain('Memorability n/a'); // no hint, so no memorability
     expect(input.value).toBe(''); // ready for the next run
   });
 
@@ -69,9 +69,9 @@ describe('TypingTest', () => {
     // A hint can be added by hand; memorability then scores.
     const hintField = screen.getByLabelText('Hint for the password under test') as HTMLInputElement;
     expect(hintField.placeholder).toBe('(hint n/a)');
-    expect(within(status).getByText('Memory n/a')).toBeTruthy();
+    expect(within(status).getByText('Memorability n/a')).toBeTruthy();
     fireEvent.change(hintField, { target: { value: 'a b c' } });
-    expect(within(screen.getByRole('status')).getByText(/^Memory \d+$/)).toBeTruthy();
+    expect(within(screen.getByRole('status')).getByText(/^Memorability \d+$/)).toBeTruthy();
     // The cancel icon next to the password under test drops it; the next run sets a new one.
     const clearButton = screen.getByRole('button', { name: 'Clear' });
     expect(clearButton.closest('.testing-row')).toBeTruthy(); // beside "Testing:"
@@ -102,7 +102,7 @@ describe('TypingTest', () => {
     fireEvent.paste(input, { clipboardData: { getData: () => 'jr;B;5ls;Fpc' } });
     expect(screen.getByRole('status').textContent).toContain('Hint: jupiter brings 5 leds for piece');
     expect(screen.queryByLabelText('Hint for the password under test')).toBeNull();
-    expect(within(screen.getByRole('status')).getByText(/^Memory \d+$/)).toBeTruthy();
+    expect(within(screen.getByRole('status')).getByText(/^Memorability \d+$/)).toBeTruthy();
     // Typing it afterwards is checked against it.
     typeInto(input, 'jr;B;5ls;Fpc', clock);
     enter(input, clock);
@@ -151,7 +151,7 @@ describe('TypingTest', () => {
     const cold = scoreCold('13;Worthy;storks;openly;pet;twisty;toys', '13 worthy storks openly pet twisty toys');
     expect(within(status).getByText(`Strength ${cold.bits.toFixed(0)}`)).toBeTruthy();
     expect(within(status).getByText(`Difficulty ${cold.difficulty.score}`)).toBeTruthy();
-    expect(within(status).getByText(`Memory ${cold.memorability.score}`)).toBeTruthy();
+    expect(within(status).getByText(`Memorability ${cold.memorability.score}`)).toBeTruthy();
     // After Clear, a password typed in by hand is next: no hint, so no memorability; strength and difficulty from the text alone.
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
@@ -160,7 +160,7 @@ describe('TypingTest', () => {
     const after = screen.getByRole('status');
     expect(after.textContent).toContain('Testing: xyzzy-42');
     expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe(''); // editable: it arrived without one
-    expect(within(after).getByText('Memory n/a')).toBeTruthy();
+    expect(within(after).getByText('Memorability n/a')).toBeTruthy();
     expect(within(after).getByText(`Strength ${scoreAlone('xyzzy-42').bits.toFixed(0)}`)).toBeTruthy();
     expect(within(after).getByText(`Difficulty ${scoreAlone('xyzzy-42').difficulty.score}`)).toBeTruthy();
   });

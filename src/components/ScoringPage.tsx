@@ -113,7 +113,7 @@ export function ScoringPage() {
           81–100 hard. Each card shows its own table; this is the whole rubric.
         </p>
         <p>
-          The rubric depends on how the password will be typed, chosen in the Mode card on the Passwords page: with ten
+          The rubric depends on how the password will be typed, chosen under Mode in the Presets card on the Passwords page: with ten
           fingers on the home row (the standard), with two fingers hunting for keys, with one hand,
           or as quickly as possible. Each mode weighs the criteria differently, drops the ones that no longer apply and
           has its own typing-time model, so the same password can score differently in each. The mode itself changes

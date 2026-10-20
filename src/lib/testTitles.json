@@ -170,7 +170,7 @@
       },
       {
         "kind": "test",
-        "title": "has a Mode card at the top of the right column that previews every difficulty at once, fills in its options as a draft, and is remembered once submitted"
+        "title": "has Mode at the top of the Presets card, first in the options column, that previews every difficulty at once, fills in its options as a draft, and is remembered once submitted"
       },
       {
         "kind": "test",
@@ -215,6 +215,14 @@
       {
         "kind": "test",
         "title": "keeps the mode tabs in the sentence card, every suggestion in the Suggestions card, and the strength panel apart"
+      },
+      {
+        "kind": "test",
+        "title": "puts the site presets and the open paste box in the Presets card under Mode, above the Requirement options"
+      },
+      {
+        "kind": "test",
+        "title": "lets the made-up sentence be edited, built as your own once submitted, copied, and replaced by a new draw"
       },
       {
         "kind": "test",
@@ -2099,6 +2107,10 @@
       {
         "kind": "test",
         "title": "keys the inputs that matter and ignores the sentence while making one up"
+      },
+      {
+        "kind": "test",
+        "title": "builds an edited made-up sentence as the user's own, and goes back to the drawn one when the edit is blank"
       }
     ]
   },
@@ -2778,6 +2790,10 @@
       {
         "kind": "test",
         "title": "passes the settings through and turns mapping settings into the active mappings"
+      },
+      {
+        "kind": "test",
+        "title": "passes an edited made-up sentence on, for the engine to build as the user's own"
       },
       {
         "kind": "test",
@@ -3597,6 +3613,10 @@
       {
         "kind": "test",
         "title": "keeps the made-up sentence, and drops only that when it is malformed"
+      },
+      {
+        "kind": "test",
+        "title": "keeps an edit to the made-up sentence only alongside that sentence"
       },
       {
         "kind": "test",
