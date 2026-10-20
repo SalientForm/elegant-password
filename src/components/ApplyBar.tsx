@@ -15,8 +15,10 @@ interface Props {
 }
 
 /**
- * Two buttons that float over the page while there are unapplied changes:
- * Discard throws them away, Submit changes saves them and regenerates.
+ * A snackbar at the foot of the page while there are unapplied changes: a
+ * card, 1 rem above the bottom, saying so at its left (or naming the first
+ * problem, with Show) and holding the two buttons at its right. Discard
+ * throws the changes away, Submit changes saves them and regenerates.
  * While they are showing, Enter anywhere submits (except on a button, link
  * or select, where Enter has its own job) and Escape discards; in a text
  * field Escape means back: it leaves the field and discards nothing, so the
@@ -54,32 +56,34 @@ export function ApplyBar({ onShowProblems }: Props) {
   const blocked = problems.length > 0;
   return (
     <div className="apply-bar" role="region" aria-label="Unapplied changes">
-      {blocked && (
-        <div className="apply-problems floating" id="apply-problems" role="alert">
-          <p>
+      <div className={blocked ? 'snackbar blocked' : 'snackbar'}>
+        {blocked ? (
+          <p className="snackbar-text" id="apply-problems" role="alert">
             <strong>{problems.length === 1 ? 'Fix this to submit:' : `Fix ${problems.length} problems to submit:`}</strong> {problems[0]!.message}
           </p>
-          {onShowProblems && (
+        ) : (
+          <p className="snackbar-text">Unapplied changes</p>
+        )}
+        <div className="snackbar-actions">
+          {blocked && onShowProblems && (
             <button type="button" className="ghost" onClick={onShowProblems}>
               Show
             </button>
           )}
+          <button type="button" className="ghost" onClick={discard} title="Escape (outside a text field; in one, Escape leaves the field first)">
+            Discard
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={apply}
+            disabled={blocked}
+            aria-describedby={blocked ? 'apply-problems' : undefined}
+            title={blocked ? 'Fix the problems in the options first' : 'Enter'}
+          >
+            Submit changes
+          </button>
         </div>
-      )}
-      <div className="apply-buttons">
-        <button type="button" className="floating ghost" onClick={discard} title="Escape (outside a text field; in one, Escape leaves the field first)">
-          Discard
-        </button>
-        <button
-          type="button"
-          className="floating primary"
-          onClick={apply}
-          disabled={blocked}
-          aria-describedby={blocked ? 'apply-problems' : undefined}
-          title={blocked ? 'Fix the problems in the options first' : 'Enter'}
-        >
-          Submit changes
-        </button>
       </div>
     </div>
   );
