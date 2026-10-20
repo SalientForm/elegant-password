@@ -79,6 +79,7 @@ a fix, and is kept.
 | --- | --- |
 | `tep g` (alias `tep generate`) | Generate passwords and print them |
 | `tep config [file]` | Ask questions, write a config file (default `./tep.yml`) |
+| `tep uninstall [--yes]` | Remove the links to a built `tep` from `$TEP_BIN_DIR`, `~/.local/bin` and the PATH, after listing them and asking (no by default); `--yes` skips the question, and without it stdin must be a terminal. The checkout and its build stay |
 | `tep help [command]`, `-h`, `--help` | Usage |
 | `tep --version`, `-V` | Version from `package.json` |
 
@@ -379,7 +380,9 @@ Change a line (1-5), s to save, q to quit without saving:
   Not published to npm (the package stays private); `pnpm link:cli`
   builds it and links `~/.local/bin/tep` (or `$TEP_BIN_DIR/tep`) to
   `dist-cli/tep.mjs`, saying if that directory is off the PATH or another
-  `tep` comes first; `pnpm unlink:cli` removes the link (pnpm 10+'s
+  `tep` comes first. In a fresh clone it is the one command needed, as
+  pnpm 11 installs the dependencies before running a script.
+  `tep uninstall` (or `pnpm unlink:cli`) removes the link (pnpm 10+'s
   `pnpm link` takes a directory and makes it a dependency of the project,
   so it does not install anything globally).
 - Dependencies: `node:util` `parseArgs` for flags, `yaml`, `zod`, and

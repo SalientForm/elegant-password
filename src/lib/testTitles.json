@@ -1170,6 +1170,59 @@
     ]
   },
   {
+    "file": "src/cli/uninstall.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "findLinks"
+      },
+      {
+        "kind": "test",
+        "title": "finds tep in ~/.local/bin, $TEP_BIN_DIR and on the PATH, each once, and only links to a built tep"
+      },
+      {
+        "kind": "test",
+        "title": "reads a relative link from its own directory, and a broken one still counts"
+      },
+      {
+        "kind": "group",
+        "title": "tep uninstall"
+      },
+      {
+        "kind": "test",
+        "title": "lists the link, asks with no as the default, and removes it on yes"
+      },
+      {
+        "kind": "test",
+        "title": "removes nothing on no, or on Ctrl+C"
+      },
+      {
+        "kind": "test",
+        "title": "wraps the paths to the box, run-on text under the path, and the closing lines inside the guide bar"
+      },
+      {
+        "kind": "test",
+        "title": "removes every link it finds, after one question"
+      },
+      {
+        "kind": "test",
+        "title": "with --yes, asks nothing and needs no terminal"
+      },
+      {
+        "kind": "test",
+        "title": "without a terminal or --yes, refuses and removes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "says so when there is nothing to remove, and leaves a tep that is not a link alone"
+      },
+      {
+        "kind": "test",
+        "title": "has help, and refuses an unknown flag with the likeliest one meant"
+      }
+    ]
+  },
+  {
     "file": "src/cli/walk.test.ts",
     "titles": [
       {

@@ -308,8 +308,8 @@ describe('tep: commands, help and version', () => {
   it('refuses an unknown command or help topic, and flags without a command', async () => {
     const r = await run(['generat']);
     expect(r.code).toBe(EXIT.usage);
-    expect(r.io.err()).toBe('tep: error: "generat" is not a tep command. Did you mean generate?\n  The commands are g (generate), config and help.\n');
-    expect((await run(['help', 'x'])).io.err()).toBe('tep help: error: there is no command "x".\n  The commands are g (generate) and config.\n');
+    expect(r.io.err()).toBe('tep: error: "generat" is not a tep command. Did you mean generate?\n  The commands are g (generate), config, uninstall and help.\n');
+    expect((await run(['help', 'x'])).io.err()).toBe('tep help: error: there is no command "x".\n  The commands are g (generate), config and uninstall.\n');
     expect((await run(['--max-length', '3'])).io.err()).toMatch(/^tep: error: a command comes before the flags, as in: tep g --max-length 3/);
   });
 

@@ -238,22 +238,35 @@ explanation for each:
 same shared core as the web app, so a password from `tep` is made and scored
 exactly as the app would make and score it.
 
-    pnpm link:cli                # builds dist-cli/tep.mjs (one file, needs only Node 24)
-                                 # and links ~/.local/bin/tep to it
+Set it up from nothing with one command (needs Node 24 and pnpm, which
+`corepack enable pnpm` provides):
+
+    git clone https://github.com/SalientForm/elegant-password.git && cd elegant-password && pnpm link:cli
+
+`pnpm link:cli` is the one command in a checkout you already have, too:
+pnpm installs the dependencies first if they are missing or out of date,
+then it builds `dist-cli/tep.mjs` (one file, needs only Node 24) and links
+`~/.local/bin/tep` to it. Then:
+
     tep g                        # ./tep.yml if there is one, else the defaults
     tep g --site short-max-16 --mode two-finger -n 3
     tep g --rules "8-20 characters, at least one number" --format json
     tep g --sentence - < sentence.txt
     tep config bank.yml          # a few questions, then tep g -c bank.yml
+    tep uninstall                # takes tep off the PATH, after asking
 
 `TEP_BIN_DIR=<dir> pnpm link:cli` links from another directory on your
 PATH instead; it says if that directory is not on the PATH or another `tep`
 comes first. The link follows the file, so `pnpm build:cli` after a change
-needs no relinking; `pnpm unlink:cli` removes it. Without the link, run
-`pnpm tep g …` from the project. Not `pnpm link`: from pnpm 10 on it takes a
-directory and adds it to this project's dependencies, which puts
-`node_modules` out of step with the lockfile, so every later `pnpm` script
-stops to reinstall. If that happened, undo it with
+needs no relinking. `tep uninstall` lists the links to a built `tep` it
+finds (in `$TEP_BIN_DIR`, `~/.local/bin` and on the PATH) and removes them
+once you say yes (`--yes` skips the question); the checkout stays, so
+delete it to remove the rest. `pnpm unlink:cli` removes just the link
+`pnpm link:cli` made, without asking. Without the link, run `pnpm tep g …` from the project. Not
+`pnpm link`: from pnpm 10 on it takes a directory and adds it to this
+project's dependencies, which puts `node_modules` out of step with the
+lockfile, so every later `pnpm` script stops to reinstall. If that
+happened, undo it with
 `git checkout -- package.json pnpm-lock.yaml && rm -f pnpm-workspace.yaml && pnpm install`.
 
 - **Settings** come from the defaults, then a config file (`./tep.yml`, or
@@ -358,7 +371,8 @@ and `@clack/prompts`):
 - `messages.ts`, `report.ts`: contradictions and warnings, worded with sources and fixes
 - `config.ts`, `configText.ts`: the config file, read with every problem and its line, written atomically
 - `flags.ts`, `generate.ts`, `output.ts`, `clipboard.ts`: `tep g`
-- `constraints.ts`, `wizard.ts`, `configCommand.ts`, `prompter.ts`: `tep config`
+- `constraints.ts`, `wizard.ts`, `wrap.ts`, `configCommand.ts`, `prompter.ts`: `tep config`
+- `uninstall.ts`: `tep uninstall`
 - `main.ts`, `bin.ts`, `help.ts`: the entry, the executable, help
 - `build/csp.ts`: the Content-Security-Policy added at build time
 

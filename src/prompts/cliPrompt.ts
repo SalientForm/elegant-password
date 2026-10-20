@@ -78,6 +78,7 @@ export const CLI_FILES: readonly [string, string][] = [
   ['wizard.ts', 'the questions, the bug path, the review (wrapped to the box\'s width)'],
   ['prompter.ts', '@clack/prompts behind the Prompter interface, drawn on stderr'],
   ['configCommand.ts', 'tep config: load, ask, confirm, write'],
+  ['uninstall.ts', 'tep uninstall: finds the links to a built tep, asks, removes them'],
   ['help.ts', 'help text, generated from the field table and the flag list'],
 ];
 
@@ -174,7 +175,7 @@ ${SHARED_CORE.map((m) => `  - ${code(`src/lib/${m.module}.ts`)}: ${m.names.map(c
 
 - **No contradictions.** tep never generates from, saves or carries forward settings that contradict themselves, and never fixes one quietly (the web app's ${code('settleRules')} fixes are never applied). A set of settings is consistent when ${code('problemsOf(req)')} is empty: ${code('ruleProblems')} first, then ${code('planProblem')}. A strength target the rules cannot reach is a **warning**, not a contradiction: the engine makes the strongest passwords the rules allow.
 - **Every message says what is wrong, where each value came from (a flag, a file and line, a preset and what chose it, a review line), and how to fix it**, with the value that would work where the engine can find it.
-- **Stack**: Node 24, the app's TypeScript and Vitest; ${code('yaml')}, ${code('zod')} and ${code('@clack/prompts')} as dependencies, kept inside ${code('src/cli/')}; ${code('tsdown')} bundles ${code('src/cli/bin.ts')} to one ESM file, ${code('dist-cli/tep.mjs')}, with a ${code('#!/usr/bin/env node')} line and every dependency inlined; ${code('package.json')} gets ${code('"bin": { "tep": "dist-cli/tep.mjs" }')} and ${code('build:cli')} (tsdown, then chmod +x). Not published; ${code('pnpm link:cli')} builds it and links ${code('~/.local/bin/tep')} (or ${code('$TEP_BIN_DIR/tep')}) to the bundle, saying if that directory is off the PATH or another ${code('tep')} comes first, and ${code('pnpm unlink:cli')} removes the link (not ${code('pnpm link')}, which from pnpm 10 adds a directory to the project's dependencies). No network, no telemetry, no update check. Randomness is the core's ${code('crypto.getRandomValues')}.
+- **Stack**: Node 24, the app's TypeScript and Vitest; ${code('yaml')}, ${code('zod')} and ${code('@clack/prompts')} as dependencies, kept inside ${code('src/cli/')}; ${code('tsdown')} bundles ${code('src/cli/bin.ts')} to one ESM file, ${code('dist-cli/tep.mjs')}, with a ${code('#!/usr/bin/env node')} line and every dependency inlined; ${code('package.json')} gets ${code('"bin": { "tep": "dist-cli/tep.mjs" }')} and ${code('build:cli')} (tsdown, then chmod +x). Not published; ${code('pnpm link:cli')} builds it and links ${code('~/.local/bin/tep')} (or ${code('$TEP_BIN_DIR/tep')}) to the bundle, saying if that directory is off the PATH or another ${code('tep')} comes first, and ${code('tep uninstall')} or ${code('pnpm unlink:cli')} removes the link; in a fresh clone ${code('pnpm link:cli')} is the one command, as pnpm installs the dependencies before running it (not ${code('pnpm link')}, which from pnpm 10 adds a directory to the project's dependencies). No network, no telemetry, no update check. Randomness is the core's ${code('crypto.getRandomValues')}.
 
 ## 2. Layout
 
@@ -189,7 +190,9 @@ ${block(OVERVIEW)}
 | --- | --- |
 ${EXIT_MEANINGS.map((e) => `| ${e.code} | ${e.meaning} |`).join('\n')}
 
-Errors print to stderr as ${code('<command>: error: <what is wrong>')} (the command is ${code('tep g')}, ${code('tep config')}, ${code('tep help')} or ${code('tep')}), then each detail indented two spaces; ${code('tep: error:')} is red at a terminal. Anything thrown that is not tep's own error is exit ${EXIT.unexpected}: "something went wrong inside tep: this is a bug", the stack, and where to report it. Ctrl+C at a prompt prints ${code('<command>: cancelled; nothing was written.')} and exits ${EXIT.interrupted}.
+Errors print to stderr as ${code('<command>: error: <what is wrong>')} (the command is ${code('tep g')}, ${code('tep config')}, ${code('tep uninstall')}, ${code('tep help')} or ${code('tep')}), then each detail indented two spaces; ${code('tep: error:')} is red at a terminal. Anything thrown that is not tep's own error is exit ${EXIT.unexpected}: "something went wrong inside tep: this is a bug", the stack, and where to report it. Ctrl+C at a prompt prints ${code('<command>: cancelled; nothing was written.')} (${code('removed')}, for ${code('tep uninstall')}) and exits ${EXIT.interrupted}.
+
+${code('tep uninstall')} removes each ${code('tep')} in ${code('$TEP_BIN_DIR')}, ${code('~/.local/bin')} or a directory on the PATH that is a link to a built tep (its target ends ${code('dist-cli/tep.mjs')}); a ${code('tep')} that is a file or links elsewhere is left alone. It lists the links in a note and asks "Are you sure? tep will no longer run from your PATH.", no by default; ${code('--yes')} (${code('-y')}) skips the question, and without it stdin must be a terminal (exit ${EXIT.usage}). Then it says which links went, that the checkout and its build stay (${code('pnpm link:cli')} puts tep back), and that an open terminal may need ${code('hash -r')}. With no link, it says so and exits ${EXIT.ok}.
 
 ## 4. tep g
 

@@ -5,14 +5,15 @@ import pkg from '../../package.json';
 import { configCommand } from './configCommand';
 import { CliError, EXIT, usageError } from './errors';
 import { generateCommand } from './generate';
-import { CONFIG_HELP, generateHelp, OVERVIEW } from './help';
+import { CONFIG_HELP, generateHelp, OVERVIEW, UNINSTALL_HELP } from './help';
 import { Cancelled, type Io } from './io';
 import { closest } from './names';
 import { COLOR, PLAIN, useColor } from './output';
 import { renderError } from './report';
+import { uninstallCommand } from './uninstall';
 
 export const VERSION: string = pkg.version;
-const COMMANDS = ['g', 'generate', 'config', 'help'];
+const COMMANDS = ['g', 'generate', 'config', 'uninstall', 'help'];
 
 async function dispatch(argv: string[], io: Io): Promise<number> {
   const [command, ...rest] = argv;
@@ -29,23 +30,26 @@ async function dispatch(argv: string[], io: Io): Promise<number> {
     if (topic === undefined) io.stdout.write(OVERVIEW);
     else if (topic === 'g' || topic === 'generate') io.stdout.write(generateHelp());
     else if (topic === 'config') io.stdout.write(CONFIG_HELP);
-    else throw usageError(`there is no command "${topic}".`, 'The commands are g (generate) and config.');
+    else if (topic === 'uninstall') io.stdout.write(UNINSTALL_HELP);
+    else throw usageError(`there is no command "${topic}".`, 'The commands are g (generate), config and uninstall.');
     return EXIT.ok;
   }
   if (command === 'g' || command === 'generate') return generateCommand(rest, io);
   if (command === 'config') return configCommand(rest, io);
+  if (command === 'uninstall') return uninstallCommand(rest, io);
   if (command.startsWith('-')) {
     throw usageError(`a command comes before the flags, as in: tep g ${argv.join(' ')}`, 'Run "tep help" for the commands.');
   }
   const near = closest(command, COMMANDS);
-  throw usageError(`"${command}" is not a tep command.${near ? ` Did you mean ${near}?` : ''}`, 'The commands are g (generate), config and help.');
+  throw usageError(`"${command}" is not a tep command.${near ? ` Did you mean ${near}?` : ''}`, 'The commands are g (generate), config, uninstall and help.');
 }
 
-/** How errors name the command: "tep g", "tep config", or "tep". */
+/** How errors name the command: "tep g", "tep config", "tep uninstall", or "tep". */
 function commandName(argv: string[]): string {
   const [command] = argv;
   if (command === 'g' || command === 'generate') return 'tep g';
   if (command === 'config') return 'tep config';
+  if (command === 'uninstall') return 'tep uninstall';
   if (command === 'help') return 'tep help';
   return 'tep';
 }
@@ -58,7 +62,7 @@ export async function main(argv: string[], io: Io): Promise<number> {
     return await dispatch(argv, io);
   } catch (e) {
     if (e instanceof Cancelled) {
-      io.stderr.write(`${name}: cancelled; nothing was written.\n`);
+      io.stderr.write(`${name}: cancelled; nothing was ${name === 'tep uninstall' ? 'removed' : 'written'}.\n`);
       return EXIT.interrupted;
     }
     if (e instanceof CliError) {

@@ -27,6 +27,7 @@ export const OVERVIEW = `tep: the elegant passwords generator, on the command li
 Usage:
   tep g [flags]            Generate passwords (also: tep generate)
   tep config [file]        Answer a few questions and write a config file (default ./tep.yml)
+  tep uninstall            Take tep off your PATH (asks first)
   tep help [command]       Help for a command
   tep --version            The version
 
@@ -65,4 +66,12 @@ Writes ./tep.yml, or the file named. An existing file is loaded first.
 
 Choices that would contradict an earlier answer are shown but cannot be
 picked, with the reason. Needs a terminal.
+`;
+
+export const UNINSTALL_HELP = `Usage: tep uninstall [--yes]
+
+Removes the links that put tep on your PATH: each tep in $TEP_BIN_DIR,
+~/.local/bin or a directory on the PATH that links to a built tep (as
+pnpm link:cli makes). Lists them and asks first; --yes skips the question.
+The checkout and its build stay: pnpm link:cli there puts tep back.
 `;
