@@ -363,7 +363,7 @@ function section(out: string[], group: FieldGroup, values: Record<string, unknow
 /** A value as YAML: symbols and separators always in double quotes, since YAML reads many symbols as syntax. */
 function valueText(f: CliField, value: unknown): string {
   const v = formatValue(f, value);
-  if ((f.kind.type === 'symbols' || f.kind.type === 'separator') && typeof v === 'string') return JSON.stringify(v);
+  if (f.kind.type === 'symbols' || (f.kind.type === 'separator' && typeof v === 'string' && !['auto', 'space', 'none'].includes(v))) return JSON.stringify(v);
   return scalar(v);
 }
 

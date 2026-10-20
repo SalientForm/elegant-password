@@ -61,7 +61,7 @@ describe('every contradiction, explained', () => {
     const e = explainOne(undefined, flagsLayer({ spaces: false, separator: ' ' }));
     expect(e).toEqual({
       title: 'The separator is a space, but spaces are not allowed.',
-      values: ['separator: a space (from --separator)', 'spaces allowed: off (from --spaces)'],
+      values: ['separator: a space (from --separator)', 'spaces: not allowed (from --spaces)'],
       fix: 'Set the separator to auto, which always picks one the rules allow (--separator), or allow spaces (--spaces).',
     });
   });

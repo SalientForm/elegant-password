@@ -78,7 +78,7 @@ Settled by the user on 2026-10-20, kept here for the record:
 - An unreachable strength target is a warning, not a contradiction (§3).
 - Blocked review items cannot be edited: change the line that blocks
   them first (§7.3).
-- Shaping a question may take up to 333 ms (§7.2).
+- Shaping a question may take up to 750 ms (§7.2; first set at 333 ms, raised the same day).
 - The loosest-completion assumption stands; the property test proves it
   (§7.2).
 

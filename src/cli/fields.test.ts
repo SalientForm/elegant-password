@@ -121,7 +121,9 @@ describe('formatValue and describeValue', () => {
   });
 
   it('and read them out in messages', () => {
-    expect(describeValue(F('spaces'), false)).toBe('off');
+    expect(describeValue(F('spaces'), false)).toBe('not allowed');
+    expect(describeValue(F('spaces'), true)).toBe('allowed');
+    expect(describeValue(F('glue'), false)).toBe('off');
     expect(describeValue(F('separator'), ' ')).toBe('a space');
     expect(describeValue(F('separator'), 'auto')).toBe('auto');
     expect(describeValue(F('symbols'), '')).toBe('none');

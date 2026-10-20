@@ -11,6 +11,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:cli": "tsdown && chmod +x dist-cli/tep.mjs",
+    "tep": "node dist-cli/tep.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -45,5 +47,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vitest": "^5.0.4"
+  },
+  "bin": {
+    "tep": "dist-cli/tep.mjs"
   }
 }

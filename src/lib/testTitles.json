@@ -324,6 +324,68 @@
     ]
   },
   {
+    "file": "src/cli/bundle.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the tep bundle"
+      },
+      {
+        "kind": "test",
+        "title": "starts with a shebang and prints its version"
+      },
+      {
+        "kind": "test",
+        "title": "piped, prints one password that keeps the default rules"
+      },
+      {
+        "kind": "test",
+        "title": "JSON: every password meets every rule, by the engine's own checks"
+      },
+      {
+        "kind": "test",
+        "title": "reads a sentence from stdin"
+      },
+      {
+        "kind": "test",
+        "title": "exits 2 for the command line, 3 for a contradiction, 4 for a bad config"
+      },
+      {
+        "kind": "test",
+        "title": "tep config needs a terminal, and says so"
+      },
+      {
+        "kind": "test",
+        "title": "stops quietly when the reader goes away (tep g | head -1)"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/clipboard.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "clipboard tools"
+      },
+      {
+        "kind": "test",
+        "title": "macOS: pbcopy, whatever the session"
+      },
+      {
+        "kind": "test",
+        "title": "Linux: Wayland first, then X11 (xclip, xsel), then WSL's clip.exe, only for the sessions there are"
+      },
+      {
+        "kind": "test",
+        "title": "finds a tool only when it is an executable file on the PATH"
+      },
+      {
+        "kind": "test",
+        "title": "runs a tool with the text on stdin and reports its exit status"
+      }
+    ]
+  },
+  {
     "file": "src/cli/config.test.ts",
     "titles": [
       {
@@ -457,6 +519,83 @@
     ]
   },
   {
+    "file": "src/cli/constraints.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "reqOf"
+      },
+      {
+        "kind": "test",
+        "title": "fills what is unanswered with the loosest values"
+      },
+      {
+        "kind": "test",
+        "title": "takes a site preset, then the values over it"
+      },
+      {
+        "kind": "test",
+        "title": "takes the mode's preset when options follow it, or the options set"
+      },
+      {
+        "kind": "group",
+        "title": "problemsWith"
+      },
+      {
+        "kind": "test",
+        "title": "finds nothing when some completion of what is unanswered works"
+      },
+      {
+        "kind": "test",
+        "title": "tries glue and no separator for an unanswered glue and separator, since neither way is always looser"
+      },
+      {
+        "kind": "test",
+        "title": "finds the contradiction in answers that have one"
+      },
+      {
+        "kind": "group",
+        "title": "the questions"
+      },
+      {
+        "kind": "test",
+        "title": "modes: all allowed while options are not chosen; with the preset, a mode whose preset contradicts the rules is not"
+      },
+      {
+        "kind": "test",
+        "title": "site presets: one that contradicts an option answered is not allowed, with why"
+      },
+      {
+        "kind": "test",
+        "title": "options: the mode's preset is not allowed when it contradicts the rules"
+      },
+      {
+        "kind": "test",
+        "title": "counts: a count the other answers rule out is not allowed, with why, and the ones below it are"
+      },
+      {
+        "kind": "test",
+        "title": "reasons name the review line on the review, and the question before it"
+      },
+      {
+        "kind": "group",
+        "title": "number ranges"
+      },
+      {
+        "kind": "test",
+        "title": "the binary search finds exactly the lengths a scan of every value finds: the allowed lengths are one unbroken range"
+      },
+      {
+        "kind": "test",
+        "title": "says why the value just outside the range is not allowed"
+      },
+      {
+        "kind": "test",
+        "title": "starts from the answer given, the default, or the nearest value that fits"
+      }
+    ]
+  },
+  {
     "file": "src/cli/fields.test.ts",
     "titles": [
       {
@@ -526,6 +665,243 @@
       {
         "kind": "test",
         "title": "round-trips every field: written back and parsed again is the same value"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/generate.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "tep g: output"
+      },
+      {
+        "kind": "test",
+        "title": "piped, prints one password and nothing else"
+      },
+      {
+        "kind": "test",
+        "title": "at a terminal, prints a table of 5: each password with its badges and hint"
+      },
+      {
+        "kind": "test",
+        "title": "colours the table at a terminal, and not with NO_COLOR or --no-color"
+      },
+      {
+        "kind": "test",
+        "title": "-n and --count set how many; --format plain and table override the default"
+      },
+      {
+        "kind": "test",
+        "title": "orders by the sort asked for"
+      },
+      {
+        "kind": "test",
+        "title": "--format json: the documented fields, difficulty for the typing mode, warnings included"
+      },
+      {
+        "kind": "test",
+        "title": "--explain adds the plan and each password's why, in a table or JSON"
+      },
+      {
+        "kind": "group",
+        "title": "tep g: warnings and notes on stderr"
+      },
+      {
+        "kind": "test",
+        "title": "an unreachable target: once, with the bits reached, the length that would reach it, and passwords anyway"
+      },
+      {
+        "kind": "test",
+        "title": "puts the warnings in the JSON too, and --quiet keeps stderr empty"
+      },
+      {
+        "kind": "test",
+        "title": "an option set by hand that the mode has no use for"
+      },
+      {
+        "kind": "test",
+        "title": "says how it read --rules"
+      },
+      {
+        "kind": "group",
+        "title": "tep g: contradictions (exit 3)"
+      },
+      {
+        "kind": "test",
+        "title": "names each problem, its values and where each came from, and a fix; nothing on stdout"
+      },
+      {
+        "kind": "test",
+        "title": "numbers several problems"
+      },
+      {
+        "kind": "test",
+        "title": "what only planning finds: no sentence fits"
+      },
+      {
+        "kind": "test",
+        "title": "a sentence the engine cannot fit"
+      },
+      {
+        "kind": "group",
+        "title": "tep g: the command line (exit 2)"
+      },
+      {
+        "kind": "test",
+        "title": "an unknown flag, with the likeliest one meant"
+      },
+      {
+        "kind": "test",
+        "title": "an unknown short flag"
+      },
+      {
+        "kind": "test",
+        "title": "a flag with no value"
+      },
+      {
+        "kind": "test",
+        "title": "a flag whose value is another flag"
+      },
+      {
+        "kind": "test",
+        "title": "a value for an on/off flag"
+      },
+      {
+        "kind": "test",
+        "title": "a value starting with a dash, with how to give it"
+      },
+      {
+        "kind": "test",
+        "title": "key=value written as an argument, with the flag meant"
+      },
+      {
+        "kind": "test",
+        "title": "a flag given twice"
+      },
+      {
+        "kind": "test",
+        "title": "on and off both"
+      },
+      {
+        "kind": "test",
+        "title": "-c and --no-config"
+      },
+      {
+        "kind": "test",
+        "title": "a value out of range"
+      },
+      {
+        "kind": "test",
+        "title": "a value of the wrong kind"
+      },
+      {
+        "kind": "test",
+        "title": "a symbol that is not one"
+      },
+      {
+        "kind": "test",
+        "title": "an unknown mode, preset or format"
+      },
+      {
+        "kind": "test",
+        "title": "sentence options without --sentence"
+      },
+      {
+        "kind": "test",
+        "title": "the sentence as an argument, refused with why"
+      },
+      {
+        "kind": "test",
+        "title": "--explain with plain output"
+      },
+      {
+        "kind": "test",
+        "title": "rules text with no rules"
+      },
+      {
+        "kind": "group",
+        "title": "tep g: config files"
+      },
+      {
+        "kind": "test",
+        "title": "reads ./tep.yml when there is one, and names its lines in messages"
+      },
+      {
+        "kind": "test",
+        "title": "flags win over the file"
+      },
+      {
+        "kind": "test",
+        "title": "--no-config ignores ./tep.yml"
+      },
+      {
+        "kind": "test",
+        "title": "-c reads the file named, relative to the working directory"
+      },
+      {
+        "kind": "test",
+        "title": "a missing -c file, or a bad one, is exit 4 with what to do"
+      },
+      {
+        "kind": "group",
+        "title": "tep g: your own sentence"
+      },
+      {
+        "kind": "test",
+        "title": "reads one line from stdin"
+      },
+      {
+        "kind": "test",
+        "title": "refuses empty stdin, more than one line, and text with no words"
+      },
+      {
+        "kind": "test",
+        "title": "asks for it, hidden, at a terminal, refusing a blank one"
+      },
+      {
+        "kind": "test",
+        "title": "Ctrl+C at the prompt is exit 130"
+      },
+      {
+        "kind": "group",
+        "title": "tep g: --copy"
+      },
+      {
+        "kind": "test",
+        "title": "copies the first password shown, and says with what"
+      },
+      {
+        "kind": "test",
+        "title": "uses pbcopy on macOS, xclip or xsel on X11, clip.exe on WSL"
+      },
+      {
+        "kind": "test",
+        "title": "no tool is exit 2, naming what it tried and how to get one; the passwords are still printed"
+      },
+      {
+        "kind": "test",
+        "title": "a failing tool is exit 1, with what it said"
+      },
+      {
+        "kind": "group",
+        "title": "tep: commands, help and version"
+      },
+      {
+        "kind": "test",
+        "title": "prints the version"
+      },
+      {
+        "kind": "test",
+        "title": "prints help for the overview and each command"
+      },
+      {
+        "kind": "test",
+        "title": "refuses an unknown command or help topic, and flags without a command"
+      },
+      {
+        "kind": "test",
+        "title": "turns anything unexpected into exit 1 and asks for a report"
       }
     ]
   },
@@ -660,6 +1036,31 @@
     ]
   },
   {
+    "file": "src/cli/prompter.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the clack prompter"
+      },
+      {
+        "kind": "test",
+        "title": "puts a disabled choice's reason in its label, since a disabled choice cannot be focused to show a hint"
+      },
+      {
+        "kind": "test",
+        "title": "draws every prompt and message on stderr, keeping stdout for passwords"
+      },
+      {
+        "kind": "test",
+        "title": "passes validation through, reading a missing value as empty"
+      },
+      {
+        "kind": "test",
+        "title": "turns Ctrl+C at any prompt into Cancelled"
+      }
+    ]
+  },
+  {
     "file": "src/cli/resolve.test.ts",
     "titles": [
       {
@@ -749,6 +1150,176 @@
       {
         "kind": "test",
         "title": "warns about a file's value too"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/walk.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "random walks through tep config"
+      },
+      {
+        "kind": "test",
+        "title": "never meet a contradiction, never reach a dead end, and save a file tep g can use"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/wizard.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "tep config: a new file"
+      },
+      {
+        "kind": "test",
+        "title": "asks the mode, the rules, the options and the output, then saves after the review"
+      },
+      {
+        "kind": "test",
+        "title": "offers each mode with its hint, ten-finger first chosen"
+      },
+      {
+        "kind": "test",
+        "title": "writes the file named, and says how to use it"
+      },
+      {
+        "kind": "test",
+        "title": "shows every answer on a numbered review, with a sample password"
+      },
+      {
+        "kind": "test",
+        "title": "q quits without writing anything"
+      },
+      {
+        "kind": "test",
+        "title": "Ctrl+C at any question is exit 130 and writes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a review answer that is not a line, s or q"
+      },
+      {
+        "kind": "group",
+        "title": "tep config: questions shaped by earlier answers"
+      },
+      {
+        "kind": "test",
+        "title": "the length questions show the range that fits, and refuse what does not, saying why"
+      },
+      {
+        "kind": "test",
+        "title": "a question with one choice left is stated, not asked, with why"
+      },
+      {
+        "kind": "test",
+        "title": "refuses symbols that are not keyboard symbols, saying which"
+      },
+      {
+        "kind": "test",
+        "title": "a separator the rules forbid is shown but cannot be picked, with the answer that rules it out"
+      },
+      {
+        "kind": "test",
+        "title": "a strength the rules cannot reach is a warning, not a block: it can be chosen"
+      },
+      {
+        "kind": "test",
+        "title": "any number of bits can be given instead of a preset"
+      },
+      {
+        "kind": "test",
+        "title": "the review warns when the target is out of reach, naming the lines"
+      },
+      {
+        "kind": "group",
+        "title": "tep config: pasted rules"
+      },
+      {
+        "kind": "test",
+        "title": "reads them, says how, and keeps the rest from the Typical site"
+      },
+      {
+        "kind": "test",
+        "title": "rules that do not fit together: says why, then asks each rule from the text's values"
+      },
+      {
+        "kind": "group",
+        "title": "tep config: a contradiction that gets through is a bug, said at once"
+      },
+      {
+        "kind": "test",
+        "title": "says so, then asks again with that choice ruled out"
+      },
+      {
+        "kind": "group",
+        "title": "tep config: the review"
+      },
+      {
+        "kind": "test",
+        "title": "changes a line, shaped by every other line, then returns to the review"
+      },
+      {
+        "kind": "test",
+        "title": "names the line that rules a choice out"
+      },
+      {
+        "kind": "test",
+        "title": "a line no other choice fits cannot be changed: says which line holds it"
+      },
+      {
+        "kind": "test",
+        "title": "changing the mode keeps options set one by one unless asked, and offers the new preset only if it fits"
+      },
+      {
+        "kind": "test",
+        "title": "switching options from the preset to one by one starts from the preset's values"
+      },
+      {
+        "kind": "group",
+        "title": "tep config: an existing file"
+      },
+      {
+        "kind": "test",
+        "title": "opens on the review with its answers, and asks before overwriting"
+      },
+      {
+        "kind": "test",
+        "title": "no to overwriting goes back to the review"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the sentence options and swaps it does not ask about"
+      },
+      {
+        "kind": "test",
+        "title": "a file that contradicts itself is named, and asked again from where it stops fitting"
+      },
+      {
+        "kind": "test",
+        "title": "a file it cannot read is exit 4, and is not overwritten"
+      },
+      {
+        "kind": "test",
+        "title": "answersOf reads a file the way tep g does"
+      },
+      {
+        "kind": "group",
+        "title": "tep config: the command line"
+      },
+      {
+        "kind": "test",
+        "title": "needs a terminal"
+      },
+      {
+        "kind": "test",
+        "title": "takes one file name, and no flags but --help"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a directory, or a file in a directory that does not exist"
       }
     ]
   },
@@ -1516,6 +2087,35 @@
       {
         "kind": "test",
         "title": "keys the inputs that matter and ignores the sentence while making one up"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/explain.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the \"Why?\" sentences"
+      },
+      {
+        "kind": "test",
+        "title": "say why Shift is pressed"
+      },
+      {
+        "kind": "test",
+        "title": "say what the separator does"
+      },
+      {
+        "kind": "test",
+        "title": "give five \"Fast to type\" lines for any suggestion, the separator's last"
+      },
+      {
+        "kind": "test",
+        "title": "read deliberate swaps from the password and hint, and word them"
+      },
+      {
+        "kind": "test",
+        "title": "word random swaps and where they landed"
       }
     ]
   },

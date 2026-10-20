@@ -7,3 +7,4 @@ blob-report
 
 # Scratch worktrees made by review agents
 .claude/
+dist-cli

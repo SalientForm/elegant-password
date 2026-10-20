@@ -60,7 +60,7 @@ export const FIELDS: readonly CliField[] = [
   { name: 'min-digits', group: 'rules', target: req('minDigits'), label: 'required digits', description: 'Digits the site requires', kind: int(0, MAX_DIGITS) },
   { name: 'min-symbols', group: 'rules', target: req('minSymbols'), label: 'required symbols', description: 'Symbols the site requires', kind: int(0, MAX_SYMBOLS) },
   { name: 'symbols', group: 'rules', target: req('allowedSymbols'), label: FIELD_LABELS.allowedSymbols, description: 'Symbols the site accepts, as one string; empty for none', kind: { type: 'symbols' } },
-  { name: 'spaces', group: 'rules', target: req('allowSpaces'), label: 'spaces allowed', description: 'Whether the site accepts spaces', kind: bool },
+  { name: 'spaces', group: 'rules', target: req('allowSpaces'), label: 'spaces', description: 'Whether the site accepts spaces', kind: bool },
   // How the user likes passwords made: what a typing mode fills in.
   { name: 'strength', group: 'options', target: req('targetBits'), label: lower(PROFILE_LABELS.targetBits), description: `Target strength: ${STRENGTH_PRESETS.map((p) => slugOf(p.label)).join(', ')}, or bits (0-${MAX_TARGET_BITS})`, kind: { type: 'strength' } },
   { name: 'shortest', group: 'options', target: req('shortest'), label: lower(PROFILE_LABELS.shortest), description: PROFILE_LABELS.shortest, kind: bool },
@@ -205,6 +205,7 @@ export function formatValue(f: CliField, value: unknown): string | number | bool
 export function describeValue(f: CliField, value: unknown): string {
   switch (f.kind.type) {
     case 'bool':
+      if (f.name === 'spaces') return value ? 'allowed' : 'not allowed';
       return value ? 'on' : 'off';
     case 'separator':
       return value === 'auto' ? 'auto' : value === ' ' ? 'a space' : value === '' ? 'none' : `"${value}"`;

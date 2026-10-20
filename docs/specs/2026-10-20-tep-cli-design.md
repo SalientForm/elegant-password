@@ -287,9 +287,13 @@ contradicts them (§3) cannot be given.
   before it is accepted, with the reason, and asked again.
 - **Text.** Allowed symbols accept only printable ASCII symbols. Anything
   else is refused, naming the character.
-- **Speed.** Working out a question's choices must take under 333 ms on a
-  typical laptop (user decision, 2026-10-20); `plan()` is the cost,
-  measured in the first milestone and pinned by a test.
+- **Speed.** Working out a question's choices must take under 750 ms on a
+  typical laptop (user decision, 2026-10-20; first set at 333 ms). The
+  cost is planning: each choice is checked with the early-exit
+  `planProblem`, shapes that cannot fit the length window are skipped
+  without building their length models, and results are remembered. The
+  random-walk test pins it, as CPU time (3x on CI); measured, the slowest
+  question takes about 70 ms.
 - **Loosest completion** (user decision, 2026-10-20: confirmed). The
   property test in §9 is the proof that the loosest values always leave
   a way to finish.

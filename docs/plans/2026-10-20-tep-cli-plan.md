@@ -140,7 +140,7 @@ committed on its own.
   nothing, non-TTY exits 2.
 - Property test: random walks through the wizard never meet a
   contradiction or a question with no allowed choice.
-- Timing test: every question shaped in under 333 ms (3x on CI).
+- Timing test: every question shaped in under 750 ms of CPU time (3x on CI).
 
 ### M6. Build and run
 
