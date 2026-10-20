@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { criterionOf, DEFAULT_TYPING_MODE, difficultyIn } from '../lib/difficulty';
-import { scoreAlone, scoreCold } from '../lib/score';
+import { difficultyAlone, scoreCold } from '../lib/score';
+import { rawBits, strengthBits } from '../lib/strength';
 import { finishAttempt, nextTarget, recordKey, startRecording, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
 import { CancelIcon } from './icons';
@@ -28,8 +29,9 @@ export const MANAGER_OPT_OUT = { 'data-bwignore': 'true', 'data-1p-ignore': 'tru
  * the first run can be scored too: Enter makes the text in the field the
  * password under test. The password most recently added to the list also
  * becomes the one under test, with its hint, so all three badges can be
- * scored; a password typed in by hand has no hint, so its strength and
- * difficulty come from the text alone and memorability is not available.
+ * scored; a password typed in by hand has no hint, so its difficulty comes
+ * from the text alone and memorability is not available (Strength and Raw
+ * never need a hint).
  * Later runs are checked against the target until "Clear" drops it, a paste
  * replaces it, or another password is added to the list. A hint can be
  * typed in for a password that has none, so memorability can be scored too.
@@ -74,9 +76,8 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);
   /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis with the full text as a tip, like My list. */
   const shownTarget = target === undefined ? undefined : shown ? target : '•'.repeat([...target].length);
-  const alone = useMemo(() => (target !== undefined && hintText === undefined ? scoreAlone(target) : undefined), [target, hintText]);
   const typingMode = passwords?.typingMode ?? DEFAULT_TYPING_MODE;
-  const base = cold?.difficulty ?? alone?.difficulty;
+  const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? difficultyAlone(target) : undefined), [cold, target]);
   const difficulty = useMemo(() => (target !== undefined && base ? difficultyIn(target, base, typingMode) : undefined), [target, base, typingMode]);
   const last = attempts[0];
 
@@ -197,11 +198,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
             </p>
           )}
           <div className="actions">
-            {cold ? (
-              <ScoreBadges bits={cold.bits} difficulty={difficulty} memorability={cold.memorability.score} />
-            ) : (
-              <ScoreBadges bits={alone!.bits} difficulty={difficulty} />
-            )}
+            <ScoreBadges strength={strengthBits(target!)} raw={rawBits(target!)} difficulty={difficulty} {...(cold ? { memorability: cold.memorability.score } : {})} />
           </div>
           {last && (
             <ul className="typing-stats">

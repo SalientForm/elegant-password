@@ -40,7 +40,7 @@ const block = (s: string, lang = '') => `\`\`\`${lang}\n${s.trimEnd()}\n\`\`\``;
 export const SHARED_CORE: readonly { module: string; names: string[]; for: string }[] = [
   { module: 'engine', names: ['runInputs'], for: 'generation: one pure call, the same as the web worker makes' },
   { module: 'pipeline', names: ['inputsFor', 'presentSuggestions'], for: 'settings to engine inputs, and suggestions rescored for the typing mode and ordered' },
-  { module: 'readings', names: ['scoreReadings'], for: 'the Strength, Difficulty and Memorability figures, bands and sentences' },
+  { module: 'readings', names: ['scoreReadings'], for: 'the Strength, Raw, Difficulty and Memorability figures, bands and sentences' },
   { module: 'explain', names: ['typingLines', 'twistLine', 'twistOptionsLine', 'easedIn', 'easedLine'], for: 'the "Why?" sentences, for --explain' },
   { module: 'consistency', names: ['problemsOf', 'warningsOf', 'reachableBits'], for: 'contradictions (rules, then planning) and the unreachable-target warning' },
   { module: 'generate', names: ['planProblem', 'shortfallWarning', 'checkRequirements', 'DEFAULT_REQUIREMENTS', 'STRENGTH_PRESETS'], for: 'what stops planning, early exit; the engine\'s own shortfall warning, to drop as a duplicate' },
@@ -180,7 +180,7 @@ ${SHARED_CORE.map((m) => `  - ${code(`src/lib/${m.module}.ts`)}: ${m.names.map(c
 ## 2. Layout
 
 ${CLI_FILES.map(([f, what]) => `- ${code(`src/cli/${f.includes(',') ? f.split(', ').join(', src/cli/') : f}`)}: ${what}.`).join('\n')}
-- ${code('src/boundaries.test.ts')}: ${code('src/lib')} imports only ${code('src/lib')} and names no browser or Node global; ${code('src/cli')} imports only ${code('src/lib')}, ${code('node:*')}, its three packages and ${code('package.json')}, and none of the engine's inner steps (${code('generate')}, ${code('fromSentence')}, ${code('scoreCold')}, ${code('scoreAlone')}, ${code('scoreDifficulty')}, ${code('difficultyIn')}, ${code('sortSuggestions')}, ${code('activeMappings')}, the badge bands); the web app never imports ${code('src/cli')}; and the web app builds its inputs with ${code('inputsFor')}, orders with ${code('presentSuggestions')} and reads badges with ${code('scoreReadings')}.
+- ${code('src/boundaries.test.ts')}: ${code('src/lib')} imports only ${code('src/lib')} and names no browser or Node global; ${code('src/cli')} imports only ${code('src/lib')}, ${code('node:*')}, its three packages and ${code('package.json')}, and none of the engine's inner steps (${code('generate')}, ${code('fromSentence')}, ${code('scoreCold')}, ${code('strengthBits')}, ${code('rawBits')}, ${code('scoreDifficulty')}, ${code('difficultyIn')}, ${code('sortSuggestions')}, ${code('activeMappings')}, the badge bands); the web app never imports ${code('src/cli')}; and the web app builds its inputs with ${code('inputsFor')}, orders with ${code('presentSuggestions')} and reads badges with ${code('scoreReadings')}.
 
 ## 3. Commands and exit codes
 
@@ -218,9 +218,9 @@ The command line itself can contradict: each of these is exit ${EXIT.usage} with
 
 ### 4.3 Output
 
-- **table** (stdout a terminal): one row per password: index, password, then "Strength n  Difficulty n  Memorability n" from ${code('scoreReadings')} (strength and memorability coloured by band, difficulty by level), and "hint: ..." under it. Colour only when the stream is a terminal, ${code('NO_COLOR')} is unset and ${code('--no-color')} is not given.
+- **table** (stdout a terminal): one row per password: index, password, then "Strength n  Raw n  Difficulty n  Memorability n" from ${code('scoreReadings')} (strength and memorability coloured by band, difficulty by level, raw uncoloured), then dim the session's bits ("42.7 bits": for an attacker who knows tep and the swaps in force; not a score), and "hint: ..." under it. Colour only when the stream is a terminal, ${code('NO_COLOR')} is unset and ${code('--no-color')} is not given.
 - **plain** (piped): the passwords alone, one per line, so ${code('tep g | wl-copy')} works.
-- **json**: ${code('{ mode, typingMode, separator, sort, warnings, suggestions: [{ password, hint, bits, difficulty, difficultyLabel, memorability, readings: { strength, difficulty, memorability } }] }')}; with ${code('--explain')} also ${code('plan')} and each suggestion's ${code('explain')} lines.
+- **json**: ${code('{ mode, typingMode, separator, sort, warnings, suggestions: [{ password, hint, strength, raw, bits, difficulty, difficultyLabel, memorability, readings: { strength, raw, difficulty, memorability } }] }')}; with ${code('--explain')} also ${code('plan')} and each suggestion's ${code('explain')} lines.
 - **--explain**: the plan's exact bits and where they come from, then for each password its words and roles, steps, swaps (${code('twistLine')}), where the swaps landed (${code('twistOptionsLine')}), deliberate swaps (${code('easedLine')}), the "Fast to type" lines (${code('typingLines')}) and every rule check, met or not.
 - Notes, warnings (the engine's, minus its shortfall warning, which tep's own replaces), and the unreachable-target warning go to stderr as ${code('tep g: warning: ...')}; ${code('--quiet')} silences them (they stay in the JSON).
 - ${code('--copy')} copies the first password shown, after printing, and says so on stderr: ${tools.map(([where, t]) => `${where}: ${t.map((x) => code(x.command.join(' '))).join(', ')}`).join('; ')}, the first on the PATH. None found is exit ${EXIT.usage} naming the tools tried and how to install one; a tool that fails is exit ${EXIT.unexpected} with what it said. Stdout closing early (${code('tep g | head -1')}) ends quietly.

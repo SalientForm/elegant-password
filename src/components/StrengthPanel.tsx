@@ -1,10 +1,11 @@
 import { crackEstimates, formatDuration, type Plan } from '../lib/generate';
 
 /**
- * Why a generated password is strong: the exact entropy of the current plan.
- * This is the generator's figure for these settings. Each card's figure is
- * scored from its own password and hint alone (see src/lib/score.ts), so it
- * can differ a little; the card is what travels with the password.
+ * The bits: the exact entropy of the current plan, for an attacker who knows
+ * this tool. This is the generator's figure for these settings and this
+ * session; it is never saved with a password. The badges on the cards
+ * (Strength, Raw) assume an attacker who does not know the tool, and travel
+ * with the password.
  */
 export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) {
   const counted = plan.breakdown.filter((b) => b.poolSize > 1);
@@ -13,10 +14,11 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
     <section className="panel strength">
       <div className="strength-head">
         <div>
-          <h2>Why this sentence is strong</h2>
+          <h2>Bits: for an attacker who knows this tool</h2>
           <p className="hint">
-            The maths assumes an attacker knows this tool, its word lists and the sentence pattern. Strength comes only
-            from the random choices.
+            The exact entropy of the random choices behind this batch, assuming the attacker knows this tool, its
+            word lists and the sentence pattern. The Strength and Raw badges on the cards assume an attacker who does
+            not know the tool; this figure is for one who does, and it stays in this session.
           </p>
         </div>
         <div className={plan.meetsTarget ? 'bits ok' : 'bits low'}>
@@ -54,8 +56,9 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
       <p className="hint">
         Capitalisation and separators{plan.easeSwaps ? ' and the deliberate swaps that ease awkward words' : ''} follow
         fixed rules, and the closing symbol, though drawn at random for variety, is not counted, so they add nothing
-        here. Random swaps add more on top. Each card scores its own password from the password and its hint alone, so a password reads the same
-        wherever it appears; that figure does not know about the length limits, so it can sit a little above this one.
+        here. Random swaps add more on top. The bits figure beside each card's badges is counted from that password
+        and its hint with the swaps in force in this session; it does not know the length limits, so it can sit above
+        this one, by more when Shortest is on.
       </p>
       <p className="hint">
         Choosing a favourite is a bias the figures here do not discount: seeing several suggestions, or pressing Refresh
@@ -71,7 +74,7 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
           </div>
         ))}
       </dl>
-      <p className="hint">Average time to guess, at 10, 100,000 and 100 billion guesses per second.</p>
+      <p className="hint">Average time to guess, for an attacker who knows the tool, at 10, 100,000 and 100 billion guesses per second.</p>
     </section>
   );
 }

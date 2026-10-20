@@ -38,6 +38,8 @@ export function isSuggestion(x: unknown): x is Suggestion {
     isFiniteNumber(x.twistBits) &&
     isFiniteNumber(x.twistOptions) &&
     isFiniteNumber(x.bits) &&
+    isFiniteNumber(x.strength) &&
+    isFiniteNumber(x.raw) &&
     isTyping(x.typing) &&
     isRecord(x.difficulty) &&
     isFiniteNumber(x.difficulty.score) &&

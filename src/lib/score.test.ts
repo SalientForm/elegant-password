@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, generate, type Requirements } from './generate';
 import { fromSentence } from './fromSentence';
-import { inferredHint, isMemorableDigits, scoreAlone, scoreCold, twistsToTry, wordBitsFromText } from './score';
-import { BUILT_IN_MAPPINGS, twistOutcomes } from './twists';
+import { difficultyAlone, editMatch, editsToTry, inferredHint, scoreCold, twistsToTry, wordBitsFromText } from './score';
+import { BUILT_IN_MAPPINGS, twistOutcomes, type Mapping } from './twists';
 import { initialsOf, pools } from './grammar';
 import { seeded } from './testRandom';
 import { lookupKey, OFF_MODEL_PRESS, pressFor } from './keyboard';
@@ -50,7 +50,7 @@ describe('scoreCold', () => {
     // No template, and none of these words is on any list: English-like text at 2.3 bits a letter.
     const s = scoreCold('Xyzzy;plugh;frobnicate', 'Xyzzy plugh frobnicate');
     expect(s.template).toBeUndefined();
-    expect(s.sentenceBits).toBeCloseTo((5 + 5 + 10) * 2.3, 5);
+    expect(s.sentenceBits).toBeCloseTo((4 + 5 + 10) * 2.3, 5); // "zz" counts once
     expect(s.bits).toBe(s.sentenceBits);
     // A list word in a user's sentence is one pick from that list; a number is its digits; an initial is one letter.
     const mixed = scoreCold('Big;otters;eat;42;F;cake', 'big otters eat 42 for cake');
@@ -83,7 +83,7 @@ describe('scoreCold', () => {
     // text reading, which an attacker without the hint faces at most.
     expect(s.capped).toBe(true);
     expect(s.bits).toBeCloseTo(s.textBits, 9);
-    expect(s.bits).toBeCloseTo(scoreAlone('jr;B;5ls;Fpc').bits, 9);
+    expect(s.bits).toBeCloseTo(scoreCold('jr;B;5ls;Fpc', inferredHint('jr;B;5ls;Fpc')).bits, 9);
     expect(s.bits).toBeLessThan(s.sentenceBits + Math.log2(4));
   });
 
@@ -147,27 +147,9 @@ describe('scoreCold', () => {
   });
 });
 
-describe('scoreAlone', () => {
-  it('is a pure function of the text and recognises this tool\'s own words', () => {
-    const a = scoreAlone('Sleepy;otters;paint;7;boats!!');
-    expect(a).toEqual(scoreAlone('Sleepy;otters;paint;7;boats!!'));
-    expect(a.hint).toBe('sleepy otters paint 7 boats');
-    const words = a.parts.filter((p) => p.kind === 'word');
-    expect(words.map((p) => p.text)).toEqual(['Sleepy', 'otters', 'paint', 'boats']);
-    expect(words.every((p) => p.poolSize! > 100 && p.bits > 6)).toBe(true);
-    expect(a.parts.find((p) => p.text === '7')).toMatchObject({ kind: 'digits' });
-    expect(a.parts.find((p) => p.text === '!!')).toBeUndefined(); // separators and closing marks are the tool's choices, as in the cold score
-    expect(a.bits).toBeGreaterThan(30);
-    expect(a.difficulty.measurements.chunks).toBe(5); // one chunk a word, as the cold score counts them
-  });
-
-  it('scores a password exactly as the cold score does with the hint read off its text', () => {
-    for (const password of ['Sleepy;otters;paint;7;boats!!', 'BlueTiger42', 'xqzv;plork;99', 'naïve;otters', 'Sally;eats;sweets!@#$', 'Sm@rt;turtles;salut3;#yenas']) {
-      const alone = scoreAlone(password);
-      const cold = scoreCold(password, alone.hint);
-      expect(alone.bits).toBe(cold.bits);
-      expect(alone.difficulty).toEqual(cold.difficulty);
-    }
+describe('the hint read off the text (inferredHint), the ceiling for the bits', () => {
+  it('reads each run as a word, a capital after a lower-case letter as a new one, a run of digits as a number', () => {
+    expect(inferredHint('Sleepy;otters;paint;7;boats!!')).toBe('sleepy otters paint 7 boats'); // separators and closing marks are the tool's choices
     expect(inferredHint('BlueTiger42')).toBe('blue tiger 42');
     expect(inferredHint('bluetiger42')).toBe('bluetiger 42');
     expect(inferredHint('RED;FOXES;RUN')).toBe('red foxes run');
@@ -183,19 +165,70 @@ describe('scoreAlone', () => {
     expect(inferredHint('T!ger42')).toBe('tiger 42');
     expect(inferredHint('Sally;eats;sweets!!')).toBe('sally eats sweets'); // closing marks are not swaps
     expect(inferredHint('Sally!eats!sweets')).toBe('sally eats sweets'); // a twist symbol used as a separator
-    const swapped = scoreAlone('Sm@rt;turtles;salut3;#yenas');
-    expect(swapped.bits).toBeCloseTo(scoreCold('Sm@rt;turtles;salut3;#yenas', 'smart turtles salute hyenas').bits, 9);
+    const swapped = scoreCold('Sm@rt;turtles;salut3;#yenas', inferredHint('Sm@rt;turtles;salut3;#yenas'));
     expect(swapped.difficulty.measurements.chunks).toBe(7); // four words and three swaps
+    expect(difficultyAlone('Sm@rt;turtles;salut3;#yenas')).toEqual(swapped.difficulty);
   });
 
-  it('counts unknown letters as English-like text and digits as choices unless memorable', () => {
-    const text = scoreAlone('xqzv');
-    expect(text.parts[0]).toMatchObject({ kind: 'letters' });
-    expect(text.bits).toBeCloseTo(4 * 2.3);
-    expect(scoreAlone('8402').bits).toBeCloseTo(4 * Math.log2(10));
-    expect(scoreAlone('1234').bits).toBeLessThan(scoreAlone('8402').bits); // a memorable run is one pick
-    expect(scoreAlone('!!!!').bits).toBe(0); // symbols alone are not a word
-    expect(scoreAlone('').bits).toBe(0);
+  it('never puts the bits with a hint above the password\'s own text reading, whatever the hint says', () => {
+    const cases: [string, string][] = [
+      ['Sleepy;otters;paint;7;boats!!', 'sleepy otters paint 7 boats'],
+      ['jr;B;5ls;Fpc', 'jupiter brings 5 leds for piece'],
+      ['Cats;dogs', 'cats and dogs and owls'],
+      ['Tr0ub4dor', 'troubadour'],
+      ['Sally;eats;sweets', 'something else entirely'],
+    ];
+    for (const [password, hint] of cases) {
+      const own = scoreCold(password, inferredHint(password)).bits;
+      expect(scoreCold(password, hint).bits, `${password} / ${hint}`).toBeLessThanOrEqual(own + 1e-9);
+    }
+  });
+
+  it('counts a repeated letter once in the text reading, so a run of one letter is one letter', () => {
+    const run = scoreCold('aaaaaaaaaaaa', 'aaaaaaaaaaaa');
+    expect(run.bits).toBeCloseTo(Math.log2(26), 9);
+    expect(scoreCold('xqzv', 'xqzv').bits).toBeCloseTo(4 * 2.3, 9);
+    expect(scoreCold('xqqqzv', 'xqqqzv').bits).toBeCloseTo(4 * 2.3, 9);
+  });
+});
+
+describe('a custom swap, and the session\'s swap list', () => {
+  const session: readonly Mapping[] = [...BUILT_IN_MAPPINGS, { from: 'e', to: 'q', kind: 'custom' }];
+
+  it('reads a word reached through a swap the built-in table does not know as the word, one step away, not as dropped', () => {
+    const s = scoreCold('63;Rqmote;thiqves;chip;fqrns', '63 remote thieves chip ferns');
+    expect(s.words.map((w) => `${w.form}:${w.text}:${w.twists}`)).toEqual(['number:63:0', 'word:Rqmote:1', 'word:thiqves:1', 'word:chip:0', 'word:fqrns:1']);
+    expect(s.aligned).toBe(true);
+    expect(s.memorability.fidelity).toBe(1);
+    expect(s.memorability.swappedWords).toBe(3);
+    expect(s.difficulty.measurements.chunks).toBe(5 + 3);
+  });
+
+  it('counts where the swaps could have landed over the list in force: one custom swap makes 65, not 64', () => {
+    const builtIn = scoreCold('Big;rqd;apples', 'big red apples');
+    const inSession = scoreCold('Big;rqd;apples', 'big red apples', session);
+    expect(builtIn.twistCount).toBe(1);
+    expect(inSession.twistOptions).toBeGreaterThan(builtIn.twistOptions);
+    expect(inSession.bits).toBeGreaterThan(builtIn.bits);
+    // Only the bits see the list: memorability and difficulty are the same wherever the password appears.
+    expect(inSession.memorability).toEqual(builtIn.memorability);
+    expect(inSession.difficulty).toEqual(builtIn.difficulty);
+    expect(inSession.words).toEqual(builtIn.words);
+  });
+
+  it('bounds the edits by the word\'s length, so a short word is not read into anything', () => {
+    expect([2, 3, 6, 9, 12, 20].map(editsToTry)).toEqual([0, 1, 2, 3, 2, 1]);
+    expect(scoreCold('Dog', 'cat').words[0]!.form).toBe('dropped');
+    expect(editMatch('rqmote;x', 'remote', 3)).toEqual({ length: 6, edits: 1 });
+    expect(editMatch('remot;x', 'remote', 3)).toEqual({ length: 5, edits: 1 }); // a letter removed
+    expect(editMatch('reemote;x', 'remote', 3)).toEqual({ length: 7, edits: 1 }); // a letter added
+    expect(editMatch('xyzxyz', 'remote', 3)).toBeUndefined();
+    expect(editMatch('remote', 'remote', 0)).toBeUndefined(); // no edits allowed: the exact forms handle that
+  });
+
+  it('prefers the table\'s reading, and a shortened form, over an edit', () => {
+    expect(scoreCold('Sm@rt', 'smart').words[0]).toMatchObject({ form: 'word', twists: 1, text: 'Sm@rt' }); // a>@ is in the table either way
+    expect(scoreCold('jr;B', 'jupiter brings').words[0]).toMatchObject({ form: 'short', twists: 0, text: 'jr' }); // not "jupiter" with five edits
   });
 });
 
@@ -226,20 +259,14 @@ describe('memorability', () => {
   });
 });
 
-describe('memorable digit runs', () => {
-  it('means repeats, consecutive runs and well-known skips, not any pair of digits', () => {
-    for (const d of ['7', '77', '123', '4321', '0123', '2468', '97531']) expect(isMemorableDigits(d), d).toBe(true);
-    for (const d of ['42', '159', '8402', '1324', '13']) expect(isMemorableDigits(d), d).toBe(false);
-  });
-});
-
 describe('characters off the US keyboard', () => {
   it('scores pasted text with accents, currency signs or tabs instead of throwing', () => {
-    for (const text of ['café', '£12', '€uro', 'naïve;otters', 'tab\there', '日本']) {
-      const alone = scoreAlone(text);
+    for (const text of ['café', '£12', '€uro', 'naïve;otters', 'tab\there', '日本', '😀sweets']) {
+      const alone = scoreCold(text, inferredHint(text));
       expect(Number.isFinite(alone.bits)).toBe(true);
       expect(alone.difficulty.score).toBeGreaterThanOrEqual(0);
     }
+    expect(scoreCold('😀sweets', 'sweets').leftoverBits).toBe(0); // the emoji is not a stray letter
     const cold = scoreCold('naïve;otters', 'naive otters');
     expect(Number.isFinite(cold.bits)).toBe(true);
     expect(cold.memorability.score).toBeGreaterThanOrEqual(0);
@@ -249,7 +276,7 @@ describe('characters off the US keyboard', () => {
     expect(pressFor('é')).toEqual(OFF_MODEL_PRESS);
     expect(OFF_MODEL_PRESS.shifted).toBe(true);
     expect(pressFor('é').key).toBe(lookupKey('`')!.key);
-    expect(scoreAlone('cafe').difficulty.score).toBeLessThan(scoreAlone('café').difficulty.score); // it costs more, never nothing
+    expect(difficultyAlone('cafe').score).toBeLessThan(difficultyAlone('café').score); // it costs more, never nothing
   });
 });
 

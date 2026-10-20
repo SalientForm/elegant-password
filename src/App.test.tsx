@@ -289,7 +289,7 @@ describe('App: order and pages', () => {
     expect(suggestions.contains(screen.getByRole('group', { name: 'Order by' }))).toBe(true);
     expect(suggestions.contains(screen.getByRole('button', { name: 'Refresh' }))).toBe(true);
     for (const c of cards()) expect(suggestions.contains(c)).toBe(true);
-    const strength = screen.getByRole('heading', { name: 'Why this sentence is strong' }).closest('.panel')!;
+    const strength = screen.getByRole('heading', { name: 'Bits: for an attacker who knows this tool' }).closest('.panel')!;
     expect(suggestions.contains(strength)).toBe(false);
     expect(sentenceCard.contains(strength)).toBe(false);
   });
@@ -323,8 +323,8 @@ describe('App: order and pages', () => {
     expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // a draft, like any other edit
     fireEvent.keyDown(field, { key: 'Enter' });
     await waitFor(() => expect(hints().every((h) => /sally/i.test(h))).toBe(true), { timeout: 10_000 });
-    expect(screen.queryByRole('heading', { name: 'Why this sentence is strong' })).toBeNull(); // scored as text, not as a draw
-    expect(screen.getByRole('heading', { name: 'How strong is this sentence?' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Bits: for an attacker who knows this tool' })).toBeNull(); // scored as text, not as a draw
+    expect(screen.getByRole('heading', { name: 'Bits for your sentence' })).toBeTruthy();
     // Back to the words as drawn, it is unedited again: nothing to submit.
     fireEvent.change(field, { target: { value: drawn } });
     fireEvent.keyDown(field, { key: 'Enter' });
@@ -343,7 +343,7 @@ describe('App: order and pages', () => {
     expect(screen.queryByText('How difficulty is scored')).toBeNull();
     window.location.hash = '#/scoring';
     fireEvent(window, new Event('hashchange'));
-    expect(await screen.findByRole('heading', { name: 'Strength, in bits' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Strength, Raw and bits' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeTruthy();
     expect(screen.getByText('Finger rolls')).toBeTruthy();
     // Deliberate swaps come with their words: no memory load, no memorability penalty.

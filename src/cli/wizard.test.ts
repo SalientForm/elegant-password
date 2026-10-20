@@ -74,7 +74,7 @@ describe('tep config: a new file', () => {
       '4  Passwords    5 at a terminal, 1 when piped',
       '5  Order        Difficulty',
       '',
-      expect.stringMatching(/^Sample: .+ {3}Strength \d+ {2}Difficulty \d+ {2}Memorability \d+$/),
+      expect.stringMatching(/^Sample: .+ {3}Strength \d+ {2}Raw \d+ {2}Difficulty \d+ {2}Memorability \d+$/),
       expect.stringMatching(/^ {8}hint: /),
     ]);
   });

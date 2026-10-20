@@ -436,7 +436,7 @@ export class Wizard {
     const outcome = runInputs(inputsFor({ mode: 'generated', req, sentence: '', sentenceOptions, mappingSettings: a.swaps ?? DEFAULT_MAPPING_SETTINGS }));
     if (!outcome.ok) return undefined;
     const [s] = presentSuggestions(outcome.suggestions, a.mode ?? DEFAULT_TYPING_MODE, (a.output.sort as SortOrder | undefined) ?? DEFAULT_SORT);
-    return s ? { password: s.password, hint: s.hint, badges: badges(scoreReadings({ bits: s.bits, difficulty: s.difficulty, memorability: s.memorability }), PLAIN) } : undefined;
+    return s ? { password: s.password, hint: s.hint, badges: badges(scoreReadings({ strength: s.strength, raw: s.raw, difficulty: s.difficulty, memorability: s.memorability }), PLAIN) } : undefined;
   }
 
   private async review(start: Answers): Promise<WizardResult> {

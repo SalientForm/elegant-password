@@ -208,15 +208,16 @@ export function SentenceStrength({ suggestions, sentence }: { suggestions: Sugge
   const hi = Math.max(...bits);
   return (
     <section className="panel strength">
-      <h2>How strong is this sentence?</h2>
+      <h2>Bits for your sentence</h2>
       <p className="generated-sentence sentence-in-question" data-testid="sentence-in-question">
         {sentence}
       </p>
       <p>
-        Scored from each password and your sentence alone, by the same rule as every other password: a word on this
-        tool's lists counts as one pick from that list, any other word as English-like text, a capital initial as one
-        letter, a number as its digits, and the swaps as the number of ways they could have landed. That gives{' '}
-        {lo === hi ? lo.toFixed(1) : `${lo.toFixed(1)}–${hi.toFixed(1)}`} bits here.
+        Counted from each password and your sentence, for an attacker who knows this tool: a word on this tool's
+        lists counts as one pick from that list, any other word as English-like text, a capital initial as one letter,
+        a number as its digits, and the swaps as the number of ways they could have landed over the swaps in force.
+        That gives {lo === hi ? lo.toFixed(1) : `${lo.toFixed(1)}–${hi.toFixed(1)}`} bits here, this session's figure;
+        the Strength and Raw badges assume an attacker who does not know the tool.
       </p>
       <p className="hint">
         It is an estimate of the text, not of how guessable your sentence is to someone who knows you. A private, slightly

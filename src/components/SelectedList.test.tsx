@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it } from 'vitest';
 import { syncGenerator } from '../state/generator';
 import { scoreCold } from '../lib/score';
+import { strengthBits } from '../lib/strength';
 import { SELECTED_KEY } from '../state/selectedStore';
 import { memoryStore } from '../state/storage';
 import { PasswordsProvider } from '../state/PasswordsProvider';
@@ -48,7 +49,7 @@ describe('SelectedList', () => {
     delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
-    const s = first.getByText(`Strength ${score.bits.toFixed(0)}`);
+    const s = first.getByText(`Strength ${Math.round(strengthBits(ENTRIES[0]!.password))}`);
     expect(s.getAttribute('title')).toBeNull(); // the app's instant tip, not the browser's
     fireEvent.mouseEnter(s.parentElement!);
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);

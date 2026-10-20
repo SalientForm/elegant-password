@@ -133,34 +133,51 @@ maximum. A sentence is refused only when no state keeps every rule.
 
 ## 4. Scoring a password cold
 
-A password is scored from two strings only: the password and its hint. No
-setting, count, or history goes in, so the same password scores the same
-everywhere it appears (a card, the saved list, a year later).
+Two scores come from the password alone, one from the password and its
+hint, and one figure from the password, the hint and the session. Nothing
+else goes in: no count, no history. The scores are the same everywhere a
+password appears (a card, the saved list, a year later); the session's
+figure is shown only in the session.
+
+| Figure | The attacker knows | From | Where |
+| --- | --- | --- | --- |
+| Raw | nothing | the password (`strength.ts`): characters × log2 of the alphabet the classes present make; a repeated character once | badge |
+| Strength | English and the usual habits, not this tool | the password (`strength.ts`): letters as English-like text at 2.3 bits each, a repeated letter once, one bit for a capital in a run; digits by their digits, a memorable run one pick; each distinct symbol one pick; no lists, no table, no hint | badge, sorts "Strength" order |
+| Difficulty | — | the password and its memory load (hint words + random swaps; `difficulty.ts`), for the chosen typing mode | badge |
+| Memorability | — | the password and its hint (`score.ts`) | badge |
+| Bits | this tool exactly, and the swaps in force in this session | the password, the hint and the session's swap list (`score.ts`, below) | dim beside a card's badges, the bits panel, `tep g` |
 
 ```mermaid
 flowchart TD
   A[password + hint] --> B[normalise the hint into words]
-  B --> C[align each word in the password:\nwhole, deliberately swapped, shortened, initial, number,\nor randomly swapped spelling, deliberate winning a tie;\nelse further along the run of symbols that follows]
+  B --> C[align each word in the password:\nwhole, deliberately swapped, shortened, initial, number,\nor randomly swapped spelling from the built-in table, deliberate winning a tie;\nfailing those, any spelling within a few single-character edits, each edit one step;\nelse further along the run of symbols that follows]
   C --> C2[repeated digits or symbols count as the\nsame word; a length tag's digits are a number word]
   C2 --> D{hint matches a\nsentence template?}
   D -- yes --> E[most restrictive comfort level whose pools\ncontain every word, pools ranked as written or as typed,\nfewer bits kept → pool sizes →\nsentence bits = Σ log2 sizes + number position]
   D -- no --> F[each word from its text: a list pick,\n2.3 bits a letter, or its digits;\n+ log2 C(eligible words, initials)]
-  E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the random swaps found;\ndeliberate swaps 0 bits]
+  E --> G[swap bits = log2 of the distinct outcomes\nfor exactly the random swaps found,\nover the session's swap list;\ndeliberate swaps 0 bits]
   F --> G
-  G --> H[difficulty rubric on the password,\nmemory load = words + random swaps;\nmemorability: deliberate swaps cost nothing]
+  G --> H[bits, capped at the password's own text reading;\ndifficulty rubric on the password,\nmemory load = words + random swaps;\nmemorability: deliberate swaps cost nothing]
 ```
 
-What it deliberately leaves out: the length limits (not knowable cold, so the
-card can sit a little above the plan's exact figure), the user's own mapping
-list (always the built-in 64; deliberate swaps follow their own fixed table),
-whether deliberate swaps were on (both comfort rankings are tried and the
-lower figure kept), and any selection bias. A deliberate swap is recognised
-from the hint but not charged: it comes with its word by one fixed rule, so
-it adds no memory load, costs no memorability, and the swapped word counts
-as kept whole. Recognising it still matters, or it would read as a random
-swap and be charged as one. Choosing a favourite
-among suggestions, or rolling again until one is liked, is a bias the figures
-do not discount; the strength panel says so in one sentence.
+Finding the hint's words never looks at the session: the fixed shortening
+rules, the built-in table, and failing those a spelling within a few edits
+(up to three for a word of ten letters or fewer, never more than a third of
+its letters), so a word reached through a custom swap is the word, one step
+away, not a dropped word. Only the bits see the session's list, when they
+count where the swaps could have landed (one custom swap makes the count
+run over 65 mappings, not 64).
+
+What the bits deliberately leave out: the length limits (not knowable cold,
+so a card's figure can sit above the plan's exact figure), whether
+deliberate swaps were on (both comfort rankings are tried and the lower
+figure kept), and any selection bias. A deliberate swap is recognised from
+the hint but not charged: it comes with its word by one fixed rule, so it
+adds no memory load, costs no memorability, and the swapped word counts as
+kept whole. Recognising it still matters, or it would read as a random swap
+and be charged as one. Choosing a favourite among suggestions, or rolling
+again until one is liked, is a bias the figures do not discount; the bits
+panel says so in one sentence.
 
 ## 5. When the flow runs
 

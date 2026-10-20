@@ -4,7 +4,7 @@ import { describeRemoved } from '../lib/ease';
 import { changedWordsOf, easedOf, twistKind, twistOptionsLine, typingLines } from '../lib/explain';
 import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
-import { scoreReadings } from '../lib/readings';
+import { READING_ORDER, scoreReadings } from '../lib/readings';
 import { MEMORABILITY, scoreCold } from '../lib/score';
 import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
@@ -15,37 +15,42 @@ import { InstantTip, PasswordTip } from './PasswordTip';
 import { observeResize } from './resize';
 
 interface BadgeProps {
-  bits: number;
+  /** Strength: for an attacker who knows English and the usual habits, not this tool. */
+  strength: number;
+  /** Raw: brute force over the characters used. */
+  raw: number;
   difficulty: Pick<Difficulty, 'score' | 'level' | 'label' | 'mode'>;
   /** Undefined when there is no hint to compare with (a password typed in by hand). */
   memorability?: number;
-  /** From the user's own sentence: the bits count only the random parts. */
-  mine?: boolean;
 }
 
-/** The three score badges: "Strength 48", "Difficulty 44" and "Memorability 71", with the full reading in each tooltip (src/lib/readings.ts). */
-export function ScoreBadges({ bits, difficulty, memorability, mine = false }: BadgeProps) {
-  void mine; // the same rule scores every password; nothing about its origin goes in
-  const r = scoreReadings({ bits, difficulty, memorability });
-  // Each badge opens the app's instant tip with its full reading; no browser tooltip.
+/** The four score badges, "Strength 63", "Raw 184", "Difficulty 44" and "Memorability 71", with the full reading in each tooltip (src/lib/readings.ts). */
+export function ScoreBadges({ strength, raw, difficulty, memorability }: BadgeProps) {
+  const r = scoreReadings({ strength, raw, difficulty, memorability });
+  const colour = { strength: `memo-${r.strength.band}`, raw: 'memo-none', difficulty: `level-${r.difficulty.level}`, memorability: `memo-${r.memorability.band ?? 'none'}` };
+  // Each badge opens the app's instant tip with its full reading; no browser tooltip. The badge is an image to a screen reader: its name is the whole reading.
   return (
     <>
-      <InstantTip content={r.strength.text} className="badge-tip">
-        <span className={`badge strength memo-${r.strength.band}`} aria-label={r.strength.text}>
-          {r.strength.label} {r.strength.value}
-        </span>
-      </InstantTip>
-      <InstantTip content={r.difficulty.text} className="badge-tip">
-        <span className={`badge difficulty level-${r.difficulty.level}`} aria-label={r.difficulty.text}>
-          {r.difficulty.label} {r.difficulty.value}
-        </span>
-      </InstantTip>
-      <InstantTip content={r.memorability.text} className="badge-tip">
-        <span className={`badge memorability memo-${r.memorability.band ?? 'none'}`} aria-label={r.memorability.text}>
-          {r.memorability.label} {r.memorability.value}
-        </span>
-      </InstantTip>
+      {READING_ORDER.map((key) => (
+        <InstantTip key={key} content={r[key].text} className="badge-tip">
+          <span className={`badge ${key} ${colour[key]}`} role="img" aria-label={r[key].text}>
+            {r[key].label} {r[key].value}
+          </span>
+        </InstantTip>
+      ))}
     </>
+  );
+}
+
+/** This session's figure for an attacker who knows the tool and the swaps in force; shown dim beside the badges and never saved. */
+export function BitsFigure({ bits }: { bits: number }) {
+  const text = `${bits.toFixed(1)} bits for an attacker who knows this tool and this session's swaps: the words drawn and where the swaps landed. This session only; not saved with the password`;
+  return (
+    <InstantTip content={text} className="badge-tip">
+      <span className="bits" role="img" aria-label={text}>
+        {bits.toFixed(1)} bits
+      </span>
+    </InstantTip>
   );
 }
 
@@ -146,7 +151,8 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
         </div>
         <div className="card-row">
           <div className="actions">
-            <ScoreBadges bits={suggestion.bits} difficulty={difficulty} memorability={suggestion.memorability} mine={mine} />
+            <ScoreBadges strength={suggestion.strength} raw={suggestion.raw} difficulty={difficulty} memorability={suggestion.memorability} />
+            <BitsFigure bits={suggestion.bits} />
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { difficultyIn } from '../lib/difficulty';
 import { scoreCold } from '../lib/score';
+import { rawBits, strengthBits } from '../lib/strength';
 import type { SelectedEntry } from '../state/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
 import { ClickToCopy } from './ClickToCopy';
@@ -28,7 +29,7 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
         </p>
       </div>
       <div className="actions">
-        <ScoreBadges bits={score.bits} difficulty={difficulty} memorability={score.memorability.score} />
+        <ScoreBadges strength={strengthBits(entry.password)} raw={rawBits(entry.password)} difficulty={difficulty} memorability={score.memorability.score} />
         <CopyButton text={entry.password} fallback={code} icon />
         <button type="button" className="icon-button ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`} title="Remove from my list">
           <TrashIcon />

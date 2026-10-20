@@ -366,7 +366,7 @@ test('orders suggestions by difficulty by default, and by strength or memorabili
 
 test('the Scoring page explains bits and shows the rubric', async ({ page }) => {
   await page.getByRole('link', { name: 'Scoring' }).click();
-  await expect(page.getByRole('heading', { name: 'Strength, in bits' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Strength, Raw and bits' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeVisible();
   await expect(page.getByText('Finger rolls')).toBeVisible();
   await page.getByRole('link', { name: 'Passwords' }).click();

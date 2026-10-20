@@ -65,9 +65,9 @@ describe('SuggestionCard', () => {
     expect(screen.getByText(/It is your own sentence/)).toBeTruthy();
     expect(screen.queryByText(/your word/)).toBeNull(); // chips carry no "your word" label
     for (const step of s.steps) expect(screen.getByText(step)).toBeTruthy();
-    fireEvent.mouseEnter(screen.getByText(`Strength ${s.bits.toFixed(0)}`).parentElement!);
-    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, .*scored from the password and its hint alone$/); // the same wording as any password
-    fireEvent.mouseLeave(screen.getByText(`Strength ${s.bits.toFixed(0)}`).parentElement!);
+    fireEvent.mouseEnter(screen.getByText(`Strength ${Math.round(s.strength)}`).parentElement!);
+    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, .*; from the password alone$/); // the same wording as any password
+    fireEvent.mouseLeave(screen.getByText(`Strength ${Math.round(s.strength)}`).parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.queryByText(/random bits/)).toBeNull();
     fireEvent.mouseEnter(screen.getByText(s.password).parentElement!);
@@ -77,8 +77,8 @@ describe('SuggestionCard', () => {
     fireEvent.mouseLeave(screen.getByText(`Difficulty ${s.difficulty.score}`).parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.getByText(`Memorability ${s.memorability}`)).toBeTruthy();
-    fireEvent.mouseEnter(screen.getByText(`Strength ${s.bits.toFixed(0)}`).parentElement!);
-    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak); scored from the password and its hint alone$/);
+    fireEvent.mouseEnter(screen.getByText(`Strength ${Math.round(s.strength)}`).parentElement!);
+    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak): for an attacker who knows English and the usual habits but not this tool; from the password alone$/);
   });
 
   it('toggles "Why?", marks unmet checks, and adds to the list', () => {
@@ -241,7 +241,7 @@ describe('tab stops on a card', () => {
     expect(password.getAttribute('tabindex')).toBe('0'); // the button
     expect(password.parentElement!.className).toContain('pw-tip-anchor');
     expect(password.parentElement!.getAttribute('tabindex')).toBe('-1'); // the anchor around it is not a second stop
-    for (const badge of ['Strength', 'Difficulty', 'Memorability']) {
+    for (const badge of ['Strength', 'Raw', 'Difficulty', 'Memorability']) {
       const anchor = screen.getByLabelText(new RegExp(`^${badge} `)).parentElement!;
       expect(anchor.className).toContain('pw-tip-anchor');
       expect(anchor.getAttribute('tabindex')).toBe('0');

@@ -331,6 +331,8 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .actions { display: flex; gap: 0.4rem; align-items: center; }
 .badge { font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
 .badge-tip { display: inline-block; }
+/* This session's bits figure: beside the badges, dim, not a score. */
+.bits { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
 .level-0, .level-1 { background: var(--accent-soft); color: var(--accent); }
 .level-2 { background: var(--warn-soft); color: var(--warn); }
 .level-3, .level-4 { background: var(--bad-soft); color: var(--bad); }

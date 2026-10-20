@@ -117,6 +117,16 @@ Still open:
 
 Not planned yet; kept here so they are not lost. Roughly smallest first.
 
+### What knowing the app is worth
+
+Asked for by the user on 2026-10-20, when the badges were split by attacker
+knowledge (Raw: nothing; Strength: English and the usual habits; bits: this
+tool exactly, session only). A fourth figure would say how much of a
+password's strength rests on the tool being unknown: Strength minus the
+bits for the same password, or the two side by side with the difference
+named. It needs the session (the bits do), so it would show beside the bits
+figure, never be saved, and never feed a score.
+
 ### A CLI with no dependencies
 
 `tep` v1 uses `yaml`, `zod` and `@clack/prompts`, all inlined into the

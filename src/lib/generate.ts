@@ -25,6 +25,7 @@ import { isFarShift, isPinkyStretch, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
 import { scoreCold } from './score';
+import { rawBits, strengthBits } from './strength';
 import { easedText, plainOf } from './ease';
 import { letterCount } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
@@ -221,8 +222,12 @@ export interface Suggestion {
   twistBits: number;
   /** Number of distinct ways the twists could have landed on these words. */
   twistOptions: number;
-  /** Total bits, scored cold from the password and hint. */
+  /** The session's figure, for an attacker who knows this tool and this session's swaps: scored cold from the password and hint over that list. Shown in the session only; not a score. */
   bits: number;
+  /** Strength: for an attacker who knows English and the usual habits, not this tool. From the password alone (strength.ts). */
+  strength: number;
+  /** Raw: brute force over the characters used. From the password alone (strength.ts). */
+  raw: number;
   typing: TypingProfile;
   difficulty: Difficulty;
   /** 0-100: how closely the password still looks like its hint; see score.ts. */
@@ -967,7 +972,7 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
     const password = render(twisted.words, variant, chosen, undefined, endSymbol, req.shiftReach);
     if (seen.has(password)) continue;
     seen.add(password);
-    const score = scoreCold(password, hint);
+    const score = scoreCold(password, hint, mappings);
     const checks = checkRequirements(password, req, {
       separator: chosen.separator,
       endSymbol,
@@ -990,6 +995,8 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
       twistBits: score.twistBits,
       twistOptions: score.twistOptions,
       bits: score.bits,
+      strength: strengthBits(password),
+      raw: rawBits(password),
       typing: score.typing,
       difficulty: score.difficulty,
       memorability: score.memorability.score,

@@ -30,7 +30,7 @@ describe('tep g: output', () => {
     expect(code).toBe(EXIT.ok);
     const lines = io.out().trimEnd().split('\n');
     expect(lines).toHaveLength(10);
-    expect(lines[0]).toMatch(/^1 {2}\S.* {3}Strength \d+ {2}Difficulty \d+ {2}Memorability \d+$/);
+    expect(lines[0]).toMatch(/^1 {2}\S.* {3}Strength \d+ {2}Raw \d+ {2}Difficulty \d+ {2}Memorability \d+ {2}[\d.]+ bits$/);
     expect(lines[1]).toMatch(/^ {3}hint: /);
     expect(io.out()).not.toContain(ESC);
   });
@@ -49,8 +49,8 @@ describe('tep g: output', () => {
 
   it('orders by the sort asked for', async () => {
     const { io } = await run(['g', '-n', '6', '--sort', 'strength', '--format', 'json']);
-    const bits = JSON.parse(io.out()).suggestions.map((s: { bits: number }) => s.bits);
-    expect(bits).toEqual([...bits].sort((a: number, b: number) => b - a));
+    const strength = JSON.parse(io.out()).suggestions.map((s: { strength: number }) => s.strength);
+    expect(strength).toEqual([...strength].sort((a: number, b: number) => b - a));
   });
 
   it('--format json: the documented fields, difficulty for the typing mode, warnings included', async () => {
@@ -59,7 +59,8 @@ describe('tep g: output', () => {
     const data = JSON.parse(io.out());
     expect(Object.keys(data)).toEqual(['mode', 'typingMode', 'separator', 'sort', 'warnings', 'suggestions']);
     expect(data).toMatchObject({ mode: 'generated', typingMode: 'two-finger', separator: ' ', sort: 'difficulty' });
-    expect(Object.keys(data.suggestions[0])).toEqual(['password', 'hint', 'bits', 'difficulty', 'difficultyLabel', 'memorability', 'readings']);
+    expect(Object.keys(data.suggestions[0])).toEqual(['password', 'hint', 'strength', 'raw', 'bits', 'difficulty', 'difficultyLabel', 'memorability', 'readings']);
+    expect(Object.keys(data.suggestions[0].readings)).toEqual(['strength', 'raw', 'difficulty', 'memorability']);
     expect(data.suggestions[0].readings.difficulty).toMatch(/\(two-finger\)$/);
   });
 

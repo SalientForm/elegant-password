@@ -86,7 +86,7 @@ describe('SentenceInput', () => {
   it('summarises the random bits across the batch', () => {
     const r = fromSentence('the otters eat their salad at noon', { ...DEFAULT_REQUIREMENTS, twists: 2, count: 4 }, undefined, { rng: seeded(6) });
     render(<SentenceStrength suggestions={r.suggestions} sentence="the otters eat their salad at noon" />);
-    const heading = screen.getByRole('heading', { name: 'How strong is this sentence?' });
+    const heading = screen.getByRole('heading', { name: 'Bits for your sentence' });
     const shown = screen.getByTestId('sentence-in-question');
     expect(shown.textContent).toBe('the otters eat their salad at noon');
     expect(heading.compareDocumentPosition(shown) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy(); // directly below the heading

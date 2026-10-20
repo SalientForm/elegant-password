@@ -58,6 +58,7 @@ import { pools, twoLetter } from './grammar';
 import { easedText } from './ease';
 import { cryptoRandom, randomInt, type RandomSource } from './random';
 import { scoreCold } from './score';
+import { rawBits, strengthBits } from './strength';
 import { dropVowels, letterCount, normalizeSentence, SMALL_WORDS, trimInterior } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
 
@@ -134,6 +135,8 @@ interface Context {
   /** The message when closing marks are needed but none can be used. */
   closingProblem: string;
   mappings: MappingSets;
+  /** The whole list in force in this session, for counting where swaps could have landed. */
+  active: readonly Mapping[];
   rng: RandomSource;
   /** Compression ladders by starting state, shared across attempts. */
   ladderCache: Map<string, Token[][]>;
@@ -610,7 +613,7 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   if (endSymbol) steps.push(`ended with “${endSymbol}” for the symbol rule`);
   if (fluff) steps.push(describeFluff(fluff, req.minLength));
 
-  const score = scoreCold(password, hint);
+  const score = scoreCold(password, hint, ctx.active);
   return {
     length,
     suggestion: {
@@ -622,6 +625,8 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
       twistBits: score.twistBits,
       twistOptions: score.twistOptions,
       bits: score.bits,
+      strength: strengthBits(password),
+      raw: rawBits(password),
       typing: score.typing,
       difficulty: score.difficulty,
       memorability: score.memorability.score,
@@ -668,6 +673,7 @@ export function fromSentence(
       digit: usable.filter((m) => /[0-9]/.test(m.to)),
       symbol: usable.filter((m) => [...m.to].some(isSymbol)),
     },
+    active: mappings,
     rng,
     ladderCache: new Map(),
   };

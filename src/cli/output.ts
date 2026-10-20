@@ -8,7 +8,7 @@ import type { Outcome } from '../lib/engine';
 import { easedIn, easedLine, twistLine, twistOptionsLine, typingLines } from '../lib/explain';
 import { roleLabel, type Plan, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
-import { scoreReadings, type Band, type ScoreReadings } from '../lib/readings';
+import { READING_ORDER, scoreReadings, type Band, type ScoreReadings } from '../lib/readings';
 import type { SortOrder } from '../lib/sort';
 import type { Format } from './flagList';
 
@@ -33,11 +33,7 @@ const byBand = (p: Paint, band: Band | null) => (band === 'high' ? p.green : ban
 const byLevel = (p: Paint, level: number) => (level <= 1 ? p.green : level === 2 ? p.yellow : p.red);
 
 export function badges(r: ScoreReadings, p: Paint): string {
-  return [
-    byBand(p, r.strength.band)(`${r.strength.label} ${r.strength.value}`),
-    byLevel(p, r.difficulty.level)(`${r.difficulty.label} ${r.difficulty.value}`),
-    byBand(p, r.memorability.band)(`${r.memorability.label} ${r.memorability.value}`),
-  ].join('  ');
+  return READING_ORDER.map((key) => (key === 'difficulty' ? byLevel(p, r.difficulty.level) : byBand(p, r[key].band))(`${r[key].label} ${r[key].value}`)).join('  ');
 }
 
 export interface Shown {
@@ -51,7 +47,7 @@ export interface Shown {
   warnings: string[];
 }
 
-const readingsOf = (s: Suggestion) => scoreReadings({ bits: s.bits, difficulty: s.difficulty, memorability: s.memorability });
+const readingsOf = (s: Suggestion) => scoreReadings({ strength: s.strength, raw: s.raw, difficulty: s.difficulty, memorability: s.memorability });
 
 /** The plan's exact strength and where it comes from (made-up sentences only). */
 export function planLines(plan: Plan): string[] {
@@ -88,7 +84,8 @@ export function renderTable(shown: Shown, p: Paint, explain: boolean): string {
   if (explain && outcome.plan) lines.push(...planLines(outcome.plan).map((l) => p.dim(l)), '');
   suggestions.forEach((s, i) => {
     const n = String(i + 1).padStart(index);
-    lines.push(`${p.dim(n)}  ${p.bold(s.password)}${' '.repeat(width - [...s.password].length)}   ${badges(readingsOf(s), p)}`);
+    // The bits are this session's figure (an attacker who knows tep and the swaps in force), not a score: dim, after the badges.
+    lines.push(`${p.dim(n)}  ${p.bold(s.password)}${' '.repeat(width - [...s.password].length)}   ${badges(readingsOf(s), p)}  ${p.dim(`${s.bits.toFixed(1)} bits`)}`);
     const pad = ' '.repeat(index + 2);
     lines.push(`${pad}${p.dim(`hint: ${s.hint}`)}`);
     if (explain) {
@@ -117,11 +114,13 @@ export function renderJson(shown: Shown, explain: boolean): string {
         return {
           password: s.password,
           hint: s.hint,
+          strength: s.strength,
+          raw: s.raw,
           bits: s.bits,
           difficulty: s.difficulty.score,
           difficultyLabel: s.difficulty.label,
           memorability: s.memorability,
-          readings: { strength: r.strength.text, difficulty: r.difficulty.text, memorability: r.memorability.text },
+          readings: { strength: r.strength.text, raw: r.raw.text, difficulty: r.difficulty.text, memorability: r.memorability.text },
           ...(explain ? { explain: explainLines(s, context) } : {}),
         };
       }),

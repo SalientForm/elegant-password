@@ -123,7 +123,7 @@ describe('the front ends', () => {
    * (scoreReadings). A front end importing one of these is a front end
    * about to do the step its own way.
    */
-  const INNER = ['generate', 'fromSentence', 'scoreCold', 'scoreAlone', 'scoreDifficulty', 'difficultyIn', 'sortSuggestions', 'activeMappings', 'strengthLevel', 'memorabilityLevel', 'strengthWord'];
+  const INNER = ['generate', 'fromSentence', 'scoreCold', 'strengthBits', 'rawBits', 'scoreDifficulty', 'difficultyIn', 'sortSuggestions', 'activeMappings', 'strengthLevel', 'memorabilityLevel', 'strengthWord'];
 
   it('the CLI reaches the engine only through the shared pipeline', () => {
     const inner = CLI.filter((f) => !isTest(f)).flatMap((f) =>

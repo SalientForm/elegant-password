@@ -2,7 +2,8 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { syncGenerator } from '../state/generator';
-import { scoreAlone, scoreCold } from '../lib/score';
+import { difficultyAlone, scoreCold } from '../lib/score';
+import { strengthBits } from '../lib/strength';
 import { SELECTED_KEY } from '../state/selectedStore';
 import { memoryStore } from '../state/storage';
 import { PasswordsProvider, usePasswords } from '../state/PasswordsProvider';
@@ -149,10 +150,11 @@ describe('TypingTest', () => {
     expect(status.textContent).toContain('Hint: 13 worthy storks openly pet twisty toys');
     expect(screen.queryByLabelText('Hint for the password under test')).toBeNull();
     const cold = scoreCold('13;Worthy;storks;openly;pet;twisty;toys', '13 worthy storks openly pet twisty toys');
-    expect(within(status).getByText(`Strength ${cold.bits.toFixed(0)}`)).toBeTruthy();
+    expect(within(status).getByText(`Strength ${Math.round(strengthBits('13;Worthy;storks;openly;pet;twisty;toys'))}`)).toBeTruthy();
+    expect(within(status).getByText(/^Raw \d+$/)).toBeTruthy();
     expect(within(status).getByText(`Difficulty ${cold.difficulty.score}`)).toBeTruthy();
     expect(within(status).getByText(`Memorability ${cold.memorability.score}`)).toBeTruthy();
-    // After Clear, a password typed in by hand is next: no hint, so no memorability; strength and difficulty from the text alone.
+    // After Clear, a password typed in by hand is next: no hint, so no memorability; difficulty from the text alone (strength never needs a hint).
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
     typeInto(input, 'xyzzy-42', clock);
@@ -161,8 +163,8 @@ describe('TypingTest', () => {
     expect(after.textContent).toContain('Testing: xyzzy-42');
     expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).value).toBe(''); // editable: it arrived without one
     expect(within(after).getByText('Memorability n/a')).toBeTruthy();
-    expect(within(after).getByText(`Strength ${scoreAlone('xyzzy-42').bits.toFixed(0)}`)).toBeTruthy();
-    expect(within(after).getByText(`Difficulty ${scoreAlone('xyzzy-42').difficulty.score}`)).toBeTruthy();
+    expect(within(after).getByText(`Strength ${Math.round(strengthBits('xyzzy-42'))}`)).toBeTruthy();
+    expect(within(after).getByText(`Difficulty ${difficultyAlone('xyzzy-42').score}`)).toBeTruthy();
   });
 
   it('cuts a long password under test with an ellipsis and shows the whole of it as an instant tip, like the list', async () => {

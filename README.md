@@ -21,11 +21,16 @@ explanation for each:
   the chosen pattern can produce within the length limits, assuming the
   attacker knows this tool. Words come from `crypto.getRandomValues`, and
   generation runs entirely in the browser.
-- **Scored cold**: what a card says about a password (bits and difficulty)
-  is a pure function of the password and its hint (`src/lib/score.ts`).
-  No setting, count or history goes in, so a password scores the same on a
-  card, in your saved list, and a year later. The strength panel keeps the
-  exact figure for the current plan.
+- **Three strength figures, by what the attacker knows**: Raw (nothing:
+  brute force over the characters used), Strength (English and the usual
+  habits, not this tool), and bits (this tool exactly, and the swaps in
+  force). Raw and Strength are scores: worked out from the password alone
+  (`src/lib/strength.ts`), so a password reads the same on a card, in your
+  saved list, and a year later. Bits is this session's figure, counted
+  from the password and its hint (`src/lib/score.ts`) and shown beside
+  the badges and in the bits panel; it is never saved. Difficulty and
+  memorability come from the password and its hint, nothing else. A
+  repeated character never raises a figure.
 
 ## Features
 
@@ -166,9 +171,10 @@ explanation for each:
   Playwright project (`pnpm test:e2e`, project `phone`) fails on any element
   past the right edge, past its column or with its text cut off, and on any
   horizontal scroll, at 1000, 800, 412 and 360 px.
-- **Scoring page** (`#/scoring`): how strength in bits, the difficulty
-  score and memorability are worked out, with the full rubric, the options
-  each typing mode fills in and what they measure, and time-to-guess tables.
+- **Scoring page** (`#/scoring`): how Raw, Strength and the bits, the
+  difficulty score and memorability are worked out, with the full rubric,
+  the options each typing mode fills in and what they measure, and
+  time-to-guess tables.
 - **Memorability** (0-100, on every card and list entry): how closely the
   password still looks like its hint. Words that keep their full length
   score in full, shortened words the fraction kept, dropped words nothing;
@@ -178,13 +184,10 @@ explanation for each:
   press Enter. Every keystroke is timed as you type, so the first run is
   scored too and becomes the password under test; corrections (Backspace,
   Delete), time, words per minute and accuracy are reported against the
-  rubric's estimate, with a strength figure from the text alone
-  (`scoreAlone`): the hint is read off the password's own runs of letters
-  and digits, swapped spellings read back to their words through the
-  mapping table, and the password is scored cold with it, so strength and
-  difficulty are the same whether a hint is typed in or not. A hint can
-  only help an attacker, so no hint ever scores a password above that
-  figure. The password under test stays, through mistyped runs, until the
+  rubric's estimate, with the Strength and Raw badges (from the password
+  alone) and Difficulty, whose memory load without a hint is read off the
+  password's own runs of letters and digits; Memorability needs a hint.
+  The password under test stays, through mistyped runs, until the
   Clear button, a paste or a new list entry replaces it; one that arrived
   without a hint can be given one. Nothing is stored.
 - **Fun page** (`#/fun`): a full rebuild-the-app spec prompt, generated from
@@ -278,9 +281,10 @@ happened, undo it with
   is wrong, where each value came from (a flag, a file and line, a preset),
   and how to fix it, with the value that would work where the engine can
   find it. A strength the rules cannot reach is a warning, as in the app.
-- **Output**: a table with the Strength, Difficulty and Memorability badges at a
-  terminal, the passwords alone when piped, or JSON; `--explain` adds the
-  card's "Why?"; `--copy` uses the platform's clipboard tool.
+- **Output**: a table with the Strength, Raw, Difficulty and Memorability
+  badges and the session's bits at a terminal, the passwords alone when
+  piped, or JSON; `--explain` adds the card's "Why?"; `--copy` uses the
+  platform's clipboard tool.
 - **Your own sentence** is read from stdin or typed at a hidden prompt
   (`--sentence -`), never taken as an argument, where shell history and
   `ps` would keep it.
