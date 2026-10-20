@@ -67,9 +67,66 @@ Follow-ups:
   stays readable, or a model that rewards alternating hands, would be
   needed before relaxing the comfort filter.
 
+## tep CLI: decisions to revisit
+
+The CLI spec (`docs/specs/2026-10-20-tep-cli-design.md`) was accepted on
+2026-10-20 with these decisions taken on the recommendation alone, with
+low confidence. Examine each once `tep` is in use, most uncertain first.
+
+Settled by the user on 2026-10-20, kept here for the record:
+
+- An unreachable strength target is a warning, not a contradiction (§3).
+- Blocked review items cannot be edited: change the line that blocks
+  them first (§7.3).
+- Shaping a question may take up to 333 ms (§7.2).
+- The loosest-completion assumption stands; the property test proves it
+  (§7.2).
+
+Still open:
+
+- **`options: preset` follows the profile** (§6). A re-measured mode
+  profile changes what an existing config generates, without the file
+  changing. Freezing the values at save time is the alternative.
+- **`--mode` replaces a config's own options** (§5.1), as in the web app.
+  The alternative: `--mode` only changes which mode difficulty is scored
+  for.
+- **Count 5 at a terminal, 1 when piped** (§5.2). Output that changes with
+  where it goes can surprise; a fixed default is the alternative.
+- **Hint printed under each password by default** (§5.3). It leaves the
+  sentence in the terminal's scrollback beside the password. Showing it
+  only with `--explain` is the alternative.
+- **Sentence mode reads stdin or a hidden prompt only** (§5.2), never
+  inline text. Check it is not too awkward to use.
+- **`./tep.yml` only** (§5.1): no parent-directory search, no global
+  `~/.config/tep/config.yml`.
+- **Unused options warn, not fail** (§5.2): `--avoid-pinky` with
+  two-finger.
+- **No `key=value` arguments** (§5.2). The request's own example was
+  `mode=ten-finger`.
+- **`quick` and `minimal-quick` both accepted** (§2), instead of one name
+  everywhere.
+- **Arrow-key menus** for the questions and a typed line number on the
+  review screen (§8). Two input styles in one wizard.
+- **No clipboard clearing** after `--copy` (§5.4).
+- **Not on npm; `pnpm link --global`** (§8). Publishing would need a
+  scoped name (`tep` is taken).
+- **Commands left out of v1** (§4): `tep score <password>`, `tep list`,
+  `tep config show`, shell completions.
+- **The Fun page's rebuild prompt leaves the CLI out** (§10).
+
 ## Future considerations
 
 Not planned yet; kept here so they are not lost. Roughly smallest first.
+
+### A CLI with no dependencies
+
+`tep` v1 uses `yaml`, `zod` and `@clack/prompts`, all inlined into the
+bundle, so the built file needs only Node. Next, let it run from the
+source with no installed packages at all: `node:readline` prompts (arrow
+keys through raw mode), a hand-written check for the config schema, and a
+reader and writer for the small YAML subset the config uses (maps,
+scalars, comments). The spec keeps those dependencies inside `src/cli/`
+so they can be swapped out without touching `src/lib`.
 
 ### Keyboard layouts, and phones
 
