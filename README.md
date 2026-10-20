@@ -239,12 +239,18 @@ same shared core as the web app, so a password from `tep` is made and scored
 exactly as the app would make and score it.
 
     pnpm build:cli               # dist-cli/tep.mjs: one file, needs only Node 24
-    pnpm link --global           # puts tep on your PATH
+    ln -s "$PWD/dist-cli/tep.mjs" ~/.local/bin/tep   # puts tep on your PATH
     tep g                        # ./tep.yml if there is one, else the defaults
     tep g --site short-max-16 --mode two-finger -n 3
     tep g --rules "8-20 characters, at least one number" --format json
     tep g --sentence - < sentence.txt
     tep config bank.yml          # a few questions, then tep g -c bank.yml
+
+Any directory on your PATH will do in place of `~/.local/bin`; the link
+follows the file, so a rebuild needs no relinking. Without the link, run
+`pnpm tep g …` or `node dist-cli/tep.mjs g …` from the project. Not
+`pnpm link`: from pnpm 10 on it takes a directory and adds it as a
+dependency of this project instead of installing anything globally.
 
 - **Settings** come from the defaults, then a config file (`./tep.yml`, or
   `-c`), then flags: a site preset, the site's rules (or their wording with

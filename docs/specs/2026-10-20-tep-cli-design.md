@@ -376,8 +376,10 @@ Change a line (1-5), s to save, q to quit without saving:
   imports to hold that.
 - Bundled with tsdown to one ESM file with a `#!/usr/bin/env node`
   line, `bin: { tep }` in `package.json`, built by `pnpm build:cli`.
-  Not published to npm (the package stays private); installed with
-  `pnpm link --global`.
+  Not published to npm (the package stays private); installed by a
+  symlink to `dist-cli/tep.mjs` from a directory on the PATH (pnpm 10+'s
+  `pnpm link` takes a directory and makes it a dependency of the project,
+  so it does not install anything globally).
 - Dependencies: `node:util` `parseArgs` for flags, `yaml`, `zod`, and
   `@clack/prompts` (arrow-key menus for the questions; the review screen
   takes a typed line number). The bundle inlines them, so the built
