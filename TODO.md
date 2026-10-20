@@ -112,7 +112,6 @@ Still open:
   scoped name (`tep` is taken).
 - **Commands left out of v1** (§4): `tep score <password>`, `tep list`,
   `tep config show`, shell completions.
-- **The Fun page's rebuild prompt leaves the CLI out** (§10).
 
 ## Future considerations
 

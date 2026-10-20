@@ -15,7 +15,9 @@ macOS (Windows is out of scope for now):
     tep g -c bank.yml -n 3
     tep config                     # answer questions, write ./tep.yml
 
-The CLI adds no generation logic of its own. It builds a `Requirements`
+The CLI adds no generation logic of its own, and neither does the web
+UI: both go through one shared core in `src/lib` (user decision,
+2026-10-20; the plan's §0 has the layout and the tests that hold it). It builds a `Requirements`
 (plus `SentenceOptions` and mappings), calls `runInputs` from
 `src/lib/engine.ts` and prints the outcome, so a password from `tep` is
 generated and scored exactly as the web app would generate and score it,
@@ -46,7 +48,8 @@ either: `settleRules`' automatic fixes (maximum raised to fit, separator
 set to Automatic, ...) are never applied.
 
 A set of settings is **consistent** when both hold. One function,
-`src/cli/consistency.ts` `problemsOf(settings)`, checks them in this order
+`src/lib/consistency.ts` `problemsOf(req)` (shared, so the web app can use
+it too), checks them in this order
 and returns every problem it finds, each naming the fields involved:
 
 1. `ruleProblems(req)` is empty (`validation.ts`: minimum above maximum,
@@ -362,7 +365,7 @@ Change a line (1-5), s to save, q to quit without saving:
 
 - In this repo: `src/cli/` (`main.ts` argument parsing and dispatch,
   `config.ts` schema/load/save, `resolve.ts` the layering in §5.1,
-  `consistency.ts` `problemsOf` (§3), `constraints.ts` the allowed
+  `constraints.ts` the allowed
   choices and ranges for each question (§7.2), `wizard.ts`, `output.ts`,
   `clipboard.ts`), importing `src/lib` as is. `src/lib` stays free of
   Node APIs.
@@ -405,5 +408,6 @@ Change a line (1-5), s to save, q to quit without saving:
 ## 10. Docs
 
 README gets a "Command line" section. `docs/algorithm-flow.md` is
-unchanged (no new algorithm). The Fun page's rebuild prompt does not
-cover the CLI in v1.
+unchanged (no new algorithm). The Fun page has two rebuild prompts, the
+app's first and then the CLI's, which builds on the app's shared core
+instead of redefining it (user decision, 2026-10-20).
