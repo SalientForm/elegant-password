@@ -9,6 +9,7 @@ import { CONFIG_HELP, generateHelp, OVERVIEW } from './help';
 import { Cancelled, type Io } from './io';
 import { closest } from './names';
 import { COLOR, PLAIN, useColor } from './output';
+import { renderError } from './report';
 
 export const VERSION: string = pkg.version;
 const COMMANDS = ['g', 'generate', 'config', 'help'];
@@ -61,7 +62,7 @@ export async function main(argv: string[], io: Io): Promise<number> {
       return EXIT.interrupted;
     }
     if (e instanceof CliError) {
-      io.stderr.write(`${p.red(`${name}: error:`)} ${e.title}\n${e.details.map((d) => (d ? `  ${d}\n` : '\n')).join('')}`);
+      io.stderr.write(renderError(name, e, p));
       return e.exitCode;
     }
     const message = e instanceof Error ? (e.stack ?? e.message) : String(e);

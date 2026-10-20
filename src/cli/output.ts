@@ -10,7 +10,7 @@ import { roleLabel, type Plan, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { scoreReadings, type Band, type ScoreReadings } from '../lib/readings';
 import type { SortOrder } from '../lib/sort';
-import type { Format } from './flags';
+import type { Format } from './flagList';
 
 /** ANSI styling, or none. */
 export interface Paint {

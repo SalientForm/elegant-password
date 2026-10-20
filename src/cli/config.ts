@@ -5,40 +5,25 @@
 
 import { closeSync, fsyncSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { isMap, isPair, isScalar, isSeq, LineCounter, parseDocument, stringify, type Document, type Node } from 'yaml';
+import { isMap, isPair, isScalar, isSeq, LineCounter, parseDocument, type Document, type Node } from 'yaml';
 import { z } from 'zod';
-import type { TypingMode } from '../lib/difficulty';
 import { mappingSettingsProblems, type MappingSettings } from '../lib/mappingSettings';
-import { modeLabel } from '../lib/modeProfiles';
-import { SITE_PRESETS } from '../lib/sitePresets';
 import { configError } from './errors';
-import { fieldsIn, formatValue, keyPath, parseValue, type CliField, type FieldGroup } from './fields';
-import { closest, lookup, MODE_NAMES, modeName, SITE_NAMES } from './names';
+import { fieldsIn, keyPath, parseValue, type FieldGroup } from './fields';
+import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
 
-export const CONFIG_VERSION = 1;
+export { CONFIG_VERSION } from './configVersion';
+import { CONFIG_VERSION } from './configVersion';
 export const DEFAULT_CONFIG_FILE = 'tep.yml';
 /** A tep config is a few hundred bytes; anything this big is the wrong file. */
 export const MAX_CONFIG_BYTES = 64 * 1024;
 
 const TOP_KEYS = ['version', 'mode', 'site', 'rules', 'options', 'sentence', 'swaps', 'output'] as const;
 
-/** A config file's contents in the engine's terms. Only what the file states. */
-export interface ConfigModel {
-  mode?: TypingMode;
-  /** A site preset's name. */
-  site?: string;
-  /** Rule values by field name, over the site preset. */
-  rules: Record<string, unknown>;
-  /** 'preset': the mode's preset as it is, now and as it changes. Otherwise option values by field name, over the preset. */
-  options: 'preset' | Record<string, unknown>;
-  sentence: Record<string, unknown>;
-  swaps?: MappingSettings;
-  output: Record<string, unknown>;
-}
-
-export const emptyModel = (): ConfigModel => ({ rules: {}, options: 'preset', sentence: {}, output: {} });
+export { emptyModel, type ConfigModel } from './configModel';
+import { emptyModel, type ConfigModel } from './configModel';
 
 export interface LoadedConfig {
   model: ConfigModel;
@@ -307,65 +292,7 @@ function fsError(e: unknown, display: string) {
 /** Load and check a config file. */
 export const loadConfig = (path: string, display = path): LoadedConfig => parseConfig(readConfigFile(path, display), display);
 
-// ---------------------------------------------------------------- writing
-
-const scalar = (v: unknown) => stringify(v).trim();
-const pad = (s: string, width = 28) => (s.length >= width ? `${s} ` : s.padEnd(width));
-
-/** The file's text: header, then each section with a comment saying what it is. Sections the model does not state are left out. */
-export function serializeConfig(model: ConfigModel, today: string): string {
-  const out: string[] = [
-    `# tep config, written by \`tep config\` on ${today}.`,
-    '# Run `tep g` in this directory, or `tep g -c <this file>`. Edit it by hand or run `tep config` again.',
-    `version: ${CONFIG_VERSION}`,
-  ];
-  const mode = model.mode ?? 'ten-finger';
-  out.push(`${pad(`mode: ${scalar(modeName(mode))}`)}# ${MODE_NAMES.map((m) => m.name).join(' | ')}`, '');
-
-  if (model.site) {
-    const preset = SITE_PRESETS.find((p) => SITE_NAMES.find((s) => s.value === p)!.name === model.site)!;
-    out.push(`${pad(`site: ${scalar(model.site)}`)}# ${preset.note}${Object.keys(model.rules).length ? '; rules below replace its values' : ''}`);
-  }
-  section(out, 'rules', model.rules, model.site ? undefined : 'the site\'s rules');
-
-  if (model.options === 'preset') {
-    out.push('', `${pad('options: preset')}# the ${modeLabel(mode)} options as tep sets them, now and as they change`);
-  } else {
-    out.push('');
-    section(out, 'options', model.options, `set one by one; the ${modeLabel(mode)} preset fills in any left out`);
-  }
-  if (Object.keys(model.output).length) {
-    out.push('');
-    section(out, 'output', model.output);
-  }
-  if (Object.keys(model.sentence).length) {
-    out.push('');
-    section(out, 'sentence', model.sentence, 'for --sentence');
-  }
-  if (model.swaps && (model.swaps.disabled.length || model.swaps.custom.length)) {
-    out.push('', 'swaps:');
-    if (model.swaps.disabled.length) out.push(`  off: [${model.swaps.disabled.map(scalar).join(', ')}]`);
-    if (model.swaps.custom.length) {
-      out.push('  custom:');
-      for (const m of model.swaps.custom) out.push(`    - { from: ${scalar(m.from)}, to: ${scalar(m.to)} }`);
-    }
-  }
-  return `${out.join('\n')}\n`;
-}
-
-function section(out: string[], group: FieldGroup, values: Record<string, unknown>, comment?: string) {
-  const fields = fieldsIn(group).filter((f) => f.name in values);
-  if (!fields.length) return;
-  out.push(comment ? `${pad(`${group}:`)}# ${comment}` : `${group}:`);
-  for (const f of fields) out.push(`  ${f.name}: ${valueText(f, values[f.name])}`);
-}
-
-/** A value as YAML: symbols and separators always in double quotes, since YAML reads many symbols as syntax. */
-function valueText(f: CliField, value: unknown): string {
-  const v = formatValue(f, value);
-  if (f.kind.type === 'symbols' || (f.kind.type === 'separator' && typeof v === 'string' && !['auto', 'space', 'none'].includes(v))) return JSON.stringify(v);
-  return scalar(v);
-}
+// ---------------------------------------------------------------- writing (the text itself: configText.ts)
 
 export interface WriteFs {
   openSync: typeof openSync;

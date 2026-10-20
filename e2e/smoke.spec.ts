@@ -275,12 +275,18 @@ test('saved settings that contradict themselves load repaired, with a note, and 
   await everyCheckMet(page);
 });
 
-test('the Fun page shows the spec and downloads it', async ({ page }) => {
+test('the Fun page shows both specs, the app first, and downloads each', async ({ page }) => {
   await page.getByRole('link', { name: 'Fun' }).click();
   await expect(page.getByText('Build "Elegant Passwords"')).toBeVisible();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download .md', exact: true }).click();
   expect((await download).suggestedFilename()).toBe('elegant-passwords-spec.md');
+  // The command line's prompt comes second, built on the app's shared core.
+  await page.getByRole('tab', { name: '2. The command line' }).click();
+  await expect(page.getByText('Build "tep", the Elegant Passwords command line')).toBeVisible();
+  const cli = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download .md', exact: true }).click();
+  expect((await cli).suggestedFilename()).toBe('tep-cli-spec.md');
   await page.getByRole('link', { name: 'Passwords' }).click();
   await expect(cards(page).first()).toBeVisible(); // state survived the visit
 });

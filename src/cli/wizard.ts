@@ -15,7 +15,7 @@ import { inputsFor, presentSuggestions } from '../lib/pipeline';
 import { scoreReadings } from '../lib/readings';
 import { parseRuleText } from '../lib/ruleText';
 import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
-import type { ConfigModel } from './config';
+import type { ConfigModel } from './configModel';
 import {
   bitsShape,
   fieldShape,
@@ -112,6 +112,13 @@ export function reviewLines(a: Answers): ReviewLine[] {
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** The review's lines as shown: number, label and value in columns. */
+export function formatReview(lines: ReviewLine[]): string[] {
+  const width = Math.max(...lines.map((l) => l.label.length));
+  const index = String(lines.length).length;
+  return lines.map((l) => `${String(l.n).padStart(index)}  ${l.label.padEnd(width)}  ${l.value}`);
+}
 
 /** Where each field is on the review screen. */
 const whereIn = (lines: ReviewLine[]): Where => ({ lineOf: (f) => lines.find((l) => l.fields.includes(f.name))?.n });
@@ -396,9 +403,7 @@ export class Wizard {
   // ------------------------------------------------------------ review
 
   private show(a: Answers, lines: ReviewLine[]) {
-    const width = Math.max(...lines.map((l) => l.label.length));
-    const index = String(lines.length).length;
-    const body = lines.map((l) => `${String(l.n).padStart(index)}  ${l.label.padEnd(width)}  ${l.value}`);
+    const body = formatReview(lines);
     const req = reqOf(a);
     const where = whereIn(lines);
     for (const w of warningsOf(req)) {

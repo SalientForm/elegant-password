@@ -13,6 +13,7 @@ import { randomInt, type RandomSource } from '../lib/random';
 import { seeded } from '../lib/testRandom';
 import { layerOf, loadConfig } from './config';
 import { configCommand } from './configCommand';
+import { QUESTION_BUDGET_MS } from './constraints';
 import { EXIT } from './errors';
 import type { Prompter, SelectOption } from './io';
 import { resolve } from './resolve';
@@ -24,7 +25,7 @@ import { fakeIo, flagsLayer } from './testing';
  * Vitest runs test files in parallel processes, and time spent waiting for
  * a core is the scheduler's, not the wizard's.
  */
-const BUDGET_MS = 750 * (process.env.CI ? 3 : 1);
+const BUDGET_MS = QUESTION_BUDGET_MS * (process.env.CI ? 3 : 1);
 const cpuMs = () => {
   const u = process.cpuUsage();
   return (u.user + u.system) / 1000;

@@ -34,7 +34,21 @@ describe('Fun page download', () => {
     expect(screen.getByText(/Build "Elegant Passwords"/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Download/ }));
     expect(click).toHaveBeenCalledOnce();
+    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('elegant-passwords-spec.md');
     expect(screen.getByRole('button', { name: 'Copy prompt' })).toBeTruthy();
+  });
+
+  it('offers the app prompt first, then the command line prompt, each with its own download', () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<FunPage />);
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((t) => t.textContent)).toEqual(['1. The web app', '2. The command line']);
+    expect(tabs[0]!.getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(tabs[1]!);
+    expect(screen.getByText(/Build "tep", the Elegant Passwords command line/)).toBeTruthy();
+    expect(screen.queryByText(/Build "Elegant Passwords"/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Download/ }));
+    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe('tep-cli-spec.md');
   });
 });
 

@@ -2,7 +2,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { clipboardTools, systemClipboard } from './clipboard';
+import { systemClipboard } from './clipboard';
+import { clipboardTools } from './clipboardTools';
 
 describe('clipboard tools', () => {
   it('macOS: pbcopy, whatever the session', () => {

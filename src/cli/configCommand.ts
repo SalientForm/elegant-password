@@ -5,7 +5,8 @@
 import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve as resolvePath } from 'node:path';
 import { parseArgs } from 'node:util';
-import { DEFAULT_CONFIG_FILE, loadConfig, serializeConfig, writeAtomic } from './config';
+import { DEFAULT_CONFIG_FILE, loadConfig, writeAtomic } from './config';
+import { serializeConfig } from './configText';
 import { CliError, configError, EXIT, usageError } from './errors';
 import { CONFIG_HELP } from './help';
 import type { Io } from './io';

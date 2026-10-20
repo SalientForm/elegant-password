@@ -105,7 +105,7 @@
       },
       {
         "kind": "test",
-        "title": "the Fun page shows the spec and downloads it"
+        "title": "the Fun page shows both specs, the app first, and downloads each"
       },
       {
         "kind": "test",
@@ -312,6 +312,14 @@
       {
         "kind": "test",
         "title": "the web builds its inputs, orders its suggestions and reads its badges through the same shared calls"
+      },
+      {
+        "kind": "group",
+        "title": "the browser bundle"
+      },
+      {
+        "kind": "test",
+        "title": "loads nothing that needs Node or the CLI's packages, though the Fun page shows the CLI's prompt"
       },
       {
         "kind": "group",
@@ -1417,6 +1425,10 @@
       {
         "kind": "test",
         "title": "renders the spec with copy and download controls"
+      },
+      {
+        "kind": "test",
+        "title": "offers the app prompt first, then the command line prompt, each with its own download"
       },
       {
         "kind": "group",
@@ -3370,6 +3382,39 @@
       {
         "kind": "test",
         "title": "has no duplicates"
+      }
+    ]
+  },
+  {
+    "file": "src/prompts/cliPrompt.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the CLI prompt"
+      },
+      {
+        "kind": "test",
+        "title": "says it builds on the app of the first prompt, which comes first"
+      },
+      {
+        "kind": "test",
+        "title": "names only shared-core functions that exist, in the modules it says"
+      },
+      {
+        "kind": "test",
+        "title": "lists every CLI file that exists"
+      },
+      {
+        "kind": "test",
+        "title": "covers every flag, config key and exit code from the live definitions"
+      },
+      {
+        "kind": "test",
+        "title": "shows real messages, a real config file and a real review, generated from the code"
+      },
+      {
+        "kind": "test",
+        "title": "lists the CLI's tests, and the app prompt leaves them out"
       }
     ]
   },

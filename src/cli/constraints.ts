@@ -21,6 +21,9 @@ import type { Source } from './sources';
 
 export const COUNT_DEFAULT = 5;
 
+/** How long working out one question's choices may take, in milliseconds of CPU time (user decision, 2026-10-20). src/cli/walk.test.ts holds it. */
+export const QUESTION_BUDGET_MS = 750;
+
 /** What the wizard has been told. Fields absent are not answered yet. */
 export interface Answers {
   mode?: TypingMode;

@@ -37,14 +37,16 @@ const code = (file: string) =>
 interface Import {
   from: string;
   names: string[];
+  /** `import type`: erased when compiled, so it loads nothing. */
+  typeOnly: boolean;
 }
 
 /** Every static import and re-export: where from, and the names taken (types included). */
 function importsOf(file: string): Import[] {
   const out: Import[] = [];
   const text = code(file);
-  for (const m of text.matchAll(/(?:import|export)\s+(?:type\s+)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g)) {
-    const clause = m[1]!;
+  for (const m of text.matchAll(/(?:import|export)\s+(type\s+)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g)) {
+    const clause = m[2]!;
     const braced = clause.match(/\{([\s\S]*)\}/)?.[1] ?? '';
     const names = braced
       .split(',')
@@ -52,10 +54,10 @@ function importsOf(file: string): Import[] {
       .filter(Boolean);
     const plain = clause.replace(/\{[\s\S]*\}/, '').replace(/[,\s]/g, '');
     if (plain && plain !== '*' && !plain.startsWith('*as')) names.push(plain);
-    out.push({ from: m[2]!, names });
+    out.push({ from: m[3]!, names, typeOnly: !!m[1] });
   }
-  for (const m of text.matchAll(/import\s+['"]([^'"]+)['"]/g)) out.push({ from: m[1]!, names: [] });
-  for (const m of text.matchAll(/import\(\s*['"]([^'"]+)['"]\s*\)/g)) out.push({ from: m[1]!, names: [] });
+  for (const m of text.matchAll(/import\s+['"]([^'"]+)['"]/g)) out.push({ from: m[1]!, names: [], typeOnly: false });
+  for (const m of text.matchAll(/import\(\s*['"]([^'"]+)['"]\s*\)/g)) out.push({ from: m[1]!, names: [], typeOnly: false });
   return out;
 }
 
@@ -143,11 +145,58 @@ describe('the front ends', () => {
   });
 });
 
+/** The source file a relative import loads, or undefined for a package or a non-code file. */
+function resolveImport(from: string, spec: string): string | undefined {
+  if (!spec.startsWith('.')) return undefined;
+  const base = join(ROOT, from, '..', spec.split('?')[0]!);
+  for (const candidate of [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts')]) {
+    try {
+      if (statSync(candidate).isFile() && /\.tsx?$/.test(candidate)) return relative(ROOT, candidate);
+    } catch {
+      // Not this one.
+    }
+  }
+  return undefined;
+}
+
+/** Every source file the browser loads from these entries, following imports that are not type-only. */
+function reachable(entries: string[]): Set<string> {
+  const seen = new Set<string>();
+  const queue = [...entries];
+  while (queue.length) {
+    const file = queue.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    for (const i of importsOf(file)) {
+      if (i.typeOnly) continue;
+      const next = resolveImport(file, i.from);
+      if (next) queue.push(next);
+    }
+  }
+  return seen;
+}
+
+describe('the browser bundle', () => {
+  it('loads nothing that needs Node or the CLI\'s packages, though the Fun page shows the CLI\'s prompt', () => {
+    const files = reachable(['src/main.tsx', 'src/worker.ts']);
+    expect([...files].some((f) => f.startsWith('src/cli/'))).toBe(true); // the CLI prompt draws on the CLI's pure modules
+    const bad = [...files].flatMap((f) =>
+      importsOf(f)
+        .filter((i) => !i.typeOnly && /^(node:|yaml$|zod$|@clack\/)/.test(i.from))
+        .map((i) => `${f} imports ${i.from}`),
+    );
+    expect(bad).toEqual([]);
+  });
+});
+
 describe('this test', () => {
   it('reads imports of every shape the code uses', () => {
     const sample = importsOf('src/state/PasswordsProvider.tsx');
     expect(sample.find((i) => i.from === '../lib/pipeline')?.names).toEqual(['inputsFor']);
     expect(sample.find((i) => i.from === 'react')?.names).toContain('createContext');
     expect(sample.find((i) => i.from === '../lib/generate')?.names).toEqual(['GeneratedSentence', 'Requirements', 'Suggestion']);
+    expect(sample.find((i) => i.from === '../lib/generate')?.typeOnly).toBe(true);
+    expect(resolveImport('src/App.tsx', './lib/pipeline')).toBe('src/lib/pipeline.ts');
+    expect(resolveImport('src/App.tsx', 'react')).toBeUndefined();
   });
 });

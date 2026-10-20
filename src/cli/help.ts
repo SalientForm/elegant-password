@@ -3,7 +3,7 @@
 
 import { EXIT } from './errors';
 import { FIELDS, fieldsIn, type CliField, type FieldGroup } from './fields';
-import { META_FLAGS } from './flags';
+import { META_FLAGS } from './flagList';
 
 const pad = (s: string, width: number) => (s.length >= width ? `${s}  ` : s.padEnd(width));
 

@@ -19,6 +19,16 @@ export const EXIT = {
 
 export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
 
+/** Each exit code and what it means, for help and the Fun page's CLI prompt. */
+export const EXIT_MEANINGS: readonly { code: ExitCode; meaning: string }[] = [
+  { code: EXIT.ok, meaning: 'Passwords printed, or the config saved (or the wizard quit with q)' },
+  { code: EXIT.unexpected, meaning: 'A bug: the engine failed in a way no setting explains; or the clipboard tool failed' },
+  { code: EXIT.usage, meaning: 'The command line: an unknown flag, a bad value, an unknown preset, flags that contradict each other, no terminal for tep config, no clipboard tool' },
+  { code: EXIT.contradiction, meaning: 'Settings that contradict each other, or a sentence that cannot be made to fit' },
+  { code: EXIT.config, meaning: 'A config file that cannot be read or is not valid' },
+  { code: EXIT.interrupted, meaning: 'Interrupted (Ctrl+C)' },
+];
+
 export class CliError extends Error {
   constructor(
     readonly exitCode: ExitCode,

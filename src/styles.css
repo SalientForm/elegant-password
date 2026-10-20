@@ -409,6 +409,7 @@ table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .topnav a { padding: 0.5rem 0.9rem; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .topnav a.active { color: var(--accent); border-bottom-color: var(--accent); }
 .fun { display: grid; gap: 1rem; margin-bottom: 1rem; }
+.fun-panel { display: grid; gap: 1rem; }
 .fun-head { display: flex; justify-content: space-between; gap: 1rem; align-items: start; flex-wrap: wrap; }
 .fun-head > div:first-child { max-width: 60ch; }
 .dev-stats { display: grid; gap: 0.6rem; }

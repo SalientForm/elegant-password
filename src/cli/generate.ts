@@ -5,7 +5,7 @@
 
 import { existsSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
-import { problemsOf, warningsOf, type Problem } from '../lib/consistency';
+import { problemsOf, warningsOf } from '../lib/consistency';
 import { runInputs } from '../lib/engine';
 import { shortfallWarning } from '../lib/generate';
 import { inputsFor, presentSuggestions } from '../lib/pipeline';
@@ -17,28 +17,14 @@ import { CliError, EXIT, usageError } from './errors';
 import { parseGenerateArgs } from './flags';
 import { generateHelp } from './help';
 import type { Io } from './io';
-import { explainProblem, explainWarning, renderExplained, type Refer } from './messages';
+import { explainWarning, renderExplained, type Refer } from './messages';
+import { contradictionError, renderNotice } from './report';
 import { COLOR, PLAIN, render, useColor } from './output';
-import { resolve, type Layer, type Resolved } from './resolve';
+import { resolve, type Layer } from './resolve';
 
 const ISSUES = 'https://github.com/SalientForm/elegant-password/issues';
 /** Longer than any sentence anyone types. */
 const MAX_SENTENCE = 500;
-
-/** Every contradiction in resolved settings, as one error: each problem with its values, their sources and a fix. */
-export function contradictionError(problems: Problem[], r: Resolved): CliError {
-  const refer: Refer = { source: (f) => r.sources[f.name]! };
-  const details = problems.flatMap((p, i) => {
-    const [title, ...rest] = renderExplained(explainProblem(p, r.generation.req, refer), '     ');
-    return [`${problems.length > 1 ? `${i + 1}. ` : ''}${title}`, ...rest, ''];
-  });
-  details.pop();
-  return new CliError(
-    EXIT.contradiction,
-    `these settings contradict each other${problems.length > 1 ? ` (${problems.length} problems)` : ''}, so no passwords were made:`,
-    details,
-  );
-}
 
 /** Why a sentence cannot be used, or undefined when it can. */
 function sentenceProblem(sentence: string): string | undefined {
@@ -90,8 +76,7 @@ export async function generateCommand(argv: string[], io: Io): Promise<number> {
   const err = useColor(io.stderr.isTTY, io.env, flags.color) ? COLOR : PLAIN;
   const say = (kind: 'warning' | 'note', lines: string[]) => {
     if (flags.quiet || !lines.length) return;
-    const [first, ...rest] = lines;
-    io.stderr.write(`${(kind === 'warning' ? err.yellow : err.dim)(`tep g: ${kind}:`)} ${first}\n${rest.map((l) => `  ${l}\n`).join('')}`);
+    io.stderr.write(renderNotice('tep g', kind, lines, err));
   };
 
   const targetWarnings = r.generation.mode === 'generated' ? warningsOf(req).map((w) => renderExplained(explainWarning(w, req, refer))) : [];
