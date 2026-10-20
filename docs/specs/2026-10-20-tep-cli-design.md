@@ -367,12 +367,13 @@ Change a line (1-5), s to save, q to quit without saving:
 
 ## 8. Build and layout
 
-- In this repo: `src/cli/` (`main.ts` argument parsing and dispatch,
-  `config.ts` schema/load/save, `resolve.ts` the layering in §5.1,
-  `constraints.ts` the allowed
-  choices and ranges for each question (§7.2), `wizard.ts`, `output.ts`,
-  `clipboard.ts`), importing `src/lib` as is. `src/lib` stays free of
-  Node APIs.
+- In this repo: `src/cli/`, importing the shared core in `src/lib`. As
+  built, the files are listed in the README's layout and in the Fun page's
+  CLI prompt, which a test checks against the directory. The modules the
+  Fun page's prompt draws on (the field table, names, messages,
+  constraints, the config writer, help) stay free of Node APIs, so the
+  browser can run them; `src/boundaries.test.ts` follows the browser's
+  imports to hold that.
 - Bundled with tsdown to one ESM file with a `#!/usr/bin/env node`
   line, `bin: { tep }` in `package.json`, built by `pnpm build:cli`.
   Not published to npm (the package stays private); installed with

@@ -1,7 +1,12 @@
 # Plan: `tep`, and one shared core for the app and the CLI
 
 Implements `docs/specs/2026-10-20-tep-cli-design.md` on branch
-`feature/tep-cli`. Written 2026-10-20.
+`feature/tep-cli`. Written 2026-10-20; carried out the same day, all
+milestones done. Two things found on the way are folded in: the card's
+"Why?" sentences moved to the core (`src/lib/explain.ts`) so `--explain`
+says what the card says, and planning skips sentence shapes that cannot fit
+the length window, which took the slowest wizard question from about
+360 ms to about 70 ms.
 
 ## 0. The rule this plan is built around: no drift
 

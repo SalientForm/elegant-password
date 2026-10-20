@@ -232,6 +232,45 @@ explanation for each:
   no track, a thin rounded handle shown only while the pointer is over the
   area or it scrolls, like macOS with scroll bars shown automatically.
 
+## Command line
+
+`tep` makes the same passwords in a terminal (Linux and macOS), through the
+same shared core as the web app, so a password from `tep` is made and scored
+exactly as the app would make and score it.
+
+    pnpm build:cli               # dist-cli/tep.mjs: one file, needs only Node 24
+    pnpm link --global           # puts tep on your PATH
+    tep g                        # ./tep.yml if there is one, else the defaults
+    tep g --site short-max-16 --mode two-finger -n 3
+    tep g --rules "8-20 characters, at least one number" --format json
+    tep g --sentence - < sentence.txt
+    tep config bank.yml          # a few questions, then tep g -c bank.yml
+
+- **Settings** come from the defaults, then a config file (`./tep.yml`, or
+  `-c`), then flags: a site preset, the site's rules (or their wording with
+  `--rules`), a typing mode, which fills in the options that suit it, and
+  any option by hand. `tep help g` lists every flag.
+- **No contradictions.** Settings that contradict each other make no
+  passwords (exit 3), and nothing is quietly fixed. Every message says what
+  is wrong, where each value came from (a flag, a file and line, a preset),
+  and how to fix it, with the value that would work where the engine can
+  find it. A strength the rules cannot reach is a warning, as in the app.
+- **Output**: a table with the Strength, Difficulty and Memory badges at a
+  terminal, the passwords alone when piped, or JSON; `--explain` adds the
+  card's "Why?"; `--copy` uses the platform's clipboard tool.
+- **Your own sentence** is read from stdin or typed at a hidden prompt
+  (`--sentence -`), never taken as an argument, where shell history and
+  `ps` would keep it.
+- **`tep config`** asks the typing mode, the site's rules (a preset, pasted
+  wording, or each rule), the options and the output, then shows every
+  answer with a line number to change or save. Each question only offers
+  what fits the answers before it; a choice ruled out is shown with the
+  answer that rules it out.
+- Exit codes: 0 done, 1 a bug or a failed clipboard tool, 2 the command line,
+  3 a contradiction, 4 a config file, 130 interrupted.
+
+The design is in [docs/specs/2026-10-20-tep-cli-design.md](docs/specs/2026-10-20-tep-cli-design.md).
+
 ## How it works
 
 [docs/algorithm-flow.md](docs/algorithm-flow.md) maps every criterion to the
@@ -245,6 +284,7 @@ cold scoring.
     pnpm test       # unit tests (Vitest)
     pnpm test:e2e   # browser smoke tests (Playwright) against the build on 4272 and the dev server on 4273
     pnpm build && pnpm preview   # http://127.0.0.1:4271
+    pnpm build:cli  # the command line, dist-cli/tep.mjs; pnpm tep g runs it
 
 Run `pnpm test:e2e` after each iteration: it builds, starts its own servers
 on this project's spare ports, drives a real Chromium through loading,
@@ -298,7 +338,18 @@ Web app:
 - `src/state/generator.ts`, `src/worker.ts`: generation in a worker or inline
 - `src/state/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`, `mappingStore.ts`: persistence with untrusted-input parsing
 - `src/components/`: React UI
-- `src/prompts/specPrompt.ts`: the Fun page prompt
+- `src/prompts/specPrompt.ts`, `cliPrompt.ts`: the Fun page's two prompts, the app's and then the command line's
+
+Command line, `src/cli/` (imports only the shared core, Node, `yaml`, `zod`
+and `@clack/prompts`):
+
+- `fields.ts`: every setting once: flag, config key, label, values
+- `resolve.ts`, `sources.ts`: settings layered from defaults, file and flags, each with where it came from
+- `messages.ts`, `report.ts`: contradictions and warnings, worded with sources and fixes
+- `config.ts`, `configText.ts`: the config file, read with every problem and its line, written atomically
+- `flags.ts`, `generate.ts`, `output.ts`, `clipboard.ts`: `tep g`
+- `constraints.ts`, `wizard.ts`, `configCommand.ts`, `prompter.ts`: `tep config`
+- `main.ts`, `bin.ts`, `help.ts`: the entry, the executable, help
 - `build/csp.ts`: the Content-Security-Policy added at build time
 
 - `docs/algorithm-flow.md`: the algorithm flow
