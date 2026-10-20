@@ -162,17 +162,27 @@ test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps t
   await expect(page.getByRole('tab', { name: 'Use my sentence' })).toHaveAttribute('aria-selected', 'true');
 });
 
-test('copies a password with the Copy button or by clicking the password itself', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  const shown = await settledPasswords(page);
-  await cards(page).first().getByRole('button', { name: 'Copy', exact: true }).click();
-  await expect(cards(page).first().getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shown[0]);
-  await page.evaluate(() => navigator.clipboard.writeText(''));
-  await cards(page).nth(1).locator('.password').click();
-  await expect(page.locator('.copy-bubble')).toHaveText('Copied!');
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shown[1]);
-  await expect(page.locator('.copy-bubble')).toHaveCount(0, { timeout: 4000 }); // gone after two seconds
+test('a desktop has no Copy button on a card (the password is selected like text), and a password cut short reveals on click', async ({ page }) => {
+  await settledPasswords(page);
+  await expect(cards(page).first().getByRole('button', { name: 'Copy' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Copy sentence' })).toBeVisible(); // the sentence is not a password: its Copy button stays
+  // A long own sentence under a wide length limit makes a password wider than its column: it ends in an ellipsis and is a button.
+  await page.getByLabel('Maximum', { exact: true }).fill('120');
+  await page.getByRole('tab', { name: 'Use my sentence' }).click();
+  await page.getByLabel('Your sentence', { exact: true }).fill('Sally eats sweets on Sundays with her friends and family every single week of the whole year');
+  await page.keyboard.press('Control+Enter');
+  await expect(applyBar(page)).toHaveCount(0);
+  const password = cards(page).first().locator('.password');
+  await expect(password).toHaveClass(/can-reveal/);
+  await expect(password).toHaveAttribute('aria-expanded', 'false');
+  const folded = (await password.boundingBox())!;
+  await password.click();
+  await expect(password).toHaveAttribute('aria-expanded', 'true');
+  await expect(password).toHaveClass(/revealed/);
+  const whole = (await password.boundingBox())!;
+  expect(whole.height).toBeGreaterThan(folded.height); // wrapped onto more lines, nothing copied
+  await password.click();
+  await expect(password).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('number fields can be typed through and apply as a draft', async ({ page }) => {

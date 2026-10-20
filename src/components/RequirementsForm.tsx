@@ -274,6 +274,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
         {!separatorBlocked && (
           <p className="hint">
             {note.kind === 'symbol' ? `${note.text} Clear the box for Auto.` : note.text}
+            {!value.allowSpaces && value.separator !== ' ' ? ' Space is not available: the site does not allow spaces.' : ''}
           </p>
         )}
         <label className="check">
@@ -285,6 +286,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
           />
           Include a number, placed at random (about 8 bits for two keystrokes)
         </label>
+        {value.minDigits > 0 && <p className="hint">Always on while digits are required under Must contain.</p>}
         <span className="field-label">Capital initials</span>
         <div className="segmented four">
           {Array.from({ length: MAX_INITIALS + 1 }, (_, n) => (

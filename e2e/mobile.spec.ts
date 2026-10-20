@@ -79,7 +79,7 @@ async function noSideways(page: Page, where: string) {
         .map((el) => `${name(column)} > ${name(el)}`);
     });
     const cut = [...document.querySelectorAll('button, label, span, h2, h3, p, th, td')]
-      .filter((el) => (el as HTMLElement).offsetWidth > 0 && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible' && !el.closest('.pw-tip-anchor'))
+      .filter((el) => (el as HTMLElement).offsetWidth > 0 && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible' && !el.closest('.pw-tip-anchor') && !el.classList.contains('sr-only')) // a screen-reader-only element is 1 px wide on purpose
       .map(name);
     window.scrollTo(400, window.scrollY);
     return { out: [...new Set(out)].slice(0, 8), past: [...new Set(past)].slice(0, 8), cut: [...new Set(cut)].slice(0, 8), scrollX: window.scrollX };
@@ -161,7 +161,7 @@ test.beforeEach(async ({ page, isMobile }) => {
   await page.goto('/');
 });
 
-test('phone: the open column fills the width under a bar with the page menu at the left and the column tabs centred', async ({ page }) => {
+test('phone: the open column fills the width under a bar with the page menu at the left and the column tabs centred', async ({ page, context }) => {
   await expect(page.locator('main')).toHaveClass('columns narrow phone focus-suggestions');
   await expect(strips(page)).toHaveCount(0); // the tabs do the strips' job
   await expect(page.getByRole('tablist', { name: 'Sections' }).getByRole('tab')).toHaveText(['Options', 'Suggestions', 'Testing']);
@@ -191,6 +191,19 @@ test('phone: the open column fills the width under a bar with the page menu at t
   await tab(page, 'Suggestions').click();
   await settled(page);
   const first = (await cards(page).first().locator('.password').textContent())!;
+  // A touch screen gets a Copy button on each card, and a password cut short by the narrow column shows all of itself on a tap.
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await cards(page).first().getByRole('button', { name: 'Copy', exact: true }).click();
+  await expect(cards(page).first().getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(first);
+  const cut = cards(page).locator('.password.can-reveal').first();
+  if (await cut.count()) {
+    await cut.tap();
+    await expect(cut).toHaveAttribute('aria-expanded', 'true');
+    await noSideways(page, 'a revealed password');
+    await cut.tap();
+    await expect(cut).toHaveAttribute('aria-expanded', 'false');
+  }
   await cards(page).first().getByRole('button', { name: 'Add', exact: true }).click();
 
   await tab(page, 'Testing').click();

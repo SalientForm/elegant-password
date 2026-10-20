@@ -5,6 +5,10 @@ import { useShownProblems } from './useShownProblems';
 /** Controls where Enter already means something else; the global shortcut leaves them alone. */
 const OWN_ENTER = new Set(['BUTTON', 'A', 'SELECT', 'TEXTAREA']);
 
+/** Whether the key went to a text field, where Escape means "leave the field", not "discard the draft". */
+const inTextField = (el: HTMLElement | null) =>
+  !!el && (el.tagName === 'TEXTAREA' || el.isContentEditable || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'range'].includes((el as HTMLInputElement).type)));
+
 interface Props {
   /** Opens the options column at the first problem, wherever it is on screen. */
   onShowProblems?: () => void;
@@ -14,8 +18,10 @@ interface Props {
  * Two buttons that float over the page while there are unapplied changes:
  * Discard throws them away, Submit changes saves them and regenerates.
  * While they are showing, Enter anywhere submits (except on a button, link
- * or select, where Enter has its own job) and Escape discards. Gone as soon
- * as there is nothing to submit. Submitting while a batch is still being
+ * or select, where Enter has its own job) and Escape discards; in a text
+ * field Escape means back: it leaves the field and discards nothing, so the
+ * next Escape discards. Keys that are part of an IME composition are left
+ * alone. Gone as soon as there is nothing to submit. Submitting while a batch is still being
  * made simply supersedes that batch; the one thing that disables Submit is a
  * contradiction in the rules, said above the buttons until it is fixed.
  */
@@ -26,7 +32,9 @@ export function ApplyBar({ onShowProblems }: Props) {
   useEffect(() => {
     if (!dirty) return undefined;
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName ?? '';
+      if (e.isComposing) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName ?? '';
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || !OWN_ENTER.has(tag))) {
         e.preventDefault();
         // An input commits its own value on this same key press; let that render first, then apply what it left.
@@ -34,7 +42,8 @@ export function ApplyBar({ onShowProblems }: Props) {
         else apply();
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        discard();
+        if (inTextField(target)) target!.blur();
+        else discard();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -58,7 +67,7 @@ export function ApplyBar({ onShowProblems }: Props) {
         </div>
       )}
       <div className="apply-buttons">
-        <button type="button" className="floating ghost" onClick={discard} title="Escape">
+        <button type="button" className="floating ghost" onClick={discard} title="Escape (outside a text field; in one, Escape leaves the field first)">
           Discard
         </button>
         <button

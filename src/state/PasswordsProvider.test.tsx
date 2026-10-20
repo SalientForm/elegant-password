@@ -48,6 +48,7 @@ function Probe() {
       <output data-testid="typing-mode">{p.typingMode}</output>
       <output data-testid="draft-comfort">{p.draft.req.comfort}</output>
       <output data-testid="applied-comfort">{p.applied.req.comfort}</output>
+      <output data-testid="persisted">{String(p.secretsPersisted)}</output>
       <button onClick={() => p.setTypingMode('one-handed')}>one-handed</button>
       <button onClick={() => p.setReq({ ...p.draft.req, twists: 3 })}>twists3</button>
       <button onClick={() => p.setReq({ ...p.draft.req, minLength: 40, maxLength: 20 })}>contradict</button>
@@ -237,6 +238,27 @@ describe('PasswordsProvider', () => {
     fireEvent.click(screen.getByText('remove'));
     await waitFor(() => expect(text('selected')).toBe(''));
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)).toEqual([]);
+  });
+
+  it('on a shared origin keeps the list and the batch in memory, removes a list an earlier version stored, and says so', async () => {
+    const local = memoryStore();
+    local.setItem(SELECTED_KEY, JSON.stringify([{ password: 'old;one', hint: 'old one', addedAt: '2026-10-15T00:00:00.000Z' }]));
+    local.setItem(REQUIREMENTS_KEY, JSON.stringify({ ...DEFAULT_REQUIREMENTS, twists: 3 }));
+    const session = memoryStore();
+    render(
+      <PasswordsProvider generator={countingGenerator()} local={local} session={session} debounceMs={0} persistSecrets={false}>
+        <Probe />
+      </PasswordsProvider>,
+    );
+    await settled();
+    expect(local.getItem(SELECTED_KEY)).toBeNull(); // the exposed list is gone, and not read
+    expect(text('selected')).toBe('');
+    expect(text('applied')).toBe('3'); // settings are not secrets: still read and kept
+    fireEvent.click(screen.getByText('add'));
+    expect(text('selected')).toBe(text('first'));
+    expect(local.getItem(SELECTED_KEY)).toBeNull(); // the list stays in memory
+    expect(session.getItem(SESSION_KEY)).toBeNull(); // so does the batch
+    expect(text('persisted')).toBe('false');
   });
 
   it('treats a typing mode as a draft that brings its options: nothing runs or is saved until applied, and Discard reverts both', async () => {

@@ -72,6 +72,27 @@ describe('ApplyBar', () => {
     expect(bar()).toBeNull();
   });
 
+  it('in a text field, Escape leaves the field and keeps the draft; the next Escape discards; a composing key is left alone', () => {
+    mount();
+    fireEvent.click(screen.getByText('edit'));
+    const field = document.createElement('input');
+    field.type = 'text';
+    document.body.appendChild(field);
+    try {
+      field.focus();
+      expect(document.activeElement).toBe(field);
+      fireEvent.keyDown(field, { key: 'Escape', isComposing: true });
+      expect(document.activeElement).toBe(field); // part of an IME composition: nothing happens
+      fireEvent.keyDown(field, { key: 'Escape' });
+      expect(document.activeElement).not.toBe(field); // back: the field is left
+      expect(bar()).toBeTruthy(); // and the draft is kept
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(bar()).toBeNull(); // outside a field, Escape discards
+    } finally {
+      field.remove();
+    }
+  });
+
   it('disables Submit while the draft contradicts itself, says why above it, and refuses Enter and Ctrl+Enter until it is fixed', () => {
     const show = vi.fn();
     mount(show);

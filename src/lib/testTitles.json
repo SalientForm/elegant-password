@@ -85,7 +85,7 @@
       },
       {
         "kind": "test",
-        "title": "copies a password with the Copy button or by clicking the password itself"
+        "title": "a desktop has no Copy button on a card (the password is selected like text), and a password cut short reveals on click"
       },
       {
         "kind": "test",
@@ -1450,24 +1450,11 @@
       },
       {
         "kind": "test",
+        "title": "in a text field, Escape leaves the field and keeps the draft; the next Escape discards; a composing key is left alone"
+      },
+      {
+        "kind": "test",
         "title": "disables Submit while the draft contradicts itself, says why above it, and refuses Enter and Ctrl+Enter until it is fixed"
-      }
-    ]
-  },
-  {
-    "file": "src/components/ClickToCopy.test.tsx",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "ClickToCopy"
-      },
-      {
-        "kind": "test",
-        "title": "copies on click and shows \"Copied!\" next to the cursor for two seconds"
-      },
-      {
-        "kind": "test",
-        "title": "works from the keyboard and explains itself when the clipboard is unavailable"
       }
     ]
   },
@@ -1543,6 +1530,27 @@
     ]
   },
   {
+    "file": "src/components/InstantTip.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "InstantTip"
+      },
+      {
+        "kind": "test",
+        "title": "opens at once on hover or focus, and closes on leave or Escape"
+      },
+      {
+        "kind": "test",
+        "title": "stays open while the pointer is over it, lives at the document level, and closes on scroll"
+      },
+      {
+        "kind": "test",
+        "title": "does nothing when its condition says there is nothing to show"
+      }
+    ]
+  },
+  {
     "file": "src/components/NumberField.test.tsx",
     "titles": [
       {
@@ -1564,23 +1572,31 @@
     ]
   },
   {
-    "file": "src/components/PasswordTip.test.tsx",
+    "file": "src/components/PasswordText.test.tsx",
     "titles": [
       {
         "kind": "group",
-        "title": "PasswordTip"
+        "title": "PasswordText"
       },
       {
         "kind": "test",
-        "title": "opens at once on hover or focus when the password is cut off, and closes on leave or Escape"
+        "title": "is plain text when the password fits: no button, no tab stop, nothing to click"
       },
       {
         "kind": "test",
-        "title": "stays open while the pointer is over it, lives at the document level, and closes on scroll"
+        "title": "cut short, is a button that shows the whole password on click and folds it back on the next"
       },
       {
         "kind": "test",
-        "title": "does nothing when the password fits"
+        "title": "works from the keyboard, and keeps Enter and Space to itself"
+      },
+      {
+        "kind": "test",
+        "title": "never copies: there is no copy bubble and no clipboard call"
+      },
+      {
+        "kind": "test",
+        "title": "starts folded again when the password changes"
       }
     ]
   },
@@ -1671,6 +1687,14 @@
       {
         "kind": "test",
         "title": "shows each entry with its hint and its cold score, and keeps the date out of sight"
+      },
+      {
+        "kind": "test",
+        "title": "shows the whole of a password cut short by its column on a click, and folds it back on the next"
+      },
+      {
+        "kind": "test",
+        "title": "offers a Copy button on a touch screen, where selecting text is hard"
       },
       {
         "kind": "test",
@@ -1776,7 +1800,7 @@
       },
       {
         "kind": "test",
-        "title": "makes the password one stop (the password itself, a button) and each badge a focusable anchor"
+        "title": "makes a password that fits no stop at all, and each badge a focusable anchor"
       }
     ]
   },
@@ -1855,7 +1879,7 @@
       },
       {
         "kind": "test",
-        "title": "cuts a long password under test with an ellipsis and shows the whole of it as an instant tip, like the list"
+        "title": "cuts a long password under test with an ellipsis, and a click shows the whole of it, like the list"
       },
       {
         "kind": "group",
@@ -3610,6 +3634,10 @@
       },
       {
         "kind": "test",
+        "title": "on a shared origin keeps the list and the batch in memory, removes a list an earlier version stored, and says so"
+      },
+      {
+        "kind": "test",
         "title": "treats a typing mode as a draft that brings its options: nothing runs or is saved until applied, and Discard reverts both"
       },
       {
@@ -3701,6 +3729,23 @@
       {
         "kind": "test",
         "title": "neither loads nor saves through a localStorage whose getter throws: an undefined store means defaults, quietly"
+      }
+    ]
+  },
+  {
+    "file": "src/state/origin.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the app's own origin"
+      },
+      {
+        "kind": "test",
+        "title": "is a local server, and nothing on a shared host"
+      },
+      {
+        "kind": "test",
+        "title": "takes the hosts the build names, lower-cased and trimmed"
       }
     ]
   },

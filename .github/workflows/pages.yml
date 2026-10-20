@@ -30,9 +30,15 @@ jobs:
       - run: pnpm test
         env:
           NODE_OPTIONS: --max-old-space-size=4096 # generate.test.ts runs out of the default heap on the runner
+      # With the repository variable PAGES_DOMAIN set (the app's own domain, with its DNS record pointing at GitHub Pages),
+      # the app builds at the root and names that host as its own origin, where My list may be stored; without it, the
+      # Pages path under the shared salientform.github.io origin, where secrets stay in memory (src/state/origin.ts).
       - run: pnpm build
         env:
-          BASE_PATH: /${{ github.event.repository.name }}/
+          BASE_PATH: ${{ vars.PAGES_DOMAIN && '/' || format('/{0}/', github.event.repository.name) }}
+          VITE_OWN_HOSTS: ${{ vars.PAGES_DOMAIN }}
+      - if: ${{ vars.PAGES_DOMAIN }}
+        run: echo "${{ vars.PAGES_DOMAIN }}" > dist/CNAME
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist

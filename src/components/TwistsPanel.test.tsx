@@ -26,11 +26,15 @@ describe('TwistsPanel', () => {
     render(<Harness />);
     const chip = screen.getByRole('button', { name: 'a→@' });
     expect(chip.getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByText(`${BUILT_IN_MAPPINGS.length} on`)).toBeTruthy();
+    // "On" counts the mappings that can apply: switched on and not skipped under these rules (a skipped one says so in its tip).
+    const usable = () => document.querySelectorAll('button.mapping[aria-pressed="true"]:not(.blocked)').length;
+    const skipped = BUILT_IN_MAPPINGS.length - usable();
+    expect(skipped).toBeGreaterThan(0); // the defaults avoid pinky stretches, so "l→!" and friends are skipped
+    expect(screen.getByText(`${usable()} on`)).toBeTruthy();
     fireEvent.click(chip);
     expect(state().disabled).toEqual(['a>@']);
     expect(chip.getAttribute('aria-pressed')).toBe('false');
-    expect(screen.getByText(`${BUILT_IN_MAPPINGS.length - 1} on`)).toBeTruthy();
+    expect(screen.getByText(`${BUILT_IN_MAPPINGS.length - skipped - 1} on`)).toBeTruthy();
     fireEvent.click(chip);
     expect(state().disabled).toEqual([]);
   });

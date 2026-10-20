@@ -70,8 +70,6 @@ describe('SuggestionCard', () => {
     fireEvent.mouseLeave(screen.getByText(`Strength ${Math.round(s.strength)}`).parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.queryByText(/random bits/)).toBeNull();
-    fireEvent.mouseEnter(screen.getByText(s.password).parentElement!);
-    expect(screen.queryByRole('tooltip')).toBeNull(); // it fits, so no tip
     fireEvent.mouseEnter(screen.getByText(`Difficulty ${s.difficulty.score}`).parentElement!);
     expect(screen.getByRole('tooltip').textContent).toBe(`Difficulty ${s.difficulty.score}, ${s.difficulty.label.toLowerCase()} (ten-finger)`);
     fireEvent.mouseLeave(screen.getByText(`Difficulty ${s.difficulty.score}`).parentElement!);
@@ -216,9 +214,9 @@ describe('SuggestionCard rows', () => {
     const before = constructed;
     const mounted = [show(s, context, 0), show(s, context, 1), show(s, context, 2)];
     expect(constructed - before).toBeLessThanOrEqual(1); // at most one more, and only if none existed yet
-    expect(watchedCount()).toBe(3);
+    expect(watchedCount()).toBe(6); // each card watches its head (to stack) and its password (to know when it is cut)
     mounted[0]!.unmount();
-    expect(watchedCount()).toBe(2);
+    expect(watchedCount()).toBe(4);
     cleanup();
     expect(watchedCount()).toBe(0);
   });
@@ -234,13 +232,13 @@ describe('after the rows tests', () => {
 });
 
 describe('tab stops on a card', () => {
-  it('makes the password one stop (the password itself, a button) and each badge a focusable anchor', () => {
+  it('makes a password that fits no stop at all, and each badge a focusable anchor', () => {
     const { s, context } = first({});
     show(s, context);
     const password = screen.getByText(s.password);
-    expect(password.getAttribute('tabindex')).toBe('0'); // the button
-    expect(password.parentElement!.className).toContain('pw-tip-anchor');
-    expect(password.parentElement!.getAttribute('tabindex')).toBe('-1'); // the anchor around it is not a second stop
+    expect(password.getAttribute('tabindex')).toBeNull(); // it fits, so it is plain text, not a stop
+    expect(password.parentElement!.className).toBe('card-row'); // no tip anchor around it
+    expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull(); // copying is the selection's job where the pointer is fine
     for (const badge of ['Strength', 'Raw', 'Difficulty', 'Memorability']) {
       const anchor = screen.getByLabelText(new RegExp(`^${badge} `)).parentElement!;
       expect(anchor.className).toContain('pw-tip-anchor');

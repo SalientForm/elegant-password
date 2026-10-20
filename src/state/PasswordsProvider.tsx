@@ -13,11 +13,12 @@ import { inputsKey, type GenerateInputs, type Mode, type Outcome } from '../lib/
 import type { SentenceOptions } from '../lib/fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
 import { createGenerator, type Generator } from './generator';
+import { isOwnOrigin } from './origin';
 import { activeMappings, type MappingSettings } from '../lib/mappingSettings';
 import { loadMappingSettings, saveMappingSettings } from './mappingStore';
 import { withProfile } from '../lib/modeProfiles';
 import { inputsFor } from '../lib/pipeline';
-import { loadSelected, saveSelected, withEntry, withoutEntry, type SelectedEntry } from './selectedStore';
+import { loadSelected, saveSelected, SELECTED_KEY, withEntry, withoutEntry, type SelectedEntry } from './selectedStore';
 import { loadSession, saveSession } from './sessionStore';
 import {
   loadMode,
@@ -33,7 +34,7 @@ import {
   saveTypingMode,
 } from './settingsStore';
 import type { SortOrder } from '../lib/sort';
-import { browserStore, type KeyValueStore } from './storage';
+import { browserStore, memoryStore, removeKey, type KeyValueStore } from './storage';
 import type { Mapping } from '../lib/twists';
 import { ruleProblems, type RuleProblem } from '../lib/validation';
 
@@ -98,6 +99,8 @@ export interface PasswordsContextValue {
   /** Apply any draft and draw a new made-up sentence, the only way it changes. Refused while the draft has problems. */
   newSentence: () => void;
   selected: SelectedEntry[];
+  /** Whether the list and the current batch are written to the browser's storage: only on the app's own origin (src/state/origin.ts). */
+  secretsPersisted: boolean;
   addSelected: (s: Pick<Suggestion, 'password' | 'hint'>) => void;
   removeSelected: (password: string) => void;
   clearSelected: () => void;
@@ -116,6 +119,8 @@ export interface PasswordsProviderProps {
   session?: KeyValueStore;
   /** How long to wait after a change before generating. */
   debounceMs?: number;
+  /** Whether secrets (the list, the current batch) may go to the browser's storage. Defaults to whether the page is on the app's own origin. */
+  persistSecrets?: boolean;
 }
 
 interface Result {
@@ -126,9 +131,16 @@ interface Result {
 
 const sameSettings = (a: Settings, b: Settings) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
-export function PasswordsProvider({ children, generator: given, local, session, debounceMs = 120 }: PasswordsProviderProps) {
+export function PasswordsProvider({ children, generator: given, local, session, debounceMs = 120, persistSecrets }: PasswordsProviderProps) {
+  const [secretsPersisted] = useState(() => persistSecrets ?? isOwnOrigin());
   const [localStore] = useState(() => local ?? browserStore('local'));
-  const [sessionStore] = useState(() => session ?? browserStore('session'));
+  // Secrets stay in memory on a shared origin, where other sites could read the browser's storage; a list an earlier version left there is removed.
+  const [listStore] = useState(() => {
+    if (secretsPersisted) return localStore;
+    removeKey(localStore, SELECTED_KEY);
+    return memoryStore();
+  });
+  const [sessionStore] = useState(() => (secretsPersisted ? (session ?? browserStore('session')) : memoryStore()));
   const [restored] = useState(() => loadSession(sessionStore));
 
   const [loaded] = useState(() => loadRequirementsReport(localStore));
@@ -144,7 +156,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const [draft, setDraft] = useState<Settings>(applied);
   const [mode, setMode] = useState(() => loadMode(localStore));
   const [sort, setSort] = useState(() => loadSort(localStore));
-  const [selected, setSelected] = useState(() => loadSelected(localStore));
+  const [selected, setSelected] = useState(() => loadSelected(listStore));
   const [round, setRound] = useState(restored?.round ?? 0);
   const [generated, setGenerated] = useState<GeneratedSentence | null>(restored?.generated ?? null);
   const [result, setResult] = useState<Result | null>(
@@ -201,14 +213,14 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const inputs = useMemo<GenerateInputs>(() => inputsFor({ ...applied, mode }, generated), [mode, applied, generated]);
   const key = useMemo(() => inputsKey(inputs), [inputs]);
 
-  // Applied settings and the list survive for good; they hold no secrets.
+  // Applied settings survive for good; they hold no secrets. The list holds passwords: it goes to the browser only on the app's own origin.
   useEffect(() => void saveRequirements(localStore, applied.req), [localStore, applied.req]);
   useEffect(() => void saveSentenceOptions(localStore, applied.sentenceOptions), [localStore, applied.sentenceOptions]);
   useEffect(() => saveMappingSettings(applied.mappingSettings, localStore), [localStore, applied.mappingSettings]);
   useEffect(() => void saveMode(localStore, mode), [localStore, mode]);
   useEffect(() => void saveSort(localStore, sort), [localStore, sort]);
   useEffect(() => void saveTypingMode(localStore, applied.typingMode), [localStore, applied.typingMode]);
-  useEffect(() => void saveSelected(localStore, selected), [localStore, selected]);
+  useEffect(() => void saveSelected(listStore, selected), [listStore, selected]);
 
   // Generate when the applied inputs or the round change, unless the batch on
   // screen was already made from exactly these (as after a reload).
@@ -300,12 +312,13 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       generated,
       newSentence,
       selected,
+      secretsPersisted,
       addSelected,
       removeSelected,
       clearSelected,
       isSelected,
     }),
-    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, setEditedSentence, setTypingMode, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, setEditedSentence, setTypingMode, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, secretsPersisted, addSelected, removeSelected, clearSelected, isSelected],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;

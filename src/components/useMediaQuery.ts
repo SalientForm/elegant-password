@@ -6,6 +6,8 @@ export const MEDIUM = '(max-width: 1100px)';
 export const NARROW = '(max-width: 800px)';
 /** At 600 px and below (phones) the open column takes the whole width under a bar of tabs. */
 export const PHONE = '(max-width: 600px)';
+/** A touch screen (a coarse pointer): where selecting text is hard, so a Copy button is offered. */
+export const TOUCH = '(pointer: coarse)';
 
 /** Whether a media query matches, kept up to date. False where matchMedia is unavailable. */
 export function useMediaQuery(query: string): boolean {

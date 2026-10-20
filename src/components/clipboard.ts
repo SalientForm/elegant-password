@@ -34,5 +34,5 @@ export type CopyState = 'idle' | 'copied' | 'failed';
 export const COPY_MESSAGES: Record<CopyState, string> = {
   idle: '',
   copied: 'Copied',
-  failed: 'Copy failed. The text is selected: press Ctrl+C (⌘C on a Mac).',
+  failed: 'Could not copy. The text is selected: copy it from the selection.',
 };

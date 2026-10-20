@@ -5,7 +5,7 @@ import { rawBits, strengthBits } from '../lib/strength';
 import { finishAttempt, nextTarget, recordKey, startRecording, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
 import { CancelIcon } from './icons';
-import { PasswordTip } from './PasswordTip';
+import { PasswordText } from './PasswordText';
 import { ScoreBadges } from './SuggestionCard';
 
 interface Props {
@@ -74,7 +74,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
 
   const hintText = hint?.trim() ? hint.trim() : undefined;
   const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);
-  /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis with the full text as a tip, like My list. */
+  /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis and a click shows the whole of it, like My list. */
   const shownTarget = target === undefined ? undefined : shown ? target : '•'.repeat([...target].length);
   const typingMode = passwords?.typingMode ?? DEFAULT_TYPING_MODE;
   const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? difficultyAlone(target) : undefined), [cold, target]);
@@ -164,9 +164,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
           <div className="testing-row">
             <p>
               <span className="field-label">Testing:</span>{' '}
-              <PasswordTip password={shownTarget}>
-                <code className="password">{shownTarget}</code>
-              </PasswordTip>
+              <PasswordText password={shownTarget} />
             </p>
             <button type="button" className="icon-button" onClick={clear} aria-label="Clear" title="Clear the password under test">
               <CancelIcon />

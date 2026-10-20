@@ -54,7 +54,7 @@ describe('CopyButton', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
     });
-    expect(screen.getByRole('status').textContent).toMatch(/Copy failed/);
+    expect(screen.getByRole('status').textContent).toMatch(/^Could not copy\. The text is selected: copy it from the selection\.$/);
     expect(window.getSelection()?.toString()).toBe('secret-pw');
   });
 
@@ -64,6 +64,6 @@ describe('CopyButton', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
     });
-    expect(screen.getByRole('status').textContent).toMatch(/Copy failed/);
+    expect(screen.getByRole('status').textContent).toMatch(/^Could not copy\. The text is selected: copy it from the selection\.$/);
   });
 });

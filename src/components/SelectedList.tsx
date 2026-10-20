@@ -4,14 +4,15 @@ import { scoreCold } from '../lib/score';
 import { rawBits, strengthBits } from '../lib/strength';
 import type { SelectedEntry } from '../state/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
-import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
 import { TrashIcon } from './icons';
-import { PasswordTip } from './PasswordTip';
+import { PasswordText } from './PasswordText';
 import { ScoreBadges } from './SuggestionCard';
+import { TOUCH, useMediaQuery } from './useMediaQuery';
 
 function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
   const { typingMode } = usePasswords();
+  const touch = useMediaQuery(TOUCH);
   const score = useMemo(() => scoreCold(entry.password, entry.hint), [entry.password, entry.hint]);
   const difficulty = useMemo(() => difficultyIn(entry.password, score.difficulty, typingMode), [entry.password, score, typingMode]);
   const code = useRef<HTMLElement>(null);
@@ -19,18 +20,14 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
   return (
     <li className="entry">
       <div className="entry-main">
-        <PasswordTip password={entry.password}>
-          <ClickToCopy text={entry.password} className="password entry-password" ref={code}>
-            {entry.password}
-          </ClickToCopy>
-        </PasswordTip>
+        <PasswordText password={entry.password} className="password entry-password" ref={code} />
         <p className="entry-hint">
           <span className="field-label">Hint:</span> {entry.hint || <em>none</em>}
         </p>
       </div>
       <div className="actions">
         <ScoreBadges strength={strengthBits(entry.password)} raw={rawBits(entry.password)} difficulty={difficulty} memorability={score.memorability.score} />
-        <CopyButton text={entry.password} fallback={code} icon />
+        {touch && <CopyButton text={entry.password} fallback={code} icon />}
         <button type="button" className="icon-button ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`} title="Remove from my list">
           <TrashIcon />
         </button>
@@ -41,7 +38,7 @@ function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void
 
 /** The user's own list of chosen passwords with their hints, kept in this browser. */
 export function SelectedList() {
-  const { selected, removeSelected, clearSelected } = usePasswords();
+  const { selected, removeSelected, clearSelected, secretsPersisted } = usePasswords();
   const [confirm, setConfirm] = useState(false);
 
   return (
@@ -64,8 +61,11 @@ export function SelectedList() {
         )}
       </div>
       <p className="hint">
-        Passwords you add, each with its hint, kept in this browser’s storage only and never sent anywhere. Each one is scored
-        from the password and hint alone (difficulty for the chosen mode), so it reads the same every time.
+        Passwords you add, each with its hint,{' '}
+        {secretsPersisted
+          ? 'kept in this browser’s storage only and never sent anywhere.'
+          : 'kept for this visit only: this site’s address is shared with other sites, which could read this browser’s storage, so nothing is saved here until the app has an address of its own.'}{' '}
+        Each one is scored from the password and hint alone (difficulty for the chosen mode), so it reads the same every time.
       </p>
       {selected.length === 0 ? (
         <p className="hint">Nothing yet. Use “Add” on a suggestion.</p>

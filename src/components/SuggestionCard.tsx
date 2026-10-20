@@ -6,13 +6,14 @@ import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
 import { READING_ORDER, scoreReadings } from '../lib/readings';
 import { MEMORABILITY, scoreCold } from '../lib/score';
-import { ClickToCopy } from './ClickToCopy';
 import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
 import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
-import { InstantTip, PasswordTip } from './PasswordTip';
+import { InstantTip } from './InstantTip';
+import { PasswordText } from './PasswordText';
 import { observeResize } from './resize';
+import { TOUCH, useMediaQuery } from './useMediaQuery';
 
 interface BadgeProps {
   /** Strength: for an attacker who knows English and the usual habits, not this tool. */
@@ -95,6 +96,7 @@ export function needsStack(head: HTMLElement): boolean | undefined {
 
 export function SuggestionCard({ suggestion, context, index, selected = false, onAdd }: Props) {
   const mine = context.source === 'sentence';
+  const touch = useMediaQuery(TOUCH); // a Copy button only where selecting text is hard
   const [open, setOpen] = useState(false); // every "Why?" starts closed
   const code = useRef<HTMLElement>(null);
   const head = useRef<HTMLDivElement>(null);
@@ -124,16 +126,12 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
     <article className="card" aria-label={`Suggestion ${index + 1}`}>
       <div className={stacked ? 'card-head stacked' : 'card-head'} ref={head}>
         <div className="card-row">
-          <PasswordTip password={password}>
-            <ClickToCopy text={password} className="password" ref={code}>
-              {password}
-            </ClickToCopy>
-          </PasswordTip>
+          <PasswordText password={password} ref={code} />
           <div className="actions card-buttons">
             <button type="button" className="icon-button ghost" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={whyId} aria-label={open ? 'Hide why' : 'Why?'} title={open ? 'Hide why' : 'Why?'}>
               {open ? <ChevronUpIcon /> : <InfoIcon />}
             </button>
-            <CopyButton text={password} fallback={code} icon />
+            {touch && <CopyButton text={password} fallback={code} icon />}
             {onAdd && (
               <button
                 type="button"

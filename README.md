@@ -44,8 +44,9 @@ explanation for each:
   password to your list, as that password's hint.
 - **Submit, then it sticks.** Edits to the rules, swaps or sentence are a
   draft: "Discard" and "Submit changes" float over the page (Ctrl+Enter
-  also submits) and disappear once there is nothing to submit. Submitting
-  saves the settings and regenerates; "Refresh" submits any draft too.
+  also submits; Escape discards, or in a text field first leaves the field)
+  and disappear once there is nothing to submit. Submitting saves the
+  settings and regenerates; "Refresh" submits any draft too.
 - **The sentence stays put.** A made-up sentence is kept until you press
   the refresh icon beside it. Refresh under Suggestions, the order and rule
   changes all rebuild the passwords from the same sentence.
@@ -93,9 +94,19 @@ explanation for each:
   live in sessionStorage (gone when the tab closes); the applied settings,
   mode, mappings and your list live in localStorage. On reload the same
   passwords come back; nothing is rolled again until something is applied.
-  Unapplied drafts are not kept.
+  Unapplied drafts are not kept. Secrets (the list, the current batch) go
+  to the browser only on the app's own origin: a local server, or the
+  hosts named at build time in `VITE_OWN_HOSTS`. On a shared origin such
+  as `salientform.github.io`, where every site of the organisation can
+  read the same storage, they stay in memory for the visit and My list
+  says so; settings are stored everywhere.
 - **My list.** Add a suggestion one at a time; each entry stores only the
-  password and its hint, scored cold on display. Copy, remove, or clear.
+  password and its hint, scored cold on display. Remove, or clear.
+- **Showing and copying a password.** A password cut short by its column
+  ends in an ellipsis; a click or tap shows the whole of it, wrapped, and
+  the next folds it back. On a desktop a password is copied like any
+  text, by selecting it; a touch screen gets a Copy button on each card
+  and list entry.
 - **"At least N" rules** for uppercase, digits and symbols (all on by
   default). Several capitals means whole words in capitals, so the case
   never flips back and forth.
@@ -324,6 +335,16 @@ Fun page download, and fails on any console error. First time only:
 Every push to `main`, merges included, runs `.github/workflows/pages.yml`:
 unit tests, then a build under `/elegant-password/` (`BASE_PATH`), published
 to GitHub Pages at https://salientform.github.io/elegant-password/.
+
+That address is an origin the organisation's other Pages sites share, so
+the app keeps My list and the current batch in memory there (see "Survives
+a refresh"). To give the app a domain of its own: add the DNS record
+GitHub Pages asks for (a `CNAME` to `salientform.github.io` for a
+subdomain), set the repository variable `PAGES_DOMAIN` to the host
+(Settings → Secrets and variables → Actions → Variables), and push. The
+workflow then builds at `/`, writes `dist/CNAME`, and names the host in
+`VITE_OWN_HOSTS`, where the list is stored again. For a dev server reached
+through another host, name it in `.env.development` (`VITE_OWN_HOSTS`).
 
 ## License
 

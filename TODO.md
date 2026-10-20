@@ -147,7 +147,11 @@ letter layer and group digits and symbols together.
 
 ### Protect the saved list
 
-My list keeps passwords in localStorage in plain text. Offer to encrypt it
+My list keeps passwords in localStorage in plain text, and since
+2026-10-20 only on the app's own origin (`src/state/origin.ts`; on the
+shared GitHub Pages origin it lives in memory for the visit). The user
+decided the app will move to a domain of its own; the deploy is ready for
+it (`PAGES_DOMAIN`, see the README). Beyond that: offer to encrypt the list
 with a passphrase (WebCrypto: PBKDF2 or Argon2 to AES-GCM), or a "hints
 only" mode that keeps the sentence and drops the password. Scoring is
 unaffected either way: it already needs only the password and hint.

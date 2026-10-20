@@ -78,7 +78,9 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
     kind,
     mappings: BUILT_IN_MAPPINGS.filter((m) => m.kind === kind),
   }));
-  const enabledCount = BUILT_IN_MAPPINGS.length - settings.disabled.length + settings.custom.length;
+  // On: switched on, usable under these rules, and able to apply to what is being made.
+  const usable = (m: Mapping) => !blocked(m) && (relevant ? relevant(m) : true);
+  const enabledCount = BUILT_IN_MAPPINGS.filter((m) => !disabled.has(mappingKey(m)) && usable(m)).length + settings.custom.filter((m) => usable({ ...m, kind: 'custom' })).length;
 
   return (
     <section className="panel twists">
@@ -109,6 +111,7 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
         <legend>
           Mappings <span className="count">{enabledCount} on</span>
         </legend>
+        {relevant && <p className="hint">A greyed swap's letters are not in your sentence, so it cannot apply.</p>}
         {groups.map((g) => (
           <div className="mapping-group" key={g.kind}>
             <h3>{MAPPING_KIND_LABELS[g.kind]}</h3>

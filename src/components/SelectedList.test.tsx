@@ -34,19 +34,9 @@ describe('SelectedList', () => {
     expect(items).toHaveLength(2);
     const first = within(items[0]!);
     const code = first.getByText(ENTRIES[0]!.password);
-    expect(code.getAttribute('title')).toBeNull(); // no browser tooltip at all: it is slow and cannot be copied
-    expect(code.getAttribute('role')).toBe('button'); // clicking the password copies it
-    // The tip exists only for a password that is cut off; one that fits has no rollover (jsdom has no layout, so widths are faked).
-    fireEvent.mouseEnter(code.parentElement!);
-    expect(screen.queryByRole('tooltip')).toBeNull();
-    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 400 });
-    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 120 });
-    fireEvent.mouseEnter(code.parentElement!);
-    expect(screen.getByRole('tooltip').textContent).toBe(ENTRIES[0]!.password); // immediate, real text that can be selected
-    fireEvent.mouseLeave(code.parentElement!);
-    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull()); // leaving waits a moment so the pointer can reach the tip
-    delete (HTMLElement.prototype as { scrollWidth?: unknown }).scrollWidth;
-    delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
+    expect(code.getAttribute('title')).toBeNull(); // no browser tooltip at all
+    expect(code.getAttribute('role')).toBeNull(); // it fits, so it is plain text: nothing to click (jsdom has no layout; widths are faked below)
+    expect(first.queryByRole('button', { name: 'Copy' })).toBeNull(); // no Copy button where the pointer is fine: the text is selected like any text
     expect(first.getByText(ENTRIES[0]!.hint)).toBeTruthy();
     const score = scoreCold(ENTRIES[0]!.password, ENTRIES[0]!.hint);
     const s = first.getByText(`Strength ${Math.round(strengthBits(ENTRIES[0]!.password))}`);
@@ -64,6 +54,35 @@ describe('SelectedList', () => {
     expect(screen.getByRole('tooltip').textContent).toMatch(/^Memorability \d+ of 100/);
     expect(first.queryByText(/Added/)).toBeNull(); // stored, never displayed
     expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].addedAt).toBe(ENTRIES[0]!.addedAt);
+  });
+
+  it('shows the whole of a password cut short by its column on a click, and folds it back on the next', () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 400 });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 120 });
+    try {
+      mount();
+      const code = screen.getByRole('button', { name: ENTRIES[0]!.password });
+      expect(code.getAttribute('aria-expanded')).toBe('false');
+      fireEvent.click(code);
+      expect(code.getAttribute('aria-expanded')).toBe('true');
+      expect(code.className).toContain('revealed');
+      fireEvent.click(code);
+      expect(code.getAttribute('aria-expanded')).toBe('false');
+    } finally {
+      delete (HTMLElement.prototype as { scrollWidth?: unknown }).scrollWidth;
+      delete (HTMLElement.prototype as { clientWidth?: unknown }).clientWidth;
+    }
+  });
+
+  it('offers a Copy button on a touch screen, where selecting text is hard', () => {
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: (q: string) => ({ matches: q === '(pointer: coarse)', addEventListener() {}, removeEventListener() {} }) });
+    try {
+      mount();
+      const items = within(screen.getByRole('list', { name: 'My passwords' })).getAllByRole('listitem');
+      expect(within(items[0]!).getByRole('button', { name: 'Copy' })).toBeTruthy();
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
   });
 
   it('removes one entry, and removes all only on a second click', () => {
