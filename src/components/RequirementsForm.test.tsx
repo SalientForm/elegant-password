@@ -64,7 +64,7 @@ describe('RequirementsForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /Master password/ }));
     expect(req().targetBits).toBe(72);
     expect(screen.getByRole('button', { name: /Master password/ }).getAttribute('aria-pressed')).toBe('true');
-    fireEvent.change(screen.getByLabelText('Custom target (bits)'), { target: { value: '55' } });
+    fireEvent.change(screen.getByLabelText('Strength target in bits'), { target: { value: '55' } });
     expect(req().targetBits).toBe(55);
     fireEvent.click(screen.getByRole('button', { name: 'Strict' }));
     expect(req().comfort).toBe('strict');

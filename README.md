@@ -13,7 +13,7 @@ explanation for each:
   and runs along one row, and penalises long reaches, row jumps, same-finger
   pairs and Shift. Case never alternates inside a word: one capital starts a
   word, and several mean whole words in capitals.
-  The separator is Automatic by default: `;` (home row under the right
+  The separator is Auto by default: `;` (home row under the right
   pinky, no Shift, and it counts as a symbol) whenever the site allows it,
   else a space (thumb), else `.` or `,`, else none. Space, None or any
   allowed symbol can be chosen instead.
@@ -57,7 +57,7 @@ explanation for each:
   (`!@#$%^&*`) and *NIST passphrase* (15-64, anything goes, nothing
   required). Strength, comfort, style and swaps stay yours. The preset the
   rules match exactly shows pressed; one that rules out a separator you
-  chose sets it to Automatic and says so beside the presets.
+  chose sets it to Auto and says so beside the presets.
 - **Paste the site's rules.** Paste the sign-up form's wording ("Must be
   8-20 characters and include at least one number and one of !@#$%") and
   the form fills in, saying what it understood: "8-20 characters, a digit,
@@ -67,7 +67,7 @@ explanation for each:
   does not mention stays as it was; text with no rules says so and
   changes nothing. Anything the new rules would contradict is fixed in
   what the text did not say, and named ("maximum raised to 40 to fit",
-  "separator set to Automatic"). Presets and pasted rules are drafts like
+  "separator set to Auto"). Presets and pasted rules are drafts like
   any edit.
 - **Rules that cannot all hold are caught, never generated.** One pure
   function (`src/lib/validation.ts`) finds every contradiction: a minimum
@@ -191,7 +191,7 @@ explanation for each:
   score in full, shortened words the fraction kept, dropped words nothing;
   shorter passwords score higher; each word with a random swap costs a
   little. A deliberate swap costs nothing: it comes with its word.
-- **Test a password** (right column, under Mode): type any password and
+- **Test a password** (right column): type any password and
   press Enter. Every keystroke is timed as you type, so the first run is
   scored too and becomes the password under test; corrections (Backspace,
   Delete), time, words per minute and accuracy are reported against the
@@ -217,11 +217,11 @@ explanation for each:
   error shows a message and a reload button, never a blank page.
 - **Accessible.** The mode switch is a real tab list (arrow keys, Home,
   End), toggles report their pressed state, and status text is announced.
-- **Difficulty score** (0-100) from a rubric of up to nine criteria: size,
+- **Difficulty score** (0-100) from a rubric of eleven criteria across the modes, up to ten in one: size,
   typing speed, reach, row jumps, same-finger pairs, Shift and case,
   off-letter keys, pinky stretches and memory load. The full rubric is in
   the app.
-- **Mode** (top of the right column): how the password will be typed, which
+- **Mode** (top of the Presets card, first in the left column): how the password will be typed, which
   every difficulty score is for. Ten-finger is the standard rubric;
   two-finger weighs length, travel and symbols and drops rolls and
   same-finger moves; one-handed charges every Shift, most
@@ -304,8 +304,16 @@ happened, undo it with
   answer with a line number to change or save. Each question only offers
   what fits the answers before it; a choice ruled out is shown with the
   answer that rules it out.
-- Exit codes: 0 done, 1 a bug or a failed clipboard tool, 2 the command line,
-  3 a contradiction, 4 a config file, 130 interrupted.
+- **Which config file** the settings came from is always said: the table's
+  first line, a `config` object in the JSON, and a note on stderr when the
+  output is piped (`--quiet` hides the note).
+- **Esc means back** in `tep config`: from a line back to the review with
+  the line unchanged, and out of the review without saving. Ctrl+C always
+  stops, writing nothing. A pasted rule the wizard cannot keep is named as
+  it is dropped and listed on the review.
+- Exit codes: 0 done, 1 a bug, a failed clipboard tool or a link that could
+  not be removed, 2 the command line, 3 a contradiction, 4 a config file,
+  130 interrupted.
 
 The design is in [docs/specs/2026-10-20-tep-cli-design.md](docs/specs/2026-10-20-tep-cli-design.md).
 
@@ -374,31 +382,39 @@ Shared core, `src/lib/`:
 - `sitePresets.ts`, `ruleText.ts`: site rule presets and the pasted-rules parser
 - `modeProfiles.ts`: the options each typing mode fills in
 - `difficulty.ts`: the difficulty rubric
-- `score.ts`: cold scoring of a password from its hint
+- `score.ts`: cold scoring of a password from its hint: memorability, difficulty, and the session's bits
+- `strength.ts`: the Strength and Raw scores, from the password alone
 - `engine.ts`: generation as one pure function of plain inputs
 - `pipeline.ts`: settings to engine inputs, and suggestions as shown (rescored for the typing mode, ordered)
-- `readings.ts`: how the three scores read (badge label, figure, band, sentence)
+- `readings.ts`: how the four scores read (badge label, figure, band, sentence)
 - `choices.ts`: the choice lists and their words (comfort, separators, sort orders)
+- `explain.ts`: the card's "Why?" sentences, shared with `tep g --explain`
+- `random.ts`, `text.ts`, `sort.ts`, `typingTest.ts`, `fluff.ts`: randomness, text helpers, the sort orders, the typing test's maths, padding
+- `devStats.ts`, `testRandom.ts`: measurement and seeded randomness for the tests and `pnpm stats`
 
 Web app:
 
 - `src/state/PasswordsProvider.tsx`: the provider that owns state, persistence and generation
 - `src/state/generator.ts`, `src/worker.ts`: generation in a worker or inline
 - `src/state/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`, `mappingStore.ts`: persistence with untrusted-input parsing
+- `src/state/origin.ts`: whether the page is on the app's own origin, where secrets may be stored
 - `src/components/`: React UI
 - `src/prompts/specPrompt.ts`, `cliPrompt.ts`: the Fun page's two prompts, the app's and then the command line's
 
 Command line, `src/cli/` (imports only the shared core, Node, `yaml`, `zod`
 and `@clack/prompts`):
 
-- `fields.ts`: every setting once: flag, config key, label, values
+- `fields.ts`, `flagList.ts`, `names.ts`: every setting once (flag, config key, label, values), the flags that are not settings, and the names and "did you mean"
 - `resolve.ts`, `sources.ts`: settings layered from defaults, file and flags, each with where it came from
-- `messages.ts`, `report.ts`: contradictions and warnings, worded with sources and fixes
-- `config.ts`, `configText.ts`: the config file, read with every problem and its line, written atomically
-- `flags.ts`, `generate.ts`, `output.ts`, `clipboard.ts`: `tep g`
+- `messages.ts`, `report.ts`, `errors.ts`: contradictions and warnings worded with sources and fixes; how errors print; the exit codes
+- `config.ts`, `configText.ts`, `configModel.ts`, `configVersion.ts`: the config file, read with every problem and its line, written atomically
+- `flags.ts`, `args.ts`, `generate.ts`, `output.ts`, `clipboard.ts`, `clipboardTools.ts`: `tep g` (its flags, the small commands' parser, the output formats, the clipboard)
 - `constraints.ts`, `wizard.ts`, `wrap.ts`, `configCommand.ts`, `prompter.ts`: `tep config`
-- `uninstall.ts`: `tep uninstall`
-- `main.ts`, `bin.ts`, `help.ts`: the entry, the executable, help
-- `build/csp.ts`: the Content-Security-Policy added at build time
+- `uninstall.ts`, `tepLink.ts`: `tep uninstall`, and what a link to a built tep is (shared with `scripts/linkCli.mjs`)
+- `main.ts`, `bin.ts`, `help.ts`, `io.ts`: the command table, the executable, help, and the terminal behind an interface (`testing.ts` fakes it)
 
+Build and docs:
+
+- `build/csp.ts`: the Content-Security-Policy added at build time
+- `scripts/linkCli.mjs`: `pnpm link:cli` and `unlink:cli`
 - `docs/algorithm-flow.md`: the algorithm flow

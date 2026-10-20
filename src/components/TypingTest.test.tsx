@@ -35,7 +35,7 @@ describe('TypingTest', () => {
   it('scores the first run from the recorded keystrokes and sets it as the password under test', () => {
     const clock = { t: 0 };
     render(<TypingTest now={() => clock.t} />);
-    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     typeInto(input, 'Sleepy;otterx<s', clock);
     enter(input, clock);
     const result = screen.getByRole('status');
@@ -53,7 +53,7 @@ describe('TypingTest', () => {
   it('keeps the password under test through mistyped runs until Clear, and takes a typed-in hint', () => {
     const clock = { t: 0 };
     render(<TypingTest now={() => clock.t} />);
-    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull(); // nothing to clear yet
     typeInto(input, 'abc', clock);
     enter(input, clock);
@@ -93,7 +93,7 @@ describe('TypingTest', () => {
         <TypingTest now={() => clock.t} />
       </PasswordsProvider>,
     );
-    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     // An unknown password: it becomes the target, with no hint, and nothing lands in the field.
     fireEvent.paste(input, { clipboardData: { getData: () => 'Pasted;secret;42\n' } });
     expect(input.value).toBe('');
@@ -115,7 +115,7 @@ describe('TypingTest', () => {
 
   it('can hide the text as it is typed, and gives password managers nothing to latch on to', () => {
     render(<TypingTest />);
-    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     expect(input.type).toBe('text');
     expect(input.autocomplete).toBe('off');
     for (const [attr, value] of Object.entries(MANAGER_OPT_OUT)) expect(input.getAttribute(attr), attr).toBe(value);
@@ -156,7 +156,7 @@ describe('TypingTest', () => {
     expect(within(status).getByText(`Memorability ${cold.memorability.score}`)).toBeTruthy();
     // After Clear, a password typed in by hand is next: no hint, so no memorability; difficulty from the text alone (strength never needs a hint).
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
-    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     typeInto(input, 'xyzzy-42', clock);
     enter(input, clock);
     const after = screen.getByRole('status');
@@ -205,7 +205,7 @@ describe('TypingTest with characters off the US keyboard', () => {
         <TypingTest now={() => clock.t} />
       </PasswordsProvider>,
     );
-    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     typeInto(input, 'café£1', clock);
     enter(input, clock);
     const status = screen.getByRole('status');
@@ -238,7 +238,7 @@ describe('TypingTest and the list shrinking', () => {
       </PasswordsProvider>,
     );
     expect(screen.getByRole('status').textContent).toContain('Testing: New;two');
-    const input = screen.getByLabelText('Test and practice') as HTMLInputElement;
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     typeInto(input, 'New;two', clock);
     enter(input, clock);
     expect(screen.getByRole('status').textContent).toContain('Typed correctly');

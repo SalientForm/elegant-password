@@ -242,7 +242,7 @@ The user adds the DNS record and the variable when the domain exists.
 | Automatic / Auto | Auto | README, form hint, validation message |
 | apply / Submit | submit | hints on the Passwords page |
 | `(hint n/a)` / Hint: none | Hint: *none* | typing test, My list |
-| Testing / Test a password / Test and practice | Testing (tab), Test a password (heading), Password to test (field) | column, typing test |
+| Testing / Test a password / Test and practice | Testing (tab), Test a password (heading), Typing test (field) | column, typing test |
 | Source Text | Source text | sentence card |
 | "must be between 0 and N" / "whole number from 0 to N" | a whole number from 0 to N | validation |
 | Strength target / target strength / Custom target (bits) | Strength target; Strength target in bits | form, CLI labels |

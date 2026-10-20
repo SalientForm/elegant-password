@@ -157,7 +157,7 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
           ))}
         </div>
         <label className="field inline">
-          <span>Custom target (bits)</span>
+          <span>Strength target in bits</span>
           <NumberField {...num('targetBits', 0, MAX_TARGET_BITS)} {...mark('targetBits')} />
         </label>
         <label className="check">

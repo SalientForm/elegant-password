@@ -139,7 +139,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         ref={input}
         type="text"
         className={shown ? 'mono' : 'mono masked'}
-        aria-label="Test and practice"
+        aria-label="Typing test"
         name="practice-text"
         id="practice-text"
         autoComplete="off"

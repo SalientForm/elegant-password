@@ -97,4 +97,41 @@ audit's item numbers.
 
 ## Not addressed
 
-Filled in when the work is done.
+Everything in the spec was done and checked (typecheck, 772 unit tests,
+both builds, 57 browser tests, and Esc, Ctrl+C and the hidden prompt in a
+pseudo-terminal). Left out, with why:
+
+- **Esc as "previous question" during the wizard's first pass.** Esc means
+  back at the review (to the review from a line; out of it without saving);
+  during the first questions there is no earlier question to return to, so
+  it stops like Ctrl+C. Going back one question would need the first pass
+  restructured as a list of steps with a history; not worth it yet.
+- **Android on-screen keyboards in the typing test** (audit 42). The fix
+  (count keystrokes from `beforeinput`) could not be tried on a device,
+  so it was not made.
+- **Splitting `generate.ts` and `score.ts`** (audit 44). Large but
+  coherent; a split for its own sake was not worth the churn in one pass.
+  Dead code and copied constants were removed instead.
+- **Blocking framing** (audit 45). GitHub Pages sends no headers and a
+  meta CSP cannot set `frame-ancestors`; possible only once the app has a
+  domain behind something that sets headers.
+- **Badge tab stops** (audit 24). Each badge stays a tab stop: its tip is
+  how a keyboard user reads it. The badges now carry `role="img"` with
+  the whole reading as their name, which was the accessibility defect.
+- **Sequences and keyboard runs in Raw** (audit 12). The user chose
+  repeats only; `asdfasdfasdf` and `qwertyuiop` still read red, through
+  the bands, not through pattern detection.
+- **The domain itself** (audit 11). There is none yet. The deploy is
+  ready for it (`PAGES_DOMAIN`), and until then My list and the current
+  batch stay in memory on the shared origin.
+- **The strength panel's colour** (audit 9). Green there still means
+  "meets your target" while a badge's green means 50+ bits; the panel's
+  text now says what its figure is and that the badges assume a different
+  attacker, which was the confusion.
+- **A dedicated origin for the Tailscale dev address.** Named in
+  `.env.development`, so the dev server keeps storing the list there.
+- **Warnings as structured JSON** (audit 27). Kept as strings, now with
+  their lines joined by newlines rather than runs of spaces; a structured
+  shape would change the documented interface.
+- **Help listing modes with ten-finger first** (audit 20). The list
+  follows the core's order; cosmetic.

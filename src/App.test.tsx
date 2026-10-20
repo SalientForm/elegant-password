@@ -282,7 +282,7 @@ describe('App: order and pages', () => {
     await waitFor(() => expect(cards().length).toBeGreaterThan(0), { timeout: 10_000 });
     const sentenceCard = screen.getByRole('tablist', { name: 'How to make the sentence' }).closest('.panel')!;
     expect(sentenceCard.className).toBe('panel sentence-card');
-    expect(screen.getByRole('region', { name: 'Source Text' })).toBe(sentenceCard);
+    expect(screen.getByRole('region', { name: 'Source text' })).toBe(sentenceCard);
     expect(sentenceCard.contains(screen.getByTestId('generated-sentence'))).toBe(true);
     const suggestions = screen.getByRole('heading', { name: 'Suggestions' }).closest('.panel')!;
     expect(suggestions.className).toBe('panel suggestions');
@@ -338,7 +338,7 @@ describe('App: order and pages', () => {
 
   it('has a Scoring page with the rubric and the bits explanation, and keeps the typing test and list in the right column', async () => {
     render(<App />);
-    expect(screen.getByLabelText('Test and practice')).toBeTruthy();
+    expect(screen.getByLabelText('Typing test')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'My list' })).toBeTruthy();
     expect(screen.queryByText('How difficulty is scored')).toBeNull();
     window.location.hash = '#/scoring';
@@ -440,7 +440,7 @@ describe('App when too narrow for three columns', () => {
     expect(stripLabels()).toEqual(['Options', 'Testing']); // Suggestions is open at first
     expect(document.getElementById('section-panel-options')!.hidden).toBe(true);
     expect(document.getElementById('section-panel-list')!.hidden).toBe(true);
-    expect(screen.queryByRole('textbox', { name: 'Test and practice' })).toBeNull(); // hidden columns are out of the accessibility tree
+    expect(screen.queryByRole('textbox', { name: 'Typing test' })).toBeNull(); // hidden columns are out of the accessibility tree
     const main = document.querySelector('main')!;
     expect(main.className).toBe('columns narrow focus-suggestions');
     // The strips keep their columns' places; the shrunken columns stay in the DOM, hidden. A strip left of the
@@ -462,7 +462,7 @@ describe('App when too narrow for three columns', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Testing' }));
     expect(stripLabels()).toEqual(['Options', 'Suggestions']);
     expect(strips().map((b) => b.parentElement!.className)).toEqual(['strip left', 'strip left']); // both left of it
-    expect(screen.getByRole('textbox', { name: 'Test and practice' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Typing test' })).toBeTruthy();
     expect(visibleHeadings()).toContain('My list');
     expect(visibleHeadings()).not.toContain('Suggestions');
     expect(screen.getByRole('region', { name: 'Unapplied changes' })).toBeTruthy(); // the floating buttons follow
@@ -517,7 +517,7 @@ describe('App on a phone', () => {
     expect(screen.getByText('Requirement options')).toBeTruthy();
     expect(screen.queryAllByRole('article')).toHaveLength(0);
     fireEvent.click(screen.getByRole('tab', { name: 'Testing' }));
-    expect(screen.getByRole('textbox', { name: 'Test and practice' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Typing test' })).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Suggestions' }));
     expect(cards().length).toBeGreaterThan(0);
 

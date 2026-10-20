@@ -26,9 +26,9 @@ export const COMFORT_CHOICES: readonly Choice<Comfort>[] = [
 
 export const comfortLabel = (comfort: Comfort) => COMFORT_CHOICES.find((c) => c.value === comfort)!.label;
 
-/** The separators that are not a symbol: Automatic, a space, or none. */
+/** The separators that are not a symbol: Auto, a space, or none. */
 export const SEPARATOR_KINDS: readonly Choice<string>[] = [
-  { value: 'auto', label: 'Auto', hint: 'Automatic: whatever the site allows: ";" if it can, else a space, else "." or ","' },
+  { value: 'auto', label: 'Auto', hint: 'Whatever the site allows: ";" if it can, else a space, else the first allowed and comfortable of ". - , _", else none' },
   { value: ' ', label: 'Space', hint: 'A space, typed with the thumb' },
   { value: '', label: 'None', hint: 'The words run together' },
 ];

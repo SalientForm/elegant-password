@@ -151,18 +151,28 @@ naming the reason, not rejected.
 
 ### 5.3 Output
 
-- **TTY, default `table`**: one row per password, the badges the web app
-  shows (Strength in bits, Difficulty for the chosen mode, Memorability), and the
-  hint under it:
+- **TTY, default `table`**: first a dim line saying which config file the
+  settings came from (`Config: tep.yml (/home/me/x/tep.yml)`, or `Config:
+  none (no tep.yml in /home/me/x)`, or `Config: none (--no-config)`); then
+  one row per password with the badges the web app shows (Strength, Raw,
+  Difficulty for the chosen mode, Memorability), the session's bits dim
+  after them, and the hint under it:
 
-      1  13 worthy storks openly pet twisty toys   Strength 42  Difficulty 38  Memorability 74
+      Config: none (no tep.yml in /home/me/x)
+      1  13 worthy storks openly pet twisty toys   Strength 63  Raw 171  Difficulty 38  Memorability 74  42.7 bits
          hint: thirteen worthy storks openly pet twisty toys
 
 - **Piped (`plain`)**: passwords only, one per line, nothing else on
-  stdout, so `tep g | pbcopy` works (one password when piped).
-- **`json`**: `{ mode, typingMode, separator, warnings, suggestions:
-  [{ password, hint, bits, difficulty, memorability }] }`, stable field
-  names, documented as an interface.
+  stdout, so `tep g | pbcopy` works (one password when piped); the config
+  line goes to stderr as a note (`--quiet` hides it). `--explain` with no
+  format asks for the why, which plain output cannot carry: it prints the
+  table.
+- **`json`**: `{ mode, typingMode, separator, sort, config: { file, path,
+  why }, warnings, suggestions: [{ password, hint, strength, raw, bits,
+  difficulty, difficultyLabel, memorability, readings }] }`, stable field
+  names, documented as an interface (2026-10-20: `strength` and `raw` are
+  the scores, `bits` the session's figure). Warnings keep their lines,
+  joined with newlines.
 - Warnings (the engine's `warnings`, such as fewer swaps than asked)
   go to stderr.
 
@@ -177,12 +187,15 @@ No clearing after a delay in v1.
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Passwords printed |
-| 1 | Unexpected error (an engine bug: `unexpected: true`) |
-| 2 | Usage: unknown flag, bad value, unknown preset |
-| 3 | Settings that contradict each other (§3) |
+| 0 | Passwords printed, the config saved, or the wizard left with q or Esc |
+| 1 | Unexpected error (an engine bug: `unexpected: true`), a clipboard tool that failed, or a link `tep uninstall` could not remove |
+| 2 | Usage: unknown flag, bad value, unknown preset, no terminal where one is needed, no clipboard tool |
+| 3 | Settings that contradict each other (§3), or a sentence that cannot be made to fit |
 | 4 | Config file unreadable or invalid |
 | 130 | Interrupted (Ctrl+C) |
+
+The help line is built from the one list in `src/cli/errors.ts`, so it
+cannot drift from this table.
 
 ## 6. Config file
 
@@ -324,13 +337,29 @@ number:
   3  Options            Two-finger preset
        Strength target 40 bits (Everyday), Separator space, Minimum swaps 1,
        Capital initials 1, Two-letter words 1, Made-up nouns 1, Glue on
-  4  Count              5
-  5  Sort               Difficulty
+  4  Count              5 at a terminal, 1 when piped
+  5  Order              Difficulty
 
-  Sample: 7 Ertdfg jr wise elks B; ...      Strength 42  Difficulty 31  Memorability 70
+  Sample: 7 Ertdfg jr wise elks B; ...      Strength 63  Raw 160  Difficulty 31  Memorability 70
 
 Change a line (1-5), s to save, q to quit without saving:
 ```
+
+Esc means back (user decision, 2026-10-20): while changing a line it
+returns to the review with the line unchanged; at the review's own
+question it leaves without saving, like `q`. Ctrl+C always stops, writing
+nothing. The prompter tells the two keys apart by listening for the key
+itself, since the prompt library reports both the same way. During the
+first questions there is no earlier question to return to, so Esc stops
+like Ctrl+C there.
+
+A pasted rule the wizard cannot keep is never dropped in silence (user
+decision, 2026-10-20): it is named as it is dropped ("Dropped the pasted
+rule for required symbols, 3: ... tep's passwords will not meet it; check
+what the site accepts") and listed on the review ("Dropped: required
+symbols 3 (the pasted rules asked for it): ...") for as long as the answer
+differs from what the text asked. A loaded file's value that cannot be kept
+is treated the same way.
 
 - Choosing a line asks that question again, then returns here. The
   question is shaped as in §7.2, but by every other answer, not only the
@@ -402,7 +431,8 @@ Change a line (1-5), s to save, q to quit without saving:
   config round trip (write, read, same `Requirements`), schema errors with
   line numbers, output formats, exit codes.
 - The wizard driven through a fake terminal: every path, the review edits,
-  Ctrl+C writes nothing.
+  Ctrl+C writes nothing, Esc goes back to the review or out of it, a
+  dropped pasted rule is named and listed.
 - Contradictions, property-tested: a random walk through the wizard that
   picks any allowed choice or in-range number at every question, review
   edits included, never reaches `problemsOf` with a problem, and every

@@ -319,7 +319,7 @@ test('pads a short sentence to the minimum with a length tag that states the len
 });
 
 test('tests a typed password in the masthead: speed, corrections, strength, and the lock', async ({ page, context }) => {
-  const field = page.getByLabel('Test and practice', { exact: true });
+  const field = page.getByLabel('Typing test', { exact: true });
   await field.click();
   await field.pressSequentially('Sleepy;otterx', { delay: 20 });
   await page.keyboard.press('Backspace');

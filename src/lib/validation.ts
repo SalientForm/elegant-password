@@ -63,7 +63,7 @@ export const FIELD_LABELS: Record<keyof Requirements, string> = {
   allowSpaces: 'spaces',
   separator: 'separator',
   includeNumber: 'include a number',
-  targetBits: 'target strength',
+  targetBits: 'strength target',
   shortest: 'shortest that meets the target',
   comfort: 'typing comfort',
   twists: 'minimum swaps',
@@ -159,7 +159,7 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
 
   // Strength and comfort.
   if (!(typeof req.targetBits === 'number' && req.targetBits >= 0 && req.targetBits <= MAX_TARGET_BITS)) {
-    add('range', `The target strength must be from 0 to ${MAX_TARGET_BITS} bits.`, 'targetBits');
+    add('range', `The strength target must be from 0 to ${MAX_TARGET_BITS} bits.`, 'targetBits');
   }
   if (!COMFORTS.includes(req.comfort)) add('range', 'Typing comfort must be strict, balanced or relaxed.', 'comfort');
 
@@ -178,8 +178,8 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
     ['madeUp', 'Made-up nouns', MAX_MADE_UP],
     ['twists', 'Minimum swaps', MAX_TWISTS],
   ];
-  for (const [key, label, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${label} must be between 0 and ${max}.`, key);
-  if (!whole(req.count, 1, MAX_COUNT)) add('range', `The number of suggestions must be between 1 and ${MAX_COUNT}.`, 'count');
+  for (const [key, label, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${label} must be a whole number from 0 to ${max}.`, key);
+  if (!whole(req.count, 1, MAX_COUNT)) add('range', `The number of suggestions must be a whole number from 1 to ${MAX_COUNT}.`, 'count');
   return out;
 }
 

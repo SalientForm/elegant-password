@@ -275,7 +275,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
     <>
       {/* The sentence card: how to make the sentence, and the sentence itself (generated, or the user's own). */}
       <section className="panel sentence-card" aria-labelledby="source-text">
-        <h2 id="source-text">Source Text</h2>
+        <h2 id="source-text">Source text</h2>
         <Tabs tabs={MODE_TABS} value={p.mode} onChange={p.setMode} label="How to make the sentence" idPrefix="mode" />
         <TabPanel idPrefix="mode" id="generated" active={p.mode === 'generated'}>
           <div className="sentence">
@@ -305,7 +305,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
             <p className="hint">
               The sentence behind every suggestion below, drawn at random from the word lists. It stays the same until you
               draw a new one with the button beside it or apply a new Mode; changing the rules or refreshing the suggestions keeps it.
-              You can edit it and apply the change (Enter submits): an edited sentence is no longer a random draw, so it is built and
+              You can edit it and submit the change (Enter submits): an edited sentence is no longer a random draw, so it is built and
               scored like your own sentence, with the options under “Use my sentence”. Clear it and submit to go back to the drawn one.
             </p>
           </div>
