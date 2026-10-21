@@ -132,6 +132,25 @@ twists). It is the lead if the budget is ever missed.
   smaller; navigation to the first batch on screen in the built app went
   from 435 ms to 326 ms (median of seven, twice); the 61 smoke tests pass.
 
+### The opening capital (2026-10-21)
+
+- **The capital is a word's first character, never after a swapped-in
+  symbol** (`@Corns`). In generated mode the word that takes it is chosen
+  from the words as typed, before the swaps (`capitalOrder` in
+  `src/lib/generate.ts`: the first ordinary word, or with Shift reach on
+  one whose first letter capitalises in reach), and the swaps keep that
+  word's first character a letter (`capitalAt` in `src/lib/twists.ts`).
+  Chosen after the swaps, as before, the capital followed Shift reach to a
+  word the swaps had not been told to keep: 1.0-1.8 % of passwords with
+  Shift reach on. Sentence mode capitalises before the swaps, which match
+  lowercase letters only.
+- **Only the capital's word is kept**: with the capital elsewhere (Shift
+  reach, a two-letter form first) or not placed at all (a made-up noun in
+  capitals meets the rule), the first word's start may be swapped. The
+  cold scorer keeps the start of the twistable word that carries the
+  capital, wherever it is, so the bits count what generation can make.
+  At the defaults a seeded batch is the same passwords as before.
+
 ### Limits and caches
 
 - A sentence, a hint and the password under test are at most 500
