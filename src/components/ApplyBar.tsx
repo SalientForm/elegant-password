@@ -16,7 +16,7 @@ interface Props {
 
 /**
  * A snackbar at the foot of the page while there are unapplied changes: a
- * card, 1 rem above the bottom, saying so at its left (or naming the first
+ * card, 1.5 rem above the bottom, saying so at its left (or naming the first
  * problem, with Show) and holding the two buttons at its right. Discard
  * throws the changes away, Submit changes saves them and regenerates.
  * While they are showing, Enter anywhere submits (except on a button, link
