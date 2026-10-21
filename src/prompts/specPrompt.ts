@@ -50,7 +50,7 @@ import { SELECTED_KEY } from '../state/selectedStore';
 import { SESSION_KEY } from '../state/sessionStore';
 import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY, SORT_KEY, TYPING_MODE_KEY } from '../state/settingsStore';
 import { RULE_KEYS, SITE_PRESETS } from '../lib/sitePresets';
-import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, type MappingKind } from '../lib/twists';
+import { BUILT_IN_KINDS, BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS } from '../lib/twists';
 import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from '../lib/words';
 import algorithmFlow from '../../docs/algorithm-flow.md?raw';
 import testTitles from '../lib/testTitles.json';
@@ -87,7 +87,7 @@ const sortButtons = () =>
   SORT_CHOICES.map((c) => `"${c.label}", ${lowerFirst(c.hint)}${c.value === DEFAULT_SORT ? ', the default' : ''}`).join('; ');
 
 function mappingSection(): string {
-  return (['symbol', 'digit', 'spelling'] as MappingKind[])
+  return BUILT_IN_KINDS
     .map((kind) => {
       const items = BUILT_IN_MAPPINGS.filter((m) => m.kind === kind).map((m) => code(`${m.from}→${m.to}`));
       return `**${MAPPING_KIND_LABELS[kind]} (${items.length})**: ${items.join(' ')}`;

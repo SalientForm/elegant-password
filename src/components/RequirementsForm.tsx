@@ -3,7 +3,7 @@ import { DEFAULT_TYPING_MODE, type TypingMode } from '../lib/difficulty';
 import { COMFORT_CHOICES, isSymbolSeparator, MUST_CONTAIN, SEPARATOR_KINDS, separatorChoices, separatorNote } from '../lib/choices';
 import { MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, SEPARATOR_PREFERENCE, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
 import { MADE_UP_NOUNS, pools } from '../lib/grammar';
-import { FAR_SHIFT_LETTERS, FAR_SHIFT_SYMBOLS, ONE_HAND_SHIFT_REACH, PINKY_STRETCH_SYMBOLS, pressFor } from '../lib/keyboard';
+import { FAR_SHIFT_LETTERS, FAR_SHIFT_SYMBOLS, ONE_HAND_SHIFT_REACH, PINKY_STRETCH_SYMBOLS } from '../lib/keyboard';
 import { MINIMAL_BITS, PROFILE_LABELS, unusedIn, type ProfileKey } from '../lib/modeProfiles';
 import { ignoredSymbols, MAX_COUNT, MAX_LENGTH, MAX_TARGET_BITS, MIN_COUNT, MIN_LENGTH, ruleProblems, type RuleProblem } from '../lib/validation';
 import { useShownProblems } from './useShownProblems';
@@ -36,11 +36,9 @@ const ANCHORS: Partial<Record<keyof Requirements, Anchor>> = {
 };
 const anchorOf = (p: RuleProblem): Anchor => ANCHORS[p.fields[0]!] ?? 'other';
 
-/** Characters as they sit on the keyboard, left to right: "T G B Y H N U J I" rather than "B G H I J N T U Y". */
-const keyboardOrder = (chars: readonly string[]) => [...chars].sort((a, b) => pressFor(a).key.x - pressFor(b).key.x).join(' ');
-const PINKY_STRETCHES = keyboardOrder(PINKY_STRETCH_SYMBOLS);
-const FAR_SYMBOLS = keyboardOrder(FAR_SHIFT_SYMBOLS);
-const FAR_LETTERS = keyboardOrder(FAR_SHIFT_LETTERS);
+const PINKY_STRETCHES = PINKY_STRETCH_SYMBOLS.join(' ');
+const FAR_SYMBOLS = FAR_SHIFT_SYMBOLS.join(' ');
+const FAR_LETTERS = FAR_SHIFT_LETTERS.join(' ');
 /** The strength preset that is just the site's rules. */
 const MINIMAL_LABEL = STRENGTH_PRESETS.find((p) => p.bits === MINIMAL_BITS)!.label;
 /** What a made-up noun is worth: one pick from every made-up noun. */

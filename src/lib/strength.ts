@@ -207,7 +207,7 @@ export function strengthParts(password: string): StrengthPart[] {
       return { text, kind, bits: textBits + walks * Math.log2(KEY_WALK_CHOICES) + (/\p{Lu}/u.test(text) ? 1 : 0) };
     }
     if (kind === 'digits') {
-      return { text, kind, bits: text.length === 1 ? Math.log2(10) : isMemorableDigits(text) ? Math.log2(MEMORABLE_DIGITS_CHOICES) : text.length * Math.log2(10) };
+      return { text, kind, bits: text.length === 1 ? Math.log2(CLASS_SIZES.digit) : isMemorableDigits(text) ? Math.log2(MEMORABLE_DIGITS_CHOICES) : text.length * Math.log2(CLASS_SIZES.digit) };
     }
     const first = !seenSymbols.has(text);
     seenSymbols.add(text);

@@ -167,10 +167,10 @@ explanation for each:
   comfort filter is unchanged. "Ease awkward words with deliberate swaps"
   switches it off.
 - **Avoid pinky stretches** (on by default): the tool never picks a symbol
-  more than one key from where a pinky rests (`! - _ = + ) |` ...). A
+  more than one key from where a pinky rests (`` ` ~ ! ) - _ + = ] } \ | ``). A
   separator you choose yourself, like `-`, is still used.
 - **Keep Shift within reach** (off by default; the One-handed mode turns it
-  on): no shifted symbol more than 4 keys from both Shift keys (`$ % ^ & *`)
+  on): no shifted symbol more than 4 keys from both Shift keys (`$ % ^ & * (`)
   is picked, and the opening capital goes on a word whose first letter one
   hand can capitalise while holding Shift (not T G B Y H N U J I).
 - **Shortest that meets the target** (off by default; Minimal-quick turns it

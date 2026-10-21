@@ -2,7 +2,7 @@
 // head, from 0 (effortless) to 100 (hard).
 //
 // Each criterion measures one thing and lands on a level from 0 to 4 using
-// fixed cut-points. A criterion's points are weight x level / 4, and the
+// fixed cut-points. A criterion's points are weight x level / MAX_LEVEL (4), and the
 // weights add up to 100. Cut-points were calibrated on generated passwords
 // so the default settings land in the easy-to-moderate range.
 //
@@ -303,7 +303,7 @@ export const LEVEL_WIDTH = 20;
 export const levelRange = (level: Level) => ({ min: level === 0 ? 0 : level * LEVEL_WIDTH + 1, max: (level + 1) * LEVEL_WIDTH });
 
 export function overallLevel(score: number): Level {
-  return Math.min(4, Math.floor(score / (LEVEL_WIDTH + 0.0001))) as Level;
+  return Math.min(MAX_LEVEL, Math.floor(score / (LEVEL_WIDTH + 0.0001))) as Level;
 }
 
 /** Score a password against a mode's rubric. `chunks` is how many pieces there are to remember. */
@@ -312,7 +312,7 @@ export function scoreDifficulty(password: string, chunks: number, mode: TypingMo
   const criteria = RUBRICS[mode].map((criterion) => {
     const value = measurements[criterion.id];
     const level = levelFor(value, criterion.cutPoints, criterion.higherIsEasier);
-    return { id: criterion.id, value, level, points: (criterion.weight * level) / 4 };
+    return { id: criterion.id, value, level, points: (criterion.weight * level) / MAX_LEVEL };
   });
   const score = Math.round(criteria.reduce((sum, c) => sum + c.points, 0));
   const level = overallLevel(score);

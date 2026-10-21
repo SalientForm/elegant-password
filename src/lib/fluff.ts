@@ -106,9 +106,9 @@ function fill(R: number, short: number, inputs: FluffInputs, repeatsUsed: number
     if (w.length >= MIN_WORD && w.length <= MAX_WORD) byLength.set(w.length, [...(byLength.get(w.length) ?? []), w]);
   }
   while (left > 0) {
-    // A whole word, only when more than 3 characters short, and only if one fits exactly.
+    // A whole word, only when more than MIN_WORD characters short, and only if one fits exactly.
     const wordLen = Math.min(MAX_WORD, left - sep);
-    if (short > 3 && wordLen >= MIN_WORD) {
+    if (short > MIN_WORD && wordLen >= MIN_WORD) {
       // Prefer a word that uses the whole remainder; otherwise the longest that leaves room for something else.
       const candidates = [wordLen, ...Array.from({ length: wordLen - MIN_WORD }, (_, i) => wordLen - 1 - i)].filter((n) => byLength.has(n));
       const n = candidates.find((len) => len === wordLen || left - (len + sep) === 0 || left - (len + sep) >= 1);
