@@ -17,6 +17,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { commonPasswordProblem, commonRank } from '../lib/common';
 import type { TypingMode } from '../lib/difficulty';
 import { inputsKey, runInputs, type GenerateInputs, type Mode, type Outcome } from '../lib/engine';
+import { timed } from './slow';
 import type { SentenceOptions } from '../lib/fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
 import { checkWithZxcvbn, type ZxcvbnCheck } from './zxcvbnCheck';
@@ -336,7 +337,7 @@ export function PasswordsProvider({ children, engine = runInputs, local, session
     setBusy(true);
     const timer = setTimeout(() => {
       const request = inputsRef.current;
-      const outcome = engineRef.current(request);
+      const outcome = timed('Making passwords', () => engineRef.current(request));
       // A new draw becomes the kept sentence, and the batch is filed under the inputs with it, so it is not made again.
       const drawn = request.mode === 'generated' && !request.generated && outcome.ok ? outcome.generated : undefined;
       if (drawn) setGenerated(drawn);

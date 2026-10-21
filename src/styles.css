@@ -532,14 +532,19 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
 .apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); z-index: 20; width: max-content; max-width: min(48rem, calc(100vw - 2rem)); pointer-events: none; }
 .snackbar { pointer-events: auto; display: flex; align-items: center; gap: 0.5rem 1rem; min-height: 3rem; padding: 0.5rem 0.6rem 0.5rem 1rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 1.25rem 12rem rgb(0 0 0 / 0.55), 0 16px 48px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.25); } /* a wide 12 rem blur lifts it well off whatever it floats over */
 .snackbar.blocked { border-color: var(--bad); }
+/* The slow-work error: the same card, in the error colour, above the unapplied-changes bar when both show. */
+.slow-notice { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); z-index: 21; width: max-content; max-width: min(48rem, calc(100vw - 2rem)); pointer-events: none; }
+body:has(.apply-bar) .slow-notice { bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px)); }
+.snackbar.failed { border-color: var(--bad); }
+.snackbar.failed .snackbar-text { color: var(--bad); }
 .snackbar-text { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 0.85rem; overflow-wrap: anywhere; }
 .snackbar.blocked .snackbar-text { color: var(--bad); }
 .snackbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; margin-left: auto; flex: 0 1 auto; min-width: 0; } /* on the narrowest phones the buttons wrap rather than run off the screen */
 .snackbar-actions button { font-size: 0.9rem; padding: 0.5rem 0.9rem; min-height: 0; }
 .snackbar-actions button.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--accent); font-weight: 600; } /* a snackbar's text actions */
 .snackbar.blocked .snackbar-actions button.ghost:first-child { color: var(--bad); } /* Show, in the problem's colour */
-@media (max-width: 600px) { .apply-bar { left: 1rem; right: 1rem; transform: none; width: auto; max-width: none; } .snackbar { flex-wrap: wrap; } .snackbar-actions { max-width: 100%; } }
-@media (max-width: 360px) { .apply-bar { left: 0.5rem; right: 0.5rem; } .snackbar-actions button { padding: 0.5rem 0.6rem; } } /* 320 px: Show, Discard and Submit changes still fit, or wrap */ /* a phone: the text may take a line of its own, the buttons under it at the right */
+@media (max-width: 600px) { .apply-bar, .slow-notice { left: 1rem; right: 1rem; transform: none; width: auto; max-width: none; } .snackbar { flex-wrap: wrap; } .snackbar-actions { max-width: 100%; } }
+@media (max-width: 360px) { .apply-bar, .slow-notice { left: 0.5rem; right: 0.5rem; } .snackbar-actions button { padding: 0.5rem 0.6rem; } } /* 320 px: Show, Discard and Submit changes still fit, or wrap */ /* a phone: the text may take a line of its own, the buttons under it at the right */
 .chip.fluff { background: var(--warn-soft); border: 1px dashed var(--warn); }
 
 /* Test a password, top of the right column */

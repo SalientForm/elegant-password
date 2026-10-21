@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { usePageFirstWheel } from './components/columnScroll';
 import { MEDIUM, NARROW, PHONE, useMediaQuery } from './components/useMediaQuery';
 import { ApplyBar } from './components/ApplyBar';
+import { SlowNotice } from './components/SlowNotice';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequirementsForm } from './components/RequirementsForm';
 import { SelectedList } from './components/SelectedList';
@@ -110,6 +111,7 @@ export function App() {
           {page === 'scoring' && <ScoringPage />}
           {page === 'fun' && <FunPage />}
         </Suspense>
+        <SlowNotice />
       </div>
     </ErrorBoundary>
   );

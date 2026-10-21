@@ -439,6 +439,7 @@ Web app:
 - `src/state/PasswordsProvider.tsx`: the provider that owns state, persistence and generation
 - `src/state/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`, `mappingStore.ts`: persistence with untrusted-input parsing
 - `src/state/origin.ts`: whether the page is on the app's own origin, where secrets may be stored
+- `src/state/slow.ts`: work over 2 s reported as a failure, which `SlowNotice` shows until dismissed
 - `src/components/`: React UI
 - `src/prompts/specPrompt.ts`, `cliPrompt.ts`: the Fun page's two prompts, the app's and then the command line's
 

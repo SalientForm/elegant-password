@@ -210,6 +210,10 @@
         "title": "has accessible mode tabs and a status while working"
       },
       {
+        "kind": "test",
+        "title": "shows slow work as a floating error on any page until it is dismissed"
+      },
+      {
         "kind": "group",
         "title": "App: typing mode"
       },
@@ -1885,6 +1889,23 @@
       {
         "kind": "test",
         "title": "summarises the random bits across the batch"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SlowNotice.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SlowNotice"
+      },
+      {
+        "kind": "test",
+        "title": "shows nothing until work is slow, then names it and how long it took, as an alert"
+      },
+      {
+        "kind": "test",
+        "title": "is dismissed by its button or by Escape inside it, and a newer failure replaces it"
       }
     ]
   },
@@ -3973,6 +3994,10 @@
       },
       {
         "kind": "test",
+        "title": "reports a batch that takes over 2 s as slow work, and keeps the batch"
+      },
+      {
+        "kind": "test",
         "title": "discards a draft, and \"Refresh\" applies one"
       },
       {
@@ -4259,6 +4284,31 @@
       {
         "kind": "test",
         "title": "read an older \";\" (the old default) as Automatic, and an older \"auto\" (a space first) as a space where spaces are allowed, so no passwords change"
+      }
+    ]
+  },
+  {
+    "file": "src/state/slow.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "timed"
+      },
+      {
+        "kind": "test",
+        "title": "reports work over 2 s with what it was and how long it took, and passes the result through"
+      },
+      {
+        "kind": "test",
+        "title": "reports nothing for work of 2 s or less"
+      },
+      {
+        "kind": "test",
+        "title": "reports slow work that throws, and rethrows"
+      },
+      {
+        "kind": "test",
+        "title": "lets a newer report replace the one showing, tells listeners after the current task, and forgets on dismiss"
       }
     ]
   },

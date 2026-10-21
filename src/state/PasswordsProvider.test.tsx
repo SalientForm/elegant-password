@@ -14,6 +14,7 @@ import type { ZxcvbnCheck } from './zxcvbnCheck';
 import { memoryStore, type KeyValueStore } from './storage';
 import { BUILT_IN_MAPPINGS, mappingKey } from '../lib/twists';
 import { PasswordsProvider, usePasswords } from './PasswordsProvider';
+import { currentSlow, dismissSlow } from './slow';
 
 afterEach(cleanup);
 
@@ -124,6 +125,20 @@ describe('PasswordsProvider', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(gen.runs).toHaveLength(3);
     expect(text('dirty')).toBe('false');
+  });
+
+  it('reports a batch that takes over 2 s as slow work, and keeps the batch', async () => {
+    let t = 0;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => t);
+    const slowEngine: Engine = (inputs) => {
+      t += 2600;
+      return runInputs(inputs);
+    };
+    mount(slowEngine);
+    await settled();
+    expect(currentSlow()).toEqual({ what: 'Making passwords', ms: 2600 });
+    clock.mockRestore();
+    dismissSlow();
   });
 
   it('discards a draft, and "Refresh" applies one', async () => {

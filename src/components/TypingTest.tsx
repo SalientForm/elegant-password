@@ -7,10 +7,14 @@ import { MAX_HINT_LENGTH } from '../lib/text';
 import { MAX_LENGTH } from '../lib/validation';
 import { finishAttempt, nextTarget, pastedTarget, recordChange, recordKey, startRecording, UNNAMED_KEYS, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
+import { timed } from '../state/slow';
 import { CancelIcon } from './icons';
 import { PasswordText } from './PasswordText';
 import { ScoreBadges } from './SuggestionCard';
 import { useZxcvbn } from './useZxcvbn';
+
+/** What the slow-work notice names when scoring the password under test takes too long. */
+const SCORING = 'Scoring the password under test';
 
 interface Props {
   /** Clock in milliseconds; injectable for tests. */
@@ -116,14 +120,14 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   }, [epoch]);
 
   const hintText = hint?.trim() ? hint.trim() : undefined;
-  const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);
+  const cold = useMemo(() => (target !== undefined && hintText !== undefined ? timed(SCORING, () => scoreCold(target, hintText)) : undefined), [target, hintText]);
   /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis and a click shows the whole of it, like My list. */
   const shownTarget = target === undefined ? undefined : shown ? target : '•'.repeat([...target].length);
   const typingMode = passwords?.typingMode ?? DEFAULT_TYPING_MODE;
-  const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? difficultyAlone(target) : undefined), [cold, target]);
+  const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? timed(SCORING, () => difficultyAlone(target)) : undefined), [cold, target]);
   const difficulty = useMemo(() => (target !== undefined && base ? difficultyIn(target, base, typingMode) : undefined), [target, base, typingMode]);
   /** The figures from the password alone, worked out once per password under test, not on every keystroke. */
-  const alone = useMemo(() => (target === undefined ? undefined : { strength: strengthBits(target), raw: rawBits(target), rank: commonRank(target) }), [target]);
+  const alone = useMemo(() => (target === undefined ? undefined : timed(SCORING, () => ({ strength: strengthBits(target), raw: rawBits(target), rank: commonRank(target) }))), [target]);
   const last = attempts[0];
   const zxcvbn = useZxcvbn(target, passwords?.selected.find((e) => e.password === target)?.zxcvbn);
 

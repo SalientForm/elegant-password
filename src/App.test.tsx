@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
+import { dismissSlow, reportSlow } from './state/slow';
 import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from './state/settingsStore';
 import { MEDIUM, NARROW, PHONE } from './components/useMediaQuery';
 
@@ -45,6 +46,22 @@ describe('App', () => {
     expect(tabs[1]!.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('tabpanel')).toBeTruthy();
     expect(screen.getByLabelText('Your sentence')).toBeTruthy();
+  });
+
+  it('shows slow work as a floating error on any page until it is dismissed', async () => {
+    render(<App />);
+    await act(async () => {
+      reportSlow('Making passwords', 2500);
+      await Promise.resolve();
+    });
+    const notice = screen.getByRole('region', { name: 'Slow work' });
+    expect(within(notice).getByRole('alert').textContent).toMatch(/^Making passwords took 2\.5 s, over the 2\.0 s/);
+    await act(async () => {
+      fireEvent.click(within(notice).getByRole('button', { name: 'Dismiss' }));
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('region', { name: 'Slow work' })).toBeNull();
+    dismissSlow();
   });
 });
 
