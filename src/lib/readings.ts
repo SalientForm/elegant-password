@@ -3,7 +3,6 @@
 // badges and the CLI's table both print these, so they cannot disagree.
 
 import { typingModeLabel, type Difficulty } from './difficulty';
-import { STRENGTH_PRESETS } from './generate';
 import { MEMORABILITY_BANDS, STRENGTH_BANDS } from './score';
 
 export type Band = 'high' | 'mid' | 'low';
@@ -11,16 +10,19 @@ export type Band = 'high' | 'mid' | 'low';
 /** Colour band for a memorability score: green above 75, yellow above 45, red below. */
 export const memorabilityLevel = (score: number): Band => (score > MEMORABILITY_BANDS.green ? 'high' : score > MEMORABILITY_BANDS.yellow ? 'mid' : 'low');
 
-/** Colour band for strength in bits: green from the "Strong" preset up, yellow from "Everyday", red below. Give it the figure as shown (rounded), so a badge reading 50 is never yellow. */
+/** Colour band for strength in bits: green from 50 bits, yellow from 40, red below. Give it the figure as shown (rounded), so a badge reading 50 is never yellow. */
 export const strengthLevel = (bits: number): Band => (bits >= STRENGTH_BANDS.green ? 'high' : bits >= STRENGTH_BANDS.yellow ? 'mid' : 'low');
 
-/** The preset a strength reaches: "master password", "very strong", "strong", "everyday", or "weak" (below the yellow band; the Minimal preset is not a strength). */
-export const strengthWord = (bits: number) =>
-  [...STRENGTH_PRESETS]
-    .filter((p) => p.bits >= STRENGTH_BANDS.yellow)
-    .reverse()
-    .find((p) => bits >= p.bits)
-    ?.label.toLowerCase() ?? 'weak';
+/** The word for each strength band, the colour said in words. */
+export const STRENGTH_WORDS: Record<Band, string> = { high: 'high', mid: 'fair', low: 'low' };
+
+/**
+ * The word a strength reads: its band's, never a preset's. The presets are
+ * targets for the bits, which assume an attacker who knows this tool;
+ * Strength assumes one who does not, so it reads higher and the presets'
+ * words would overstate it. Give it the figure as shown, as for the colour.
+ */
+export const strengthWord = (bits: number) => STRENGTH_WORDS[strengthLevel(bits)];
 
 export interface Reading {
   /** The badge's word: "Strength", "Raw", "Difficulty", "Memorability". */

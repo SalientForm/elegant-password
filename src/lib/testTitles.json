@@ -3144,7 +3144,11 @@
       },
       {
         "kind": "test",
-        "title": "is green from 50 bits, yellow from 40, red below, and names the preset reached"
+        "title": "is green from 50 bits, yellow from 40, red below, and says high, fair or low"
+      },
+      {
+        "kind": "test",
+        "title": "names its band and never a preset, at every figure from 0 to 256"
       },
       {
         "kind": "group",

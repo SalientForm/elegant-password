@@ -419,7 +419,7 @@ function measureMatch(words: readonly string[], scored: readonly ScoredWord[], s
   return { template: slots, comfort, sizes, bits };
 }
 
-/** Badge colour bands: strength in bits (green from the "Strong" preset, yellow from "Everyday") and memorability out of 100. */
+/** Badge colour bands: strength in bits (green from 50, yellow from 40, red below) and memorability out of 100. */
 export const STRENGTH_BANDS = { green: 50, yellow: 40 } as const;
 export const MEMORABILITY_BANDS = { green: 75, yellow: 45 } as const;
 
