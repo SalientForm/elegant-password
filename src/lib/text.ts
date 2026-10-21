@@ -6,7 +6,7 @@
  * in characters. Scoring a text is quadratic in places (the alignment, the
  * twist count), so the length is capped rather than left open; at this cap
  * the longest permitted batch answers in about a quarter of a second on a
- * desktop (docs/specs/2026-10-21-engine-budget-design.md).
+ * desktop (docs/decisions.md, "The engine's budget").
  */
 export const MAX_SENTENCE_LENGTH = 500;
 

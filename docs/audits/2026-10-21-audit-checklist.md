@@ -23,8 +23,8 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 
 | Id | Finding | Where | Status | Spec |
 | --- | --- | --- | --- | --- |
-| H1 | A worker timeout runs the engine on the UI thread and marks the generator broken for the rest of the session; sentence mode at permitted settings measured 3.9 s on a desktop, so a slow phone crosses the 10 s limit, freezes, and never uses the worker again. Profiled: 93 % of that time scores candidates the search discards. Fixed by bounding the engine (maximum length 128, score once per kept suggestion, 3 attempts per suggestion, `collapseBlocks` without slicing, the sentence cap in the engine) rather than by handling the timeout | `src/lib/fromSentence.ts:427`, `:627`, `:704`; `src/lib/strength.ts:122`; `src/lib/validation.ts:13` | built | [2026-10-21-engine-budget-design.md](../specs/2026-10-21-engine-budget-design.md), commit `8699fd5`, 2026-10-21; worst permitted case 224 ms (was 3,631 ms) |
-| H2 | Remove the worker once H1 is built and measured under its budget (the audit's 90-day bet, step 2): `generator.ts` loses its queue, timeout and restart, `worker.ts` and its test doubles go, and L2, L3 and L10 close with it. The price is written down in the spec: no safety net for future engine work, no Stop button, about a second's stall at the worst settings on a slow phone | `src/state/generator.ts`; `src/worker.ts`; `src/state/PasswordsProvider.tsx` | built | [2026-10-21-no-worker-design.md](../specs/2026-10-21-no-worker-design.md), built 2026-10-21 (M1 `0fc536f`, M2 `f12e95f`); the first batch lands 110 ms sooner, one chunk carries the engine; plan: [2026-10-21-no-worker-plan.md](../plans/2026-10-21-no-worker-plan.md); `TODO.md` keeps the case for a worker again, once the app runs without one |
+| H1 | A worker timeout runs the engine on the UI thread and marks the generator broken for the rest of the session; sentence mode at permitted settings measured 3.9 s on a desktop, so a slow phone crosses the 10 s limit, freezes, and never uses the worker again. Profiled: 93 % of that time scores candidates the search discards. Fixed by bounding the engine (maximum length 128, score once per kept suggestion, 3 attempts per suggestion, `collapseBlocks` without slicing, the sentence cap in the engine) rather than by handling the timeout | `src/lib/fromSentence.ts:427`, `:627`, `:704`; `src/lib/strength.ts:122`; `src/lib/validation.ts:13` | built | `docs/decisions.md`, "The engine's budget" (the spec folded in and removed); commit `8699fd5`, 2026-10-21; worst permitted case 224 ms (was 3,631 ms) |
+| H2 | Remove the worker once H1 is built and measured under its budget (the audit's 90-day bet, step 2): `generator.ts` loses its queue, timeout and restart, `worker.ts` and its test doubles go, and L2, L3 and L10 close with it. The price is written down in the spec: no safety net for future engine work, no Stop button, about a second's stall at the worst settings on a slow phone | `src/state/generator.ts`; `src/worker.ts`; `src/state/PasswordsProvider.tsx` | built | `docs/decisions.md`, "Where generation runs" (the spec and plan folded in and removed); built 2026-10-21, `0fc536f`, `f12e95f`, `e513506`; the first batch lands 110 ms sooner, one chunk carries the engine; `TODO.md` keeps the case for a worker again, once the app runs without one |
 
 ## Medium
 
@@ -43,15 +43,15 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 | Id | Finding | Where | Status | Spec |
 | --- | --- | --- | --- | --- |
 | L1 | "At least 3 of the following 4" is read as all four required and reported as understood | `src/lib/ruleText.ts:265` | open | |
-| L2 | Caches keyed on array identity never hit across worker requests (each request is a structured clone): 0.1 ms with one list vs 67 ms cloned, 200 scores | `src/worker.ts:7`; `src/lib/score.ts:457`; `src/lib/twists.ts:179` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); [2026-10-21-no-worker-design.md](../specs/2026-10-21-no-worker-design.md) |
-| L3 | A busy worker is replaced after 300 ms; the fresh one re-imports and re-ranks every pool (cold 80 ms vs warm 19 ms) | `src/state/generator.ts:43` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); [2026-10-21-no-worker-design.md](../specs/2026-10-21-no-worker-design.md) |
+| L2 | Caches keyed on array identity never hit across worker requests (each request is a structured clone): 0.1 ms with one list vs 67 ms cloned, 200 scores | `src/worker.ts:7`; `src/lib/score.ts:457`; `src/lib/twists.ts:179` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
+| L3 | A busy worker is replaced after 300 ms; the fresh one re-imports and re-ranks every pool (cold 80 ms vs warm 19 ms) | `src/state/generator.ts:43` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
 | L4 | The pasted-rules box re-parses on every render and has no length cap | `src/components/SiteRules.tsx:58`, `:100` | open | |
 | L5 | Stored sentence options have no upper bounds | `src/state/settingsStore.ts:121` | open | |
 | L6 | The Fun page renders markdown to raw HTML with no sanitiser (constants only; CSP blocks scripts) | `src/components/FunPage.tsx:10`, `:88` | open | |
 | L7 | The CSP is a meta tag, so it cannot carry `frame-ancestors`; the Pages site can be framed | `build/csp.ts` | open | |
 | L8 | Coverage artefacts are committed and stale (600 KB from 2026-10-15); `.gitignore` lacks `coverage` | `coverage/` | open | |
 | L9 | The check job is copy-pasted between `ci.yml` and `pages.yml` | `.github/workflows/` | open | |
-| L10 | The common-password list ships in both the page and worker chunks and is split eagerly at import | `src/lib/common.ts:21` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); [2026-10-21-no-worker-design.md](../specs/2026-10-21-no-worker-design.md) |
+| L10 | The common-password list ships in both the page and worker chunks and is split eagerly at import | `src/lib/common.ts:21` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
 | L11 | zxcvbn 4.4.2 has had no release since 2017 (398 KB gzipped, loaded lazily) | `package.json` | open | |
 | L12 | Duplicated helpers (`plural` ×3, `COMFORTS` ×2, capitalise/lower-first ×4) and a type-only import cycle through `generate.ts` for `Requirements` | `src/lib/validation.ts:109`, `src/lib/ruleText.ts:410`, `src/cli/messages.ts:29`, `src/lib/score.ts:160`, `src/lib/checks.ts:7`, `src/lib/validation.ts:10` | open | |
 | L13 | The three largest modules are unchanged since the prior audit: `generate.ts` 1,022 lines, `score.ts` 727, `fromSentence.ts` 723 | `src/lib/` | open | |
@@ -63,7 +63,7 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 
 | Id | Item | Where | Status | Spec |
 | --- | --- | --- | --- | --- |
-| D1 | The CLI spec and plan of 2026-10-20: every decision that remains accurate recorded in the README's command line section or `docs/decisions.md`, then the files deleted (the rule of H2's spec §2.9; H2's plan M4 does the same for the other four specs) | `docs/specs/2026-10-20-tep-cli-design.md`; `docs/plans/2026-10-20-tep-cli-plan.md` | open | no spec needed; `TODO.md` keeps "tep CLI: decisions to revisit" |
+| D1 | The CLI spec and plan of 2026-10-20: every decision that remains accurate recorded in the README's command line section or `docs/decisions.md`, then the files deleted (the rule of H2's spec §2.9; done for the other four specs with H2) | `docs/specs/2026-10-20-tep-cli-design.md`; `docs/plans/2026-10-20-tep-cli-plan.md` | open | no spec needed; `TODO.md` keeps "tep CLI: decisions to revisit" |
 
 ## Order
 

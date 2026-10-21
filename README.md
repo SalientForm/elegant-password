@@ -58,7 +58,8 @@ explanation for each:
   required symbols with a few swaps, then closing marks. The
   sentence is kept in this tab only (sessionStorage) so a refresh does not
   lose it, and is never sent anywhere; it is only kept longer if you add a
-  password to your list, as that password's hint.
+  password to your list, as that password's hint. A sentence, like a hint,
+  is at most 500 characters.
 - **Submit, then it sticks.** Edits to the rules, swaps or sentence are a
   draft: a snackbar at the foot of the page holds "Discard" and "Submit
   changes" (Ctrl+Enter also submits; Escape discards, or in a text field
@@ -115,10 +116,20 @@ explanation for each:
   to the browser only on the app's own origin: a local server, or the
   hosts named at build time in `VITE_OWN_HOSTS`. On a shared origin such
   as `salientform.github.io`, where every site of the organisation can
-  read the same storage, they stay in memory for the visit and My list
-  says so; settings are stored everywhere.
+  read the same storage, they stay in memory for the visit, anything an
+  earlier version stored there is removed, and My list says so; settings
+  are stored everywhere. Every write reports whether it worked: when one
+  fails, My list or the settings show an alert with Try again, and nothing
+  on screen is lost. A "This session" card under My list says where the
+  session is kept; "Forget this session" (pressed twice) drops the
+  passwords on screen, both sentences and the password under test, from
+  memory and storage, and draws a new sentence; My list and the settings
+  stay.
 - **My list.** Add a suggestion one at a time; each entry stores only the
-  password and its hint, scored cold on display. Remove, or clear.
+  password and its hint, scored cold on display. Remove, or clear. Each
+  change is made to the list as stored, read again just before the write,
+  and a change another tab makes shows at once, so two tabs never write
+  over each other.
 - **Showing and copying a password.** A password cut short by its column
   ends in an ellipsis; a click or tap shows the whole of it, wrapped, and
   the next folds it back. On a desktop a password is copied like any
@@ -217,7 +228,13 @@ explanation for each:
   password's own runs of letters and digits; Memorability needs a hint.
   The password under test stays, through mistyped runs, until the
   Clear button, a paste or a new list entry replaces it; one that arrived
-  without a hint can be given one. Nothing is stored.
+  without a hint can be given one. Nothing is stored. A pasted password is
+  kept exactly, spaces at either end included, with one trailing line
+  break dropped; more than one line, spaces alone or more than 500
+  characters are refused with the reason. On a soft keyboard that names no
+  keys (Android), the typing is read from how the text changes. A keyboard
+  button on every card and My list entry makes that password the one
+  under test, with its hint, without saving or removing anything.
 - **Fun page** (`#/fun`): a full rebuild-the-app spec prompt, generated from
   the live constants and rendered as formatted text, with Copy and Download
   of the markdown. It embeds the algorithm flow document verbatim as a
@@ -233,7 +250,9 @@ explanation for each:
   allows only the app itself and no network at all (`build/csp.ts`), plus
   `referrer: no-referrer`. The clipboard failing (insecure context, page
   not focused) selects the text instead of silently doing nothing. A render
-  error shows a message and a reload button, never a blank page.
+  error shows a message and a button that forgets the session and reloads,
+  never a blank page; a stored session that does not parse is removed on
+  load.
 - **Accessible.** The mode switch is a real tab list (arrow keys, Home,
   End), toggles report their pressed state, and status text is announced.
 - **Difficulty score** (0-100) from a rubric of eleven criteria across the modes, up to ten in one: size,
@@ -436,3 +455,4 @@ Build and docs:
 - `build/csp.ts`: the Content-Security-Policy added at build time
 - `scripts/linkCli.mjs`: `pnpm link:cli` and `unlink:cli`
 - `docs/algorithm-flow.md`: the algorithm flow
+- `docs/decisions.md`: the design decisions, with why, kept current

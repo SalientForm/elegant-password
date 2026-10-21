@@ -159,8 +159,8 @@ unaffected either way: it already needs only the password and hint.
 ### A worker again, once everything works without one
 
 Asked for by the user on 2026-10-21, when the audit's bet was taken: the
-engine is bounded first (`docs/specs/2026-10-21-engine-budget-design.md`,
-checklist H1) and the worker removed on that measurement (H2). Once the
+engine is bounded first and the worker removed on that measurement
+(`docs/decisions.md`, "Generation"; checklist H1 and H2). Once the
 app runs without one and the real stall on a phone is known, consider
 putting a worker back, and only if there is a reason the measurement
 gives: the worst permitted batch stalls a slow phone for longer than a
@@ -209,7 +209,8 @@ since this is the password people actually forget.
 
 ## From the 2026-10-20 follow-up audit: still open
 
-The rest of the audit is done (`docs/specs/2026-10-20-follow-up-fixes-design.md`).
+The rest of the audit was done on 2026-10-20; its decisions are in
+`docs/decisions.md`.
 
 - A phone typing model. The typing test now reads a soft keyboard's
   typing from how the text changes, but difficulty is still scored for
