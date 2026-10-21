@@ -1,5 +1,9 @@
 import { memo } from 'react';
-import { crackEstimates, formatDuration, type Plan } from '../lib/generate';
+import { ATTACK_SCENARIOS, crackEstimates, formatDuration, type Plan } from '../lib/generate';
+import { andList, largeNumber } from '../lib/readings';
+
+/** The attackers' speeds as they read: "10, 100,000 and 100 billion". */
+const SPEEDS = andList(ATTACK_SCENARIOS.map((a) => largeNumber(a.guessesPerSecond)));
 
 /**
  * The bits: the exact entropy of the current plan, for an attacker who knows
@@ -75,7 +79,7 @@ export const StrengthPanel = memo(function StrengthPanel({ plan, target }: { pla
           </div>
         ))}
       </dl>
-      <p className="hint">Average time to guess, for an attacker who knows the tool, at 10, 100,000 and 100 billion guesses per second.</p>
+      <p className="hint">Average time to guess, for an attacker who knows the tool, at {SPEEDS} guesses per second.</p>
     </section>
   );
 });

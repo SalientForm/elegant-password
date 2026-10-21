@@ -1810,6 +1810,10 @@
       },
       {
         "kind": "test",
+        "title": "names the core's own keys and figures in its hints: every pinky stretch and far Shift key, in keyboard order, and the bits of a number and a made-up noun"
+      },
+      {
+        "kind": "test",
         "title": "cannot pick Space while spaces are not allowed, and flags a Space picked before they were ruled out"
       },
       {
@@ -1823,6 +1827,23 @@
       {
         "kind": "test",
         "title": "shows a problem at once when the field is left"
+      }
+    ]
+  },
+  {
+    "file": "src/components/ScoringPage.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the figures the Scoring page names"
+      },
+      {
+        "kind": "test",
+        "title": "reads them from the core, so they say what the code does"
+      },
+      {
+        "kind": "test",
+        "title": "names the attackers' speeds under the bits panel"
       }
     ]
   },
@@ -3283,6 +3304,22 @@
       {
         "kind": "test",
         "title": "is green for effortless and easy, yellow for moderate, red for demanding and hard, and the reading carries it"
+      },
+      {
+        "kind": "group",
+        "title": "figures in text"
+      },
+      {
+        "kind": "test",
+        "title": "writes a count as a word up to twelve and in figures above"
+      },
+      {
+        "kind": "test",
+        "title": "writes a large figure with its scale word from a million up"
+      },
+      {
+        "kind": "test",
+        "title": "joins a list as a sentence does"
       }
     ]
   },
@@ -3744,6 +3781,10 @@
       {
         "kind": "test",
         "title": "has 64 distinct, valid mappings"
+      },
+      {
+        "kind": "test",
+        "title": "lists its kinds once each, in the order they are shown, and every built-in mapping is one of them"
       },
       {
         "kind": "group",

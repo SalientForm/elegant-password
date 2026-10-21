@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTwists, BUILT_IN_MAPPINGS, cachedSpellingCount, mappingKey, spellingsOf, VARIANT_CACHE_LIMIT, twistOutcomes, validateMapping, type Mapping, type TwistOptions } from './twists';
+import { applyTwists, BUILT_IN_KINDS, BUILT_IN_MAPPINGS, cachedSpellingCount, mappingKey, spellingsOf, VARIANT_CACHE_LIMIT, twistOutcomes, validateMapping, type Mapping, type TwistOptions } from './twists';
 import { seeded } from './testRandom';
 import { DEFAULT_REQUIREMENTS, generate } from './generate';
 
@@ -18,6 +18,10 @@ describe('built-in mappings', () => {
     expect(BUILT_IN_MAPPINGS).toHaveLength(64);
     expect(new Set(BUILT_IN_MAPPINGS.map(mappingKey)).size).toBe(64);
     for (const b of BUILT_IN_MAPPINGS) expect(validateMapping(b.from, b.to), mappingKey(b)).toBeUndefined();
+  });
+
+  it('lists its kinds once each, in the order they are shown, and every built-in mapping is one of them', () => {
+    expect(BUILT_IN_KINDS).toEqual([...new Set(BUILT_IN_MAPPINGS.map((b) => b.kind))]);
   });
 });
 

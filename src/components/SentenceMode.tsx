@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type Ref } from 'react';
 import { LENGTH_TAG_CHOICES, SHRINK_CHOICES } from '../lib/choices';
-import type { LengthTag } from '../lib/fluff';
+import { MIN_WORD, totalTagNumber, type LengthTag } from '../lib/fluff';
 import { lengthTagSymbol, SHRINK_FROM_RANGE, TAG_SYMBOLS, TARGET_LENGTH_RANGE, type SentenceOptions } from '../lib/fromSentence';
 import { comfortableSymbols, type Requirements, type Suggestion } from '../lib/generate';
 import { MAX_HINT_LENGTH } from '../lib/text';
@@ -112,9 +112,9 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
         </p>
       )}
       <p className="hint">
-        Padding only adds what is missing, after every word has been kept whole: a word when more than 3 short, a digit
+        Padding only adds what is missing, after every word has been kept whole: a word when more than {MIN_WORD} short, a digit
         or symbol repeated (“$t33l” → “$t33333l”), a run of digits (123), closing marks (!!), and the tag last. The tag
-        states the finished length, so it is worked out once, never by trial: 47 characters get “%50”.
+        states the finished length, so it is worked out once, never by trial: 47 characters get “{TAG_SYMBOLS.total[0]}{totalTagNumber(47)}”.
       </p>
       <label className="field inline">
         <span>Compress toward (characters)</span>

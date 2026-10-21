@@ -1,7 +1,8 @@
 import { memo, useState } from 'react';
 import { mappingBlock, MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
+import { PROFILE_LABELS } from '../lib/modeProfiles';
 import { customMappingProblem, DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
-import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, type Mapping, type MappingKind } from '../lib/twists';
+import { BUILT_IN_KINDS, BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, type Mapping } from '../lib/twists';
 
 interface Props {
   req: Requirements;
@@ -61,7 +62,7 @@ export const TwistsPanel = memo(function TwistsPanel({ req, onReqChange, setting
     setError(undefined);
   };
 
-  const groups = (['symbol', 'digit', 'spelling'] as MappingKind[]).map((kind) => ({
+  const groups = BUILT_IN_KINDS.map((kind) => ({
     kind,
     mappings: BUILT_IN_MAPPINGS.filter((m) => m.kind === kind),
   }));
@@ -78,7 +79,7 @@ export const TwistsPanel = memo(function TwistsPanel({ req, onReqChange, setting
       </p>
 
       <fieldset>
-        <legend>Minimum swaps</legend>
+        <legend>{PROFILE_LABELS.twists}</legend>
         <div className="segmented four">
           {Array.from({ length: MAX_TWISTS + 1 }, (_, n) => (
             <button

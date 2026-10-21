@@ -299,6 +299,9 @@ export function levelFor(value: number, cutPoints: Criterion['cutPoints'], highe
 /** Each level spans this many points: 0-20, 21-40, 41-60, 61-80, 81-100. */
 export const LEVEL_WIDTH = 20;
 
+/** The totals a level covers: 0-20 for Effortless, 21-40 for Easy, up to 81-100 for Hard. */
+export const levelRange = (level: Level) => ({ min: level === 0 ? 0 : level * LEVEL_WIDTH + 1, max: (level + 1) * LEVEL_WIDTH });
+
 export function overallLevel(score: number): Level {
   return Math.min(4, Math.floor(score / (LEVEL_WIDTH + 0.0001))) as Level;
 }

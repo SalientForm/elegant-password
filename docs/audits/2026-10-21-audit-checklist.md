@@ -48,7 +48,7 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 | L2 | Caches keyed on array identity never hit across worker requests (each request is a structured clone): 0.1 ms with one list vs 67 ms cloned, 200 scores | `src/worker.ts:7`; `src/lib/score.ts:457`; `src/lib/twists.ts:179` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
 | L3 | A busy worker is replaced after 300 ms; the fresh one re-imports and re-ranks every pool (cold 80 ms vs warm 19 ms) | `src/state/generator.ts:43` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
 | L4 | The pasted-rules box re-parses on every render and has no length cap | `src/components/SiteRules.tsx:58`, `:100` | open | |
-| L5 | Stored sentence options have no upper bounds | `src/state/settingsStore.ts:121` | open | |
+| L5 | Stored sentence options have no upper bounds | `src/state/settingsStore.ts:121` | built | no spec needed; commit `c1ba3fa`, 2026-10-21: `parseSentenceOptions` keeps each number inside `SHRINK_FROM_RANGE` / `TARGET_LENGTH_RANGE` (`src/lib/fromSentence.ts`), else the default |
 | L6 | The Fun page renders markdown to raw HTML with no sanitiser (constants only; CSP blocks scripts) | `src/components/FunPage.tsx:10`, `:88` | open | |
 | L7 | The CSP is a meta tag, so it cannot carry `frame-ancestors`; the Pages site can be framed | `build/csp.ts` | open | |
 | L8 | Coverage artefacts are committed and stale (600 KB from 2026-10-15); `.gitignore` lacks `coverage` | `coverage/` | built | no spec needed; `coverage/` untracked and ignored, 2026-10-21, with D1 |

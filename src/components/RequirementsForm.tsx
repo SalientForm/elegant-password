@@ -1,9 +1,11 @@
 import { memo } from 'react';
 import { DEFAULT_TYPING_MODE, type TypingMode } from '../lib/difficulty';
-import { COMFORT_CHOICES, isSymbolSeparator, MUST_CONTAIN, SEPARATOR_KINDS, separatorNote } from '../lib/choices';
-import { MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
-import { unusedIn, type ProfileKey } from '../lib/modeProfiles';
-import { ignoredSymbols, MAX_COUNT, MAX_LENGTH, MAX_TARGET_BITS, ruleProblems, type RuleProblem } from '../lib/validation';
+import { COMFORT_CHOICES, isSymbolSeparator, MUST_CONTAIN, SEPARATOR_KINDS, separatorChoices, separatorNote } from '../lib/choices';
+import { MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, SEPARATOR_PREFERENCE, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
+import { MADE_UP_NOUNS, pools } from '../lib/grammar';
+import { FAR_SHIFT_LETTERS, FAR_SHIFT_SYMBOLS, ONE_HAND_SHIFT_REACH, PINKY_STRETCH_SYMBOLS, pressFor } from '../lib/keyboard';
+import { MINIMAL_BITS, PROFILE_LABELS, unusedIn, type ProfileKey } from '../lib/modeProfiles';
+import { ignoredSymbols, MAX_COUNT, MAX_LENGTH, MAX_TARGET_BITS, MIN_COUNT, MIN_LENGTH, ruleProblems, type RuleProblem } from '../lib/validation';
 import { useShownProblems } from './useShownProblems';
 import { NumberField } from './NumberField';
 
@@ -33,6 +35,16 @@ const ANCHORS: Partial<Record<keyof Requirements, Anchor>> = {
   count: 'style',
 };
 const anchorOf = (p: RuleProblem): Anchor => ANCHORS[p.fields[0]!] ?? 'other';
+
+/** Characters as they sit on the keyboard, left to right: "T G B Y H N U J I" rather than "B G H I J N T U Y". */
+const keyboardOrder = (chars: readonly string[]) => [...chars].sort((a, b) => pressFor(a).key.x - pressFor(b).key.x).join(' ');
+const PINKY_STRETCHES = keyboardOrder(PINKY_STRETCH_SYMBOLS);
+const FAR_SYMBOLS = keyboardOrder(FAR_SHIFT_SYMBOLS);
+const FAR_LETTERS = keyboardOrder(FAR_SHIFT_LETTERS);
+/** The strength preset that is just the site's rules. */
+const MINIMAL_LABEL = STRENGTH_PRESETS.find((p) => p.bits === MINIMAL_BITS)!.label;
+/** What a made-up noun is worth: one pick from every made-up noun. */
+const MADE_UP_BITS = Math.round(Math.log2(MADE_UP_NOUNS.length));
 
 function Problems({ list, anchor }: { list: RuleProblem[]; anchor: Anchor }) {
   const here = list.filter((p) => anchorOf(p) === anchor);
@@ -69,6 +81,10 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
   const note = separatorNote(value);
   const separatorBlocked = problems.some((p) => p.fields[0] === 'separator');
   const ignored = ignoredSymbols(value.allowedSymbols);
+  // Whether these rules rule out a space as the separator: the core's separator check, the one the error below comes from.
+  const spaceRuledOut = !!separatorChoices(value).find((c) => c.value === ' ')?.problem;
+  // What the number is worth: one pick from the number pool at this comfort (where it goes adds a little more).
+  const numberBits = Math.round(Math.log2(pools(value.comfort).num.length));
 
   return (
     <form className="panel form" onSubmit={(e) => e.preventDefault()}>
@@ -80,11 +96,11 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
         <div className="row">
           <label className="field">
             <span>Minimum</span>
-            <NumberField {...num('minLength', 1, MAX_LENGTH)} {...mark('minLength')} />
+            <NumberField {...num('minLength', MIN_LENGTH, MAX_LENGTH)} {...mark('minLength')} />
           </label>
           <label className="field">
             <span>Maximum</span>
-            <NumberField {...num('maxLength', 1, MAX_LENGTH)} {...mark('maxLength')} />
+            <NumberField {...num('maxLength', MIN_LENGTH, MAX_LENGTH)} {...mark('maxLength')} />
           </label>
         </div>
         <Problems list={problems} anchor="length" />
@@ -159,22 +175,22 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
           ))}
         </div>
         <label className="field inline">
-          <span>Strength target in bits</span>
+          <span>{PROFILE_LABELS.targetBits} in bits</span>
           <NumberField {...num('targetBits', 0, MAX_TARGET_BITS)} {...mark('targetBits')} />
         </label>
         <label className="check">
           <input type="checkbox" checked={value.shortest} onChange={(e) => set('shortest', e.target.checked)} />
-          Shortest that meets the target
+          {PROFILE_LABELS.shortest}
         </label>
         <p className="hint">
           Cuts each sentence shape to the fewest characters that still reach the target, so the password is as short as
-          the target allows. At Minimal it is the shortest sentence the site's rules allow.
+          the target allows. At {MINIMAL_LABEL} it is the shortest sentence the site's rules allow.
         </p>
         <Problems list={problems} anchor="strength" />
       </fieldset>
 
       <fieldset>
-        <legend>Typing comfort</legend>
+        <legend>{PROFILE_LABELS.comfort}</legend>
         <div className="segmented">
           {COMFORT_CHOICES.map((c) => (
             <button
@@ -196,32 +212,32 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
             disabled={!!unused('avoidPinkyStretch')}
             onChange={(e) => set('avoidPinkyStretch', e.target.checked)}
           />
-          Avoid pinky stretches
+          {PROFILE_LABELS.avoidPinkyStretch}
         </label>
         <p className="hint">
           {unused('avoidPinkyStretch') ?? (
             <>
-              Skips symbols more than one key from where your pinkies rest, like <code>! - _ = + ) |</code>, in twists and
-              closing marks.
+              Skips symbols more than one key from where your pinkies rest (<code>{PINKY_STRETCHES}</code>) in twists
+              and closing marks.
             </>
           )}
         </p>
         <label className="check">
           <input type="checkbox" checked={value.shiftReach} disabled={!!unused('shiftReach')} onChange={(e) => set('shiftReach', e.target.checked)} />
-          Keep Shift within reach
+          {PROFILE_LABELS.shiftReach}
         </label>
         <p className="hint">
           {unused('shiftReach') ?? (
             <>
-              For one hand holding Shift: skips symbols more than 4 keys from both Shift keys, like <code>$ % ^ &amp; *</code>,
-              in twists and closing marks, and puts the capital on a word that does not start with <code>T G B Y H N U J I</code>{' '}
-              when the sentence has one.
+              For one hand holding Shift: skips symbols more than {ONE_HAND_SHIFT_REACH} keys from both Shift keys
+              (<code>{FAR_SYMBOLS}</code>) in twists and closing marks, and puts the capital on a word that does not start
+              with <code>{FAR_LETTERS}</code> when the sentence has one.
             </>
           )}
         </p>
         <label className="check">
           <input type="checkbox" checked={value.easeSwaps} disabled={!!unused('easeSwaps')} onChange={(e) => set('easeSwaps', e.target.checked)} />
-          Ease awkward words with deliberate swaps
+          {PROFILE_LABELS.easeSwaps}
         </label>
         <p className="hint">
           {unused('easeSwaps') ??
@@ -239,7 +255,7 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
             {SEPARATOR_KINDS.map((c) => {
               const chosen = value.separator === c.value;
               // A space the site forbids cannot be picked; one picked before spaces were ruled out stays, with the error below.
-              const ruledOut = c.value === ' ' && !value.allowSpaces;
+              const ruledOut = c.value === ' ' && spaceRuledOut;
               return (
                 <button
                   type="button"
@@ -262,7 +278,7 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
             maxLength={1}
             spellCheck={false}
             autoComplete="off"
-            placeholder="or ;"
+            placeholder={`or ${SEPARATOR_PREFERENCE[0]}`}
             aria-label="Separator symbol"
             value={symbolSeparator ? value.separator : ''}
             onChange={(e) => {
@@ -276,7 +292,7 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
         {!separatorBlocked && (
           <p className="hint">
             {note.kind === 'symbol' ? `${note.text} Clear the box for Auto.` : note.text}
-            {!value.allowSpaces && value.separator !== ' ' ? ' Space is not available: the site does not allow spaces.' : ''}
+            {spaceRuledOut && value.separator !== ' ' ? ' Space is not available: the site does not allow spaces.' : ''}
           </p>
         )}
         <label className="check">
@@ -286,10 +302,10 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
             disabled={value.minDigits > 0}
             onChange={(e) => set('includeNumber', e.target.checked)}
           />
-          Include a number, placed at random (about 8 bits for two keystrokes)
+          {PROFILE_LABELS.includeNumber}, placed at random (about {numberBits} bits for two keystrokes, plus its place)
         </label>
         {value.minDigits > 0 && <p className="hint">Always on while digits are required under Must contain.</p>}
-        <span className="field-label">Capital initials</span>
+        <span className="field-label">{PROFILE_LABELS.initials}</span>
         <div className="segmented four">
           {Array.from({ length: MAX_INITIALS + 1 }, (_, n) => (
             <button type="button" key={n} className={value.initials === n ? 'active' : ''} aria-pressed={value.initials === n} onClick={() => set('initials', n)}>
@@ -298,7 +314,7 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
           ))}
         </div>
         <p className="hint">Words typed as one capital letter: “brings” → B. Shorter, but each counts for less.</p>
-        <span className="field-label">Two-letter words</span>
+        <span className="field-label">{PROFILE_LABELS.shorthand}</span>
         <div className="segmented four">
           {Array.from({ length: MAX_SHORTHAND + 1 }, (_, n) => (
             <button type="button" key={n} className={value.shorthand === n ? 'active' : ''} aria-pressed={value.shorthand === n} onClick={() => set('shorthand', n)}>
@@ -307,7 +323,7 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
           ))}
         </div>
         <p className="hint">First letter and last consonant: “gently” → gy, “jupiter” → jr.</p>
-        <span className="field-label">Made-up nouns</span>
+        <span className="field-label">{PROFILE_LABELS.madeUp}</span>
         <div className="segmented four">
           {Array.from({ length: MAX_MADE_UP + 1 }, (_, n) => (
             <button type="button" key={n} className={value.madeUp === n ? 'active' : ''} aria-pressed={value.madeUp === n} onClick={() => set('madeUp', n)}>
@@ -317,7 +333,7 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
         </div>
         <p className="hint">
           Nouns made of up to two key rolls, all lowercase or ALL CAPS: “ert” + “dfg” → ertdfg. Fast, and each is worth
-          about 14 bits.
+          about {MADE_UP_BITS} bits.
         </p>
         <label className="check">
           <input type="checkbox" checked={value.glue} onChange={(e) => set('glue', e.target.checked)} />
@@ -325,7 +341,7 @@ export const RequirementsForm = memo(function RequirementsForm({ value, onChange
         </label>
         <label className="field inline">
           <span>Suggestions</span>
-          <NumberField {...num('count', 1, MAX_COUNT)} {...mark('count')} />
+          <NumberField {...num('count', MIN_COUNT, MAX_COUNT)} {...mark('count')} />
         </label>
         <Problems list={problems} anchor="style" />
       </fieldset>

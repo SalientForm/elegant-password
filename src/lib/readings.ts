@@ -46,6 +46,29 @@ export interface ScoreReadings {
   memorability: Reading;
 }
 
+// A figure the core defines reads the same in every front end's text: "six
+// key widths", "100 billion guesses", "a, b and c".
+
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+
+/** A count as it reads in a sentence: a word up to twelve ("three", "six"), figures above ("65"). */
+export const numberWord = (n: number) => NUMBER_WORDS[n] ?? n.toLocaleString('en');
+
+const SCALES: readonly [string, number][] = [
+  ['trillion', 1e12],
+  ['billion', 1e9],
+  ['million', 1e6],
+];
+
+/** A large figure in words: "10", "100,000", "100 billion". */
+export function largeNumber(n: number): string {
+  const scale = SCALES.find(([, size]) => n >= size);
+  return scale ? `${(n / scale[1]).toLocaleString('en')} ${scale[0]}` : n.toLocaleString('en');
+}
+
+/** Items joined as in a sentence: "a", "a and b", "a, b and c". */
+export const andList = (items: readonly string[]) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1)}` : (items[0] ?? ''));
+
 export const READING_LABELS = { strength: 'Strength', raw: 'Raw', difficulty: 'Difficulty', memorability: 'Memorability' } as const;
 
 /** The badges in the order they are shown. */

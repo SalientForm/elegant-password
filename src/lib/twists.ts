@@ -26,6 +26,9 @@ export const MAPPING_KIND_LABELS: Record<MappingKind, string> = {
   custom: 'Your mappings',
 };
 
+/** The built-in kinds in the order they are listed: symbol swaps, number swaps, misspellings. */
+export const BUILT_IN_KINDS = ['symbol', 'digit', 'spelling'] as const satisfies readonly MappingKind[];
+
 const pairs = (kind: MappingKind, spec: string): Mapping[] =>
   spec
     .trim()

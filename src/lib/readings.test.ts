@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scoreDifficulty } from './difficulty';
 import { STRENGTH_PRESETS } from './generate';
-import { difficultyBand, memorabilityLevel, READING_LABELS, READING_ORDER, scoreReadings, STRENGTH_WORDS, strengthLevel, strengthWord } from './readings';
+import { andList, difficultyBand, largeNumber, memorabilityLevel, numberWord, READING_LABELS, READING_ORDER, scoreReadings, STRENGTH_WORDS, strengthLevel, strengthWord } from './readings';
 
 describe('memorability badge colours', () => {
   it('is green above 75, yellow above 45, red at or below 45', () => {
@@ -82,5 +82,25 @@ describe('difficulty badge colours', () => {
       const r = scoreReadings({ strength: 50, raw: 60, difficulty: { score: 10, level, label: 'Easy', mode: 'ten-finger' } });
       expect(r.difficulty.band).toBe(difficultyBand(level));
     }
+  });
+});
+
+describe('figures in text', () => {
+  it('writes a count as a word up to twelve and in figures above', () => {
+    expect([0, 3, 6, 12].map(numberWord)).toEqual(['zero', 'three', 'six', 'twelve']);
+    expect(numberWord(65)).toBe('65');
+    expect(numberWord(1500)).toBe('1,500');
+  });
+
+  it('writes a large figure with its scale word from a million up', () => {
+    expect([10, 1e4, 1e5, 999_999].map(largeNumber)).toEqual(['10', '10,000', '100,000', '999,999']);
+    expect([1e6, 1e11, 2.5e12].map(largeNumber)).toEqual(['1 million', '100 billion', '2.5 trillion']);
+  });
+
+  it('joins a list as a sentence does', () => {
+    expect(andList([])).toBe('');
+    expect(andList(['a'])).toBe('a');
+    expect(andList(['a', 'b'])).toBe('a and b');
+    expect(andList(['a', 'b', 'c'])).toBe('a, b and c');
   });
 });

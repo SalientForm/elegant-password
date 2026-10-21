@@ -331,6 +331,13 @@ twists). It is the lead if the budget is ever missed.
   and `scoreReadings`, the calls the web makes, and rebuilds no reading;
   and that for each site preset and typing mode the web provider and `tep`
   build the same inputs from the same settings.
+- **A figure, list or label the core defines is interpolated, never
+  typed out** (2026-10-21): the web app's hints and the Scoring page read
+  the class sizes, bands, key lists, speeds and preset and option labels
+  from `src/lib` (`numberWord`, `largeNumber` and `andList` in
+  `readings.ts` write them into a sentence), so the text says what the
+  code does. Which score or level is which colour is decided only in
+  `readings.ts`; the stylesheet paints the bands.
 - **The CLI modules the Fun page's prompt draws on stay free of Node
   APIs** (the field table, names, messages, constraints, the config writer,
   help), so the browser can run them; the boundaries test follows the
