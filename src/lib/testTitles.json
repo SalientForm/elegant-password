@@ -181,6 +181,10 @@
         "title": "in sentence mode the swaps follow the sentence as it is typed"
       },
       {
+        "kind": "test",
+        "title": "a keystroke in the made-up sentence renders no row of My list; a new typing mode renders every row"
+      },
+      {
         "kind": "group",
         "title": "App: what renders when the window narrows"
       },

@@ -24,6 +24,7 @@ vi.mock('./components/StrengthPanel', async (original) => renders.counting('Stre
 vi.mock('./components/RequirementsForm', async (original) => renders.counting('RequirementsForm', await original()));
 vi.mock('./components/TwistsPanel', async (original) => renders.counting('TwistsPanel', await original()));
 vi.mock('./components/SiteRules', async (original) => renders.counting('SiteRules', await original()));
+vi.mock('./components/ListEntry', async (original) => renders.counting('ListEntry', await original()));
 
 import { App } from './App';
 
@@ -94,6 +95,22 @@ describe('App: what renders', () => {
     expect(ph().disabled).toBe(true);
     fireEvent.change(sentence, { target: { value: 'sally eats sweets photo' } });
     expect(ph().disabled).toBe(false);
+  });
+
+  it('a keystroke in the made-up sentence renders no row of My list; a new typing mode renders every row', { timeout: 30_000 }, async () => {
+    render(<App />);
+    await settled();
+    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Add' }));
+    fireEvent.click(within(cards()[1]!).getByRole('button', { name: 'Add' }));
+    const list = screen.getByRole('list', { name: 'My passwords' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    await settled(); // the rows' readings are in
+    renders.counts.clear();
+    typeInMadeUpSentence();
+    expect(renders.count('ListEntry')).toBe(0);
+    fireEvent.click(within(screen.getByRole('region', { name: 'Mode' })).getByRole('button', { name: 'One-handed' }));
+    expect(renders.count('ListEntry')).toBeGreaterThanOrEqual(2);
+    for (const row of within(list).getAllByRole('listitem')) expect(within(row).getByText(/^Difficulty \d+$/).getAttribute('aria-label')).toMatch(/\(one-handed\)$/);
   });
 });
 
