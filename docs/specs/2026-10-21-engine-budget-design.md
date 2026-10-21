@@ -1,6 +1,6 @@
 # The engine answers within a budget
 
-Status: **built**, 2026-10-21, on the working tree of
+Status: **built**, 2026-10-21, commit `8699fd5` on
 `feature/audit-follow-up` (plan: `docs/plans/2026-10-21-engine-budget-plan.md`). Acts on
 item H1 of `docs/audits/2026-10-21-audit-checklist.md` and the engine half
 of M2. It is the first of two steps that take the audit's 90-day bet: make
