@@ -199,7 +199,7 @@ describe('RequirementsForm', () => {
     const notKept = () => screen.queryByTestId('rules-not-kept')?.textContent;
     fireEvent.change(box, { target: { value: 'exactly 300 characters' } });
     expect(pasteStatus().textContent).toBe('Nothing this tool can keep yet.');
-    expect(notKept()).toBe('Not kept: exactly 300 characters: this tool makes at most 256.');
+    expect(notKept()).toBe('Not kept: exactly 300 characters: this tool makes at most 128.');
     fireEvent.click(screen.getByRole('button', { name: 'Fill in' }));
     expect(req()).toEqual(DEFAULT_REQUIREMENTS);
     expect(pasteStatus().textContent).toBe('Nothing this tool can keep; nothing changed.');

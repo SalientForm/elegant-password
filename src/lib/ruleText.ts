@@ -30,7 +30,7 @@ export interface ParsedRules {
   understood: string[];
   /**
    * Rules the text states that this tool cannot keep, each with why
-   * ("exactly 300 characters: this tool makes at most 256"). None of them
+   * ("exactly 300 characters: this tool makes at most 128"). None of them
    * is applied; a front end must say them, and tep refuses them.
    */
   unsupported: string[];

@@ -144,6 +144,7 @@ describe('stored requirements: contradictions, the reset report and older versio
       ['space separator, spaces not allowed', { separator: ' ', allowSpaces: false }, ['separator']],
       ['separator a letter', { separator: 'x' }, ['separator']],
       ['count out of range', { count: 99 }, ['count']],
+      ['maximum past what the tool makes', { maxLength: 200 }, ['maxLength']],
       ['negative target', { targetBits: -5 }, ['targetBits']],
       ['too many initials', { initials: 7 }, ['initials']],
       ['a number field holding text', { maxLength: 'lots' }, ['maxLength']],

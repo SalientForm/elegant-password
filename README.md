@@ -34,7 +34,7 @@ explanation for each:
   again ("Password1!" three times) or a walk along the keyboard ("asdf").
 - **Rules it cannot keep are named**: pasted site rules show what was
   understood and, separately, what was not kept and why (a minimum length
-  above 256, "no digits", "at most 2 symbols"); nothing is quietly weakened.
+  above 128, "no digits", "at most 2 symbols"); nothing is quietly weakened.
   A minimum number of lowercase letters is a rule like the other counts.
 - **No common passwords**: a password that is exactly one of the 10,001
   most common passwords (SecLists' `10k-most-common.txt`, in

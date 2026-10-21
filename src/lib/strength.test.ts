@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { commonRank } from './common';
+import { randomInt } from './random';
+import { seeded } from './testRandom';
 import { BITS_PER_ENGLISH_LETTER, collapseBlocks, collapseRuns, isMemorableDigits, KEY_WALK_CHOICES, keyWalks, MEMORABLE_DIGITS_CHOICES, rawBits, strengthBits, strengthParts, SYMBOL_CHOICES } from './strength';
 
 const L = (n: number) => n * BITS_PER_ENGLISH_LETTER;
@@ -101,6 +103,37 @@ describe('the habits an attacker tries early', () => {
     // Words are not repetitions: two letters twice is English ("banana", "cocoa").
     expect(collapseBlocks('banana').text).toBe('banana');
     expect(collapseBlocks('cocoa').text).toBe('cocoa');
+  });
+
+  it('reads every block length off one pass, giving exactly what comparing slices gave', () => {
+    // The scan this replaced, kept as the oracle: it sliced and joined a block for every length at every position.
+    const isRepetition = (length: number, times: number) => (length >= 3 && times >= 2) || (length === 2 && times >= 3);
+    const oracle = (text: string) => {
+      const chars = [...text];
+      const repeats: { block: string; times: number }[] = [];
+      let out = '';
+      let i = 0;
+      while (i < chars.length) {
+        let found: { length: number; times: number } | undefined;
+        for (let length = 2; i + 2 * length <= chars.length; length++) {
+          const block = chars.slice(i, i + length).join('');
+          let times = 1;
+          while (chars.slice(i + times * length, i + (times + 1) * length).join('') === block) times++;
+          if (isRepetition(length, times) && (!found || length * times > found.length * found.times)) found = { length, times };
+        }
+        if (found) {
+          const block = chars.slice(i, i + found.length).join('');
+          out += block;
+          repeats.push({ block, times: found.times });
+          i += found.length * found.times;
+        } else out += chars[i++];
+      }
+      return { text: out, repeats };
+    };
+    const crafted = ['', 'a', 'ab', 'abab', 'ababab', 'abcabc', 'abcabcab', 'aabaab', 'abababababab', 'xabcabcabcy', 'abcdabcdabcd', 'aaaa', 'abaabaaba', '😀x😀x😀x', 'Password1!Password1!x'];
+    const rng = seeded(7);
+    const random = Array.from({ length: 2000 }, () => Array.from({ length: randomInt(41, rng) }, () => 'abc'[randomInt(3, rng)]).join(''));
+    for (const text of [...crafted, ...random]) expect(collapseBlocks(text), JSON.stringify(text)).toEqual(oracle(text));
   });
 
   it('reads a walk along a keyboard row or the alphabet as one pick', () => {

@@ -13,7 +13,7 @@ const answers = (over: Partial<Answers>): Answers => ({ ...noAnswers(), ...over 
 describe('reqOf', () => {
   it('fills what is unanswered with the loosest values', () => {
     const req = reqOf(noAnswers());
-    expect(req).toMatchObject({ minLength: 1, maxLength: 256, minUppercase: 0, minDigits: 0, minSymbols: 0, allowedSymbols: ALL_SYMBOLS, allowSpaces: true, comfort: 'relaxed', madeUp: 0, glue: false, separator: 'auto' });
+    expect(req).toMatchObject({ minLength: 1, maxLength: 128, minUppercase: 0, minDigits: 0, minSymbols: 0, allowedSymbols: ALL_SYMBOLS, allowSpaces: true, comfort: 'relaxed', madeUp: 0, glue: false, separator: 'auto' });
     expect(Object.keys(LOOSEST).sort()).toEqual(['avoid-pinky', 'comfort', 'ease-swaps', 'glue', 'initials', 'made-up', 'max-length', 'min-digits', 'min-length', 'min-lowercase', 'min-symbols', 'min-uppercase', 'number', 'separator', 'shift-reach', 'shortest', 'spaces', 'strength', 'swaps', 'symbols', 'two-letter'].sort());
   });
 

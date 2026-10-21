@@ -125,14 +125,7 @@ export function collapseBlocks(text: string): { text: string; repeats: { block: 
   let out = '';
   let i = 0;
   while (i < chars.length) {
-    let found: { length: number; times: number } | undefined;
-    for (let length = 2; i + 2 * length <= chars.length; length++) {
-      const block = chars.slice(i, i + length).join('');
-      let times = 1;
-      while (chars.slice(i + times * length, i + (times + 1) * length).join('') === block) times++;
-      // The block covering most of the text wins; of two that cover as much, the shorter ("ab" over "abab").
-      if (isRepetition(length, times) && (!found || length * times > found.length * found.times)) found = { length, times };
-    }
+    const found = repetitionAt(chars, i);
     if (found) {
       const block = chars.slice(i, i + found.length).join('');
       out += block;
@@ -141,6 +134,36 @@ export function collapseBlocks(text: string): { text: string; repeats: { block: 
     } else out += chars[i++];
   }
   return { text: out, repeats };
+}
+
+/**
+ * The block starting at `i` that is typed again and again and covers the
+ * most text (of two that cover as much, the shorter: "ab" over "abab"), or
+ * undefined when no block there reads as a repetition. One pass builds the
+ * Z-array of the suffix (z[k]: how many characters from i + k on match
+ * those from i on); a block of length L is then typed 1 + z[L] / L times
+ * in a row, so every length is read off without comparing slices.
+ */
+function repetitionAt(chars: readonly string[], i: number): { length: number; times: number } | undefined {
+  const m = chars.length - i;
+  const z = new Int32Array(m);
+  let l = 0;
+  let r = 0;
+  for (let k = 1; k < m; k++) {
+    let zk = k < r ? Math.min(r - k, z[k - l]!) : 0;
+    while (k + zk < m && chars[i + zk] === chars[i + k + zk]) zk++;
+    z[k] = zk;
+    if (k + zk > r) {
+      l = k;
+      r = k + zk;
+    }
+  }
+  let found: { length: number; times: number } | undefined;
+  for (let length = 2; 2 * length <= m; length++) {
+    const times = 1 + Math.floor(z[length]! / length);
+    if (isRepetition(length, times) && (!found || length * times > found.length * found.times)) found = { length, times };
+  }
+  return found;
 }
 
 /** The password cut into runs of letters (a capital after a lower-case letter starts a new run), runs of digits, and single other characters. */

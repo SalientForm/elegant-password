@@ -13,8 +13,8 @@ describe('ruleProblems', () => {
     expect(ruleProblems(DEFAULT_REQUIREMENTS)).toEqual([]);
   });
 
-  it('length: each bound a whole number from 1 to 256, and the minimum not above the maximum', () => {
-    for (const bad of [0, -3, 1.5, 257, Number.NaN, '12']) {
+  it('length: each bound a whole number from 1 to 128, and the minimum not above the maximum', () => {
+    for (const bad of [0, -3, 1.5, 129, Number.NaN, '12']) {
       expect(fieldsOf({ minLength: bad }), String(bad)).toEqual([['minLength']]);
       expect(fieldsOf({ maxLength: bad, minLength: 1 }), String(bad)).toContainEqual(['maxLength']);
     }

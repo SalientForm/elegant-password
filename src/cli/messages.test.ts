@@ -107,7 +107,7 @@ describe('every contradiction, explained', () => {
     const req = { ...DEFAULT_REQUIREMENTS, minLength: 0 };
     const [p] = problemsOf(req);
     const e = explainProblem(p!, req, { source: () => fileAt(4, 'rules.min-length') });
-    expect(e.title).toBe('The minimum length must be a whole number from 1 to 256.');
+    expect(e.title).toBe('The minimum length must be a whole number from 1 to 128.');
     expect(e.fix).toBe('Change rules.min-length in tep.yml (line 4).');
   });
 
@@ -148,7 +148,7 @@ describe('the searches behind the fixes', () => {
       { minLength: 12, maxLength: 12, minUppercase: 6 },
     ]) {
       const req = { ...DEFAULT_REQUIREMENTS, ...over };
-      expect(smallestWorkingMax(req), JSON.stringify(over)).toBe(brute(req.maxLength + 1, 256, (n) => ok({ ...req, maxLength: n })));
+      expect(smallestWorkingMax(req), JSON.stringify(over)).toBe(brute(req.maxLength + 1, 128, (n) => ok({ ...req, maxLength: n })));
       expect(largestWorkingMin(req), JSON.stringify(over)).toBe(brute(req.minLength - 1, 1, (n) => ok({ ...req, minLength: n })));
     }
   });

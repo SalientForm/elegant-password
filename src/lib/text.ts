@@ -4,10 +4,21 @@
 /**
  * The longest sentence, hint or password under test either front end takes,
  * in characters. Scoring a text is quadratic in places (the alignment, the
- * twist count), and a 500-character sentence already takes seconds, so
- * longer input is refused rather than left to freeze the page.
+ * twist count), so the length is capped rather than left open; at this cap
+ * the longest permitted batch answers in about a quarter of a second on a
+ * desktop (docs/specs/2026-10-21-engine-budget-design.md).
  */
 export const MAX_SENTENCE_LENGTH = 500;
+
+/**
+ * Why a sentence is too long, or undefined when it is not: the one check
+ * and wording for the engine and for `tep g`, so a sentence that reaches
+ * the engine by any route is capped the same way. Lengths count UTF-16
+ * code units, as the web app's fields and the CLI already do.
+ */
+export function sentenceLengthProblem(sentence: string): string | undefined {
+  return sentence.length > MAX_SENTENCE_LENGTH ? `The sentence is ${sentence.length} characters; ${MAX_SENTENCE_LENGTH} is the most this tool takes. Use a shorter sentence.` : undefined;
+}
 
 /** Small words: these become capital initials and are the first to be dropped. */
 export const SMALL_WORDS: ReadonlySet<string> = new Set(

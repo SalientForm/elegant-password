@@ -10,7 +10,7 @@
 import type { Requirements } from './generate';
 import { lookupKey } from './keyboard';
 
-export const MAX_LENGTH = 256;
+export const MAX_LENGTH = 128;
 export const MAX_TARGET_BITS = 256;
 export const MAX_COUNT = 20;
 export const MAX_TWISTS = 3;
