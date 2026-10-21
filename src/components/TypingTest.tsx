@@ -121,6 +121,8 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const typingMode = passwords?.typingMode ?? DEFAULT_TYPING_MODE;
   const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? difficultyAlone(target) : undefined), [cold, target]);
   const difficulty = useMemo(() => (target !== undefined && base ? difficultyIn(target, base, typingMode) : undefined), [target, base, typingMode]);
+  /** The figures from the password alone, worked out once per password under test, not on every keystroke. */
+  const alone = useMemo(() => (target === undefined ? undefined : { strength: strengthBits(target), raw: rawBits(target), rank: commonRank(target) }), [target]);
   const last = attempts[0];
   const zxcvbn = useZxcvbn(target, passwords?.selected.find((e) => e.password === target)?.zxcvbn);
 
@@ -258,13 +260,13 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               <span className="field-label">Hint:</span> {hintText ?? <em>none</em>}
             </p>
           )}
-          {commonRank(target!) !== undefined && (
+          {alone?.rank !== undefined && (
             <p className="error" role="alert">
-              {commonPasswordProblem(commonRank(target!)!)}.
+              {commonPasswordProblem(alone.rank)}.
             </p>
           )}
           <div className="actions">
-            <ScoreBadges strength={strengthBits(target!)} raw={rawBits(target!)} difficulty={difficulty} {...(zxcvbn ? { zxcvbn } : {})} {...(cold ? { memorability: cold.memorability.score } : {})} />
+            <ScoreBadges strength={alone!.strength} raw={alone!.raw} difficulty={difficulty} {...(zxcvbn ? { zxcvbn } : {})} {...(cold ? { memorability: cold.memorability.score } : {})} />
           </div>
           {last && (
             <ul className="typing-stats">

@@ -2007,6 +2007,10 @@
       },
       {
         "kind": "test",
+        "title": "scores Strength, Raw and the common-password check once per password under test, not on every keystroke"
+      },
+      {
+        "kind": "test",
         "title": "can hide the text as it is typed, and gives password managers nothing to latch on to"
       },
       {
