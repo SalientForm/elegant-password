@@ -1,8 +1,7 @@
 import { memo, useState } from 'react';
-import { MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
-import { isFarShift, isPinkyStretch } from '../lib/keyboard';
-import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
-import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, validateMapping, type Mapping, type MappingKind } from '../lib/twists';
+import { mappingBlock, MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
+import { customMappingProblem, DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
+import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, type Mapping, type MappingKind } from '../lib/twists';
 
 interface Props {
   req: Requirements;
@@ -22,13 +21,12 @@ export const relevantTo = (words: readonly string[]) => (m: Pick<Mapping, 'from'
 
 const show = (to: string) => (to === '' ? '–' : to);
 
-/** The separator the requirements resolve to, or undefined while they are invalid or the separator is a space. */
-function separatorInUse(req: Requirements): string | undefined {
+/** The separator the requirements resolve to, or none while they are invalid. */
+function separatorInUse(req: Requirements): string {
   try {
-    const s = resolveSeparator(req);
-    return s.trim() ? s : undefined;
+    return resolveSeparator(req);
   } catch {
-    return undefined;
+    return '';
   }
 }
 
@@ -38,20 +36,10 @@ export const TwistsPanel = memo(function TwistsPanel({ req, onReqChange, setting
   const [error, setError] = useState<string>();
 
   const disabled = new Set(settings.disabled);
-  const allowed = new Set(req.allowedSymbols);
   const separator = separatorInUse(req);
 
-  /** Why a mapping cannot be used with the current requirements, if it cannot. */
-  const blocked = (m: Pick<Mapping, 'to'>): string | undefined => {
-    for (const c of m.to) {
-      if (/[a-z0-9]/.test(c)) continue;
-      if (!allowed.has(c)) return `"${c}" is not an allowed symbol`;
-      if (c === separator) return `"${c}" is the separator, which never comes from a swap`;
-      if (req.avoidPinkyStretch && isPinkyStretch(c)) return `"${c}" needs a pinky stretch`;
-      if (req.shiftReach && isFarShift(c)) return `"${c}" needs a Shift key out of one hand's reach`;
-    }
-    return undefined;
-  };
+  /** Why a mapping cannot be used with the current requirements, if it cannot: the core's reason (mappingBlock). */
+  const blocked = (m: Pick<Mapping, 'to'>): string | undefined => mappingBlock(m, req, separator);
 
   const toggle = (key: string) =>
     onSettingsChange({
@@ -62,10 +50,9 @@ export const TwistsPanel = memo(function TwistsPanel({ req, onReqChange, setting
   const add = (e: React.FormEvent) => {
     e.preventDefault();
     const f = from.trim().toLowerCase();
-    const problem = validateMapping(f, to);
-    const exists = [...BUILT_IN_MAPPINGS, ...settings.custom].some((m) => mappingKey(m) === mappingKey({ from: f, to }));
-    if (problem || exists) {
-      setError(problem ?? 'That mapping already exists.');
+    const problem = customMappingProblem({ from: f, to }, settings.custom);
+    if (problem) {
+      setError(problem.message);
       return;
     }
     onSettingsChange({ ...settings, custom: [...settings.custom, { from: f, to }] });

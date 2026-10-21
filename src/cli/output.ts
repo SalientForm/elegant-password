@@ -7,7 +7,6 @@ import type { TypingMode } from '../lib/difficulty';
 import type { Outcome } from '../lib/engine';
 import { easedIn, easedLine, twistLine, twistOptionsLine, typingLines } from '../lib/explain';
 import { roleLabel, type Plan, type Suggestion } from '../lib/generate';
-import { isMadeUpNoun } from '../lib/grammar';
 import { READING_ORDER, scoreReadings, type Band, type ScoreReadings } from '../lib/readings';
 import type { SortOrder } from '../lib/sort';
 import type { Format } from './flagList';
@@ -29,11 +28,9 @@ export const PLAIN: Paint = { green: (s) => s, yellow: (s) => s, red: (s) => s, 
 export const useColor = (isTTY: boolean, env: Record<string, string | undefined>, flag: boolean) => isTTY && flag && !env.NO_COLOR;
 
 const byBand = (p: Paint, band: Band | null) => (band === 'high' ? p.green : band === 'mid' ? p.yellow : band === 'low' ? p.red : p.dim);
-/** Difficulty is coloured by level: effortless and easy green, moderate yellow, demanding and hard red. */
-const byLevel = (p: Paint, level: number) => (level <= 1 ? p.green : level === 2 ? p.yellow : p.red);
 
 export function badges(r: ScoreReadings, p: Paint): string {
-  return READING_ORDER.map((key) => (key === 'difficulty' ? byLevel(p, r.difficulty.level) : byBand(p, r[key].band))(`${r[key].label} ${r[key].value}`)).join('  ');
+  return READING_ORDER.map((key) => byBand(p, r[key].band)(`${r[key].label} ${r[key].value}`)).join('  ');
 }
 
 /** Which config file the settings came from, or why none did. */
@@ -75,7 +72,7 @@ export function planLines(plan: Plan): string[] {
 /** The "Why?" of one password, as lines. */
 export function explainLines(s: Suggestion, context: { separator: string; minUppercase: number }): string[] {
   const words = s.words.map((w) => {
-    const role = roleLabel(w, isMadeUpNoun(w.original));
+    const role = roleLabel(w);
     return w.text === w.original ? `${w.text} (${role})` : `${w.text} for "${w.original}" (${role})`;
   });
   const out = [`Words: ${words.join(', ')}`];

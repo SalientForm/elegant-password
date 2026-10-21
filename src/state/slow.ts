@@ -2,10 +2,12 @@
 // stall cannot be cut short; it can be made visible. Any one piece of work
 // over SLOW_MS is a failure (the user's line, 2026-10-21): it is reported
 // here, and SlowNotice shows it as a floating error until it is dismissed.
-// The clock lives in the web app; src/lib stays free of one.
+// The clock lives in the web app; the line itself is the core's
+// (src/lib/budget.ts), shared with the CLI.
 
-/** Longer than this, one piece of work is a failure. */
-export const SLOW_MS = 2000;
+import { SLOW_MS } from '../lib/budget';
+
+export { SLOW_MS };
 
 export interface SlowWork {
   /** What was slow, as the notice names it: "Making passwords". */

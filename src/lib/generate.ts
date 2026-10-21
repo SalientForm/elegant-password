@@ -206,9 +206,9 @@ export type WordRole = Slot | 'yours' | 'fluff';
 
 export const ROLE_LABELS: Record<WordRole, string> = { ...SLOT_LABELS, yours: 'your word', fluff: 'padding' };
 
-/** Label for a word chip: made-up nouns get their own label. */
-export function roleLabel(word: { text: string; original: string; slot: WordRole }, madeUp: boolean): string {
-  return madeUp ? 'made-up noun' : ROLE_LABELS[word.slot];
+/** Label for a word chip: a made-up noun in a noun slot gets its own label; your own words and padding never do. */
+export function roleLabel(word: { original: string; slot: WordRole }): string {
+  return word.slot === 'noun' && isMadeUpNoun(word.original) ? 'made-up noun' : ROLE_LABELS[word.slot];
 }
 
 export interface RequirementCheck {
@@ -839,9 +839,20 @@ export interface MakeUpOptions extends GenerateOptions {
  * short.
  */
 export function usableMappings(mappings: readonly Mapping[], req: Requirements, separator = ''): Mapping[] {
-  const allowed = new Set(comfortableSymbols(req));
-  if (separator) allowed.delete(separator);
-  return mappings.filter((m) => [...m.to].every((c) => /[a-z0-9]/.test(c) || allowed.has(c)));
+  return mappings.filter((m) => !mappingBlock(m, req, separator));
+}
+
+/** Why a mapping cannot be used under these rules and this separator, or undefined when it can: the reason the swaps panel shows. */
+export function mappingBlock(m: Pick<Mapping, 'to'>, req: Requirements, separator = ''): string | undefined {
+  const allowed = allowedSymbolSet(req);
+  for (const c of m.to) {
+    if (/[a-z0-9]/.test(c)) continue;
+    if (!allowed.includes(c)) return `"${c}" is not an allowed symbol`;
+    if (c === separator) return `"${c}" is the separator, which never comes from a swap`;
+    if (req.avoidPinkyStretch && isPinkyStretch(c)) return `"${c}" needs a pinky stretch`;
+    if (req.shiftReach && isFarShift(c)) return `"${c}" needs a Shift key out of one hand's reach`;
+  }
+  return undefined;
 }
 
 const same = <T>(a: readonly T[], b: readonly T[]) => a.length === b.length && a.every((x, i) => x === b[i]);

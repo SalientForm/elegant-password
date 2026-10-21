@@ -39,7 +39,7 @@ sentence:
 swaps:
   off: [a>@]
   custom:
-    - { from: ph, to: f }
+    - { from: cat, to: k@ }
 output:
   count: 2
   sort: strength
@@ -53,7 +53,7 @@ output:
       rules: { 'max-length': 14, symbols: '!@#' },
       options: { swaps: 3, separator: ' ' },
       sentence: { shrink: 'ends' },
-      swaps: { disabled: ['a>@'], custom: [{ from: 'ph', to: 'f' }] },
+      swaps: { disabled: ['a>@'], custom: [{ from: 'cat', to: 'k@' }] },
       output: { count: 2, sort: 'strength' },
     });
     expect(lines).toMatchObject({ mode: 3, site: 4, 'rules.max-length': 6, 'rules.symbols': 7, 'options.swaps': 9, 'options.separator': 10, 'sentence.shrink': 12, swaps: 13, 'output.count': 18 });
@@ -66,7 +66,7 @@ output:
     expect(layer.site?.source).toEqual({ kind: 'file', file: 'bank.yml', line: 4, key: 'site' });
     const r = resolve(layer, flagsLayer({}), { tty: true });
     expect(r.generation.req).toMatchObject({ minLength: 8, maxLength: 14, allowedSymbols: '!@#', twists: 3, separator: ' ' });
-    expect(r.generation.mappingSettings).toEqual({ disabled: ['a>@'], custom: [{ from: 'ph', to: 'f' }] });
+    expect(r.generation.mappingSettings).toEqual({ disabled: ['a>@'], custom: [{ from: 'cat', to: 'k@' }] });
     expect(r.count).toBe(2);
   });
 
@@ -181,7 +181,7 @@ describe('parseConfig: every way a file can be wrong, each with its line', () =>
     ]);
   });
 
-  it('bad swaps: not a built-in, a malformed entry, a custom swap the core refuses, a duplicate', () => {
+  it('bad swaps: not a built-in, a malformed entry, a custom swap the core refuses, a copy of a built-in, a duplicate', () => {
     expect(
       messages(`version: 1
 swaps:
@@ -189,17 +189,19 @@ swaps:
   custom:
     - { from: PH, to: f }
     - ph
-    - { from: ph, to: f }
-    - { from: ph, to: f }
+    - { from: cat, to: k@ }
+    - { from: cat, to: k@ }
     - { from: o, to: 0 }
+    - { from: ph, to: f }
 `),
     ).toEqual([
       'tep.yml:3: swaps.off entry 2 must be a built-in swap written "from>to", such as "a>@"; found 3.',
       'tep.yml:3: swaps.off entry 1: "zz>q" is not a built-in swap. Built-in swaps are written "from>to", such as "a>@" or "ph>f".',
       'tep.yml:5: swaps.custom entry 1: PH>f: Replace: 1-8 lowercase letters.',
       'tep.yml:6: swaps.custom entry 2 must be a map with "from" and "to", such as { from: ph, to: f }; found the text "ph".',
-      'tep.yml:8: swaps.custom entry 4: ph>f is listed twice (also entry 3).',
+      'tep.yml:8: swaps.custom entry 4: cat>k@ is listed twice (also entry 3).',
       'tep.yml:9: swaps.custom entry 5: "to" must be text; found 0. Put it in double quotes, as in to: "0".',
+      'tep.yml:10: swaps.custom entry 6: ph>f is a built-in swap already, so it needs no custom entry.',
     ]);
   });
 });
@@ -213,7 +215,7 @@ describe('serializeConfig', () => {
       rules: { 'min-length': 10, 'max-length': 20, 'min-uppercase': 1, 'min-digits': 1, 'min-symbols': 1, symbols: '!#&*,:', spaces: false },
       options: { strength: 45, shortest: true, comfort: 'strict', separator: '#', swaps: 1 },
       sentence: { 'target-length': null, shrink: 'vowels' },
-      swaps: { disabled: ['a>@'], custom: [{ from: 'ph', to: 'f' }, { from: 'o', to: '0' }, { from: 'e', to: '1e3' }] }, // a swap to a digit must come back as text
+      swaps: { disabled: ['a>@'], custom: [{ from: 'cat', to: 'k@' }, { from: 'oo', to: '0' }, { from: 'e', to: '1e3' }] }, // a swap to a digit must come back as text
       output: { count: 3, sort: 'memorability' },
     },
     { ...emptyModel(), site: 'nist-passphrase', rules: { 'max-length': 40 }, options: { separator: ' ' } },
@@ -240,7 +242,7 @@ describe('serializeConfig', () => {
     expect(text).toContain('options: preset             # the Two-finger options as tep sets them, now and as they change');
     expect(serializeConfig(models[1]!, today)).toContain('  symbols: "!#&*,:"');
     expect(serializeConfig(models[1]!, today)).toContain('  separator: "#"');
-    expect(serializeConfig(models[1]!, today)).toContain('    - { from: o, to: "0" }'); // bare, 0 would read back as a number
+    expect(serializeConfig(models[1]!, today)).toContain('    - { from: oo, to: "0" }'); // bare, 0 would read back as a number
   });
 
   it('resolves to the same requirements as the model it came from', () => {

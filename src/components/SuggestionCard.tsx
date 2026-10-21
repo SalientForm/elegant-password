@@ -4,7 +4,6 @@ import { typingModeLabel, type Difficulty } from '../lib/difficulty';
 import { describeRemoved } from '../lib/ease';
 import { changedWordsOf, easedOf, twistKind, twistOptionsLine, typingLines } from '../lib/explain';
 import { roleLabel, type Suggestion } from '../lib/generate';
-import { isMadeUpNoun } from '../lib/grammar';
 import { ZXCVBN_LEVELS, zxcvbnLine, type ZxcvbnLabel } from '../lib/zxcvbnReading';
 import { READING_ORDER, scoreReadings } from '../lib/readings';
 import { MEMORABILITY, scoreCold } from '../lib/score';
@@ -216,7 +215,7 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion, context
                   <span>{w.text}</span>
                   {(() => {
                     // Your own words need no part-of-speech label; only show what they were when they changed.
-                    const label = w.slot === 'yours' ? '' : roleLabel(w, !mine && w.slot === 'noun' && isMadeUpNoun(w.original));
+                    const label = w.slot === 'yours' ? '' : roleLabel(w);
                     const text = w.text !== w.original ? (label ? `${label}: ${w.original}` : w.original) : label;
                     return text ? <small>{text}</small> : null;
                   })()}
@@ -331,7 +330,7 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion, context
               <li>
                 {memo.swappedWords === 0
                   ? 'No random swaps, so no penalty.'
-                  : `${memo.swappedWords} word${memo.swappedWords === 1 ? ' has' : 's have'} random swaps: −${Math.min(MEMORABILITY.maxSwapPenalty, memo.swappedWords * MEMORABILITY.swapPenalty)} points.`}
+                  : `${memo.swappedWords} word${memo.swappedWords === 1 ? ' has' : 's have'} random swaps: −${memo.swapPenalty} points.`}
                 {eased.length > 0 && ` ${eased.length === 1 ? 'The deliberate swap costs' : `The ${eased.length} deliberate swaps cost`} nothing: ${eased.length === 1 ? 'it comes' : 'each comes'} with its word.`}
               </li>
             </ul>

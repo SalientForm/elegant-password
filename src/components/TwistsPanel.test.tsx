@@ -50,7 +50,7 @@ describe('TwistsPanel', () => {
     fireEvent.change(replace, { target: { value: 'A' } });
     fireEvent.change(withField, { target: { value: '4' } });
     fireEvent.click(add);
-    expect(screen.getByText(/already exists/i)).toBeTruthy(); // "A" is lowercased first, and a>4 is built in
+    expect(screen.getByText('a>4 is a built-in swap already, so it needs no custom entry.')).toBeTruthy(); // "A" is lowercased first, and a>4 is built in
 
     fireEvent.change(replace, { target: { value: 'cat' } });
     fireEvent.change(withField, { target: { value: 'K@' } });

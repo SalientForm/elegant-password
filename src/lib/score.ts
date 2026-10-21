@@ -102,6 +102,8 @@ export interface Memorability {
   sameSize: number;
   /** Hint words with a random swap; deliberate swaps are not counted. */
   swappedWords: number;
+  /** Points taken off for the random swaps (at most MEMORABILITY.maxSwapPenalty). */
+  swapPenalty: number;
 }
 
 export const MEMORABILITY = { fidelityWeight: 0.6, brevityWeight: 0.4, shortAt: 16, longAt: 48, swapPenalty: 5, maxSwapPenalty: 20 } as const;
@@ -120,7 +122,7 @@ export function memorabilityOf(password: string, words: readonly ScoredWord[]): 
   const swappedWords = words.filter((w) => w.twists > 0).length;
   const penalty = Math.min(MEMORABILITY.maxSwapPenalty, swappedWords * MEMORABILITY.swapPenalty);
   const score = Math.max(0, Math.round(100 * (MEMORABILITY.fidelityWeight * fidelity + MEMORABILITY.brevityWeight * brevity) - penalty));
-  return { score, fidelity, brevity, sameSize: credits.filter((c) => c >= 1).length, swappedWords };
+  return { score, fidelity, brevity, sameSize: credits.filter((c) => c >= 1).length, swappedWords, swapPenalty: penalty };
 }
 
 export interface ColdScore {

@@ -2,7 +2,7 @@
 // meets the target, and keeping Shift within one hand's reach. In a file of
 // their own: generate.test.ts is already the heaviest worker.
 import { describe, expect, it } from 'vitest';
-import { applyUppercase, automaticSeparator, DEFAULT_REQUIREMENTS, generate, plan, usableMappings, type Requirements } from './generate';
+import { applyUppercase, automaticSeparator, DEFAULT_REQUIREMENTS, generate, mappingBlock, plan, usableMappings, type Requirements } from './generate';
 import { isFarShift } from './keyboard';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, mappingKey } from './twists';
@@ -99,6 +99,16 @@ describe('keep Shift within reach', () => {
     for (const gone of ['s>$', 'x>*', 'and>&']) expect(usable).not.toContain(gone);
     for (const kept of ['a>@', 'h>#', 'e>3', 'ph>f']) expect(usable).toContain(kept);
     expect(usableMappings(BUILT_IN_MAPPINGS, req({}), ';').map(mappingKey)).toContain('s>$'); // off: as ever
+  });
+
+  it('says why a mapping cannot be used, and usableMappings keeps exactly the ones with no reason', () => {
+    const r = req({ shiftReach: true, avoidPinkyStretch: true, allowedSymbols: '@#$!' });
+    expect(mappingBlock({ to: '&' }, r, ';')).toBe('"&" is not an allowed symbol');
+    expect(mappingBlock({ to: '@' }, r, '@')).toBe('"@" is the separator, which never comes from a swap');
+    expect(mappingBlock({ to: '!' }, r, ';')).toBe('"!" needs a pinky stretch');
+    expect(mappingBlock({ to: '$' }, r, ';')).toBe('"$" needs a Shift key out of one hand\'s reach');
+    expect(mappingBlock({ to: '#' }, r, ';')).toBeUndefined();
+    expect(usableMappings(BUILT_IN_MAPPINGS, r, ';')).toEqual(BUILT_IN_MAPPINGS.filter((m) => !mappingBlock(m, r, ';')));
   });
 
   it('keeps the automatic separator in reach: a space before a far symbol, and the closing mark with a warning when every symbol is far', () => {

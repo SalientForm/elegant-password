@@ -431,6 +431,7 @@ Shared core, `src/lib/`:
 - `readings.ts`: how the four scores read (badge label, figure, band, sentence)
 - `choices.ts`: the choice lists and their words (comfort, separators, sort orders)
 - `explain.ts`: the card's "Why?" sentences, shared with `tep g --explain`
+- `budget.ts`: how long one piece of work may take before it is a failure (2 s), for both front ends
 - `random.ts`, `text.ts`, `sort.ts`, `typingTest.ts`, `fluff.ts`: randomness, text helpers, the sort orders, the typing test's maths, padding
 - `devStats.ts`, `testRandom.ts`: measurement and seeded randomness for the tests and `pnpm stats`
 

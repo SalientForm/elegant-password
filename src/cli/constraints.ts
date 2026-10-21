@@ -6,6 +6,7 @@
 // left unanswered, and a choice is checked against every other answer.
 // Pure: the wizard asks, this decides.
 
+import { SLOW_MS } from '../lib/budget';
 import { problemsOf, reachableBits, type Problem } from '../lib/consistency';
 import { DEFAULT_TYPING_MODE, TYPING_MODES, type TypingMode } from '../lib/difficulty';
 import { separatorChoices } from '../lib/choices';
@@ -23,8 +24,8 @@ import type { Source } from './sources';
 
 /** How long working out one question's choices may take, in milliseconds on a typical laptop (user decision, 2026-10-20). src/cli/walk.test.ts asserts it as work; pnpm measure:wizard times it, naming the questions over it. */
 export const QUESTION_BUDGET_MS = 750;
-/** The time past which pnpm measure:wizard fails a question, in milliseconds (user decision, 2026-10-21): the budget is the target, this is the failure. */
-export const QUESTION_FAIL_MS = 2000;
+/** The time past which pnpm measure:wizard fails a question: the core's line for slow work (user decision, 2026-10-21). The budget is the target, this is the failure. */
+export const QUESTION_FAIL_MS = SLOW_MS;
 
 /** What the wizard has been told. Fields absent are not answered yet. */
 export interface Answers {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scoreDifficulty } from './difficulty';
 import { STRENGTH_PRESETS } from './generate';
-import { memorabilityLevel, READING_LABELS, READING_ORDER, scoreReadings, STRENGTH_WORDS, strengthLevel, strengthWord } from './readings';
+import { difficultyBand, memorabilityLevel, READING_LABELS, READING_ORDER, scoreReadings, STRENGTH_WORDS, strengthLevel, strengthWord } from './readings';
 
 describe('memorability badge colours', () => {
   it('is green above 75, yellow above 45, red at or below 45', () => {
@@ -72,5 +72,15 @@ describe('score readings', () => {
   it('keeps the labels the web badges and the CLI table both print', () => {
     expect(READING_LABELS).toEqual({ strength: 'Strength', raw: 'Raw', difficulty: 'Difficulty', memorability: 'Memorability' });
     expect(READING_ORDER).toEqual(['strength', 'raw', 'difficulty', 'memorability']);
+  });
+});
+
+describe('difficulty badge colours', () => {
+  it('is green for effortless and easy, yellow for moderate, red for demanding and hard, and the reading carries it', () => {
+    expect(([0, 1, 2, 3, 4] as const).map(difficultyBand)).toEqual(['high', 'high', 'mid', 'low', 'low']);
+    for (const level of [0, 1, 2, 3, 4] as const) {
+      const r = scoreReadings({ strength: 50, raw: 60, difficulty: { score: 10, level, label: 'Easy', mode: 'ten-finger' } });
+      expect(r.difficulty.band).toBe(difficultyBand(level));
+    }
   });
 });

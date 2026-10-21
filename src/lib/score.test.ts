@@ -252,7 +252,9 @@ describe('memorability', () => {
     const swapped = scoreCold('Sally;e4ts;sw33ts', 'Sally eats sweets').memorability;
     expect(swapped.fidelity).toBe(1); // same lengths, just spelled differently
     expect(swapped.swappedWords).toBe(2);
-    expect(swapped.score).toBe(whole.score - 10);
+    expect(swapped.swapPenalty).toBe(10);
+    expect(whole.swapPenalty).toBe(0);
+    expect(swapped.score).toBe(whole.score - swapped.swapPenalty);
     const shortened = scoreCold('jr;B;5ls;Fpc', 'jupiter brings 5 leds for piece').memorability;
     expect(shortened.sameSize).toBe(1); // only "5" kept its length
     expect(shortened.fidelity).toBeLessThan(0.5);

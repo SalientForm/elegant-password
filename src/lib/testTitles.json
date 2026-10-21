@@ -539,7 +539,7 @@
       },
       {
         "kind": "test",
-        "title": "bad swaps: not a built-in, a malformed entry, a custom swap the core refuses, a duplicate"
+        "title": "bad swaps: not a built-in, a malformed entry, a custom swap the core refuses, a copy of a built-in, a duplicate"
       },
       {
         "kind": "group",
@@ -2786,6 +2786,10 @@
       },
       {
         "kind": "test",
+        "title": "says why a mapping cannot be used, and usableMappings keeps exactly the ones with no reason"
+      },
+      {
+        "kind": "test",
         "title": "keeps the automatic separator in reach: a space before a far symbol, and the closing mark with a warning when every symbol is far"
       }
     ]
@@ -3111,6 +3115,14 @@
       {
         "kind": "test",
         "title": "finds every unusable entry, with where it is"
+      },
+      {
+        "kind": "group",
+        "title": "customMappingProblem"
+      },
+      {
+        "kind": "test",
+        "title": "is the one rule for a custom swap: valid, not a built-in, not listed already"
       }
     ]
   },
@@ -3263,6 +3275,14 @@
       {
         "kind": "test",
         "title": "keeps the labels the web badges and the CLI table both print"
+      },
+      {
+        "kind": "group",
+        "title": "difficulty badge colours"
+      },
+      {
+        "kind": "test",
+        "title": "is green for effortless and easy, yellow for moderate, red for demanding and hard, and the reading carries it"
       }
     ]
   },

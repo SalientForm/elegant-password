@@ -13,6 +13,9 @@ export const memorabilityLevel = (score: number): Band => (score > MEMORABILITY_
 /** Colour band for strength in bits: green from 50 bits, yellow from 40, red below. Give it the figure as shown (rounded), so a badge reading 50 is never yellow. */
 export const strengthLevel = (bits: number): Band => (bits >= STRENGTH_BANDS.green ? 'high' : bits >= STRENGTH_BANDS.yellow ? 'mid' : 'low');
 
+/** Colour band for a difficulty level: effortless and easy green, moderate yellow, demanding and hard red. */
+export const difficultyBand = (level: Difficulty['level']): Band => (level <= 1 ? 'high' : level === 2 ? 'mid' : 'low');
+
 /** The word for each strength band, the colour said in words. */
 export const STRENGTH_WORDS: Record<Band, string> = { high: 'high', mid: 'fair', low: 'low' };
 
@@ -38,7 +41,7 @@ export interface Reading {
 export interface ScoreReadings {
   strength: Reading;
   raw: Reading;
-  /** `band` is null: difficulty is coloured by its level (Difficulty.level), not a band. */
+  /** `band` is the level's (difficultyBand); `level` is kept for the label's five steps. */
   difficulty: Reading & { level: Difficulty['level'] };
   memorability: Reading;
 }
@@ -77,7 +80,7 @@ export function scoreReadings({
     difficulty: {
       label: READING_LABELS.difficulty,
       value: String(difficulty.score),
-      band: null,
+      band: difficultyBand(difficulty.level),
       level: difficulty.level,
       text: `Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()} (${typingModeLabel(difficulty.mode).toLowerCase()})`,
     },
