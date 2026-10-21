@@ -6,7 +6,7 @@ import { LENGTH_TAG_CHOICES, SHRINK_CHOICES } from '../lib/choices';
 import { DEFAULT_TYPING_MODE, TYPING_MODE_IDS, type TypingMode } from '../lib/difficulty';
 import { MODES, type Mode } from '../lib/engine';
 import type { LengthTag } from '../lib/fluff';
-import { DEFAULT_SENTENCE_OPTIONS, type SentenceOptions, type ShrinkStyle } from '../lib/fromSentence';
+import { DEFAULT_SENTENCE_OPTIONS, SHRINK_FROM_RANGE, TARGET_LENGTH_RANGE, type SentenceOptions, type ShrinkStyle } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
 import { COMFORT_SHARE } from '../lib/grammar';
 import { DEFAULT_SORT, SORT_ORDERS, type SortOrder } from '../lib/sort';
@@ -115,12 +115,15 @@ export function resetNotice(reset: readonly (keyof Requirements)[]): string | nu
 
 const own = (o: object, key: string) => Object.prototype.hasOwnProperty.call(o, key); // never a prototype key such as "toString"
 
+/** A whole number inside the core's range for its field (fromSentence.ts), the one each front end's field takes. */
+const inRange = (x: unknown, range: { min: number; max: number }): x is number => isFiniteNumber(x) && Number.isInteger(x) && x >= range.min && x <= range.max;
+
+/** The stored sentence options, field by field: a value outside its field's range falls back to the default, like anything else odd. */
 export function parseSentenceOptions(raw: unknown): SentenceOptions {
   if (!isRecord(raw)) return DEFAULT_SENTENCE_OPTIONS;
   const d = DEFAULT_SENTENCE_OPTIONS;
-  const shrinkFrom = isFiniteNumber(raw.shrinkFrom) && Number.isInteger(raw.shrinkFrom) && raw.shrinkFrom >= 2 ? raw.shrinkFrom : d.shrinkFrom;
-  const targetLength =
-    raw.targetLength === null ? null : isFiniteNumber(raw.targetLength) && Number.isInteger(raw.targetLength) && raw.targetLength >= 1 ? raw.targetLength : d.targetLength;
+  const shrinkFrom = inRange(raw.shrinkFrom, SHRINK_FROM_RANGE) ? raw.shrinkFrom : d.shrinkFrom;
+  const targetLength = raw.targetLength === null ? null : inRange(raw.targetLength, TARGET_LENGTH_RANGE) ? raw.targetLength : d.targetLength;
   return {
     shrink: isString(raw.shrink) && SHRINK_STYLES.includes(raw.shrink as ShrinkStyle) ? (raw.shrink as ShrinkStyle) : d.shrink,
     shrinkFrom,
@@ -132,8 +135,9 @@ export function parseSentenceOptions(raw: unknown): SentenceOptions {
   };
 }
 
+/** The stored mode; anything else is the first mode, making up a sentence. */
 export function parseMode(raw: unknown): Mode {
-  return isString(raw) && MODES.includes(raw as Mode) ? (raw as Mode) : 'generated';
+  return isString(raw) && MODES.includes(raw as Mode) ? (raw as Mode) : MODES[0]!;
 }
 
 export const loadRequirements = (store: KeyValueStore | undefined) => parseRequirements(readJson(store, REQUIREMENTS_KEY));

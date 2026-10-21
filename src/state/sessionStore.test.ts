@@ -95,6 +95,8 @@ describe('session records the cards cannot read', () => {
     expect(isSuggestion({ ...s, twists: [{ ...twist, mapping: { ...twist.mapping, kind: 'toString' } }] })).toBe(false);
     expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, criteria: [null] } })).toBe(false);
     expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, level: 9 } })).toBe(false);
+    expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, mode: 'one-footed' } })).toBe(false); // no rubric to show it in
+    expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, mode: 'quick' } })).toBe(true);
     expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, measurements: { ...s.difficulty.measurements, seconds: 'slow' } } })).toBe(false);
     expect(isSuggestion({ ...s, words: [{ text: 'x', original: 'x', slot: 'constructor' }] })).toBe(false);
   });

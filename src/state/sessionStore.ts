@@ -4,9 +4,9 @@
 // of the inputs that made it, so on reload the app shows it again instead
 // of rolling fresh passwords.
 
-import type { Outcome } from '../lib/engine';
+import { MODES, type Mode, type Outcome } from '../lib/engine';
 import type { GeneratedSentence, Suggestion } from '../lib/generate';
-import { LEVELS } from '../lib/difficulty';
+import { LEVELS, TYPING_MODE_IDS, type TypingMode } from '../lib/difficulty';
 import { couldBeDrawn, ROLE_LABELS } from '../lib/generate';
 import { SLOT_LABELS } from '../lib/grammar';
 import { MAPPING_KIND_LABELS } from '../lib/twists';
@@ -48,7 +48,7 @@ const isDifficulty = (d: unknown): boolean =>
   isFiniteNumber(d.score) &&
   isLevel(d.level) &&
   isString(d.label) &&
-  (d.mode === undefined || isString(d.mode)) &&
+  (d.mode === undefined || TYPING_MODE_IDS.includes(d.mode as TypingMode)) && // a mode the core does not know has no rubric to show
   Array.isArray(d.criteria) &&
   d.criteria.every((c) => isRecord(c) && isString(c.id) && isFiniteNumber(c.value) && isLevel(c.level) && isFiniteNumber(c.points)) &&
   isRecord(d.measurements) &&
@@ -111,7 +111,7 @@ export function isOutcome(x: unknown): x is Outcome {
   if (x.ok === false) return isString(x.error);
   if (x.ok !== true) return false;
   return (
-    (x.source === 'generated' || x.source === 'sentence') &&
+    MODES.includes(x.source as Mode) &&
     isString(x.separator) &&
     Array.isArray(x.suggestions) &&
     x.suggestions.every(isSuggestion) &&

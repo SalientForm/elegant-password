@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
+import { DEFAULT_SENTENCE_OPTIONS, SHRINK_FROM_RANGE, TARGET_LENGTH_RANGE } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { ruleProblems } from '../lib/validation';
 import {
@@ -75,6 +75,15 @@ describe('settings store', () => {
     });
     expect(parseSentenceOptions({ shrink: 'wat', shrinkFrom: 1, targetLength: 'x' })).toEqual(DEFAULT_SENTENCE_OPTIONS);
     expect(parseSentenceOptions({ targetLength: null })).toEqual(DEFAULT_SENTENCE_OPTIONS);
+    // Each number is kept inside the range its field takes, ends included; outside it, the default (audit L5).
+    const ranged = { shrinkFrom: SHRINK_FROM_RANGE, targetLength: TARGET_LENGTH_RANGE } as const;
+    for (const [key, { min, max }] of Object.entries(ranged) as [keyof typeof ranged, { min: number; max: number }][]) {
+      expect(parseSentenceOptions({ [key]: min })[key], `${key} ${min}`).toBe(min);
+      expect(parseSentenceOptions({ [key]: max })[key], `${key} ${max}`).toBe(max);
+      expect(parseSentenceOptions({ [key]: min - 1 })[key], `${key} ${min - 1}`).toBe(DEFAULT_SENTENCE_OPTIONS[key]);
+      expect(parseSentenceOptions({ [key]: max + 1 })[key], `${key} ${max + 1}`).toBe(DEFAULT_SENTENCE_OPTIONS[key]);
+      expect(parseSentenceOptions({ [key]: 1e9 })[key], `${key} 1e9`).toBe(DEFAULT_SENTENCE_OPTIONS[key]);
+    }
     expect(parseSentenceOptions({ padding: false, lengthTag: 'factor' })).toMatchObject({ padding: false, lengthTag: 'factor' });
     expect(parseSentenceOptions({ padding: 'no', lengthTag: 'percent' })).toMatchObject({ padding: true, lengthTag: 'total' });
     expect(parseMode('sentence')).toBe('sentence');
