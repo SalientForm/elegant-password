@@ -3948,6 +3948,14 @@
       {
         "kind": "test",
         "title": "says it in one line"
+      },
+      {
+        "kind": "group",
+        "title": "zxcvbn's colour bands"
+      },
+      {
+        "kind": "test",
+        "title": "puts strong and good in green, weak in yellow and very weak in red"
       }
     ]
   },

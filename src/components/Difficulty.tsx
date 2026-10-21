@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { criterionOf, DEFAULT_TYPING_MODE, LEVELS, RUBRICS, TYPING_MODES, type Criterion, type Difficulty } from '../lib/difficulty';
+import { criterionOf, DEFAULT_TYPING_MODE, LEVELS, MAX_LEVEL, RUBRICS, TYPING_MODES, type Criterion, type Difficulty } from '../lib/difficulty';
+import { difficultyBand } from '../lib/readings';
 
 /** One password scored against each rubric criterion. */
 export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
@@ -21,7 +22,7 @@ export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
             <td data-label="Criterion">{criterion.name}</td>
             <td data-label="Measured">{criterion.format(value)}</td>
             <td data-label="Level">
-              <span className={`pip level-${level}`}>{LEVELS[level]}</span>
+              <span className={`pip band-${difficultyBand(level)}`}>{LEVELS[level]}</span>
             </td>
             <td data-label="Points">
               {points % 1 ? points.toFixed(1) : points} / {criterion.weight}
@@ -36,7 +37,7 @@ export function DifficultyTable({ difficulty }: { difficulty: Difficulty }) {
 
 const band = (c: Criterion, level: number) => {
   const lo = level === 0 ? undefined : c.cutPoints[level - 1];
-  const hi = level === 4 ? undefined : c.cutPoints[level];
+  const hi = level === MAX_LEVEL ? undefined : c.cutPoints[level];
   if (lo === undefined) return `< ${c.format(hi!)}`;
   if (hi === undefined) return `≥ ${c.format(lo)}`;
   return `${c.format(lo)}–${c.format(hi)}`;

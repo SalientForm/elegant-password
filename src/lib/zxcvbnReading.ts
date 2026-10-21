@@ -5,6 +5,8 @@
 // into one of four words, the usual reading of that figure. It is pure, so it
 // is tested on its own; the password never leaves the browser.
 
+import type { Band } from './readings';
+
 export const ZXCVBN_URL = 'https://github.com/dropbox/zxcvbn';
 export const ZXCVBN_VERSION = '4.4.2';
 /** The attack the reading is for: an offline attack on a slow hash, at this many guesses a second. */
@@ -14,6 +16,9 @@ export const ZXCVBN_ESTIMATOR = `zxcvbn ${ZXCVBN_VERSION}, offline slow hashing 
 
 export const ZXCVBN_LABELS = ['very weak', 'weak', 'good', 'strong'] as const;
 export type ZxcvbnLabel = (typeof ZXCVBN_LABELS)[number];
+
+/** zxcvbn's four words in the app's colour bands: strong and good green, weak yellow, very weak red. */
+export const ZXCVBN_BAND: Record<ZxcvbnLabel, Band> = { strong: 'high', good: 'high', weak: 'mid', 'very weak': 'low' };
 
 /** The crack times each word covers. */
 export const ZXCVBN_LEVELS: Record<ZxcvbnLabel, string> = {

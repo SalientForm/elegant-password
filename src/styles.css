@@ -347,13 +347,11 @@ button.ghost { border-color: transparent; color: var(--muted); }
 /* zxcvbn's reading: the fourth badge, in four words. */
 .badge.zxcvbn { font-weight: 600; }
 .badge.zxcvbn.pending { font-weight: 400; color: var(--muted); border-style: dashed; }
-.level-0, .level-1 { background: var(--accent-soft); color: var(--accent); }
-.level-2 { background: var(--warn-soft); color: var(--warn); }
-.level-3, .level-4 { background: var(--bad-soft); color: var(--bad); }
-.memo-high { background: var(--accent-soft); color: var(--accent); }
-.memo-mid { background: var(--warn-soft); color: var(--warn); }
-.memo-low { background: var(--bad-soft); color: var(--bad); }
-.memo-none { background: var(--key); color: var(--muted); }
+/* The colour bands (src/lib/readings.ts): which score or level is which band is decided there, never here. */
+.band-high { background: var(--accent-soft); color: var(--accent); }
+.band-mid { background: var(--warn-soft); color: var(--warn); }
+.band-low { background: var(--bad-soft); color: var(--bad); }
+.band-none { background: var(--key); color: var(--muted); }
 .pip { font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.45rem; border-radius: 999px; }
 table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .rubric th, .rubric td { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--line); vertical-align: top; }

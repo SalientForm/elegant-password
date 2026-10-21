@@ -17,6 +17,8 @@ import { isFarShift, isPinkyStretch, isRoll, pressFor, transitionCost, type Key 
 
 export const LEVELS = ['Effortless', 'Easy', 'Moderate', 'Demanding', 'Hard'] as const;
 export type Level = 0 | 1 | 2 | 3 | 4;
+/** The top level, Hard: a criterion's points are weight x level / MAX_LEVEL. */
+export const MAX_LEVEL = (LEVELS.length - 1) as Level;
 
 export interface Measurements {
   characters: number;
