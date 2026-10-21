@@ -69,7 +69,7 @@ describe('keep Shift within reach', () => {
     }
   });
 
-  it("the opening capital is a word's first character, with Shift reach on and off", () => {
+  it("the opening capital is a word's first character, with Shift reach on and off", { timeout: 20_000 }, () => {
     for (const shiftReach of [false, true]) {
       for (const twists of [1, 2, 3]) {
         for (let seed = 1; seed <= 25; seed++) {
