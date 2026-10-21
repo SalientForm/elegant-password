@@ -1,6 +1,6 @@
-// The generation engine as one pure function of plain inputs, so it can run
-// in a worker, in a test, or inline: the same request always means the same
-// thing, and the result is plain data that can be stored and restored.
+// The generation engine as one pure function of plain inputs, so it runs the
+// same in the page, in the CLI and in a test: the same inputs always mean the
+// same thing, and the result is plain data that can be stored and restored.
 
 import { fromSentence, type SentenceOptions } from './fromSentence';
 import { generate, RequirementsError, type GeneratedSentence, type Plan, type Requirements, type Suggestion } from './generate';
@@ -25,11 +25,6 @@ export interface GenerateInputs {
   edited?: string | null;
 }
 
-export interface GenerateRequest extends GenerateInputs {
-  /** Lets the caller ignore answers to requests it has since superseded. */
-  id: number;
-}
-
 export type Outcome =
   | {
       ok: true;
@@ -48,11 +43,6 @@ export type Outcome =
       /** True for a bug rather than a requirements problem. */
       unexpected?: boolean;
     };
-
-export interface GenerateResponse {
-  id: number;
-  outcome: Outcome;
-}
 
 /** Run the generator for these inputs. Never throws: problems come back as an outcome. */
 export function runInputs(inputs: GenerateInputs): Outcome {

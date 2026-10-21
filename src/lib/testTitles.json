@@ -3916,15 +3916,19 @@
       },
       {
         "kind": "test",
-        "title": "drops answers to superseded requests"
-      },
-      {
-        "kind": "group",
-        "title": "PasswordsProvider: a request still in flight for inputs no longer wanted"
+        "title": "runs once, for the newer inputs, when a change is applied during the debounce"
       },
       {
         "kind": "test",
-        "title": "never lands on top of the batch the inputs went back to"
+        "title": "shows Working… by the time the engine is called, so the status is painted before the thread is taken"
+      },
+      {
+        "kind": "group",
+        "title": "PasswordsProvider: inputs that go back to what is on screen within the debounce"
+      },
+      {
+        "kind": "test",
+        "title": "runs nothing, keeps the batch those inputs have, and is not busy"
       },
       {
         "kind": "group",
@@ -3977,63 +3981,6 @@
       {
         "kind": "test",
         "title": "forgets the session: a new sentence and batch, the stored session replaced, the practice target dropped; the list stays"
-      }
-    ]
-  },
-  {
-    "file": "src/state/generator.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "generators"
-      },
-      {
-        "kind": "test",
-        "title": "runs inline"
-      },
-      {
-        "kind": "test",
-        "title": "matches worker answers to requests by id, and a newer request supersedes an older one at once"
-      },
-      {
-        "kind": "test",
-        "title": "sends one request at a time: newer ones wait in one slot, each taking it from the last"
-      },
-      {
-        "kind": "test",
-        "title": "answers the newest request straight away when it is the one the worker is on"
-      },
-      {
-        "kind": "test",
-        "title": "replaces a worker still busy with superseded work, and ignores the old one if it answers after all"
-      },
-      {
-        "kind": "test",
-        "title": "replaces the busy worker at once when it has already been busy past the limit"
-      },
-      {
-        "kind": "test",
-        "title": "ignores answers it did not ask for"
-      },
-      {
-        "kind": "test",
-        "title": "makes the worker on first use and again after dispose, so a StrictMode cleanup cannot strand it"
-      },
-      {
-        "kind": "test",
-        "title": "falls back to running inline when the worker fails"
-      },
-      {
-        "kind": "test",
-        "title": "falls back to running inline when the worker stays silent"
-      },
-      {
-        "kind": "test",
-        "title": "forgets outstanding requests on dispose and ignores a late answer from the old worker"
-      },
-      {
-        "kind": "test",
-        "title": "creates an inline generator where there are no workers"
       }
     ]
   },

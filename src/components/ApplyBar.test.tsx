@@ -2,7 +2,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
-import { syncGenerator } from '../state/generator';
 import { REQUIREMENTS_KEY } from '../state/settingsStore';
 import { memoryStore } from '../state/storage';
 import { PasswordsProvider, usePasswords } from '../state/PasswordsProvider';
@@ -27,7 +26,7 @@ function Probe() {
 function mount(onShowProblems?: () => void, active = true) {
   const local = memoryStore();
   render(
-    <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+    <PasswordsProvider local={local} session={memoryStore()} debounceMs={0}>
       <Probe />
       <ApplyBar onShowProblems={onShowProblems} active={active} />
     </PasswordsProvider>,

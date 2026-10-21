@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { syncGenerator } from '../state/generator';
 import { scoreCold } from '../lib/score';
 import { strengthBits } from '../lib/strength';
 import { SELECTED_KEY } from '../state/selectedStore';
@@ -20,7 +19,7 @@ function mount(entries = ENTRIES) {
   const local = memoryStore();
   local.setItem(SELECTED_KEY, JSON.stringify(entries));
   render(
-    <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+    <PasswordsProvider local={local} session={memoryStore()} debounceMs={0}>
       <SelectedList />
     </PasswordsProvider>,
   );

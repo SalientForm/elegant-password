@@ -4,8 +4,9 @@
 // are what generation uses and what is persisted, so a reload brings back
 // exactly what was applied. Picking a typing mode is a draft too: it fills
 // in the options that suit the mode, and Submit applies both. Generation
-// runs off the render path (in a worker when the browser has one), keeping
-// the old passwords on screen until the new batch is ready.
+// runs on the page's own thread, a debounce after the last change and within
+// the engine's budget, keeping the old passwords on screen until the new
+// batch is ready.
 //
 // Every write to the browser's storage reports whether it worked, so the
 // app never says something is kept when it is not (persistence). My list is
@@ -15,11 +16,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { commonPasswordProblem, commonRank } from '../lib/common';
 import type { TypingMode } from '../lib/difficulty';
-import { inputsKey, type GenerateInputs, type Mode, type Outcome } from '../lib/engine';
+import { inputsKey, runInputs, type GenerateInputs, type Mode, type Outcome } from '../lib/engine';
 import type { SentenceOptions } from '../lib/fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
 import { checkWithZxcvbn, type ZxcvbnCheck } from './zxcvbnCheck';
-import { createGenerator, type Generator } from './generator';
 import { isOwnOrigin } from './origin';
 import { activeMappings, type MappingSettings } from '../lib/mappingSettings';
 import { loadMappingSettings, saveMappingSettings } from './mappingStore';
@@ -161,8 +161,8 @@ const PasswordsContext = createContext<PasswordsContextValue | null>(null);
 
 export interface PasswordsProviderProps {
   children: ReactNode;
-  /** Where generation runs. Defaults to a worker when available, else inline. */
-  generator?: Generator;
+  /** Makes a batch from the inputs, never throwing. Defaults to the engine; tests pass one that counts. */
+  engine?: (inputs: GenerateInputs) => Outcome;
   /** Settings and the list. Defaults to localStorage. */
   local?: KeyValueStore;
   /** The current passwords and sentence. Defaults to sessionStorage. */
@@ -183,7 +183,7 @@ interface Result {
 
 const sameSettings = (a: Settings, b: Settings) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
-export function PasswordsProvider({ children, generator: given, local, session, debounceMs = 120, persistSecrets, zxcvbn = checkWithZxcvbn }: PasswordsProviderProps) {
+export function PasswordsProvider({ children, engine = runInputs, local, session, debounceMs = 120, persistSecrets, zxcvbn = checkWithZxcvbn }: PasswordsProviderProps) {
   const [secretsPersisted] = useState(() => persistSecrets ?? isOwnOrigin());
   const [localStore] = useState(() => local ?? browserStore('local'));
   // Secrets stay in memory on a shared origin, where other sites could read the browser's storage; a list or a
@@ -227,14 +227,8 @@ export function PasswordsProvider({ children, generator: given, local, session, 
     restored?.outcome ? { key: restored.key, round: restored.round, outcome: restored.outcome } : null,
   );
   const [busy, setBusy] = useState(false);
-
-  // The worker is made on first use and again after dispose, so StrictMode's
-  // extra cleanup in development cannot leave us talking to a dead worker.
-  const [generator] = useState(() => given ?? createGenerator());
-  useEffect(() => {
-    if (given) return undefined; // the caller owns it
-    return () => generator.dispose();
-  }, [generator, given]);
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
 
   const dirty = useMemo(() => !sameSettings(draft, applied), [draft, applied]);
   const problems = useMemo(() => ruleProblems(draft.req), [draft.req]);
@@ -322,8 +316,11 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   );
 
   // Generate when the applied inputs or the round change, unless the batch on
-  // screen was already made from exactly these (as after a reload).
-  const latest = useRef(0);
+  // screen was already made from exactly these (as after a reload). The engine
+  // runs on this thread, in a timer: the debounce is what lets the browser
+  // paint "Working…" and the dimmed old batch before the thread is taken, and
+  // a change applied during it cancels the timer, so only the newest inputs
+  // run. Nothing can arrive while a batch runs, so there is nothing to supersede.
   const inputsRef = useRef(inputs);
   inputsRef.current = inputs;
   const resultRef = useRef(result);
@@ -331,25 +328,21 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   useEffect(() => {
     const current = resultRef.current;
     if (current && current.key === key && current.round === round) {
-      latest.current++; // a request still in flight for other inputs must not land on top of this batch
       setBusy(false);
       return undefined;
     }
-    const id = ++latest.current;
     setBusy(true);
     const timer = setTimeout(() => {
       const request = inputsRef.current;
-      void generator.run({ id, ...request }).then((outcome) => {
-        if (id !== latest.current) return; // superseded
-        // A new draw becomes the kept sentence, and the batch is filed under the inputs with it, so it is not made again.
-        const drawn = request.mode === 'generated' && !request.generated && outcome.ok ? outcome.generated : undefined;
-        if (drawn) setGenerated(drawn);
-        setResult({ key: drawn ? inputsKey({ ...request, generated: drawn }) : key, round, outcome });
-        setBusy(false);
-      });
+      const outcome = engineRef.current(request);
+      // A new draw becomes the kept sentence, and the batch is filed under the inputs with it, so it is not made again.
+      const drawn = request.mode === 'generated' && !request.generated && outcome.ok ? outcome.generated : undefined;
+      if (drawn) setGenerated(drawn);
+      setResult({ key: drawn ? inputsKey({ ...request, generated: drawn }) : key, round, outcome });
+      setBusy(false);
     }, debounceMs);
     return () => clearTimeout(timer);
-  }, [key, round, generator, debounceMs]);
+  }, [key, round, debounceMs]);
 
   // The current passwords and the applied sentence survive a reload, in this tab only.
   useEffect(() => {
@@ -414,8 +407,7 @@ export function PasswordsProvider({ children, generator: given, local, session, 
 
   const forgetSession = useCallback(() => {
     clearSession(sessionStore);
-    latest.current++; // a batch still being made for the old sentence must not land
-    setResult(null);
+    setResult(null); // a timer pending for the old sentence is cleared when the inputs change
     setGenerated(null);
     const blank = (s: Settings) => (s.sentence === '' && s.editedSentence === null ? s : { ...s, sentence: '', editedSentence: null });
     setApplied(blank);

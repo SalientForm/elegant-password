@@ -39,7 +39,7 @@ const block = (s: string, lang = '') => `\`\`\`${lang}\n${s.trimEnd()}\n\`\`\``;
  * reimplements them.
  */
 export const SHARED_CORE: readonly { module: string; names: string[]; for: string }[] = [
-  { module: 'engine', names: ['runInputs'], for: 'generation: one pure call, the same as the web worker makes' },
+  { module: 'engine', names: ['runInputs'], for: 'generation: one pure call, the same the web app makes' },
   { module: 'pipeline', names: ['inputsFor', 'presentSuggestions'], for: 'settings to engine inputs, and suggestions rescored for the typing mode and ordered' },
   { module: 'readings', names: ['scoreReadings'], for: 'the Strength, Raw, Difficulty and Memorability figures, bands and sentences' },
   { module: 'explain', names: ['typingLines', 'twistLine', 'twistOptionsLine', 'easedIn', 'easedLine'], for: 'the "Why?" sentences, for --explain' },

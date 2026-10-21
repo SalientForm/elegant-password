@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { syncGenerator } from '../state/generator';
 import { difficultyAlone, scoreCold } from '../lib/score';
 import { strengthBits } from '../lib/strength';
 import { SELECTED_KEY } from '../state/selectedStore';
@@ -89,7 +88,7 @@ describe('TypingTest', () => {
     local.setItem(SELECTED_KEY, JSON.stringify([{ password: 'jr;B;5ls;Fpc', hint: 'jupiter brings 5 leds for piece', addedAt: '2026-10-15T00:00:00.000Z' }]));
     const clock = { t: 0 };
     render(
-      <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+      <PasswordsProvider local={local} session={memoryStore()} debounceMs={0}>
         <TypingTest now={() => clock.t} />
       </PasswordsProvider>,
     );
@@ -181,7 +180,7 @@ describe('TypingTest', () => {
       return <button onClick={() => p.addSelected({ password: '13;Worthy;storks;openly;pet;twisty;toys', hint: '13 worthy storks openly pet twisty toys' })}>add</button>;
     }
     render(
-      <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+      <PasswordsProvider local={local} session={memoryStore()} debounceMs={0}>
         <Adder />
         <TypingTest now={() => clock.t} />
       </PasswordsProvider>,
@@ -218,7 +217,7 @@ describe('TypingTest', () => {
     const long = '13;Worthy;storks;openly;pet;twisty;toys;and;more;words;yet';
     local.setItem(SELECTED_KEY, JSON.stringify([{ password: long, hint: '13 worthy storks openly pet twisty toys and more words yet', addedAt: '2026-10-15T00:00:00.000Z' }]));
     render(
-      <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+      <PasswordsProvider local={local} session={memoryStore()} debounceMs={0}>
         <TypingTest />
       </PasswordsProvider>,
     );
@@ -247,7 +246,7 @@ describe('TypingTest with characters off the US keyboard', () => {
   it('scores a run such as “café” instead of taking the page down', () => {
     const clock = { t: 0 };
     render(
-      <PasswordsProvider generator={syncGenerator()} local={memoryStore()} session={memoryStore()} debounceMs={0}>
+      <PasswordsProvider local={memoryStore()} session={memoryStore()} debounceMs={0}>
         <TypingTest now={() => clock.t} />
       </PasswordsProvider>,
     );
@@ -278,7 +277,7 @@ describe('TypingTest and the list shrinking', () => {
       return <button onClick={() => p.removeSelected('New;two')}>remove latest</button>;
     }
     render(
-      <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
+      <PasswordsProvider local={local} session={memoryStore()} debounceMs={0}>
         <Remover />
         <TypingTest now={() => clock.t} />
       </PasswordsProvider>,

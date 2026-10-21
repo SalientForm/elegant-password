@@ -2,10 +2,9 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { inputsKey, runInputs, type GenerateRequest } from '../lib/engine';
+import { inputsKey, runInputs, type GenerateInputs, type Outcome } from '../lib/engine';
 import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
-import type { Generator } from './generator';
 import { activeMappings } from '../lib/mappingSettings';
 import { loadMappingSettings } from './mappingStore';
 import { SELECTED_KEY } from './selectedStore';
@@ -17,17 +16,18 @@ import { PasswordsProvider, usePasswords } from './PasswordsProvider';
 
 afterEach(cleanup);
 
-/** An inline generator that counts its runs. */
-function countingGenerator(): Generator & { runs: GenerateRequest[] } {
-  const runs: GenerateRequest[] = [];
-  return {
-    runs,
-    run: (request) => {
-      runs.push(request);
-      return Promise.resolve(runInputs(request));
+type Engine = (inputs: GenerateInputs) => Outcome;
+
+/** The engine, counting its runs. */
+function countingEngine(): Engine & { runs: GenerateInputs[] } {
+  const runs: GenerateInputs[] = [];
+  return Object.assign(
+    (inputs: GenerateInputs) => {
+      runs.push(inputs);
+      return runInputs(inputs);
     },
-    dispose: () => {},
-  };
+    { runs },
+  );
 }
 
 function Probe() {
@@ -70,9 +70,9 @@ function Probe() {
   );
 }
 
-const mount = (gen: Generator, local = memoryStore(), session = memoryStore()) => {
+const mount = (engine: Engine, local = memoryStore(), session = memoryStore(), debounceMs = 0) => {
   const utils = render(
-    <PasswordsProvider generator={gen} local={local} session={session} debounceMs={0}>
+    <PasswordsProvider engine={engine} local={local} session={session} debounceMs={debounceMs}>
       <Probe />
     </PasswordsProvider>,
   );
@@ -87,7 +87,7 @@ const settled = async () => {
 
 describe('PasswordsProvider', () => {
   it('generates on mount, and again only when changes are applied or a new batch is asked for', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     mount(gen);
     await settled();
     expect(gen.runs).toHaveLength(1);
@@ -125,7 +125,7 @@ describe('PasswordsProvider', () => {
   });
 
   it('discards a draft, and "Refresh" applies one', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     mount(gen);
     await settled();
     fireEvent.click(screen.getByText('twists3'));
@@ -140,14 +140,14 @@ describe('PasswordsProvider', () => {
   });
 
   it('keeps the current passwords across a reload without rolling new ones', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     const { local, session, unmount } = mount(gen);
     await settled();
     const shown = text('first');
     expect(loadSession(session)?.outcome).toBeTruthy();
     unmount();
     // A fresh mount with the same stores is what a reload is.
-    const gen2 = countingGenerator();
+    const gen2 = countingEngine();
     mount(gen2, local, session);
     await settled();
     expect(text('first')).toBe(shown);
@@ -160,7 +160,7 @@ describe('PasswordsProvider', () => {
   });
 
   it('keeps the made-up sentence through Refresh, rule changes, an error and a reload; only "new sentence" draws another', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     const { local, session, unmount } = mount(gen);
     await settled();
     const sentence = text('sentence')!;
@@ -193,7 +193,7 @@ describe('PasswordsProvider', () => {
 
     // A reload keeps it too.
     unmount();
-    mount(countingGenerator(), local, session);
+    mount(countingEngine(), local, session);
     await waitFor(() => expect(text('error')).not.toBe(''));
     expect(text('sentence')).toBe(sentence);
 
@@ -210,7 +210,7 @@ describe('PasswordsProvider', () => {
   });
 
   it('persists applied settings, the mode, the applied sentence and the list; drafts are not persisted', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     const { local, session, unmount } = mount(gen);
     await settled();
     fireEvent.click(screen.getByText('twists3'));
@@ -234,7 +234,7 @@ describe('PasswordsProvider', () => {
     await waitFor(() => expect(JSON.parse(session.getItem(SESSION_KEY)!).sentence).toBe('Sally eats sweets on Sundays'));
     unmount();
 
-    mount(countingGenerator(), local, session);
+    mount(countingEngine(), local, session);
     expect(text('selected')).toBe(added);
     expect(text('applied')).toBe('3');
     expect(text('dirty')).toBe('false');
@@ -249,7 +249,7 @@ describe('PasswordsProvider', () => {
     local.setItem(REQUIREMENTS_KEY, JSON.stringify({ ...DEFAULT_REQUIREMENTS, twists: 3 }));
     const session = memoryStore();
     render(
-      <PasswordsProvider generator={countingGenerator()} local={local} session={session} debounceMs={0} persistSecrets={false}>
+      <PasswordsProvider engine={countingEngine()} local={local} session={session} debounceMs={0} persistSecrets={false}>
         <Probe />
       </PasswordsProvider>,
     );
@@ -265,7 +265,7 @@ describe('PasswordsProvider', () => {
   });
 
   it('treats a typing mode as a draft that brings its options: nothing runs or is saved until applied, and Discard reverts both', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     const { local, session, unmount } = mount(gen);
     await settled();
     fireEvent.click(screen.getByText('one-handed'));
@@ -290,13 +290,13 @@ describe('PasswordsProvider', () => {
     expect(JSON.parse(local.getItem(TYPING_MODE_KEY)!)).toBe('one-handed');
     expect(text('dirty')).toBe('false');
     unmount();
-    mount(countingGenerator(), local, session);
+    mount(countingEngine(), local, session);
     expect(text('typing-mode')).toBe('one-handed');
     expect(text('applied-comfort')).toBe('strict');
   });
 
   it('never applies a draft that contradicts itself: apply and Refresh are refused, and nothing runs, until it is fixed', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     mount(gen);
     await settled();
     const shown = text('first');
@@ -317,7 +317,7 @@ describe('PasswordsProvider', () => {
   });
 
   it('shows what only planning can find as a message, and marks a batch stale while new inputs are pending', async () => {
-    const gen = countingGenerator();
+    const gen = countingEngine();
     mount(gen);
     await settled();
     fireEvent.click(screen.getByText('tight')); // consistent, but no made-up sentence is 4-8 characters
@@ -329,53 +329,46 @@ describe('PasswordsProvider', () => {
     expect(text('stale')).toBe('false');
   });
 
-  it('drops answers to superseded requests', async () => {
-    const resolvers: ((o: ReturnType<typeof runInputs>) => void)[] = [];
-    const requests: GenerateRequest[] = [];
-    const slow: Generator = {
-      run: (request) => {
-        requests.push(request);
-        return new Promise((resolve) => resolvers.push(resolve));
-      },
-      dispose: vi.fn(),
-    };
-    mount(slow);
-    await waitFor(() => expect(requests).toHaveLength(1));
-    fireEvent.click(screen.getByText('again'));
-    await waitFor(() => expect(requests).toHaveLength(2));
-    const { id: _id, ...second } = requests[1]!;
-    const late = runInputs(requests[0]!);
-    const fresh = runInputs(second);
-    await act(async () => resolvers[1]!(fresh));
-    await act(async () => resolvers[0]!(late));
-    expect(text('first')).toBe(fresh.ok ? fresh.suggestions[0]!.password : '');
+  it('runs once, for the newer inputs, when a change is applied during the debounce', async () => {
+    const gen = countingEngine();
+    mount(gen, memoryStore(), memoryStore(), 50);
+    await settled();
+    expect(gen.runs).toHaveLength(1);
+    fireEvent.click(screen.getByText('again')); // a new round: the timer starts
+    fireEvent.click(screen.getByText('twists3'));
+    fireEvent.click(screen.getByText('apply')); // newer inputs within the 50 ms: the timer starts again for these
+    expect(gen.runs).toHaveLength(1);
+    await waitFor(() => expect(gen.runs).toHaveLength(2));
+    expect(gen.runs[1]!.req.twists).toBe(3);
+    await new Promise((r) => setTimeout(r, 80));
+    expect(gen.runs).toHaveLength(2); // the round on its own never ran
+  });
+
+  it('shows Working… by the time the engine is called, so the status is painted before the thread is taken', async () => {
+    const seen: string[] = [];
+    mount((inputs) => {
+      seen.push(text('busy') ?? '');
+      return runInputs(inputs);
+    });
+    await settled();
+    expect(seen).toEqual(['true']);
   });
 });
 
-describe('PasswordsProvider: a request still in flight for inputs no longer wanted', () => {
-  it('never lands on top of the batch the inputs went back to', async () => {
-    const resolvers: ((o: ReturnType<typeof runInputs>) => void)[] = [];
-    const requests: GenerateRequest[] = [];
-    const slow: Generator = {
-      run: (request) => {
-        requests.push(request);
-        return new Promise((resolve) => resolvers.push(resolve));
-      },
-      dispose: vi.fn(),
-    };
-    mount(slow);
-    await waitFor(() => expect(requests).toHaveLength(1));
-    await act(async () => resolvers[0]!(runInputs(requests[0]!)));
+describe('PasswordsProvider: inputs that go back to what is on screen within the debounce', () => {
+  it('runs nothing, keeps the batch those inputs have, and is not busy', async () => {
+    const gen = countingEngine();
+    mount(gen, memoryStore(), memoryStore(), 50);
+    await settled();
     const shown = text('first');
     expect(shown).not.toBe('');
-    // To "Use my sentence" (an empty one: the engine says so) and straight back before the answer arrives.
+    // To "Use my sentence" (an empty one: the engine would say so) and straight back before the timer fires.
     fireEvent.click(screen.getByText('sentence-mode'));
-    await waitFor(() => expect(requests).toHaveLength(2));
+    expect(text('busy')).toBe('true');
     fireEvent.click(screen.getByText('generated-mode'));
-    await new Promise((r) => setTimeout(r, 20));
-    expect(requests).toHaveLength(2); // the batch on screen was made from these inputs: nothing to run
+    await new Promise((r) => setTimeout(r, 80));
+    expect(gen.runs).toHaveLength(1); // the batch on screen was made from these inputs: nothing to run
     expect(text('busy')).toBe('false');
-    await act(async () => resolvers[1]!(runInputs(requests[1]!))); // the late answer for the other inputs
     expect(text('first')).toBe(shown);
     expect(text('error')).toBe('');
     expect(text('stale')).toBe('false');
@@ -397,9 +390,9 @@ describe('PasswordsProvider: a contradictory requirement set', () => {
   it('saved before this check existed, is repaired on load, keeping every other setting, and says what was reset until the next submit', async () => {
     const local = memoryStore();
     local.setItem(REQUIREMENTS_KEY, JSON.stringify({ ...DEFAULT_REQUIREMENTS, version: 2, minLength: 40, maxLength: 32, twists: 3, allowSpaces: false, separator: ' ' }));
-    const gen = countingGenerator();
+    const gen = countingEngine();
     render(
-      <PasswordsProvider generator={gen} local={local} session={memoryStore()} debounceMs={0}>
+      <PasswordsProvider engine={gen} local={local} session={memoryStore()} debounceMs={0}>
         <Shown />
       </PasswordsProvider>,
     );
@@ -464,7 +457,7 @@ function StoreProbe() {
 
 const mountStores = (local: KeyValueStore, session: KeyValueStore, extra: { zxcvbn?: ZxcvbnCheck; persistSecrets?: boolean } = {}) =>
   render(
-    <PasswordsProvider generator={countingGenerator()} local={local} session={session} debounceMs={0} zxcvbn={extra.zxcvbn ?? (() => Promise.resolve({ ...READING }))} persistSecrets={extra.persistSecrets ?? true}>
+    <PasswordsProvider engine={countingEngine()} local={local} session={session} debounceMs={0} zxcvbn={extra.zxcvbn ?? (() => Promise.resolve({ ...READING }))} persistSecrets={extra.persistSecrets ?? true}>
       <StoreProbe />
     </PasswordsProvider>,
   );
