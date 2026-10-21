@@ -28,10 +28,12 @@ explanation for each:
   (`src/lib/strength.ts`), so a password reads the same on a card, in your
   saved list, and a year later. Bits is this session's figure, counted
   from the password and its hint (`src/lib/score.ts`) and shown beside
-  the badges and in the bits panel; it is never saved. Difficulty and
-  memorability come from the password and its hint, nothing else. A
-  repeated character never raises a figure, and neither does a block typed
-  again ("Password1!" three times) or a walk along the keyboard ("asdf").
+  the badges and in the bits panel; it is never saved. Strength's tip
+  reads high, fair or low by its colour; the presets, Everyday to Master
+  password, are targets for the bits. Difficulty and memorability come
+  from the password and its hint, nothing else. A repeated character never
+  raises a figure, and neither does a block typed again ("Password1!"
+  three times) or a walk along the keyboard ("asdf").
 - **Rules it cannot keep are named**: pasted site rules show what was
   understood and, separately, what was not kept and why (a minimum length
   above 128, "no digits", "at most 2 symbols"); nothing is quietly weakened.

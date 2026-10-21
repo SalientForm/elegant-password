@@ -149,6 +149,10 @@ figure is shown only in the session.
 | Bits | this tool exactly, and the swaps in force in this session | the password, the hint and the session's swap list (`score.ts`, below) | dim beside a card's badges, the bits panel, `tep g` |
 | zxcvbn | (not a score) the zxcvbn library's second opinion | the password: zxcvbn 4.4.2's crack time at 10^4 guesses/s, read as very weak / weak / good / strong (`zxcvbnReading.ts`, `state/zxcvbnCheck.ts`), worked out in the browser | the fourth badge everywhere; saved with a My list entry |
 
+The Strength badge is green from 50 bits, yellow from 40 and red below,
+judged on the figure as shown, and its tip names the band: high, fair or
+low. The presets are targets for the bits and never describe Strength.
+
 ```mermaid
 flowchart TD
   A[password + hint] --> B[normalise the hint into words]

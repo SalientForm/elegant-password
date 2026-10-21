@@ -45,6 +45,22 @@ to revisit.
 - **The bits panel's green means "meets your target"; a badge's green means
   50 bits or more** (2026-10-20). The panel says its figure is for an
   attacker who knows the tool and that the badges assume one who does not.
+- **Strength's word names its colour band, never a preset** (2026-10-21,
+  M3). The presets, Everyday to Master password, are targets on the bits'
+  ladder, for an attacker who knows the tool; Strength assumes one who
+  does not and reads above a card's bits, by 14 bits at the median at the
+  defaults, so when the tip named the highest preset reached, 99.8 % of
+  default suggestions were named a preset above the one chosen and 37 % of
+  batches of five showed "master password". The tip says high (50 bits or
+  more), fair (40 to 49) or low, read off the same rounded figure as the
+  colour, so word and colour cannot disagree; the Scoring page states the
+  bands by number and says the presets are targets for the bits. The
+  user's answers (2026-10-21): the words are high, fair and low, the
+  recommendation over no word or the band's numbers; the Scoring page
+  sentence drops the preset names. A badge with no word would leave its
+  band, read by a screen reader, to colour alone; the presets' own words
+  or zxcvbn's would put one word on two badges with two meanings.
+  `STRENGTH_WORDS` and `strengthWord` in `src/lib/readings.ts`.
 - **A deliberate swap costs nothing** (2026-10-15, the user's decision). It
   follows from its word by one fixed rule, so it is not memory load; the
   measurement is in `TODO.md`.
