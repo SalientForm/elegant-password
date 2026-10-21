@@ -69,6 +69,23 @@ describe('keep Shift within reach', () => {
     }
   });
 
+  it("the opening capital is a word's first character, with Shift reach on and off", () => {
+    for (const shiftReach of [false, true]) {
+      for (const twists of [1, 2, 3]) {
+        for (let seed = 1; seed <= 25; seed++) {
+          const r = generate(req({ shiftReach, twists }), { rng: seeded(seed) });
+          for (const s of r.suggestions) {
+            const capitals = [...s.password.matchAll(/[A-Z]/g)];
+            expect(capitals, s.password).toHaveLength(1);
+            const before = s.password[capitals[0]!.index - 1];
+            // At the start, or after the separator: never after a swapped-in symbol or digit ("@Corns").
+            expect(before === undefined || before === r.plan.separator, s.password).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
   it('prefers a word whose first letter capitalises in reach, and falls back to any word when none does', () => {
     expect(applyUppercase(['tiny', 'otters', 'hunt'], 1, undefined, undefined, true)).toEqual(['tiny', 'Otters', 'hunt']);
     expect(applyUppercase(['tiny', 'birds', 'hunt', 'yaks'], 1, undefined, undefined, true)).toEqual(['Tiny', 'birds', 'hunt', 'yaks']);

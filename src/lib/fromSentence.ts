@@ -510,7 +510,6 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   };
   const twistOpts = {
     skip: (i: number) => tokens[i]?.kind !== 'word',
-    protectFirstLetter: false,
     minDelta: -1000,
     maxDelta: 1000,
   };

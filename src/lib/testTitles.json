@@ -2708,6 +2708,10 @@
       },
       {
         "kind": "test",
+        "title": "the opening capital is a word's first character, with Shift reach on and off"
+      },
+      {
+        "kind": "test",
         "title": "prefers a word whose first letter capitalises in reach, and falls back to any word when none does"
       },
       {
@@ -3295,6 +3299,10 @@
       },
       {
         "kind": "test",
+        "title": "counts the start of the word with the capital as protected wherever it is"
+      },
+      {
+        "kind": "test",
         "title": "handles whole words in capitals, made-up nouns and glue"
       },
       {
@@ -3637,7 +3645,7 @@
       },
       {
         "kind": "test",
-        "title": "respects skip, first-letter protection and the length limits"
+        "title": "respects skip, the capital's word and the length limits"
       },
       {
         "kind": "test",

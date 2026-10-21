@@ -732,15 +732,33 @@ function better(a: Plan, b: Plan): boolean {
 const nearCapital = (word: string) => !isFarShift((word.match(/[a-z]/)?.[0] ?? 'a').toUpperCase());
 
 /**
+ * The order words take the capitals in. With a random source it starts from
+ * a random word (and wraps round), so a batch does not all capitalise the
+ * same word; without one it is the first eligible word. With `nearShift`,
+ * words whose first letter capitalises within one hand's reach of a Shift key
+ * come first, so the capital lands on one of them whenever the sentence has
+ * one; the rest follow, so the uppercase rule is met even when the words in
+ * reach have too few letters for it. Neither choice is counted as bits.
+ */
+export function capitalOrder(
+  words: readonly string[],
+  /** Words whose case is part of what was chosen (made-up nouns); never recased. */
+  fixedCase: (i: number) => boolean = () => false,
+  rng?: RandomSource,
+  nearShift = false,
+): number[] {
+  const any = words.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
+  const near = nearShift ? any.filter((j) => nearCapital(words[j]!)) : [];
+  const preferred = near.length ? near : any;
+  const start = rng && preferred.length ? randomInt(preferred.length, rng) : 0;
+  return [...preferred.slice(start), ...preferred.slice(0, start), ...any.filter((j) => !preferred.includes(j))];
+}
+
+/**
  * One capital goes on the first letter of a word, like a sentence. More than
  * one puts whole words in capitals ("SLEEPY-otters ..."), so Shift is held
- * once instead of the case flipping back and forth. With a random source the
- * word is chosen at random (and whole-word capitals start from a random word
- * and wrap round), so a batch does not all capitalise the same word; without
- * one it is the first eligible word. With `nearShift`, words whose first
- * letter capitalises within one hand's reach of a Shift key come first, so
- * the capital lands on one of them whenever the sentence has one. Neither
- * choice is counted as bits.
+ * once instead of the case flipping back and forth. The words are taken in
+ * `capitalOrder`.
  */
 export function applyUppercase(
   words: readonly string[],
@@ -754,14 +772,8 @@ export function applyUppercase(
   // Capital initials and ALL-CAPS made-up nouns already count toward the rule.
   const existing = countUpper(out.join(''));
   if (existing >= minUppercase) return out;
-  const any = out.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
-  // With Shift reach on, the words one hand can capitalise come first, from a random one of them; the rest follow, so
-  // the uppercase rule is met even when the words in reach have too few letters for it.
-  const near = nearShift ? any.filter((j) => nearCapital(out[j]!)) : [];
-  const preferred = near.length ? near : any;
-  if (preferred.length === 0) return out;
-  const start = rng ? randomInt(preferred.length, rng) : 0;
-  const order = [...preferred.slice(start), ...preferred.slice(0, start), ...any.filter((j) => !preferred.includes(j))];
+  const order = capitalOrder(out, fixedCase, rng, nearShift);
+  if (order.length === 0) return out;
   if (minUppercase === 1) {
     const i = order[0]!;
     out[i] = out[i]!.replace(/[a-z]/, (c) => c.toUpperCase());
@@ -777,8 +789,22 @@ export function applyUppercase(
   return out;
 }
 
-function render(words: string[], variant: Variant, plan: Plan, rng?: RandomSource, endSymbol = variant.endSymbol, nearShift = false): string {
-  const cased = applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i), rng, nearShift);
+/**
+ * The word that takes the opening capital, chosen from the words as typed,
+ * before any swap: only when the rule needs one capital and the words have
+ * none. Swaps keep its first character a letter, so the capital is always a
+ * word's first character, never after a swapped-in symbol ("@Corns").
+ */
+function capitalWord(words: readonly string[], minUppercase: number, fixedCase: (i: number) => boolean, nearShift: boolean): number | undefined {
+  if (minUppercase !== 1 || countUpper(words.join('')) > 0) return undefined;
+  return capitalOrder(words, fixedCase, undefined, nearShift)[0];
+}
+
+function render(words: string[], variant: Variant, plan: Plan, endSymbol = variant.endSymbol, capitalAt?: number): string {
+  const cased =
+    capitalAt === undefined
+      ? applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i))
+      : words.map((w, j) => (j === capitalAt ? w.replace(/[a-z]/, (c) => c.toUpperCase()) : w));
   return trimSeparators(joinTokens(cased, variant.shape.glue, plan.separator) + endSymbol, plan.separator);
 }
 
@@ -897,7 +923,8 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
   if (drawn && req.shortest && length > chosen.maxLength) {
     warnings.push(`The kept sentence makes ${length} characters, longer than the ${chosen.maxLength} the shortest plan needs. Draw a new sentence for a shorter one.`);
   }
-  if (req.shiftReach && req.minUppercase === 1 && countUpper(typed.join('')) === 0 && !typed.some((w, j) => !shape.madeUp.includes(j) && /[a-z]/.test(w) && nearCapital(w))) {
+  const capitalAt = capitalWord(typed, chosen.minUppercase, (j) => shape.madeUp.includes(j), req.shiftReach);
+  if (req.shiftReach && capitalAt !== undefined && !nearCapital(typed[capitalAt]!)) {
     warnings.push('No word in this sentence starts with a letter one hand can capitalise while holding Shift (T G B Y H N U J I are out of reach).');
   }
   // Twists never touch the number, initials, made-up nouns or two-letter
@@ -945,8 +972,8 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
         count: Math.min(MAX_TWISTS, req.twists + (req.twists > 0 ? randomInt(2, rng) : 0)),
         mappings: twistMappings,
         skip: fixed,
-        // The opening capital goes on the first ordinary word (twists skip made-up nouns and initials).
-        protectFirstLetter: chosen.minUppercase === 1 && shape.initials.length === 0,
+        // The word that takes the opening capital keeps a letter first.
+        capitalAt,
         minDelta: req.minLength - length,
         // The shortest plan never lets a swap lengthen the password ("f" to "ph").
         maxDelta: req.shortest ? 0 : req.maxLength - length,
@@ -954,8 +981,8 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
       },
       rng,
     );
-    // The opening capital stays on the first word, a sentence-like start, unless Shift reach moves it to a word in reach.
-    const password = render(twisted.words, variant, chosen, undefined, endSymbol, req.shiftReach);
+    // The opening capital goes on the word chosen before the swaps: the first word, a sentence-like start, unless Shift reach moves it to a word in reach.
+    const password = render(twisted.words, variant, chosen, endSymbol, capitalAt);
     if (seen.has(password)) continue;
     seen.add(password);
     const score = scoreCold(password, hint, mappings);

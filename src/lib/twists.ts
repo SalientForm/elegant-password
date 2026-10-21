@@ -88,8 +88,8 @@ export interface TwistOptions {
   mappings: readonly Mapping[];
   /** Word positions that must not be twisted (e.g. the leading number). */
   skip: (wordIndex: number) => boolean;
-  /** Keep the first character a letter so sentence-case capitalisation still works. */
-  protectFirstLetter: boolean;
+  /** The word that takes the opening capital: its first character stays a letter, so the capital can go there. */
+  capitalAt?: number;
   /** Allowed change in total length, so the result still fits the length limits. */
   minDelta: number;
   maxDelta: number;
@@ -216,10 +216,9 @@ interface Table {
 }
 
 function buildTable(words: readonly string[], opts: TwistOptions): Table {
-  const firstWord = words.findIndex((_, i) => !opts.skip(i));
   const plain = (word: string): Variant => ({ text: word, twists: 0, delta: 0, letters: 0, used: [] });
   const variants = words.map((word, i) =>
-    opts.skip(i) ? [plain(word)] : cachedVariants(word, opts.mappings, opts.count, opts.protectFirstLetter && i === firstWord),
+    opts.skip(i) ? [plain(word)] : cachedVariants(word, opts.mappings, opts.count, i === opts.capitalAt),
   );
   const baseLetters = words.reduce((n, w, i) => (opts.skip(i) ? n : n + letterCount(w)), 0);
 

@@ -8,7 +8,6 @@ const opts = (over: Partial<TwistOptions>): TwistOptions => ({
   count: 1,
   mappings: [],
   skip: () => false,
-  protectFirstLetter: false,
   minDelta: -100,
   maxDelta: 100,
   ...over,
@@ -51,11 +50,15 @@ describe('applyTwists', () => {
     expect(single.options).toBe(1);
   });
 
-  it('respects skip, first-letter protection and the length limits', () => {
+  it('respects skip, the capital\'s word and the length limits', () => {
     const mappings = [m('a', '@'), m('a', 'e')];
-    const skipped = applyTwists(['7', 'amber'], opts({ mappings, skip: (i) => i === 0, protectFirstLetter: true }), seeded());
+    const skipped = applyTwists(['7', 'amber'], opts({ mappings, skip: (i) => i === 0, capitalAt: 1 }), seeded());
     expect(skipped.options).toBe(1);
     expect(skipped.words).toEqual(['7', 'ember']);
+    // Only the word that takes the capital keeps a letter first; the others' starts may be swapped.
+    const second = applyTwists(['amber', 'apes'], opts({ mappings: [m('a', '@')], capitalAt: 1 }), seeded());
+    expect(second.options).toBe(1);
+    expect(second.words).toEqual(['@mber', 'apes']);
     const none = applyTwists(['amber'], opts({ mappings, minDelta: 1 }), seeded());
     expect(none).toMatchObject({ words: ['amber'], bits: 0, applied: [] });
     const shorter = applyTwists(['phone'], opts({ mappings: [m('ph', 'f'), m('o', '0')], maxDelta: -1 }), seeded());

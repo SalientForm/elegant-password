@@ -496,13 +496,13 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
   if (twistCount > 0) {
     const bases = scored.map((s) => s.base);
     const twistable = (s: ScoredWord) => s.form === 'word' || s.form === 'eased' || s.form === 'short';
-    const first = scored.find(twistable);
-    const protectFirstLetter = !!first && /^[A-Z][a-z]/.test(first.text);
+    // The word with the opening capital kept its first letter through the swaps, wherever it is.
+    const capitalAt = scored.findIndex((s) => twistable(s) && /^[A-Z][a-z]/.test(s.text));
     twistOptions = twistOutcomes(bases, {
       count: twistCount,
       mappings,
       skip: (i) => !twistable(scored[i]!),
-      protectFirstLetter,
+      capitalAt,
       minDelta: -Infinity,
       maxDelta: Infinity,
     }, twistCount);
