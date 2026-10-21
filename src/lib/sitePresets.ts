@@ -4,10 +4,10 @@
 // The patterns are generic and labelled as such; no preset claims to be a
 // particular company's current rules.
 
-import { allowedSymbolSet, automaticSeparator, DEFAULT_REQUIREMENTS, MAX_DIGITS, MAX_SYMBOLS, MAX_UPPERCASE, separatorProblem, type Requirements } from './generate';
+import { allowedSymbolSet, automaticSeparator, DEFAULT_REQUIREMENTS, MAX_DIGITS, MAX_LOWERCASE, MAX_SYMBOLS, MAX_UPPERCASE, separatorProblem, type Requirements } from './generate';
 
 /** The fields that describe what a site accepts, as opposed to how the user likes passwords made. */
-export const RULE_KEYS = ['minLength', 'maxLength', 'minUppercase', 'minDigits', 'minSymbols', 'allowedSymbols', 'allowSpaces'] as const;
+export const RULE_KEYS = ['minLength', 'maxLength', 'minUppercase', 'minLowercase', 'minDigits', 'minSymbols', 'allowedSymbols', 'allowSpaces'] as const;
 export type RuleKey = (typeof RULE_KEYS)[number];
 export type RuleFields = Pick<Requirements, RuleKey>;
 
@@ -27,6 +27,7 @@ export const rulesOf = (req: RuleFields): RuleFields => ({
   minLength: req.minLength,
   maxLength: req.maxLength,
   minUppercase: req.minUppercase,
+  minLowercase: req.minLowercase,
   minDigits: req.minDigits,
   minSymbols: req.minSymbols,
   allowedSymbols: req.allowedSymbols,
@@ -48,19 +49,19 @@ export const SITE_PRESETS: readonly SitePreset[] = [
     label: 'Short max (16)',
     note: '8-16, !@#$%&*',
     hint: 'Common on banking and older sites: 8-16 characters, an uppercase letter, a digit and one of a narrow set of symbols, no spaces.',
-    rules: { minLength: 8, maxLength: 16, minUppercase: 1, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%&*', allowSpaces: false },
+    rules: { minLength: 8, maxLength: 16, minUppercase: 1, minLowercase: 0, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%&*', allowSpaces: false },
   },
   {
     label: '8-20, few symbols',
     note: 'one of !@#$%^&*',
     hint: 'A very common sign-up rule: 8-20 characters, an uppercase letter, a digit and one of the shifted number-row symbols, no spaces.',
-    rules: { minLength: 8, maxLength: 20, minUppercase: 1, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%^&*', allowSpaces: false },
+    rules: { minLength: 8, maxLength: 20, minUppercase: 1, minLowercase: 0, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%^&*', allowSpaces: false },
   },
   {
     label: 'NIST passphrase',
     note: '15-64, no must-haves',
     hint: 'NIST SP 800-63B guidance: at least 15 characters when the password is the only factor, up to at least 64, every printable symbol and the space accepted, no "must contain" rules.',
-    rules: { minLength: 15, maxLength: 64, minUppercase: 0, minDigits: 0, minSymbols: 0, allowedSymbols: ALL_SYMBOLS, allowSpaces: true },
+    rules: { minLength: 15, maxLength: 64, minUppercase: 0, minLowercase: 0, minDigits: 0, minSymbols: 0, allowedSymbols: ALL_SYMBOLS, allowSpaces: true },
   },
 ];
 
@@ -73,8 +74,9 @@ export interface Settled {
   notes: string[];
 }
 
-const COUNTS: ['minUppercase' | 'minDigits' | 'minSymbols', number, string][] = [
+const COUNTS: ['minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols', number, string][] = [
   ['minUppercase', MAX_UPPERCASE, 'uppercase letters'],
+  ['minLowercase', MAX_LOWERCASE, 'lowercase letters'],
   ['minDigits', MAX_DIGITS, 'digits'],
   ['minSymbols', MAX_SYMBOLS, 'symbols'],
 ];

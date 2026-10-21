@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTwists, BUILT_IN_MAPPINGS, mappingKey, spellingsOf, twistOutcomes, validateMapping, type Mapping, type TwistOptions } from './twists';
+import { applyTwists, BUILT_IN_MAPPINGS, cachedSpellingCount, mappingKey, spellingsOf, VARIANT_CACHE_LIMIT, twistOutcomes, validateMapping, type Mapping, type TwistOptions } from './twists';
 import { seeded } from './testRandom';
 import { DEFAULT_REQUIREMENTS, generate } from './generate';
 
@@ -142,5 +142,15 @@ describe('audit fixes', () => {
     expect(spellingsOf('salad', o.mappings, 1).map((s) => s.text).sort()).toEqual(['5alad', 's@lad', 'sa!ad', 'sal@d', 'salad']);
     // Spellings are memoised per mapping list: the same array gives the same objects back.
     expect(spellingsOf('salad', o.mappings, 1)).toBe(spellingsOf('salad', o.mappings, 1));
+  });
+});
+
+describe('the spelling cache', () => {
+  it('keeps at most VARIANT_CACHE_LIMIT spellings for one mapping list, however many words it is asked about', () => {
+    const mappings = [m('a', '@')];
+    for (let i = 0; i < VARIANT_CACHE_LIMIT + 50; i++) spellingsOf(`a${i.toString(36)}`, mappings, 1);
+    expect(cachedSpellingCount(mappings)).toBeLessThanOrEqual(VARIANT_CACHE_LIMIT);
+    expect(cachedSpellingCount(mappings)).toBeGreaterThan(0);
+    expect(spellingsOf('apple', mappings, 1).map((s) => s.text).sort()).toEqual(['@pple', 'apple']); // still right after a clear
   });
 });

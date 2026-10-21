@@ -18,6 +18,7 @@ export const MAX_INITIALS = 3;
 export const MAX_SHORTHAND = 3;
 export const MAX_MADE_UP = 3;
 export const MAX_UPPERCASE = 8;
+export const MAX_LOWERCASE = 8;
 export const MAX_DIGITS = 4;
 export const MAX_SYMBOLS = 8;
 
@@ -57,6 +58,7 @@ export const FIELD_LABELS: Record<keyof Requirements, string> = {
   minLength: 'minimum length',
   maxLength: 'maximum length',
   minUppercase: 'uppercase letters',
+  minLowercase: 'lowercase letters',
   minDigits: 'digits',
   minSymbols: 'symbols',
   allowedSymbols: 'allowed symbols',
@@ -87,7 +89,7 @@ export type RuleProblemCode =
   | 'range'
   /** The minimum length is above the maximum. */
   | 'min-above-max'
-  /** The required uppercase letters, digits and symbols together need more characters than the maximum. */
+  /** The required uppercase and lowercase letters, digits and symbols together need more characters than the maximum. */
   | 'counts-exceed-max'
   /** A symbol is required but no keyboard symbol is allowed. */
   | 'symbols-none-allowed'
@@ -121,8 +123,9 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
   }
 
   // Must contain: each count in range, and together within the maximum (one character can meet only one of them).
-  const counts: ['minUppercase' | 'minDigits' | 'minSymbols', string, string, number][] = [
+  const counts: ['minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols', string, string, number][] = [
     ['minUppercase', 'Uppercase letters', 'uppercase letter', MAX_UPPERCASE],
+    ['minLowercase', 'Lowercase letters', 'lowercase letter', MAX_LOWERCASE],
     ['minDigits', 'Digits', 'digit', MAX_DIGITS],
     ['minSymbols', 'Symbols', 'symbol', MAX_SYMBOLS],
   ];

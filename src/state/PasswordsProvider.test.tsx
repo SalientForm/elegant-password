@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { inputsKey, runInputs, type GenerateRequest } from '../lib/engine';
 import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
@@ -10,7 +11,8 @@ import { loadMappingSettings } from './mappingStore';
 import { SELECTED_KEY } from './selectedStore';
 import { loadSession, SESSION_KEY } from './sessionStore';
 import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from './settingsStore';
-import { memoryStore } from './storage';
+import type { ZxcvbnCheck } from './zxcvbnCheck';
+import { memoryStore, type KeyValueStore } from './storage';
 import { PasswordsProvider, usePasswords } from './PasswordsProvider';
 
 afterEach(cleanup);
@@ -411,5 +413,198 @@ describe('PasswordsProvider: a contradictory requirement set', () => {
     fireEvent.click(screen.getByText('edit'));
     fireEvent.click(screen.getByText('apply'));
     expect(screen.getByTestId('notice').textContent).toBe('');
+  });
+});
+
+/** A store whose writes can be made to fail, as a full or blocked storage does after a successful start. */
+function failingStore() {
+  const inner = memoryStore();
+  const store = {
+    fail: new Set<string>(),
+    getItem: (key: string) => inner.getItem(key),
+    setItem: (key: string, value: string) => {
+      if (store.fail.has(key) || store.fail.has('*')) throw new DOMException('full', 'QuotaExceededError');
+      inner.setItem(key, value);
+    },
+    removeItem: (key: string) => inner.removeItem(key),
+  };
+  return store;
+}
+
+const READING = { label: 'strong', crackTime: 'centuries', fill: 100, guessesLog10: 20, score: 4, estimator: 'zxcvbn 4.4.2, offline slow hashing (10^4 guesses/s)', checkedAt: '2026-10-20T00:00:00.000Z' } as const;
+
+function StoreProbe() {
+  const p = usePasswords();
+  const first = p.outcome?.ok ? p.outcome.suggestions[0] : undefined;
+  const [refused, setRefused] = useState('');
+  return (
+    <div>
+      <output data-testid="busy">{String(p.busy)}</output>
+      <output data-testid="first">{first?.password ?? ''}</output>
+      <output data-testid="sentence">{p.generated?.words.join(' ') ?? ''}</output>
+      <output data-testid="selected">{p.selected.map((e) => e.password).join('|')}</output>
+      <output data-testid="readings">{p.selected.map((e) => e.zxcvbn?.label ?? '-').join('|')}</output>
+      <output data-testid="list">{p.persistence.list}</output>
+      <output data-testid="session">{p.persistence.session}</output>
+      <output data-testid="settings">{p.persistence.settings}</output>
+      <output data-testid="practice">{p.practice ? `${p.practice.password}/${p.practice.hint}` : ''}</output>
+      <output data-testid="epoch">{p.sessionEpoch}</output>
+      <output data-testid="refused">{refused}</output>
+      <button onClick={() => first && p.addSelected(first)}>add</button>
+      <button onClick={() => setRefused(p.addSelected({ password: 'dragon', hint: '' }).problem ?? '')}>add-common</button>
+      <button onClick={() => p.selected[0] && p.removeSelected(p.selected[0].password)}>remove</button>
+      <button onClick={() => p.setReq({ ...p.draft.req, twists: 3 })}>twists3</button>
+      <button onClick={p.apply}>apply</button>
+      <button onClick={p.retrySaving}>retry</button>
+      <button onClick={p.forgetSession}>forget</button>
+      <button onClick={() => first && p.practise(first)}>practise</button>
+    </div>
+  );
+}
+
+const mountStores = (local: KeyValueStore, session: KeyValueStore, extra: { zxcvbn?: ZxcvbnCheck; persistSecrets?: boolean } = {}) =>
+  render(
+    <PasswordsProvider generator={countingGenerator()} local={local} session={session} debounceMs={0} zxcvbn={extra.zxcvbn ?? (() => Promise.resolve({ ...READING }))} persistSecrets={extra.persistSecrets ?? true}>
+      <StoreProbe />
+    </PasswordsProvider>,
+  );
+
+describe('PasswordsProvider: what is kept, and saying so', () => {
+  it('says My list failed to save when a write fails after a good start, keeps the entry in memory, and saves it on Try again', async () => {
+    const local = failingStore();
+    mountStores(local, memoryStore());
+    await settled();
+    expect(text('list')).toBe('saved');
+    local.fail.add(SELECTED_KEY);
+    fireEvent.click(screen.getByText('add'));
+    expect(text('selected')).toBe(text('first')); // still on screen, to copy
+    expect(text('list')).toBe('failed');
+    expect(local.getItem(SELECTED_KEY)).toBeNull();
+    local.fail.clear();
+    fireEvent.click(screen.getByText('retry'));
+    await waitFor(() => expect(text('list')).toBe('saved'));
+    expect(JSON.parse(local.getItem(SELECTED_KEY)!).map((e: { password: string }) => e.password)).toEqual([text('first')]);
+  });
+
+  it('says a removal failed too, rather than letting the password come back on reload unannounced', async () => {
+    const local = failingStore();
+    local.setItem(SELECTED_KEY, JSON.stringify([{ password: 'kept;one', hint: 'kept one', addedAt: '2026-10-15T00:00:00.000Z', zxcvbn: READING }]));
+    mountStores(local, memoryStore());
+    await settled();
+    local.fail.add(SELECTED_KEY);
+    fireEvent.click(screen.getByText('remove'));
+    expect(text('selected')).toBe('');
+    expect(text('list')).toBe('failed');
+  });
+
+  it('says the settings and the session failed to save', async () => {
+    const local = failingStore();
+    const session = failingStore();
+    mountStores(local, session);
+    await settled();
+    expect(text('settings')).toBe('saved');
+    expect(text('session')).toBe('saved');
+    local.fail.add(REQUIREMENTS_KEY);
+    session.fail.add('*');
+    fireEvent.click(screen.getByText('twists3'));
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(text('settings')).toBe('failed'));
+    await waitFor(() => expect(text('session')).toBe('failed'));
+    local.fail.clear();
+    session.fail.clear();
+    fireEvent.click(screen.getByText('retry'));
+    await waitFor(() => expect(text('settings')).toBe('saved'));
+    await waitFor(() => expect(text('session')).toBe('saved'));
+  });
+
+  it('on a shared origin removes a session an earlier version stored, as well as the list', async () => {
+    const local = memoryStore();
+    const session = memoryStore();
+    local.setItem(SELECTED_KEY, JSON.stringify([{ password: 'old;one', hint: 'old one', addedAt: '2026-10-15T00:00:00.000Z' }]));
+    session.setItem(SESSION_KEY, JSON.stringify({ key: 'k', round: 0, sentence: 'my old secret sentence', outcome: null }));
+    mountStores(local, session, { persistSecrets: false });
+    await settled();
+    expect(local.getItem(SELECTED_KEY)).toBeNull();
+    expect(session.getItem(SESSION_KEY)).toBeNull();
+    expect(text('list')).toBe('visit-only');
+    expect(text('session')).toBe('visit-only');
+  });
+
+  it('makes each change to the list as stored, so two tabs adding at once both keep their entry', async () => {
+    const local = memoryStore();
+    mountStores(local, memoryStore());
+    await settled();
+    // Another tab adds an entry after this one loaded the list.
+    local.setItem(SELECTED_KEY, JSON.stringify([{ password: 'other;tab', hint: 'other tab', addedAt: '2026-10-15T00:00:00.000Z', zxcvbn: READING }]));
+    fireEvent.click(screen.getByText('add'));
+    const stored = JSON.parse(local.getItem(SELECTED_KEY)!).map((e: { password: string }) => e.password);
+    expect(stored).toEqual(['other;tab', text('first')]);
+    expect(text('selected')).toBe(`other;tab|${text('first')}`);
+  });
+
+  it("follows another tab's change to the list in this browser's localStorage", async () => {
+    localStorage.clear();
+    mountStores(localStorage, memoryStore());
+    await settled();
+    const value = JSON.stringify([{ password: 'from;elsewhere', hint: 'from elsewhere', addedAt: '2026-10-15T00:00:00.000Z', zxcvbn: READING }]);
+    localStorage.setItem(SELECTED_KEY, value);
+    act(() => void window.dispatchEvent(new StorageEvent('storage', { key: SELECTED_KEY, newValue: value, storageArea: localStorage })));
+    expect(text('selected')).toBe('from;elsewhere');
+    localStorage.clear();
+  });
+
+  it("keeps the zxcvbn reading with an entry when it is added, so a reload never works it out again", async () => {
+    const local = memoryStore();
+    const check = vi.fn(() => Promise.resolve({ ...READING }));
+    const { unmount } = mountStores(local, memoryStore(), { zxcvbn: check });
+    await settled();
+    fireEvent.click(screen.getByText('add'));
+    await waitFor(() => expect(text('readings')).toBe('strong'));
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].zxcvbn).toEqual(READING);
+    unmount();
+    const again = vi.fn(() => Promise.resolve({ ...READING }));
+    mountStores(local, memoryStore(), { zxcvbn: again });
+    await settled();
+    expect(text('readings')).toBe('strong');
+    expect(again).not.toHaveBeenCalled();
+  });
+
+  it('works out the reading once for an entry saved before readings existed', async () => {
+    const local = memoryStore();
+    local.setItem(SELECTED_KEY, JSON.stringify([{ password: 'old;one', hint: 'old one', addedAt: '2026-10-15T00:00:00.000Z' }]));
+    const check = vi.fn(() => Promise.resolve({ ...READING, label: 'good' as const }));
+    mountStores(local, memoryStore(), { zxcvbn: check });
+    await waitFor(() => expect(text('readings')).toBe('good'));
+    expect(check).toHaveBeenCalledWith('old;one');
+    expect(JSON.parse(local.getItem(SELECTED_KEY)!)[0].zxcvbn.label).toBe('good');
+  });
+
+  it('refuses a common password for My list, with the reason', async () => {
+    mountStores(memoryStore(), memoryStore());
+    await settled();
+    fireEvent.click(screen.getByText('add-common'));
+    expect(text('refused')).toMatch(/^Not allowed: number \d+ of the 10,001 most common passwords/);
+    expect(text('selected')).toBe('');
+  });
+
+  it('forgets the session: a new sentence and batch, the stored session replaced, the practice target dropped; the list stays', async () => {
+    const local = memoryStore();
+    const session = memoryStore();
+    mountStores(local, session);
+    await settled();
+    fireEvent.click(screen.getByText('add'));
+    fireEvent.click(screen.getByText('practise'));
+    expect(text('practice')).not.toBe('');
+    const before = text('sentence');
+    const listed = text('selected');
+    fireEvent.click(screen.getByText('forget'));
+    expect(text('practice')).toBe('');
+    expect(text('epoch')).toBe('1');
+    await waitFor(() => expect(text('sentence')).not.toBe(''));
+    await settled();
+    expect(text('sentence')).not.toBe(before);
+    expect(loadSession(session)?.generated?.words.join(' ')).toBe(text('sentence'));
+    expect(text('selected')).toBe(listed);
   });
 });

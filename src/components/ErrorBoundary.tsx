@@ -2,7 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
-  /** What to do when the user asks to start over. Defaults to reloading the page. */
+  /** What to do when the user asks to start over. Defaults to reloading the page; the app also forgets this tab's stored session, which a reload alone would bring back. */
   onReset?: () => void;
 }
 
@@ -33,9 +33,12 @@ export class ErrorBoundary extends Component<Props, State> {
       <div className="app" role="alert">
         <h1>Something went wrong</h1>
         <p className="error">{error.message || String(error)}</p>
-        <p className="hint">This is a bug in the app, not a problem with your settings. Nothing has been sent anywhere.</p>
+        <p className="hint">
+          This is a bug in the app, not a problem with your settings. Nothing has been sent anywhere. Starting again forgets
+          the passwords on screen and the sentences in this tab; My list and your settings stay.
+        </p>
         <button type="button" className="primary" onClick={reset}>
-          Reload the page
+          {this.props.onReset ? 'Forget this session and reload' : 'Reload the page'}
         </button>
       </div>
     );

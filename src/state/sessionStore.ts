@@ -6,7 +6,10 @@
 
 import type { Outcome } from '../lib/engine';
 import type { GeneratedSentence, Suggestion } from '../lib/generate';
+import { LEVELS } from '../lib/difficulty';
+import { ROLE_LABELS } from '../lib/generate';
 import { SLOT_LABELS } from '../lib/grammar';
+import { MAPPING_KIND_LABELS } from '../lib/twists';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, removeKey, writeJson, type KeyValueStore } from './storage';
 
 export const SESSION_KEY = 'elegant-passwords:session:v1';
@@ -25,27 +28,55 @@ export interface StoredSession {
 }
 
 const isStringArray = (x: unknown): x is string[] => Array.isArray(x) && x.every(isString);
+const isLevel = (x: unknown) => isFiniteNumber(x) && Number.isInteger(x) && x >= 0 && x < LEVELS.length;
 
+/** A swap as the card's "Why?" reads it: its word, its mapping (from, to, a known kind) and the text before and after. */
+const isTwist = (t: unknown): boolean =>
+  isRecord(t) &&
+  isFiniteNumber(t.wordIndex) &&
+  isString(t.before) &&
+  isString(t.after) &&
+  isRecord(t.mapping) &&
+  isString(t.mapping.from) &&
+  isString(t.mapping.to) &&
+  isString(t.mapping.kind) &&
+  Object.hasOwn(MAPPING_KIND_LABELS, t.mapping.kind);
+
+/** The difficulty fields the badges and the rubric table read: every criterion and every measurement a finite number. */
+const isDifficulty = (d: unknown): boolean =>
+  isRecord(d) &&
+  isFiniteNumber(d.score) &&
+  isLevel(d.level) &&
+  isString(d.label) &&
+  (d.mode === undefined || isString(d.mode)) &&
+  Array.isArray(d.criteria) &&
+  d.criteria.every((c) => isRecord(c) && isString(c.id) && isFiniteNumber(c.value) && isLevel(c.level) && isFiniteNumber(c.points)) &&
+  isRecord(d.measurements) &&
+  Object.values(d.measurements).every(isFiniteNumber);
+
+/**
+ * Every field a card reads, nested ones included, so a tampered or outdated
+ * record is turned away here rather than crashing a render when "Why?" is
+ * opened.
+ */
 export function isSuggestion(x: unknown): x is Suggestion {
   if (!isRecord(x)) return false;
   return (
     isString(x.password) &&
     isString(x.hint) &&
     Array.isArray(x.words) &&
-    x.words.every((w) => isRecord(w) && isString(w.text) && isString(w.original) && isString(w.slot)) &&
+    x.words.every((w) => isRecord(w) && isString(w.text) && isString(w.original) && isString(w.slot) && Object.hasOwn(ROLE_LABELS, w.slot)) &&
     isStringArray(x.steps) &&
     Array.isArray(x.twists) &&
+    x.twists.every(isTwist) &&
     isFiniteNumber(x.twistBits) &&
     isFiniteNumber(x.twistOptions) &&
     isFiniteNumber(x.bits) &&
     isFiniteNumber(x.strength) &&
     isFiniteNumber(x.raw) &&
     isTyping(x.typing) &&
-    isRecord(x.difficulty) &&
-    isFiniteNumber(x.difficulty.score) &&
+    isDifficulty(x.difficulty) &&
     isFiniteNumber(x.memorability) &&
-    Array.isArray(x.difficulty.criteria) &&
-    isRecord(x.difficulty.measurements) &&
     Array.isArray(x.checks) &&
     x.checks.every((c) => isRecord(c) && isString(c.rule) && isBoolean(c.met) && isString(c.how))
   );
@@ -95,6 +126,12 @@ export function parseSession(raw: unknown): StoredSession | undefined {
   return { key: raw.key, round: raw.round, sentence: raw.sentence, outcome: raw.outcome as Outcome | null, ...generated, ...edited };
 }
 
-export const loadSession = (store: KeyValueStore | undefined) => parseSession(readJson(store, SESSION_KEY));
+/** The stored session, or undefined. A stored record that does not parse is removed, so the next load (and a reload) starts clean instead of meeting it again. */
+export function loadSession(store: KeyValueStore | undefined): StoredSession | undefined {
+  const raw = readJson(store, SESSION_KEY);
+  const session = parseSession(raw);
+  if (!session && raw !== undefined) removeKey(store, SESSION_KEY);
+  return session;
+}
 export const saveSession = (store: KeyValueStore | undefined, session: StoredSession) => writeJson(store, SESSION_KEY, session);
 export const clearSession = (store: KeyValueStore | undefined) => removeKey(store, SESSION_KEY);

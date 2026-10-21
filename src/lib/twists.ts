@@ -172,8 +172,13 @@ function variantsFor(word: string, candidates: readonly Candidate[], max: number
 }
 
 // Spellings are memoised per mapping list: sentence mode finishes the same
-// words many times, and the cold scorer asks about the same words again.
+// words many times, and the cold scorer asks about the same words again. A
+// list that is dropped takes its spellings with it; the built-in list lives
+// as long as the page, so each list's spellings are capped and start afresh
+// when full, like the scorer's caches.
 const variantCache = new WeakMap<readonly Mapping[], Map<string, Variant[]>>();
+/** The most spellings kept for one mapping list. */
+export const VARIANT_CACHE_LIMIT = 5000;
 
 function cachedVariants(word: string, mappings: readonly Mapping[], max: number, protectStart: boolean): Variant[] {
   let byKey = variantCache.get(mappings);
@@ -185,10 +190,14 @@ function cachedVariants(word: string, mappings: readonly Mapping[], max: number,
   let v = byKey.get(key);
   if (!v) {
     v = variantsFor(word, candidatesFor(word, mappings, protectStart), max);
+    if (byKey.size >= VARIANT_CACHE_LIMIT) byKey.clear();
     byKey.set(key, v);
   }
   return v;
 }
+
+/** How many spellings are cached for a mapping list; for tests of the cap. */
+export const cachedSpellingCount = (mappings: readonly Mapping[]) => variantCache.get(mappings)?.size ?? 0;
 
 /** Every distinct spelling of a word reachable with up to `max` twists, including the plain word at 0. */
 export function spellingsOf(word: string, mappings: readonly Mapping[], max: number, protectStart = false): readonly Spelling[] {

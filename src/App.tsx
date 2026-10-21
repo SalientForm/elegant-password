@@ -5,6 +5,7 @@ import { ApplyBar } from './components/ApplyBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequirementsForm } from './components/RequirementsForm';
 import { SelectedList } from './components/SelectedList';
+import { SessionControls } from './components/SessionControls';
 import { SiteRules } from './components/SiteRules';
 import { CopyButton } from './components/CopyButton';
 import { GeneratedSentenceField, SentenceInput, SentenceStrength } from './components/SentenceMode';
@@ -20,6 +21,14 @@ import { SORT_CHOICES } from './lib/choices';
 import { presentSuggestions } from './lib/pipeline';
 import { normalizeSentence } from './lib/text';
 import { PasswordsProvider, usePasswords } from './state/PasswordsProvider';
+import { SESSION_KEY } from './state/sessionStore';
+import { browserStore, removeKey } from './state/storage';
+
+/** The error page's way out: forget this tab's stored session (a bad record there would only crash again) and reload. */
+const forgetAndReload = () => {
+  removeKey(browserStore('session'), SESSION_KEY);
+  window.location.reload();
+};
 
 // The Scoring and Fun pages carry their own text (the rubric tables, the rebuild prompts); they load when first visited.
 const ScoringPage = lazy(() => import('./components/ScoringPage').then((m) => ({ default: m.ScoringPage })));
@@ -64,7 +73,7 @@ export function App() {
   }, []);
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary onReset={forgetAndReload}>
       <div className="app">
         {/* The header: the title area and the three primary tabs (on a phone the tabs fold into the bar below, which sticks on its own). */}
         <header className="app-header">
@@ -94,7 +103,7 @@ export function App() {
         <PasswordsProvider>
           {/* Kept mounted so settings, the sentence and the typing test survive a visit to the other pages. */}
           <div hidden={page !== 'main'}>
-            <ElegantPasswords column={column} onColumn={setColumn} />
+            <ElegantPasswords column={column} onColumn={setColumn} active={page === 'main'} />
           </div>
         </PasswordsProvider>
         <Suspense fallback={<p className="hint">Loading…</p>}>
@@ -173,9 +182,11 @@ interface ColumnsProps {
   /** The column that is open where there is no room for all three. */
   column: Column;
   onColumn: (next: Column) => void;
+  /** Whether the Passwords page is showing; behind Scoring and Fun it stays mounted but takes no keys. Defaults to true. */
+  active?: boolean;
 }
 
-export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
+export function ElegantPasswords({ column, onColumn, active = true }: ColumnsProps) {
   const p = usePasswords();
   const { outcome, draft, applied } = p;
   const fewer = useMediaQuery(MEDIUM); // fewer than three columns fit
@@ -215,6 +226,11 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
     });
   };
   const blocked = p.problems.length > 0;
+  // Practise from a card: the typing test takes the password, and on a narrow screen its column opens.
+  const practiseHere = (s: { password: string; hint: string }) => {
+    p.practise(s);
+    if (!isOpen('list')) open('list');
+  };
   /** A shrunken column is a button in a strip, except on a phone, where the tabs in the bar stand in. */
   const strips = fewer && !phone;
   const columnProps = (id: Column) => ({
@@ -261,6 +277,14 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
             {p.notice}
           </p>
         )}
+        {p.persistence.settings === 'failed' && (
+          <div className="warning storage-failed" role="alert">
+            <p>Your settings could not be saved: this browser’s storage is full or blocked. They apply until this tab closes.</p>
+            <button type="button" onClick={p.retrySaving}>
+              Try again
+            </button>
+          </div>
+        )}
         {/* The Presets card: the typing mode, then the site's rules (one tap, or pasted); each fills in the options below. */}
         <section className="panel presets-card" aria-labelledby="presets-heading">
           <h2 id="presets-heading">Presets</h2>
@@ -302,12 +326,15 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
                 <RefreshIcon />
               </button>
             </div>
-            <p className="hint">
-              The sentence behind every suggestion below, drawn at random from the word lists. It stays the same until you
-              draw a new one with the button beside it or apply a new Mode; changing the rules or refreshing the suggestions keeps it.
-              You can edit it and submit the change (Enter submits): an edited sentence is no longer a random draw, so it is built and
-              scored like your own sentence, with the options under “Use my sentence”. Clear it and submit to go back to the drawn one.
-            </p>
+            <details className="more">
+              <summary>About this sentence</summary>
+              <p className="hint">
+                The sentence behind every suggestion below, drawn at random from the word lists. It stays the same until you
+                draw a new one with the button beside it or apply a new Mode; changing the rules or refreshing the suggestions keeps it.
+                You can edit it and submit the change (Enter submits): an edited sentence is no longer a random draw, so it is built and
+                scored like your own sentence, with the options under “Use my sentence”. Clear it and submit to go back to the drawn one.
+              </p>
+            </details>
           </div>
         </TabPanel>
         <TabPanel idPrefix="mode" id="sentence" active={p.mode === 'sentence'}>
@@ -374,6 +401,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
                 index={i}
                 selected={p.isSelected(s.password)}
                 onAdd={p.addSelected}
+                onPractise={practiseHere}
               />
             ))}
           </div>
@@ -396,6 +424,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
     <>
       <TypingTest />
       <SelectedList />
+      <SessionControls />
     </>
   );
 
@@ -420,7 +449,7 @@ export function ElegantPasswords({ column, onColumn }: ColumnsProps) {
       <div className="aside" {...columnProps('list')}>
         {aside}
       </div>
-      <ApplyBar onShowProblems={showProblems} />
+      <ApplyBar onShowProblems={showProblems} active={active} />
     </main>
   );
 }

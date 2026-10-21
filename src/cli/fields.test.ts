@@ -4,7 +4,7 @@ import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS, STRENGTH_PRESETS } from '../lib/generate';
 import { PROFILE_KEYS } from '../lib/modeProfiles';
 import { RULE_KEYS } from '../lib/sitePresets';
-import { describeValue, fieldNamed, FIELDS, fieldsIn, formatValue, keyPath, parseValue, STRENGTH_NAMES, symbolProblem, type CliField } from './fields';
+import { describeValue, fieldNamed, FIELDS, fieldsIn, formatValue, keyPath, parseValue, shownValue, STRENGTH_NAMES, symbolProblem, type CliField } from './fields';
 
 const F = (name: string): CliField => fieldNamed(name)!;
 const ok = (name: string, raw: unknown) => parseValue(F(name), raw);
@@ -146,5 +146,35 @@ describe('formatValue and describeValue', () => {
         (f.kind.type === 'bool' ? [true, false] : f.kind.type === 'int' ? [f.kind.min, f.kind.max] : f.kind.type === 'choice' ? f.kind.choices.map((c) => c.value) : ['!@#', '']);
       for (const v of values) expect(parseValue(f, formatValue(f, v)), `${f.name} ${JSON.stringify(v)}`).toEqual({ ok: true, value: v });
     }
+  });
+});
+
+describe('shownValue: a value quoted in a message', () => {
+  it('quotes text and writes anything else as JSON', () => {
+    expect(shownValue('ab')).toBe('"ab"');
+    expect(shownValue(3)).toBe('3');
+    expect(shownValue(null)).toBe('null');
+    expect(shownValue({ a: [1] })).toBe('{"a":[1]}');
+  });
+
+  it('never throws on a value that refers to itself, or on one JSON cannot write', () => {
+    const loop: Record<string, unknown> = { a: 1 };
+    loop.self = loop;
+    expect(shownValue(loop)).toBe('{"a":1,"self":"[circular]"}');
+    expect(shownValue(10n)).toBe('"10"');
+    expect(shownValue(undefined)).toBe('undefined');
+  });
+
+  it('cuts a long value short', () => {
+    const shown = shownValue('x'.repeat(500));
+    expect(shown).toHaveLength(60);
+    expect(shown.endsWith('...')).toBe(true);
+  });
+
+  it('is what parseValue quotes, so a cyclic value in a config cannot crash its message', () => {
+    const loop: unknown[] = [];
+    loop.push(loop);
+    const r = parseValue(fieldNamed('min-length')!, loop);
+    expect(r).toEqual({ ok: false, error: 'must be a whole number from 1 to 256; found ["[circular]"]' });
   });
 });

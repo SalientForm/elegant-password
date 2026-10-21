@@ -193,6 +193,32 @@ describe('RequirementsForm', () => {
     expect(pasteStatus().textContent).toBe('Filled in: 8-20 characters, a digit, a symbol from !@#$%.');
   });
 
+  it('says what pasted rules it cannot keep, and applies none of it cut down', () => {
+    render(<Harness />);
+    const box = screen.getByRole('textbox', { name: "The site's password rules" });
+    const notKept = () => screen.queryByTestId('rules-not-kept')?.textContent;
+    fireEvent.change(box, { target: { value: 'exactly 300 characters' } });
+    expect(pasteStatus().textContent).toBe('Nothing this tool can keep yet.');
+    expect(notKept()).toBe('Not kept: exactly 300 characters: this tool makes at most 256.');
+    fireEvent.click(screen.getByRole('button', { name: 'Fill in' }));
+    expect(req()).toEqual(DEFAULT_REQUIREMENTS);
+    expect(pasteStatus().textContent).toBe('Nothing this tool can keep; nothing changed.');
+    // Partly understood: what it keeps is filled in, and what it cannot is said beside it.
+    fireEvent.paste(box);
+    fireEvent.change(box, { target: { value: '8-20 characters, no digits, at least 2 lowercase letters' } });
+    expect(req()).toMatchObject({ minLength: 8, maxLength: 20, minLowercase: 2, minDigits: DEFAULT_REQUIREMENTS.minDigits });
+    expect(pasteStatus().textContent).toBe('Filled in: 8-20 characters, 2 lowercase letters.');
+    expect(notKept()).toBe('Not kept: no digits: this tool cannot leave digits out.');
+  });
+
+  it('shows a lowercase count under Must contain, off by default', () => {
+    render(<Harness />);
+    const box = screen.getByRole('checkbox', { name: 'Lowercase letters' }) as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    fireEvent.click(box);
+    expect(req().minLowercase).toBe(1);
+  });
+
   it('fills in at once when text is pasted', () => {
     render(<Harness />);
     const box = screen.getByRole('textbox', { name: "The site's password rules" });

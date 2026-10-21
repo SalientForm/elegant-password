@@ -69,4 +69,27 @@ describe('session records the cards cannot read', () => {
     expect(isOutcome({ ...good, plan: { ...good.plan, breakdown: [{ label: 'x' }] } })).toBe(false);
     expect(isOutcome({ ...good, plan: { ...good.plan, breakdown: [{ label: 'x', poolSize: 3, bits: 1.5 }] } })).toBe(true);
   });
+
+  it('rejects swaps, criteria and words the "Why?" panel cannot read (a stored twists: [null] crashed it)', () => {
+    const good = runInputs({ mode: 'generated', req: { ...DEFAULT_REQUIREMENTS, count: 1, twists: 1 }, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: BUILT_IN_MAPPINGS });
+    if (!good.ok) throw new Error('unexpected');
+    const s = good.suggestions[0]!;
+    expect(isSuggestion(s)).toBe(true);
+    const twist = { wordIndex: 0, before: 'otters', after: '0tters', mapping: { from: 'o', to: '0', kind: 'digit' } };
+    expect(isSuggestion({ ...s, twists: [twist] })).toBe(true);
+    expect(isSuggestion({ ...s, twists: [null] })).toBe(false);
+    expect(isSuggestion({ ...s, twists: [{ ...twist, mapping: null }] })).toBe(false);
+    expect(isSuggestion({ ...s, twists: [{ ...twist, mapping: { ...twist.mapping, kind: 'toString' } }] })).toBe(false);
+    expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, criteria: [null] } })).toBe(false);
+    expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, level: 9 } })).toBe(false);
+    expect(isSuggestion({ ...s, difficulty: { ...s.difficulty, measurements: { ...s.difficulty.measurements, seconds: 'slow' } } })).toBe(false);
+    expect(isSuggestion({ ...s, words: [{ text: 'x', original: 'x', slot: 'constructor' }] })).toBe(false);
+  });
+
+  it('removes a stored session that does not parse, so a reload starts clean', () => {
+    const store = memoryStore();
+    store.setItem('elegant-passwords:session:v1', JSON.stringify({ key: 'k', round: 0, sentence: '', outcome: { ok: true } }));
+    expect(loadSession(store)).toBeUndefined();
+    expect(store.getItem('elegant-passwords:session:v1')).toBeNull();
+  });
 });

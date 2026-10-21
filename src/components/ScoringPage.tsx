@@ -1,7 +1,10 @@
 import { RUBRIC, RUBRICS } from '../lib/difficulty';
 import { ATTACK_SCENARIOS, crackEstimates, formatDuration, STRENGTH_PRESETS } from '../lib/generate';
 import { MEMORABILITY, STRENGTH_BANDS } from '../lib/score';
-import { BITS_PER_ENGLISH_LETTER, MEMORABLE_DIGITS_CHOICES, SYMBOL_CHOICES } from '../lib/strength';
+import { ZXCVBN_LEVELS, ZXCVBN_URL } from '../lib/zxcvbnReading';
+import { COMMON_PASSWORD_COUNT } from '../lib/common';
+import { COMMON_PASSWORDS_SOURCE } from '../lib/commonPasswords';
+import { BITS_PER_ENGLISH_LETTER, KEY_WALK_CHOICES, MEMORABLE_DIGITS_CHOICES, MIN_KEY_WALK, SYMBOL_CHOICES } from '../lib/strength';
 
 /** How many criteria the modes use between them. */
 const CRITERIA_COUNT = new Set(Object.values(RUBRICS).flatMap((r) => r.map((c) => c.id))).size;
@@ -35,9 +38,35 @@ export function ScoringPage() {
           memorable run like 123 or 2468 one pick of {MEMORABLE_DIGITS_CHOICES}. Each distinct symbol, the space among
           them, is one pick of {SYMBOL_CHOICES}, however often it appears: a separator typed three times is one choice.
           No word lists, no sentence patterns, no swap table and no hint go in, so a swap never changes a word's
-          strength: <code>Rqmote</code> is six letters whether or not <code>e → q</code> is anyone's mapping. The badge
+          strength: <code>Rqmote</code> is six letters whether or not <code>e → q</code> is anyone's mapping.
+        </p>
+        <p>
+          The usual habits are the ones attackers try first. A password that is exactly one of the{' '}
+          <a href={COMMON_PASSWORDS_SOURCE} target="_blank" rel="noreferrer">
+            {COMMON_PASSWORD_COUNT.toLocaleString('en')} most common passwords
+          </a>{' '}
+          (SecLists) is the guesses it takes to reach it on that list, log2 of its place: <code>password</code>, first on
+          it, is 0 bits. Such a password is not allowed anywhere here: no suggestion is one, My list will not take one,
+          and the typing test says so. Only an exact match counts, so <code>Dragon</code> is not <code>dragon</code>. A
+          block typed again and again counts once, plus log2 of the times (<code>Password1!</code> three times is{' '}
+          <code>Password1!</code> and 1.6 bits; two letters count only from three times, so <code>banana</code> stays a
+          word). A walk of {MIN_KEY_WALK} letters or more along a keyboard row or the alphabet (<code>asdf</code>,{' '}
+          <code>poiu</code>, <code>abcd</code>) is one pick of {KEY_WALK_CHOICES.toLocaleString('en')}. The badge
           is green from the Strong preset at {STRENGTH_BANDS.green} bits, yellow from Everyday at {STRENGTH_BANDS.yellow},
           and red below, judged on the figure as shown.
+        </p>
+        <h3>zxcvbn: a second opinion</h3>
+        <p>
+          Every password, on a card, in the typing test and in My list, also carries what the{' '}
+          <a href={ZXCVBN_URL} target="_blank" rel="noreferrer">
+            zxcvbn
+          </a>{' '}
+          library (Dropbox's password strength estimator, 4.4.2) says about it, run here in your browser. Its crack time
+          for an offline attack on a slow hash (10,000 guesses a second) reads as one of four words:{' '}
+          {Object.entries(ZXCVBN_LEVELS).map(([word, time]) => `${word} (${time})`).join(', ')}. It is the fourth badge,
+          "zxcvbn strong". On a card or in the typing test it is worked out as the password appears; for My list it is
+          worked out once, when the password is added, and saved with it. It is not one of this app's scores and sorts
+          nothing.
         </p>
         <h3>Bits: the attacker knows this tool exactly</h3>
         <p>

@@ -246,3 +246,16 @@ describe('tab stops on a card', () => {
     }
   });
 });
+
+describe("SuggestionCard: zxcvbn's word", () => {
+  it('shows it as the fourth badge, in four words', async () => {
+    const { s, context } = first({ separator: ';' });
+    const { container } = show(s, context);
+    const badge = container.querySelector('.badge.zxcvbn')!;
+    expect(badge.textContent).toBe('zxcvbn…'); // while zxcvbn loads
+    await waitFor(() => expect(container.querySelector('.badge.zxcvbn')!.textContent).toMatch(/^zxcvbn (very weak|weak|good|strong)$/), { timeout: 5000 });
+    const order = [...container.querySelectorAll('.card-head .badge')].map((b) => b.textContent!.split(' ')[0]);
+    expect(order).toEqual(['Strength', 'Raw', 'Difficulty', 'zxcvbn', 'Memorability']);
+  });
+});
+

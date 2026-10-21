@@ -12,7 +12,10 @@
 // Each mention takes its meaning from the words nearest it: a count ("at
 // least 2 digits") or a cue ("must", "no", "optional", "allowed"), else from
 // its neighbours in the same list ("no spaces or symbols"), else from a
-// heading line such as "Your password must contain:".
+// heading line such as "Your password must contain:". A rule it reads but
+// cannot keep (a length past what the tool makes, "no digits", "at most 2
+// symbols") is never weakened quietly: it is named in `unsupported`, and
+// nothing of it is applied.
 
 import type { Requirements } from './generate';
 import { settleRules, type RuleFields } from './sitePresets';
@@ -25,9 +28,15 @@ export interface ParsedRules {
   excludedSymbols: string;
   /** What was understood, in words, for the form to show. Empty when nothing was. */
   understood: string[];
+  /**
+   * Rules the text states that this tool cannot keep, each with why
+   * ("exactly 300 characters: this tool makes at most 256"). None of them
+   * is applied; a front end must say them, and tep refuses them.
+   */
+  unsupported: string[];
 }
 
-type Polarity = { kind: 'req'; n: number; each?: boolean } | { kind: 'neg' | 'opt' | 'allow' };
+type Polarity = { kind: 'req'; n: number; each?: boolean } | { kind: 'max'; n: number } | { kind: 'neg' | 'opt' | 'allow' };
 type Kind = 'upper' | 'lower' | 'digit' | 'symbol' | 'space' | 'letter' | 'list';
 
 interface Mention {
@@ -258,8 +267,8 @@ function ownPolarity(before: string, after: string): Polarity | undefined {
   const piece = before.split(SPLIT).at(-1)!;
   const count = COUNT_TAIL.exec(piece);
   if (count) {
-    if (count[1]) return { kind: 'allow' }; // "at most 2 symbols" sets a limit this app does not model
     const n = /^\d+$/.test(count[2]!) ? Number(count[2]) : 1;
+    if (count[1]) return { kind: 'max', n }; // "at most 2 symbols" sets a limit this app does not model: reported, not kept
     return { kind: 'req', n, ...(count[3] ? { each: true } : {}) };
   }
   const head = after.split(SPLIT)[0]!;
@@ -295,12 +304,15 @@ interface Found {
   allowed: string[];
   examples: string[];
   excluded: string[];
+  unsupported: string[];
+  /** Classes the text says "no" to that the tool cannot leave out; said in `unsupported` unless the text also requires them. */
+  ruledOut: Set<'upper' | 'lower' | 'digit'>;
 }
 
 export function parseRuleText(input: string): ParsedRules {
   const { text, lists } = liftSymbolLists(normalise(input));
   const lengths: Lengths = { mins: [], maxes: [], bare: [] };
-  const f: Found = { req: {}, opt: new Set(), noSymbols: false, allowed: [], examples: [], excluded: [] };
+  const f: Found = { req: {}, opt: new Set(), noSymbols: false, allowed: [], examples: [], excluded: [], unsupported: [], ruledOut: new Set() };
   let heading: Polarity | undefined; // from a line such as "Password must contain:"
 
   for (const raw of text.split(/\n|[.!?;](?=\s|$)/)) {
@@ -347,17 +359,30 @@ export function parseRuleText(input: string): ParsedRules {
   return finish(lengths, f);
 }
 
+/** How each kind of character is named in an unsupported rule. */
+const KIND_NAMES: Record<Exclude<Kind, 'list'>, string> = {
+  upper: 'uppercase letters',
+  lower: 'lowercase letters',
+  digit: 'digits',
+  symbol: 'symbols',
+  space: 'spaces',
+  letter: 'letters',
+};
+
 function record(m: Mention, hasList: boolean, lists: SymbolList[], f: Found) {
   const pol: Polarity | undefined = m.pol ?? (m.kind === 'list' ? { kind: 'allow' } : undefined); // a list on its own is what the site accepts
   if (!pol) return;
   const req = (key: keyof Found['req'], n: number) => (f.req[key] = Math.max(f.req[key] ?? 0, n));
+  const name = m.kind === 'list' ? `symbols from ${lists[m.list!]!.chars}` : KIND_NAMES[m.kind];
+  if (pol.kind === 'max') f.unsupported.push(`at most ${pol.n} ${name}: this tool cannot set a maximum count`);
   switch (m.kind) {
     case 'upper':
     case 'digit':
     case 'lower':
       if (pol.kind === 'req') req(m.kind, pol.n);
       else if (pol.kind === 'opt') f.opt.add(m.kind);
-      return; // "no digits" is not something this app can honour, so it is not read
+      else if (pol.kind === 'neg') f.ruledOut.add(m.kind); // "4-digit PIN not allowed" beside "including a number" is not about digits
+      return;
     case 'symbol':
       if (pol.kind === 'req') req('symbol', pol.n);
       else if (pol.kind === 'opt') f.opt.add('symbol');
@@ -376,6 +401,7 @@ function record(m: Mention, hasList: boolean, lists: SymbolList[], f: Found) {
       f.spaces = pol.kind === 'neg' ? false : f.spaces === false ? false : true; // "no spaces" anywhere wins
       return;
     case 'letter':
+      if (pol.kind === 'neg') f.unsupported.push(`no ${name}: every password this tool makes is built from words`);
       return;
   }
 }
@@ -387,21 +413,32 @@ function finish(l: Lengths, f: Found): ParsedRules {
   const rules: Partial<RuleFields> = {};
   const understood: string[] = [];
 
-  const min = l.mins.length ? Math.max(...l.mins) : l.bare.length ? Math.max(...l.bare) : undefined; // "must be 8 characters" means at least 8
-  const stated = l.maxes.length ? Math.min(...l.maxes) : undefined;
+  const unsupported: string[] = [];
+
+  let min = l.mins.length ? Math.max(...l.mins) : l.bare.length ? Math.max(...l.bare) : undefined; // "must be 8 characters" means at least 8
+  let stated = l.maxes.length ? Math.min(...l.maxes) : undefined;
   // A maximum below the minimum is a slip in the text: the minimum stands and the maximum is raised to it, never swapped.
-  const max = min !== undefined && stated !== undefined && min > stated ? min : stated;
-  if (min !== undefined) rules.minLength = Math.min(min, MAX_LENGTH);
+  let max = min !== undefined && stated !== undefined && min > stated ? min : stated;
+  // A minimum past what the tool makes cannot be met: the length is not kept at all, rather than cut to fit and claimed.
+  if (min !== undefined && min > MAX_LENGTH) {
+    const said = max === undefined ? `at least ${min} characters` : min === max ? `exactly ${min} characters` : `${min}-${max} characters`;
+    unsupported.push(`${said}: this tool makes at most ${MAX_LENGTH}`);
+    min = max = stated = undefined;
+  }
+  if (min !== undefined) rules.minLength = min;
+  // A maximum past the tool's own is no limit on it: every password it makes is shorter, so the site's rule is kept, and the line says so.
+  const capped = max !== undefined && max > MAX_LENGTH;
   if (max !== undefined) rules.maxLength = Math.min(max, MAX_LENGTH);
+  const cap = capped ? ` (this tool makes at most ${MAX_LENGTH})` : '';
   if (min !== undefined && max !== undefined) {
     understood.push(
-      `${min === max ? `exactly ${min} characters` : `${min}-${max} characters`}${stated !== max ? ` (a maximum of ${stated} is below the minimum of ${min}, so the minimum stands)` : ''}`,
+      `${min === max ? `exactly ${min} characters` : `${min}-${max} characters`}${stated !== max ? ` (a maximum of ${stated} is below the minimum of ${min}, so the minimum stands)` : cap}`,
     );
   }
   else if (min !== undefined) understood.push(`at least ${min} characters`);
-  else if (max !== undefined) understood.push(`at most ${max} characters`);
+  else if (max !== undefined) understood.push(`at most ${max} characters${cap}`);
 
-  const counted = (key: 'upper' | 'digit' | 'symbol', field: 'minUppercase' | 'minDigits' | 'minSymbols', one: string, many: string, optional: string) => {
+  const counted = (key: 'upper' | 'lower' | 'digit' | 'symbol', field: 'minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols', one: string, many: string, optional: string) => {
     const n = f.req[key];
     if (n !== undefined) {
       rules[field] = n;
@@ -415,7 +452,8 @@ function finish(l: Lengths, f: Found): ParsedRules {
   };
   const upper = counted('upper', 'minUppercase', 'an uppercase letter', 'uppercase letters', 'uppercase optional');
   if (upper) understood.push(upper);
-  if (f.req.lower) understood.push('a lowercase letter (always included)');
+  const lower = counted('lower', 'minLowercase', 'a lowercase letter', 'lowercase letters', 'lowercase optional');
+  if (lower) understood.push(lower);
   const digit = counted('digit', 'minDigits', 'a digit', 'digits', 'digits optional');
   if (digit) understood.push(digit);
 
@@ -439,7 +477,10 @@ function finish(l: Lengths, f: Found): ParsedRules {
     rules.allowSpaces = f.spaces;
     understood.push(f.spaces ? 'spaces allowed' : 'no spaces');
   }
-  return { rules, excludedSymbols: excluded, understood };
+  for (const kind of f.ruledOut) {
+    if (!f.req[kind]) unsupported.push(`no ${KIND_NAMES[kind]}: this tool cannot leave ${KIND_NAMES[kind]} out`);
+  }
+  return { rules, excludedSymbols: excluded, understood, unsupported: [...new Set([...unsupported, ...f.unsupported])] };
 }
 
 // ------------------------------------------------------------------- applying

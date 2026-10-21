@@ -1,5 +1,5 @@
-# Checks every push and pull request: types, the unit tests, both builds and the browser smoke tests
-# (which pages.yml leaves to developers' machines). The deploy workflow runs the unit tests again on main.
+# Checks every push to a branch and every pull request: types, the unit tests, both builds and the browser
+# smoke tests. Pushes to main run the same checks in pages.yml, before anything is deployed.
 name: CI
 
 on:

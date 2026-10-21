@@ -9,7 +9,7 @@ import { SHRINK_FROM_RANGE, TARGET_LENGTH_RANGE, type SentenceOptions } from '..
 import { STRENGTH_PRESETS, type Requirements } from '../lib/generate';
 import { lookupKey } from '../lib/keyboard';
 import { PROFILE_LABELS } from '../lib/modeProfiles';
-import { FIELD_LABELS, isSymbol, MAX_COUNT, MAX_DIGITS, MAX_INITIALS, MAX_LENGTH, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_TARGET_BITS, MAX_TWISTS, MAX_UPPERCASE } from '../lib/validation';
+import { FIELD_LABELS, isSymbol, MAX_COUNT, MAX_DIGITS, MAX_INITIALS, MAX_LENGTH, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_TARGET_BITS, MAX_TWISTS, MAX_LOWERCASE, MAX_UPPERCASE } from '../lib/validation';
 import { closest, slugOf } from './names';
 
 /** Where a setting lives in a config file. */
@@ -61,6 +61,7 @@ export const FIELDS: readonly CliField[] = [
   { name: 'min-length', group: 'rules', target: req('minLength'), label: FIELD_LABELS.minLength, description: 'Shortest password the site accepts', kind: int(1, MAX_LENGTH) },
   { name: 'max-length', group: 'rules', target: req('maxLength'), label: FIELD_LABELS.maxLength, description: 'Longest password the site accepts', kind: int(1, MAX_LENGTH) },
   { name: 'min-uppercase', group: 'rules', target: req('minUppercase'), label: 'required uppercase letters', description: 'Uppercase letters the site requires', kind: int(0, MAX_UPPERCASE) },
+  { name: 'min-lowercase', group: 'rules', target: req('minLowercase'), label: 'required lowercase letters', description: 'Lowercase letters the site requires', kind: int(0, MAX_LOWERCASE) },
   { name: 'min-digits', group: 'rules', target: req('minDigits'), label: 'required digits', description: 'Digits the site requires', kind: int(0, MAX_DIGITS) },
   { name: 'min-symbols', group: 'rules', target: req('minSymbols'), label: 'required symbols', description: 'Symbols the site requires', kind: int(0, MAX_SYMBOLS) },
   { name: 'symbols', group: 'rules', target: req('allowedSymbols'), label: FIELD_LABELS.allowedSymbols, description: 'Symbols the site accepts, as one string; empty for none', kind: { type: 'symbols' } },
@@ -116,13 +117,41 @@ export function symbolProblem(c: string): string | undefined {
   return undefined;
 }
 
+/** The longest a value is quoted in a message; past it the rest is cut to "...". */
+const MAX_SHOWN = 60;
+
+/**
+ * A value as a message quotes it: text in double quotes, anything else as
+ * JSON. Never throws: a value that refers to itself is shown as "[circular]"
+ * where it does, and a long one is cut short.
+ */
+export function shownValue(raw: unknown): string {
+  let text: string;
+  if (typeof raw === 'string') text = `"${raw}"`;
+  else {
+    const seen = new WeakSet<object>();
+    try {
+      text =
+        JSON.stringify(raw, (_key, value: unknown) => {
+          if (typeof value !== 'object' || value === null) return typeof value === 'bigint' ? String(value) : value;
+          if (seen.has(value)) return '[circular]';
+          seen.add(value);
+          return value;
+        }) ?? String(raw);
+    } catch {
+      text = Object.prototype.toString.call(raw);
+    }
+  }
+  return text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN - 3)}...` : text;
+}
+
 /**
  * A value as written (a flag's text, or a YAML scalar) in the engine's
  * terms, or why it cannot be one. Messages say what was found and what is
  * expected, without the flag or key: the caller adds where it came from.
  */
 export function parseValue(f: CliField, raw: unknown): Parsed<unknown> {
-  const shown = typeof raw === 'string' ? `"${raw}"` : JSON.stringify(raw);
+  const shown = shownValue(raw);
   const k = f.kind;
   switch (k.type) {
     case 'int': {

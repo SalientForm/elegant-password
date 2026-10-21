@@ -57,7 +57,7 @@ export function largestWorkingMin(req: Requirements): number | undefined {
 }
 
 /** The largest value below the current one of a count field at which the requirements work; undefined when none does. */
-export function largestWorkingCount(req: Requirements, key: 'minUppercase' | 'minDigits' | 'minSymbols' | 'initials' | 'shorthand' | 'madeUp'): number | undefined {
+export function largestWorkingCount(req: Requirements, key: 'minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols' | 'initials' | 'shorthand' | 'madeUp'): number | undefined {
   for (let n = req[key] - 1; n >= 0; n--) if (ok({ ...req, [key]: n })) return n;
   return undefined;
 }
@@ -87,7 +87,7 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
   const F = (key: keyof Requirements) => reqField(key)!;
   const change = (key: keyof Requirements) => howToChange(F(key), refer.source(F(key)));
   const values = (...keys: (keyof Requirements)[]) => keys.filter((k) => reqField(k)).map((k) => valueLine(req, F(k), refer));
-  const counts = (['minUppercase', 'minDigits', 'minSymbols'] as const).filter((k) => req[k] > 0);
+  const counts = (['minUppercase', 'minLowercase', 'minDigits', 'minSymbols'] as const).filter((k) => req[k] > 0);
 
   switch (problem.code) {
     case 'min-above-max': {
@@ -160,15 +160,20 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
     case 'too-few-letters': {
       const max = smallestWorkingMax(req);
       const upper = largestWorkingCount(req, 'minUppercase');
+      const lowerCount = req.minLowercase > 0 ? largestWorkingCount(req, 'minLowercase') : undefined;
       const shapes = (['initials', 'shorthand', 'madeUp'] as const).filter((k) => req[k] > 0);
       const ways = [
         ...(max !== undefined ? [`raise the maximum length to ${max} or more (${change('maxLength')})`] : []),
         ...(upper !== undefined ? [`require at most ${plural(upper, 'uppercase letter')} (${change('minUppercase')})`] : []),
+        ...(lowerCount !== undefined ? [`require at most ${plural(lowerCount, 'lowercase letter')} (${change('minLowercase')})`] : []),
         ...shapes.map((k) => `use fewer ${F(k).label} (${change(k)})`),
       ];
       return {
-        title: `No made-up sentence between ${req.minLength} and ${req.maxLength} characters has ${plural(req.minUppercase, 'letter')} to capitalise.`,
-        values: values('minUppercase', 'maxLength', ...shapes),
+        title:
+          req.minLowercase > 0
+            ? `No made-up sentence between ${req.minLength} and ${req.maxLength} characters has ${plural(req.minUppercase + req.minLowercase, 'letter')} for ${plural(req.minUppercase, 'capital')} and ${plural(req.minLowercase, 'lowercase letter')}.`
+            : `No made-up sentence between ${req.minLength} and ${req.maxLength} characters has ${plural(req.minUppercase, 'letter')} to capitalise.`,
+        values: values('minUppercase', ...(req.minLowercase > 0 ? (['minLowercase'] as const) : []), 'maxLength', ...shapes),
         fix: `${list(ways).replace(/^./, (c) => c.toUpperCase())}.`,
       };
     }

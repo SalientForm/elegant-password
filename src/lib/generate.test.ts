@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, applyUppercase, countUpper, type Requirements } from './generate';
+import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, applyUppercase, checkRequirements, countUpper, type Requirements } from './generate';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
 import { isMadeUpNoun, pools, twoLetter } from './grammar';
@@ -544,5 +544,32 @@ describe('deliberate swaps for typing ease', () => {
       }
     }
     for (const [word, texts] of spelled) expect([...texts], word).toEqual([easedText(word)]);
+  });
+});
+
+describe('a lowercase minimum and the common-password rule', () => {
+  it('keeps the lowercase letters a whole-word capitals rule would take', () => {
+    const r = req({ minUppercase: 8, minLowercase: 6, count: 10 });
+    const result = generate(r, { rng: seeded(11) });
+    expect(result.suggestions.length).toBeGreaterThan(0);
+    for (const s of result.suggestions) {
+      expect(s.password.replace(/[^a-z]/g, '').length, s.password).toBeGreaterThanOrEqual(6);
+      expect(s.checks.find((c) => c.rule === 'At least 6 lowercase letters')?.met).toBe(true);
+    }
+  });
+
+  it('says so when no sentence has letters for both the capitals and the lowercase letters', () => {
+    expect(() => generate(req({ minLength: 8, maxLength: 9, minUppercase: 4, minLowercase: 5, minDigits: 0, minSymbols: 0 }), { rng: seeded(1) })).toThrow(/lowercase/);
+  });
+
+  it('checks every password against the most common passwords, by exact match only', () => {
+    const r = req({ minUppercase: 0, minDigits: 0, minSymbols: 0 });
+    const common = checkRequirements('password', r).find((c) => c.rule === 'Not a common password')!;
+    expect(common.met).toBe(false);
+    expect(common.how).toMatch(/^Not allowed: number 1 of the 10,001 most common passwords/);
+    expect(checkRequirements('Password', r).find((c) => c.rule === 'Not a common password')!.met).toBe(true);
+    for (const s of generate(req({ count: 5 }), { rng: seeded(3) }).suggestions) {
+      expect(s.checks.at(-1)).toEqual({ rule: 'Not a common password', met: true, how: 'not one of the 10,001 most common passwords' });
+    }
   });
 });

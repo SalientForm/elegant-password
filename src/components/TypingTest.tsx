@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { commonPasswordProblem, commonRank } from '../lib/common';
 import { criterionOf, DEFAULT_TYPING_MODE, difficultyIn } from '../lib/difficulty';
 import { difficultyAlone, scoreCold } from '../lib/score';
 import { rawBits, strengthBits } from '../lib/strength';
-import { finishAttempt, nextTarget, recordKey, startRecording, type Attempt, type Recording } from '../lib/typingTest';
+import { MAX_SENTENCE_LENGTH } from '../lib/text';
+import { finishAttempt, nextTarget, pastedTarget, recordChange, recordKey, startRecording, UNNAMED_KEYS, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
 import { CancelIcon } from './icons';
 import { PasswordText } from './PasswordText';
 import { ScoreBadges } from './SuggestionCard';
+import { useZxcvbn } from './useZxcvbn';
 
 interface Props {
   /** Clock in milliseconds; injectable for tests. */
@@ -16,7 +19,7 @@ interface Props {
 }
 
 /**
- * Attributes that tell password managers (Bitwarden, 1Password, LastPass,
+ * Attributes that tell password managers (1Password, LastPass,
  * Dashlane) to ignore the field. On top of that, nothing about the field
  * says "password": its name, id, label and placeholder are about practice,
  * it is never a password-type input (hiding masks the text with CSS), and
@@ -32,10 +35,15 @@ export const MANAGER_OPT_OUT = { 'data-bwignore': 'true', 'data-1p-ignore': 'tru
  * scored; a password typed in by hand has no hint, so its difficulty comes
  * from the text alone and memorability is not available (Strength and Raw
  * never need a hint).
+ * "Practise" on a card or a My list entry makes that password the one under
+ * test too, with its hint, without adding or removing anything.
  * Later runs are checked against the target until "Clear" drops it, a paste
- * replaces it, or another password is added to the list. A hint can be
- * typed in for a password that has none, so memorability can be scored too.
- * Nothing leaves this component.
+ * replaces it, another password is added to the list or picked to practise,
+ * or the session is forgotten. A hint can be typed in for a password that
+ * has none, so memorability can be scored too. A pasted password is kept
+ * exactly as pasted, spaces and all. On a soft keyboard that does not name
+ * its keys, the typing is read from how the text changes. Nothing leaves
+ * this component.
  */
 export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const passwords = usePasswordsOptional();
@@ -52,7 +60,11 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const [hintEditable, setHintEditable] = useState(false);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [shown, setShown] = useState(true);
+  /** Why the last paste did not set a password, until the next paste or run. */
+  const [pasteProblem, setPasteProblem] = useState<string | undefined>();
   const recording = useRef<Recording>(startRecording());
+  /** The last key down was one the keyboard did not name, so the next change of text is the typing. */
+  const unnamed = useRef(false);
   const input = useRef<HTMLInputElement>(null);
   const lastLatest = useRef(latest?.password);
   const lastSize = useRef(listSize);
@@ -72,6 +84,36 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
     setValue('');
   }, [latest, listSize]);
 
+  /** Make a password the one under test, with the hint that came with it (none: one may be typed in). */
+  const testThis = (password: string, known: string | undefined) => {
+    setTarget(password);
+    setHint(known);
+    setHintEditable(known === undefined);
+    setAttempts([]);
+    setPasteProblem(undefined);
+    recording.current = startRecording();
+    setValue('');
+  };
+
+  // "Practise" on a card or an entry picks the password to test.
+  const practice = passwords?.practice;
+  const lastPractice = useRef(practice?.id);
+  useEffect(() => {
+    if (!practice || practice.id === lastPractice.current) return;
+    lastPractice.current = practice.id;
+    testThis(practice.password, practice.hint);
+    input.current?.focus();
+  }, [practice]);
+
+  // Forgetting the session forgets the password under test and the runs on it.
+  const epoch = passwords?.sessionEpoch ?? 0;
+  const lastEpoch = useRef(epoch);
+  useEffect(() => {
+    if (epoch === lastEpoch.current) return;
+    lastEpoch.current = epoch;
+    clear();
+  }, [epoch]);
+
   const hintText = hint?.trim() ? hint.trim() : undefined;
   const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);
   /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis and a click shows the whole of it, like My list. */
@@ -80,33 +122,43 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? difficultyAlone(target) : undefined), [cold, target]);
   const difficulty = useMemo(() => (target !== undefined && base ? difficultyIn(target, base, typingMode) : undefined), [target, base, typingMode]);
   const last = attempts[0];
+  const zxcvbn = useZxcvbn(target, passwords?.selected.find((e) => e.password === target)?.zxcvbn);
 
   /** Drop the password under test; the next run starts afresh. */
-  const clear = () => {
+  function clear() {
     setTarget(undefined);
     setHint(undefined);
     setHintEditable(false);
     setAttempts([]);
+    setPasteProblem(undefined);
     recording.current = startRecording();
     setValue('');
+  }
+
+  /** Pasting selects a password to test, as adding one from the list does; it is not typed into the field. Exactly as pasted, or refused with the reason. */
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = pastedTarget(e.clipboardData.getData('text'), MAX_SENTENCE_LENGTH);
+    if (!pasted) return;
+    if ('problem' in pasted) return setPasteProblem(pasted.problem);
+    testThis(pasted.password, hintFor(pasted.password)); // a known password keeps its hint; an unknown one may be given one
   };
 
-  /** Pasting selects a password to test, as adding one from the list does; it is not typed into the field. */
-  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData('text').split(/\r?\n/)[0]?.trim() ?? '';
-    e.preventDefault();
-    if (!pasted) return;
-    const known = hintFor(pasted);
-    setTarget(pasted);
-    setHint(known);
-    setHintEditable(known === undefined); // a known password keeps its hint; an unknown one may be given one
-    setAttempts([]);
-    recording.current = startRecording();
-    setValue('');
+  /** A soft keyboard's typing, read from the change of text when its key down named no key. */
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value.slice(0, MAX_SENTENCE_LENGTH);
+    if (unnamed.current) recordChange(recording.current, value, next, now());
+    unnamed.current = false;
+    setValue(next);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const at = now();
+    if (e.nativeEvent.isComposing) {
+      unnamed.current = true; // an IME at work: its Enter accepts a candidate, and its text arrives as a change
+      return;
+    }
+    unnamed.current = UNNAMED_KEYS.has(e.key);
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation(); // Enter here is a run, not "Submit changes"
@@ -120,6 +172,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         setHintEditable(true);
       }
       setTarget(checkAgainst);
+      setPasteProblem(undefined);
       setAttempts((list) => [attempt, ...list].slice(0, keep));
       recording.current = startRecording();
       setValue('');
@@ -133,7 +186,8 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
       <h2 id="typing-test-heading">Test a password</h2>
       <p className="hint">
         Type it and press Enter. Speed and corrections are measured as you type; the first run, the password you last
-        added to your list, or one you paste here sets the one under test until you clear it. Nothing is saved.
+        added to your list, one you pick with Practise, or one you paste here (exactly as pasted) sets the one under test
+        until you clear it. Nothing is saved.
       </p>
       <input
         ref={input}
@@ -149,10 +203,16 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         {...MANAGER_OPT_OUT}
         placeholder="type it here, then Enter"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        maxLength={MAX_SENTENCE_LENGTH}
+        onChange={onChange}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
       />
+      {pasteProblem && (
+        <p className="warning" role="alert">
+          {pasteProblem}
+        </p>
+      )}
       <div className="typing-test-controls">
         <label className="check">
           <input type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} />
@@ -182,9 +242,10 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
                 autoCapitalize="off"
                 spellCheck={false}
                 value={hint ?? ''}
+                maxLength={MAX_SENTENCE_LENGTH}
                 onChange={(e) => setHint(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     e.stopPropagation();
                     input.current?.focus();
@@ -197,8 +258,13 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               <span className="field-label">Hint:</span> {hintText ?? <em>none</em>}
             </p>
           )}
+          {commonRank(target!) !== undefined && (
+            <p className="error" role="alert">
+              {commonPasswordProblem(commonRank(target!)!)}.
+            </p>
+          )}
           <div className="actions">
-            <ScoreBadges strength={strengthBits(target!)} raw={rawBits(target!)} difficulty={difficulty} {...(cold ? { memorability: cold.memorability.score } : {})} />
+            <ScoreBadges strength={strengthBits(target!)} raw={rawBits(target!)} difficulty={difficulty} {...(zxcvbn ? { zxcvbn } : {})} {...(cold ? { memorability: cold.memorability.score } : {})} />
           </div>
           {last && (
             <ul className="typing-stats">

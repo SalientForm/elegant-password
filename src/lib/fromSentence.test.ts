@@ -498,3 +498,22 @@ describe('a rule the most compressed state cannot meet', () => {
     }
   });
 });
+
+describe('a lowercase minimum and the common-password rule', () => {
+  const plain = { ...DEFAULT_SENTENCE_OPTIONS, padding: false, shrink: 'none' as const };
+
+  it('never passes "DUCKS" off as meeting a lowercase rule: five capitals and a lowercase letter need six characters', () => {
+    const r = req({ minLength: 5, maxLength: 5, minUppercase: 5, minLowercase: 1, minDigits: 0, minSymbols: 0, twists: 0, includeNumber: false });
+    expect(() => fromSentence('ducks', r, plain, { rng: seeded(1) })).toThrow(RequirementsError);
+  });
+
+  it('refuses a sentence whose capitals leave too few lowercase letters, saying why', () => {
+    const r = req({ minLength: 5, maxLength: 20, minUppercase: 5, minLowercase: 6, minDigits: 0, minSymbols: 0, twists: 0, includeNumber: false, separator: ' ' });
+    expect(() => fromSentence('ducks quack', r, plain, { rng: seeded(1) })).toThrow(/lowercase letters beside its 5 capitals/);
+  });
+
+  it('refuses a sentence that comes out as one of the most common passwords', () => {
+    const r = req({ minLength: 8, maxLength: 8, minUppercase: 0, minDigits: 0, minSymbols: 0, twists: 0, includeNumber: false, easeSwaps: false });
+    expect(() => fromSentence('password', r, plain, { rng: seeded(1) })).toThrow(/Your sentence makes "password"\. Not allowed: number 1 of the 10,001 most common passwords/);
+  });
+});

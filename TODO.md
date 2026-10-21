@@ -188,3 +188,20 @@ generalises.
 A separate flow for the one password typed every day (a password manager's,
 a laptop's): longer sentences, 70 bits or more, and recall practice built in,
 since this is the password people actually forget.
+
+## From the 2026-10-20 follow-up audit: still open
+
+The rest of the audit is done (`docs/specs/2026-10-20-follow-up-fixes-design.md`).
+
+- A phone typing model. The typing test now reads a soft keyboard's
+  typing from how the text changes, but difficulty is still scored for
+  physical keyboards, so phone results are not yet claimed to be
+  reliable. Test on real Android and iOS keyboards first.
+- Fewer focusable score tips per card (five today), deferred in both
+  audits.
+- Keep splitting the large modules (`generate.ts`, `score.ts`,
+  `fromSentence.ts`) a responsibility at a time; `checks.ts` was the first.
+- To move to a newer zxcvbn (or another crack-time scenario), update
+  `src/lib/zxcvbnReading.ts` and bump `ZXCVBN_ESTIMATOR`, so saved
+  readings are worked out again once.
+

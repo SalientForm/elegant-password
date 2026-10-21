@@ -21,9 +21,10 @@ import { explainWarning, renderExplained, type Refer } from './messages';
 import { contradictionError, renderNotice } from './report';
 import { COLOR, configLine, PLAIN, render, useColor, type Config } from './output';
 import { resolve, type Layer } from './resolve';
+import { MAX_SENTENCE_LENGTH } from '../lib/text';
 
-/** Longer than any sentence anyone types. */
-const MAX_SENTENCE = 500;
+/** Longer than any sentence anyone types; the web app's cap too. */
+const MAX_SENTENCE = MAX_SENTENCE_LENGTH;
 
 /** Why a sentence cannot be used, or undefined when it can. */
 function sentenceProblem(sentence: string): string | undefined {

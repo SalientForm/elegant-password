@@ -13,7 +13,7 @@ export type Problem = (RuleProblem & { source: 'rules' }) | (Omit<PlanProblem, '
 /** The fields a planning problem comes down to, for naming where the values came from. */
 export const PLAN_PROBLEM_FIELDS: Record<PlanProblem['code'], (keyof Requirements)[]> = {
   'no-fit': ['minLength', 'maxLength'],
-  'too-few-letters': ['minUppercase', 'maxLength', 'initials', 'shorthand', 'madeUp'],
+  'too-few-letters': ['minUppercase', 'minLowercase', 'maxLength', 'initials', 'shorthand', 'madeUp'],
   'no-closing': ['minSymbols', 'allowedSymbols', 'separator'],
   rules: [],
 };

@@ -41,6 +41,7 @@ import {
   MAX_TWISTS,
   noClosingProblem,
   comfortableSymbols,
+  countLower,
   countUpper,
   fewerSwapsWarning,
   isSymbol,
@@ -54,6 +55,7 @@ import {
   type Requirements,
   type Suggestion,
 } from './generate';
+import { commonPasswordProblem, commonRank } from './common';
 import { pools, twoLetter } from './grammar';
 import { easedText } from './ease';
 import { cryptoRandom, randomInt, type RandomSource } from './random';
@@ -366,6 +368,8 @@ interface Problem {
   tooShort?: boolean;
   /** How long the state came out when another rule failed, so the search can still steer by length. */
   length?: number;
+  /** The state came out as one of the most common passwords: said over a length problem, which would hide why. */
+  common?: boolean;
 }
 
 /** How many ladder states a fit finished; exposed for tests of the search. */
@@ -447,7 +451,7 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
       best = f;
     } else broken ??= f;
   }
-  if (!best) return short ? { problem: short.problem, tooShort: true } : { problem: broken!.problem };
+  if (!best) return short && !broken?.common ? { problem: short.problem, tooShort: true } : { problem: broken!.problem };
   if (best.length > req.maxLength) {
     return {
       problem: `Even compressed, your sentence makes ${best.length} characters, over the ${req.maxLength} maximum. Use fewer words or raise the maximum.`,
@@ -591,6 +595,16 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   }
   if (countUpper(password) < req.minUppercase) {
     return { problem: `Your sentence does not have ${req.minUppercase} letters to capitalise. Add a word.`, length };
+  }
+  if (countLower(password) < req.minLowercase) {
+    return {
+      problem: `Your sentence does not leave ${req.minLowercase} lowercase letter${req.minLowercase === 1 ? '' : 's'} beside its ${req.minUppercase} capital${req.minUppercase === 1 ? '' : 's'}. Add a word, or require fewer capitals.`,
+      length,
+    };
+  }
+  const rank = commonRank(password);
+  if (rank !== undefined) {
+    return { problem: `Your sentence makes "${password}". ${commonPasswordProblem(rank)}. Use a longer or less usual sentence.`, length, common: true };
   }
 
   const dropped = base.filter((w) => !state.some((t) => t.original === w));

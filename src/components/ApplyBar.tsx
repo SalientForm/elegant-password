@@ -12,6 +12,8 @@ const inTextField = (el: HTMLElement | null) =>
 interface Props {
   /** Opens the options column at the first problem, wherever it is on screen. */
   onShowProblems?: () => void;
+  /** Whether the Passwords page is the one showing. It stays mounted behind Scoring and Fun, and its keys must not act there. Defaults to true. */
+  active?: boolean;
 }
 
 /**
@@ -23,16 +25,16 @@ interface Props {
  * or select, where Enter has its own job) and Escape discards; in a text
  * field Escape means back: it leaves the field and discards nothing, so the
  * next Escape discards. Keys that are part of an IME composition are left
- * alone. Gone as soon as there is nothing to submit. Submitting while a batch is still being
+ * alone, and so is every key while another page is showing. Gone as soon as there is nothing to submit. Submitting while a batch is still being
  * made simply supersedes that batch; the one thing that disables Submit is a
  * contradiction in the rules, said above the buttons until it is fixed.
  */
-export function ApplyBar({ onShowProblems }: Props) {
+export function ApplyBar({ onShowProblems, active = true }: Props) {
   const { dirty, apply, discard, problems: live } = usePasswords();
   const problems = useShownProblems(live); // apply() itself still refuses any draft with problems
 
   useEffect(() => {
-    if (!dirty) return undefined;
+    if (!dirty || !active) return undefined;
     const onKey = (e: KeyboardEvent) => {
       if (e.isComposing) return;
       const target = e.target as HTMLElement | null;
@@ -50,7 +52,7 @@ export function ApplyBar({ onShowProblems }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dirty, apply, discard]);
+  }, [dirty, active, apply, discard]);
 
   if (!dirty) return null;
   const blocked = problems.length > 0;

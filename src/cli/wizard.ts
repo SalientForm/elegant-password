@@ -45,7 +45,7 @@ import { badges, PLAIN } from './output';
 import { wrapHanging } from './wrap';
 
 /** The order rules are asked in, each limiting the next (spec §7.1). */
-const RULE_ORDER = ['min-length', 'max-length', 'symbols', 'spaces', 'min-uppercase', 'min-digits', 'min-symbols'];
+const RULE_ORDER = ['min-length', 'max-length', 'symbols', 'spaces', 'min-uppercase', 'min-digits', 'min-symbols']; // a lowercase count comes from pasted rules, a flag or the file, never asked: sites almost never set one
 
 /** What the wizard can be told to do instead of the real thing, for tests of the bug path. */
 export interface WizardHooks {
@@ -386,7 +386,13 @@ export class Wizard {
     const text = await this.p.text({
       message: 'Paste the site\'s rules (one line)',
       placeholder: 'Must be 8-20 characters and include a number and one of !@#$%',
-      validate: (v) => (!v.trim() ? 'Paste the rules, or press Ctrl+C to stop.' : parseRuleText(v).understood.length ? undefined : 'No password rules found in that. It should read like a sign-up form\'s rules, such as "8-20 characters, at least one number".'),
+      validate: (v) => {
+        if (!v.trim()) return 'Paste the rules, or press Ctrl+C to stop.';
+        const read = parseRuleText(v);
+        if (read.understood.length) return undefined;
+        if (read.unsupported.length) return `Nothing in that can be kept: ${read.unsupported.join('; ')}.`;
+        return 'No password rules found in that. It should read like a sign-up form\'s rules, such as "8-20 characters, at least one number".';
+      },
     });
     const parsed = parseRuleText(text);
     // What the text does not say stays as it was: the rules so far, or the Typical site's before any.
@@ -395,6 +401,8 @@ export class Wizard {
     for (const [key, v] of Object.entries(parsed.rules)) values[reqField(key as keyof Requirements)!.name] = v;
     if (parsed.excludedSymbols) values.symbols = [...String(values.symbols)].filter((c) => !parsed.excludedSymbols.includes(c)).join('');
     this.p.info(`Read as: ${parsed.understood.join('; ')}.`);
+    // What the text says that the tool cannot keep is dropped, and said, never applied cut down.
+    if (parsed.unsupported.length) this.p.warn(`Dropped, as this tool cannot keep ${parsed.unsupported.length === 1 ? 'it' : 'them'}: ${parsed.unsupported.join('; ')}.`);
     const next: Answers = { ...a, site: undefined, rules: values, rulesAnswered: true };
     const problems = problemsWith(next);
     if (!problems.length) return next;

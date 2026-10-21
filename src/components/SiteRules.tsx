@@ -13,6 +13,8 @@ interface Filled {
   text: string;
   message: string;
   found: boolean;
+  /** Rules the text states that the tool cannot keep, each with why; none of them was applied. */
+  notKept: string[];
 }
 
 /** What a preset tap had to fix, kept while the form still holds what that tap made. */
@@ -27,7 +29,9 @@ interface PresetNote {
  * rule fields, and only in the draft, like any other edit: nothing sticks
  * until it is submitted. Neither ever leaves the form contradicting itself:
  * a separator the new rules forbid becomes Automatic, and each such fix is
- * said (beside the presets, or in the paste box's message).
+ * said (beside the presets, or in the paste box's message). A pasted rule
+ * the tool cannot keep (a length past 256, "no digits") is never applied
+ * cut down: it is listed under "Not kept", with why.
  */
 export function SiteRules({ value, onChange }: Props) {
   const active = matchingPreset(value);
@@ -39,25 +43,30 @@ export function SiteRules({ value, onChange }: Props) {
 
   const fill = (source: string) => {
     const parsed = parseRuleText(source);
+    const notKept = parsed.unsupported;
     if (!parsed.understood.length) {
-      setFilled({ text: source, found: false, message: 'No password rules found in that text; nothing changed.' });
+      setFilled({ text: source, found: false, notKept, message: notKept.length ? 'Nothing this tool can keep; nothing changed.' : 'No password rules found in that text; nothing changed.' });
       return;
     }
     const { req, notes } = applyParsedRules(value, parsed);
     setPresetNote(null);
     onChange(req);
-    setFilled({ text: source, found: true, message: `Filled in: ${[...parsed.understood, ...notes].join(', ')}.` });
+    setFilled({ text: source, found: true, notKept, message: `Filled in: ${[...parsed.understood, ...notes].join(', ')}.` });
   };
 
   const shown = filled && filled.text === text ? filled : null;
-  const preview = text.trim() ? parseRuleText(text).understood : null;
+  const parsedPreview = text.trim() ? parseRuleText(text) : null;
+  const preview = parsedPreview?.understood ?? null;
+  const notKept = shown ? shown.notKept : (parsedPreview?.unsupported ?? []);
   const status = shown
     ? shown.message
     : preview === null
       ? 'Paste the rules from the sign-up page; whatever they do not mention stays as it is.'
       : preview.length
         ? `Understood: ${preview.join(', ')}.`
-        : 'No password rules recognised yet.';
+        : notKept.length
+          ? 'Nothing this tool can keep yet.'
+          : 'No password rules recognised yet.';
 
   return (
     <section className="site-rules" aria-labelledby="site-rules-heading">
@@ -103,9 +112,16 @@ export function SiteRules({ value, onChange }: Props) {
           }}
         />
         <div className="paste-actions">
-          <p className={shown && !shown.found ? 'field-error' : 'hint'} role="status">
-            {status}
-          </p>
+          <div className="paste-status">
+            <p className={shown && !shown.found ? 'field-error' : 'hint'} role="status">
+              {status}
+            </p>
+            {notKept.length > 0 && (
+              <p className="field-error" role="alert" data-testid="rules-not-kept">
+                Not kept: {notKept.join('; ')}.
+              </p>
+            )}
+          </div>
           <button type="button" disabled={!text.trim()} onClick={() => fill(text)}>
             Fill in
           </button>

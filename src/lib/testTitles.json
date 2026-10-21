@@ -146,6 +146,14 @@
       {
         "kind": "test",
         "title": "badge tips are never clipped by a card and stay inside the viewport"
+      },
+      {
+        "kind": "test",
+        "title": "Practise on a card makes it the password under test without adding it"
+      },
+      {
+        "kind": "test",
+        "title": "Forget this session draws a new sentence and clears the password under test"
       }
     ]
   },
@@ -446,6 +454,18 @@
       },
       {
         "kind": "test",
+        "title": "an alias to nothing: a config error naming its line, not a crash in the YAML reader"
+      },
+      {
+        "kind": "test",
+        "title": "an alias that loops back on its own anchor: both named, nothing thrown while describing them"
+      },
+      {
+        "kind": "test",
+        "title": "an anchor and an alias that would only repeat a value: refused too, with how to quote a symbol list"
+      },
+      {
+        "kind": "test",
         "title": "an empty file"
       },
       {
@@ -689,6 +709,26 @@
       {
         "kind": "test",
         "title": "round-trips every field: written back and parsed again is the same value"
+      },
+      {
+        "kind": "group",
+        "title": "shownValue: a value quoted in a message"
+      },
+      {
+        "kind": "test",
+        "title": "quotes text and writes anything else as JSON"
+      },
+      {
+        "kind": "test",
+        "title": "never throws on a value that refers to itself, or on one JSON cannot write"
+      },
+      {
+        "kind": "test",
+        "title": "cuts a long value short"
+      },
+      {
+        "kind": "test",
+        "title": "is what parseValue quotes, so a cyclic value in a config cannot crash its message"
       }
     ]
   },
@@ -854,6 +894,10 @@
       {
         "kind": "test",
         "title": "rules text with no rules"
+      },
+      {
+        "kind": "test",
+        "title": "refuses rules text it cannot keep, never making a password that breaks it"
       },
       {
         "kind": "group",
@@ -1364,6 +1408,10 @@
       },
       {
         "kind": "test",
+        "title": "names what it cannot keep, drops it, and refuses text with nothing it can keep"
+      },
+      {
+        "kind": "test",
         "title": "rules that do not fit together: says why, then asks each rule from the text's values"
       },
       {
@@ -1487,6 +1535,10 @@
       {
         "kind": "group",
         "title": "ApplyBar"
+      },
+      {
+        "kind": "test",
+        "title": "takes no keys while another page is showing: neither Enter nor Escape touches the hidden draft"
       },
       {
         "kind": "test",
@@ -1693,6 +1745,14 @@
       },
       {
         "kind": "test",
+        "title": "says what pasted rules it cannot keep, and applies none of it cut down"
+      },
+      {
+        "kind": "test",
+        "title": "shows a lowercase count under Must contain, off by default"
+      },
+      {
+        "kind": "test",
         "title": "fills in at once when text is pasted"
       },
       {
@@ -1775,6 +1835,10 @@
       },
       {
         "kind": "test",
+        "title": "leaves Enter in the made-up sentence to an IME while it composes, and caps both fields"
+      },
+      {
+        "kind": "test",
         "title": "controls padding and its length tag"
       },
       {
@@ -1849,6 +1913,14 @@
       {
         "kind": "test",
         "title": "makes a password that fits no stop at all, and each badge a focusable anchor"
+      },
+      {
+        "kind": "group",
+        "title": "SuggestionCard: zxcvbn's word"
+      },
+      {
+        "kind": "test",
+        "title": "shows it as the fourth badge, in four words"
       }
     ]
   },
@@ -1916,6 +1988,22 @@
       {
         "kind": "test",
         "title": "treats a paste as choosing the password to test, with its hint when it is a known one"
+      },
+      {
+        "kind": "test",
+        "title": "keeps a pasted password exactly, spaces at either end included, and refuses more than one line"
+      },
+      {
+        "kind": "test",
+        "title": "leaves Enter alone while an IME is composing"
+      },
+      {
+        "kind": "test",
+        "title": "measures a soft keyboard that names no keys from how the text changes"
+      },
+      {
+        "kind": "test",
+        "title": "says a common password is not allowed"
       },
       {
         "kind": "test",
@@ -2552,6 +2640,22 @@
       {
         "kind": "test",
         "title": "refuses a sentence only when no state meets every rule, across random sentences and rules"
+      },
+      {
+        "kind": "group",
+        "title": "a lowercase minimum and the common-password rule"
+      },
+      {
+        "kind": "test",
+        "title": "never passes \"DUCKS\" off as meeting a lowercase rule: five capitals and a lowercase letter need six characters"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a sentence whose capitals leave too few lowercase letters, saying why"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a sentence that comes out as one of the most common passwords"
       }
     ]
   },
@@ -2778,6 +2882,22 @@
       {
         "kind": "test",
         "title": "is deterministic: the same draw gives the same passwords, and a word is always swapped the same way"
+      },
+      {
+        "kind": "group",
+        "title": "a lowercase minimum and the common-password rule"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the lowercase letters a whole-word capitals rule would take"
+      },
+      {
+        "kind": "test",
+        "title": "says so when no sentence has letters for both the capitals and the lowercase letters"
+      },
+      {
+        "kind": "test",
+        "title": "checks every password against the most common passwords, by exact match only"
       }
     ]
   },
@@ -3398,6 +3518,26 @@
       },
       {
         "kind": "group",
+        "title": "the habits an attacker tries early"
+      },
+      {
+        "kind": "test",
+        "title": "reads a password on the common list as the guesses it takes to reach it there"
+      },
+      {
+        "kind": "test",
+        "title": "counts a block typed again and again once, plus the times it was typed"
+      },
+      {
+        "kind": "test",
+        "title": "reads a walk along a keyboard row or the alphabet as one pick"
+      },
+      {
+        "kind": "test",
+        "title": "no longer reads the audit's repeated patterns as master passwords"
+      },
+      {
+        "kind": "group",
         "title": "memorable digit runs"
       },
       {
@@ -3493,6 +3633,14 @@
       {
         "kind": "test",
         "title": "counts outcomes exactly the way it samples them"
+      },
+      {
+        "kind": "group",
+        "title": "the spelling cache"
+      },
+      {
+        "kind": "test",
+        "title": "keeps at most VARIANT_CACHE_LIMIT spellings for one mapping list, however many words it is asked about"
       }
     ]
   },
@@ -3612,6 +3760,23 @@
     ]
   },
   {
+    "file": "src/lib/zxcvbnReading.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "reading zxcvbn's crack time"
+      },
+      {
+        "kind": "test",
+        "title": "turns crack times into four words"
+      },
+      {
+        "kind": "test",
+        "title": "says it in one line"
+      }
+    ]
+  },
+  {
     "file": "src/prompts/cliPrompt.test.ts",
     "titles": [
       {
@@ -3723,6 +3888,50 @@
       {
         "kind": "test",
         "title": "saved before this check existed, is repaired on load, keeping every other setting, and says what was reset until the next submit"
+      },
+      {
+        "kind": "group",
+        "title": "PasswordsProvider: what is kept, and saying so"
+      },
+      {
+        "kind": "test",
+        "title": "says My list failed to save when a write fails after a good start, keeps the entry in memory, and saves it on Try again"
+      },
+      {
+        "kind": "test",
+        "title": "says a removal failed too, rather than letting the password come back on reload unannounced"
+      },
+      {
+        "kind": "test",
+        "title": "says the settings and the session failed to save"
+      },
+      {
+        "kind": "test",
+        "title": "on a shared origin removes a session an earlier version stored, as well as the list"
+      },
+      {
+        "kind": "test",
+        "title": "makes each change to the list as stored, so two tabs adding at once both keep their entry"
+      },
+      {
+        "kind": "test",
+        "title": "follows another tab's change to the list in this browser's localStorage"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the zxcvbn reading with an entry when it is added, so a reload never works it out again"
+      },
+      {
+        "kind": "test",
+        "title": "works out the reading once for an entry saved before readings existed"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a common password for My list, with the reason"
+      },
+      {
+        "kind": "test",
+        "title": "forgets the session: a new sentence and batch, the stored session replaced, the practice target dropped; the list stays"
       }
     ]
   },
@@ -3740,6 +3949,22 @@
       {
         "kind": "test",
         "title": "matches worker answers to requests by id, and a newer request supersedes an older one at once"
+      },
+      {
+        "kind": "test",
+        "title": "sends one request at a time: newer ones wait in one slot, each taking it from the last"
+      },
+      {
+        "kind": "test",
+        "title": "answers the newest request straight away when it is the one the worker is on"
+      },
+      {
+        "kind": "test",
+        "title": "replaces a worker still busy with superseded work, and ignores the old one if it answers after all"
+      },
+      {
+        "kind": "test",
+        "title": "replaces the busy worker at once when it has already been busy past the limit"
       },
       {
         "kind": "test",
@@ -3868,6 +4093,14 @@
       {
         "kind": "test",
         "title": "rejects a suggestion whose typing profile or plan breakdown lacks the fields a card reads, instead of crashing a render"
+      },
+      {
+        "kind": "test",
+        "title": "rejects swaps, criteria and words the \"Why?\" panel cannot read (a stored twists: [null] crashed it)"
+      },
+      {
+        "kind": "test",
+        "title": "removes a stored session that does not parse, so a reload starts clean"
       }
     ]
   },
@@ -3954,6 +4187,23 @@
       {
         "kind": "test",
         "title": "reports no browser storage outside a browser"
+      }
+    ]
+  },
+  {
+    "file": "src/state/zxcvbnCheck.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "checkWithZxcvbn"
+      },
+      {
+        "kind": "test",
+        "title": "gives each reference password its word"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the crack time, the guesses and what made the reading"
       }
     ]
   }

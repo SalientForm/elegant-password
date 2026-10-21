@@ -6,20 +6,27 @@
 // in the options that suit the mode, and Submit applies both. Generation
 // runs off the render path (in a worker when the browser has one), keeping
 // the old passwords on screen until the new batch is ready.
+//
+// Every write to the browser's storage reports whether it worked, so the
+// app never says something is kept when it is not (persistence). My list is
+// changed one change at a time on the list as stored, and follows changes
+// another tab makes, so two tabs never write over each other's entries.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { commonPasswordProblem, commonRank } from '../lib/common';
 import type { TypingMode } from '../lib/difficulty';
 import { inputsKey, type GenerateInputs, type Mode, type Outcome } from '../lib/engine';
 import type { SentenceOptions } from '../lib/fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from '../lib/generate';
+import { checkWithZxcvbn, type ZxcvbnCheck } from './zxcvbnCheck';
 import { createGenerator, type Generator } from './generator';
 import { isOwnOrigin } from './origin';
 import { activeMappings, type MappingSettings } from '../lib/mappingSettings';
 import { loadMappingSettings, saveMappingSettings } from './mappingStore';
 import { withProfile } from '../lib/modeProfiles';
 import { inputsFor } from '../lib/pipeline';
-import { loadSelected, saveSelected, SELECTED_KEY, withEntry, withoutEntry, type SelectedEntry } from './selectedStore';
-import { loadSession, saveSession } from './sessionStore';
+import { changeSelected, loadSelected, SELECTED_KEY, withEntry, withoutEntry, withReading, type SelectedEntry } from './selectedStore';
+import { clearSession, loadSession, saveSession, SESSION_KEY } from './sessionStore';
 import {
   loadMode,
   loadRequirementsReport,
@@ -34,9 +41,33 @@ import {
   saveTypingMode,
 } from './settingsStore';
 import type { SortOrder } from '../lib/sort';
-import { browserStore, memoryStore, removeKey, type KeyValueStore } from './storage';
+import { browserStore, memoryStore, removeKey, watchKey, type KeyValueStore } from './storage';
 import type { Mapping } from '../lib/twists';
 import { ruleProblems, type RuleProblem } from '../lib/validation';
+
+/**
+ * Where something the app keeps actually is: 'saved' in the browser's
+ * storage, 'visit-only' by design (in memory, on a shared origin), or
+ * 'failed': storage was meant to hold it and the last write did not work
+ * (full, or blocked), so it lasts only until the tab closes.
+ */
+export type SaveState = 'saved' | 'visit-only' | 'failed';
+
+export interface Persistence {
+  /** My list. */
+  list: SaveState;
+  /** The passwords on screen and the sentences, kept through a reload of this tab. */
+  session: SaveState;
+  /** The applied settings, which hold no secrets and are stored on every origin. */
+  settings: 'saved' | 'failed';
+}
+
+/** A password chosen to practise in the typing test, from a card or My list. `id` tells two picks of the same password apart. */
+export interface PracticeTarget {
+  password: string;
+  hint: string;
+  id: number;
+}
 
 /** The inputs the user edits. A draft until applied. */
 export interface Settings {
@@ -99,12 +130,31 @@ export interface PasswordsContextValue {
   /** Apply any draft and draw a new made-up sentence, the only way it changes. Refused while the draft has problems. */
   newSentence: () => void;
   selected: SelectedEntry[];
-  /** Whether the list and the current batch are written to the browser's storage: only on the app's own origin (src/state/origin.ts). */
+  /** Whether the list and the current batch are meant to go to the browser's storage: only on the app's own origin (src/state/origin.ts). Whether they did is `persistence`. */
   secretsPersisted: boolean;
-  addSelected: (s: Pick<Suggestion, 'password' | 'hint'>) => void;
+  /** Whether each kind of thing the app keeps was actually saved. */
+  persistence: Persistence;
+  /** Try every failed write again; My list is merged with what storage holds, so nothing is lost either way. */
+  retrySaving: () => void;
+  /** Add a password to My list. Refused, with the reason, for a password on the common list (common.ts). */
+  addSelected: (s: Pick<Suggestion, 'password' | 'hint'>) => { added: boolean; problem?: string };
   removeSelected: (password: string) => void;
   clearSelected: () => void;
   isSelected: (password: string) => boolean;
+  /** Passwords whose zxcvbn reading could not be worked out (the estimator failed to load). */
+  zxcvbnFailed: ReadonlySet<string>;
+  /** The password picked to practise, if any. */
+  practice: PracticeTarget | null;
+  /** Make this password the one under test in the typing test. */
+  practise: (s: Pick<Suggestion, 'password' | 'hint'>) => void;
+  /**
+   * Forget this session: the passwords on screen, the made-up sentence and
+   * your own sentence, and the password under test, from memory and from
+   * this tab's storage. A new batch is drawn. My list and the settings stay.
+   */
+  forgetSession: () => void;
+  /** Goes up by one each time the session is forgotten, so components holding their own copies (the typing test) can drop them. */
+  sessionEpoch: number;
 }
 
 const PasswordsContext = createContext<PasswordsContextValue | null>(null);
@@ -121,6 +171,8 @@ export interface PasswordsProviderProps {
   debounceMs?: number;
   /** Whether secrets (the list, the current batch) may go to the browser's storage. Defaults to whether the page is on the app's own origin. */
   persistSecrets?: boolean;
+  /** Works out the zxcvbn reading for a password added to My list. Defaults to zxcvbn in this browser. */
+  zxcvbn?: ZxcvbnCheck;
 }
 
 interface Result {
@@ -131,16 +183,21 @@ interface Result {
 
 const sameSettings = (a: Settings, b: Settings) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
-export function PasswordsProvider({ children, generator: given, local, session, debounceMs = 120, persistSecrets }: PasswordsProviderProps) {
+export function PasswordsProvider({ children, generator: given, local, session, debounceMs = 120, persistSecrets, zxcvbn = checkWithZxcvbn }: PasswordsProviderProps) {
   const [secretsPersisted] = useState(() => persistSecrets ?? isOwnOrigin());
   const [localStore] = useState(() => local ?? browserStore('local'));
-  // Secrets stay in memory on a shared origin, where other sites could read the browser's storage; a list an earlier version left there is removed.
+  // Secrets stay in memory on a shared origin, where other sites could read the browser's storage; a list or a
+  // session an earlier version left there is removed.
   const [listStore] = useState(() => {
     if (secretsPersisted) return localStore;
     removeKey(localStore, SELECTED_KEY);
     return memoryStore();
   });
-  const [sessionStore] = useState(() => (secretsPersisted ? (session ?? browserStore('session')) : memoryStore()));
+  const [sessionStore] = useState(() => {
+    if (secretsPersisted) return session ?? browserStore('session');
+    removeKey(session ?? browserStore('session'), SESSION_KEY);
+    return memoryStore();
+  });
   const [restored] = useState(() => loadSession(sessionStore));
 
   const [loaded] = useState(() => loadRequirementsReport(localStore));
@@ -157,6 +214,13 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const [mode, setMode] = useState(() => loadMode(localStore));
   const [sort, setSort] = useState(() => loadSort(localStore));
   const [selected, setSelected] = useState(() => loadSelected(listStore));
+  // Whether the last write of the list worked; a store the browser would not give us has never worked.
+  const [listSaved, setListSaved] = useState(() => listStore !== undefined);
+  const [failedWrites, setFailedWrites] = useState<ReadonlySet<string>>(() => new Set());
+  const [retries, setRetries] = useState(0);
+  const [practice, setPractice] = useState<PracticeTarget | null>(null);
+  const [sessionEpoch, setSessionEpoch] = useState(0);
+  const [zxcvbnFailed, setZxcvbnFailed] = useState<ReadonlySet<string>>(() => new Set());
   const [round, setRound] = useState(restored?.round ?? 0);
   const [generated, setGenerated] = useState<GeneratedSentence | null>(restored?.generated ?? null);
   const [result, setResult] = useState<Result | null>(
@@ -213,14 +277,49 @@ export function PasswordsProvider({ children, generator: given, local, session, 
   const inputs = useMemo<GenerateInputs>(() => inputsFor({ ...applied, mode }, generated), [mode, applied, generated]);
   const key = useMemo(() => inputsKey(inputs), [inputs]);
 
+  /** Note whether the write under `key` worked, keeping the same set when nothing changed. */
+  const report = useCallback((key: string, ok: boolean) => {
+    setFailedWrites((prev) => {
+      if (prev.has(key) !== ok) return prev;
+      const next = new Set(prev);
+      if (ok) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
   // Applied settings survive for good; they hold no secrets. The list holds passwords: it goes to the browser only on the app's own origin.
-  useEffect(() => void saveRequirements(localStore, applied.req), [localStore, applied.req]);
-  useEffect(() => void saveSentenceOptions(localStore, applied.sentenceOptions), [localStore, applied.sentenceOptions]);
-  useEffect(() => saveMappingSettings(applied.mappingSettings, localStore), [localStore, applied.mappingSettings]);
-  useEffect(() => void saveMode(localStore, mode), [localStore, mode]);
-  useEffect(() => void saveSort(localStore, sort), [localStore, sort]);
-  useEffect(() => void saveTypingMode(localStore, applied.typingMode), [localStore, applied.typingMode]);
-  useEffect(() => void saveSelected(listStore, selected), [listStore, selected]);
+  useEffect(() => report('requirements', saveRequirements(localStore, applied.req)), [report, localStore, applied.req, retries]);
+  useEffect(() => report('sentence options', saveSentenceOptions(localStore, applied.sentenceOptions)), [report, localStore, applied.sentenceOptions, retries]);
+  useEffect(() => report('mappings', saveMappingSettings(applied.mappingSettings, localStore)), [report, localStore, applied.mappingSettings, retries]);
+  useEffect(() => report('mode', saveMode(localStore, mode)), [report, localStore, mode, retries]);
+  useEffect(() => report('sort', saveSort(localStore, sort)), [report, localStore, sort, retries]);
+  useEffect(() => report('typing mode', saveTypingMode(localStore, applied.typingMode)), [report, localStore, applied.typingMode, retries]);
+
+  // My list changes one change at a time, made to the list as stored just now, so another tab's additions survive.
+  const selectedRef = useRef(selected);
+  const listSavedRef = useRef(listSaved);
+  const changeList = useCallback(
+    (change: (list: readonly SelectedEntry[]) => SelectedEntry[]) => {
+      const { list, saved } = changeSelected(listStore, selectedRef.current, listSavedRef.current, change);
+      selectedRef.current = list; // a second change in the same tick builds on this one
+      listSavedRef.current = saved;
+      setSelected(list);
+      setListSaved(saved);
+    },
+    [listStore],
+  );
+  // Another tab's change shows here at once, unless this tab holds entries storage does not (its last write failed).
+  useEffect(
+    () =>
+      watchKey(listStore, SELECTED_KEY, () => {
+        if (!listSavedRef.current) return;
+        const list = loadSelected(listStore);
+        selectedRef.current = list;
+        setSelected(list);
+      }),
+    [listStore],
+  );
 
   // Generate when the applied inputs or the round change, unless the batch on
   // screen was already made from exactly these (as after a reload).
@@ -254,15 +353,15 @@ export function PasswordsProvider({ children, generator: given, local, session, 
 
   // The current passwords and the applied sentence survive a reload, in this tab only.
   useEffect(() => {
-    void saveSession(sessionStore, {
+    report('session', saveSession(sessionStore, {
       key: result?.key ?? key,
       round: result?.round ?? round,
       sentence: applied.sentence,
       outcome: result?.outcome ?? null,
       ...(generated ? { generated } : {}),
       ...(generated && applied.editedSentence !== null ? { edited: applied.editedSentence } : {}),
-    });
-  }, [sessionStore, result, applied.sentence, applied.editedSentence, key, round, generated]);
+    }));
+  }, [report, sessionStore, result, applied.sentence, applied.editedSentence, key, round, generated, retries]);
 
   const regenerate = useCallback(() => {
     if (apply()) setRound((r) => r + 1);
@@ -277,13 +376,63 @@ export function PasswordsProvider({ children, generator: given, local, session, 
     setRound((r) => r + 1);
   }, [apply]);
   const addSelected = useCallback(
-    (s: Pick<Suggestion, 'password' | 'hint'>) =>
-      setSelected((list) => withEntry(list, { password: s.password, hint: s.hint, addedAt: new Date().toISOString() })),
-    [],
+    (s: Pick<Suggestion, 'password' | 'hint'>) => {
+      const rank = commonRank(s.password);
+      if (rank !== undefined) return { added: false, problem: commonPasswordProblem(rank) };
+      changeList((list) => withEntry(list, { password: s.password, hint: s.hint, addedAt: new Date().toISOString() }));
+      return { added: true };
+    },
+    [changeList],
   );
-  const removeSelected = useCallback((password: string) => setSelected((list) => withoutEntry(list, password)), []);
-  const clearSelected = useCallback(() => setSelected([]), []);
+  const removeSelected = useCallback((password: string) => changeList((list) => withoutEntry(list, password)), [changeList]);
+  const clearSelected = useCallback(() => changeList(() => []), [changeList]);
   const isSelected = useCallback((password: string) => selected.some((e) => e.password === password), [selected]);
+
+  // Each entry gets its zxcvbn reading once, when it is added (or, for an entry saved before readings existed, on the next visit), and keeps it.
+  const checking = useRef(new Set<string>());
+  useEffect(() => {
+    for (const entry of selected) {
+      if (entry.zxcvbn || checking.current.has(entry.password) || zxcvbnFailed.has(entry.password)) continue;
+      const { password } = entry;
+      checking.current.add(password);
+      zxcvbn(password)
+        .then((reading) => changeList((list) => withReading(list, password, reading)))
+        .catch(() => setZxcvbnFailed((prev) => new Set(prev).add(password)))
+        .finally(() => checking.current.delete(password));
+    }
+  }, [selected, zxcvbn, zxcvbnFailed, changeList]);
+
+  const retrySaving = useCallback(() => {
+    // Memory holds what the failed writes did not; storage may hold another tab's entries. Keep both.
+    const stored = loadSelected(listStore);
+    changeList((memory) => [...memory, ...stored.filter((e) => !memory.some((m) => m.password === e.password))]);
+    setRetries((n) => n + 1);
+  }, [changeList, listStore]);
+
+  const practiceId = useRef(0);
+  const practise = useCallback((s: Pick<Suggestion, 'password' | 'hint'>) => setPractice({ password: s.password, hint: s.hint, id: ++practiceId.current }), []);
+
+  const forgetSession = useCallback(() => {
+    clearSession(sessionStore);
+    latest.current++; // a batch still being made for the old sentence must not land
+    setResult(null);
+    setGenerated(null);
+    const blank = (s: Settings) => (s.sentence === '' && s.editedSentence === null ? s : { ...s, sentence: '', editedSentence: null });
+    setApplied(blank);
+    setDraft(blank);
+    setRound(0);
+    setPractice(null);
+    setSessionEpoch((n) => n + 1);
+  }, [sessionStore]);
+
+  const persistence = useMemo<Persistence>(
+    () => ({
+      list: !secretsPersisted ? 'visit-only' : listSaved ? 'saved' : 'failed',
+      session: !secretsPersisted ? 'visit-only' : failedWrites.has('session') ? 'failed' : 'saved',
+      settings: [...failedWrites].some((k) => k !== 'session') ? 'failed' : 'saved',
+    }),
+    [secretsPersisted, listSaved, failedWrites],
+  );
 
   const value = useMemo<PasswordsContextValue>(
     () => ({
@@ -314,12 +463,19 @@ export function PasswordsProvider({ children, generator: given, local, session, 
       newSentence,
       selected,
       secretsPersisted,
+      persistence,
+      retrySaving,
       addSelected,
       removeSelected,
       clearSelected,
       isSelected,
+      zxcvbnFailed,
+      practice,
+      practise,
+      forgetSession,
+      sessionEpoch,
     }),
-    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, setEditedSentence, setTypingMode, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, secretsPersisted, addSelected, removeSelected, clearSelected, isSelected],
+    [draft, applied, dirty, problems, notice, apply, discard, setReq, setSentenceOptions, setMappingSettings, setSentence, setEditedSentence, setTypingMode, mappings, mode, sort, result, busy, key, regenerate, generated, newSentence, selected, secretsPersisted, persistence, retrySaving, addSelected, removeSelected, clearSelected, isSelected, zxcvbnFailed, practice, practise, forgetSession, sessionEpoch],
   );
 
   return <PasswordsContext.Provider value={value}>{children}</PasswordsContext.Provider>;
