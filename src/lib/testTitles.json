@@ -1031,6 +1031,23 @@
     ]
   },
   {
+    "file": "src/cli/help.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "help and examples"
+      },
+      {
+        "kind": "test",
+        "title": "name only typing modes and site presets that exist"
+      },
+      {
+        "kind": "test",
+        "title": "give, with each refused value, an example that parses"
+      }
+    ]
+  },
+  {
     "file": "src/cli/messages.test.ts",
     "titles": [
       {
@@ -3426,6 +3443,18 @@
       {
         "kind": "test",
         "title": "never leaves the rules contradicting themselves, from any starting point, for any text it reads"
+      },
+      {
+        "kind": "group",
+        "title": "mergeParsedRules"
+      },
+      {
+        "kind": "test",
+        "title": "puts in what the text states, takes out the symbols it rules out, and fixes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "is the step applyParsedRules then settles"
       }
     ]
   },

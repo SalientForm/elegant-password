@@ -11,7 +11,7 @@ import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
 import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
 import { modeLabel, profileValues, PROFILE_KEYS, unusedIn } from '../lib/modeProfiles';
 import type { GenerationSettings } from '../lib/pipeline';
-import { parseRuleText } from '../lib/ruleText';
+import { mergeParsedRules, parseRuleText } from '../lib/ruleText';
 import { RULE_KEYS, type SitePreset } from '../lib/sitePresets';
 import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
 import { usageError } from './errors';
@@ -108,8 +108,9 @@ export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv):
         );
       }
       const via: Source = { kind: 'rules-text', via: layer.rulesText.source };
-      for (const [key, value] of Object.entries(parsed.rules)) set(reqField(key as keyof Requirements)!, value, via);
-      if (parsed.excludedSymbols) set(reqField('allowedSymbols')!, [...req.allowedSymbols].filter((c) => !parsed.excludedSymbols.includes(c)).join(''), via);
+      // Merged as the web form merges them, but never settled: a contradiction is reported, not fixed.
+      const merged = mergeParsedRules(req, parsed);
+      for (const key of merged.fields) set(reqField(key)!, merged.rules[key], via);
       notes.push(`Read the rules text (${where}) as: ${parsed.understood.join('; ')}.`);
     }
     apply(layer, 'rules');

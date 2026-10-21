@@ -8,6 +8,7 @@
 // never makes a password that breaks a rule instead.
 
 import type { Requirements } from './generate';
+import { COMFORT_SHARE, type Comfort } from './grammar';
 import { lookupKey } from './keyboard';
 
 /** The shortest a length rule may be, and the fewest suggestions a batch may ask for. */
@@ -25,7 +26,8 @@ export const MAX_LOWERCASE = 8;
 export const MAX_DIGITS = 4;
 export const MAX_SYMBOLS = 8;
 
-const COMFORTS: readonly string[] = ['strict', 'balanced', 'relaxed'];
+/** The typing comfort levels, strictest first: the ones the word pools are cut for. */
+const COMFORTS = Object.keys(COMFORT_SHARE) as Comfort[];
 
 export class RequirementsError extends Error {}
 
@@ -82,6 +84,19 @@ export const FIELD_LABELS: Record<keyof Requirements, string> = {
   count: 'number of suggestions',
 };
 
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const list = (items: readonly string[]) => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} or ${items.at(-1)}`);
+
+export type CountKey = 'minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols';
+
+/** The "must contain" counts, in form order: the field, its label, one of what it counts, and its most. */
+export const MUST_CONTAIN: readonly { key: CountKey; label: string; one: string; max: number }[] = [
+  { key: 'minUppercase', label: capital(FIELD_LABELS.minUppercase), one: 'uppercase letter', max: MAX_UPPERCASE },
+  { key: 'minLowercase', label: capital(FIELD_LABELS.minLowercase), one: 'lowercase letter', max: MAX_LOWERCASE },
+  { key: 'minDigits', label: capital(FIELD_LABELS.minDigits), one: 'digit', max: MAX_DIGITS },
+  { key: 'minSymbols', label: capital(FIELD_LABELS.minSymbols), one: 'symbol', max: MAX_SYMBOLS },
+];
+
 /**
  * Which kind of contradiction, so a front end can word it its own way (the
  * CLI names flags and config keys, not form fields) without matching the
@@ -119,45 +134,39 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
   // Length.
   const minOk = whole(req.minLength, MIN_LENGTH, MAX_LENGTH);
   const maxOk = whole(req.maxLength, MIN_LENGTH, MAX_LENGTH);
-  if (!minOk) add('range', `The minimum length must be a whole number from ${MIN_LENGTH} to ${MAX_LENGTH}.`, 'minLength');
-  if (!maxOk) add('range', `The maximum length must be a whole number from ${MIN_LENGTH} to ${MAX_LENGTH}.`, 'maxLength');
+  if (!minOk) add('range', `The ${FIELD_LABELS.minLength} must be a whole number from ${MIN_LENGTH} to ${MAX_LENGTH}.`, 'minLength');
+  if (!maxOk) add('range', `The ${FIELD_LABELS.maxLength} must be a whole number from ${MIN_LENGTH} to ${MAX_LENGTH}.`, 'maxLength');
   if (minOk && maxOk && req.minLength > req.maxLength) {
     add('min-above-max', `The minimum length (${req.minLength}) is above the maximum (${req.maxLength}).`, 'minLength', 'maxLength');
   }
 
   // Must contain: each count in range, and together within the maximum (one character can meet only one of them).
-  const counts: ['minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols', string, string, number][] = [
-    ['minUppercase', 'Uppercase letters', 'uppercase letter', MAX_UPPERCASE],
-    ['minLowercase', 'Lowercase letters', 'lowercase letter', MAX_LOWERCASE],
-    ['minDigits', 'Digits', 'digit', MAX_DIGITS],
-    ['minSymbols', 'Symbols', 'symbol', MAX_SYMBOLS],
-  ];
-  const countsOk = counts.every(([key, label, , max]) => {
+  const countsOk = MUST_CONTAIN.every(({ key, label, max }) => {
     if (whole(req[key], 0, max)) return true;
     add('range', `${label} must be a whole number from 0 to ${max}.`, key);
     return false;
   });
   if (countsOk && maxOk) {
-    const needed = counts.filter(([key]) => req[key] > 0);
-    const sum = needed.reduce((n, [key]) => n + req[key], 0);
+    const needed = MUST_CONTAIN.filter(({ key }) => req[key] > 0);
+    const sum = needed.reduce((n, { key }) => n + req[key], 0);
     if (sum > req.maxLength) {
       add(
         'counts-exceed-max',
-        `${needed.map(([key, , one]) => plural(req[key], one)).join(' + ')} need at least ${sum} characters, more than the maximum of ${req.maxLength}.`,
+        `${needed.map(({ key, one }) => plural(req[key], one)).join(' + ')} need at least ${sum} characters, more than the maximum of ${req.maxLength}.`,
         'maxLength',
-        ...needed.map(([key]) => key),
+        ...needed.map(({ key }) => key),
       );
     }
   }
 
   // Site allows: required symbols need at least one the tool can type.
-  if (typeof req.allowedSymbols !== 'string') add('range', 'The allowed symbols must be text.', 'allowedSymbols');
+  if (typeof req.allowedSymbols !== 'string') add('range', `The ${FIELD_LABELS.allowedSymbols} must be text.`, 'allowedSymbols');
   else if (whole(req.minSymbols, 1, MAX_SYMBOLS) && allowedSymbolSet(req).length === 0) {
     const listed = req.allowedSymbols.trim() ? ` (none of ${req.allowedSymbols.trim()} is a keyboard symbol)` : '';
     add(
       'symbols-none-allowed',
       `${req.minSymbols === 1 ? 'A symbol is' : `${req.minSymbols} symbols are`} required, but no symbols are allowed${listed}. ` +
-        'List the symbols the site accepts, or untick Symbols under Must contain.',
+        `List the symbols the site accepts, or untick ${MUST_CONTAIN.find((c) => c.key === 'minSymbols')!.label} under Must contain.`,
       'allowedSymbols',
       'minSymbols',
     );
@@ -165,12 +174,12 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
 
   // Strength and comfort.
   if (!(typeof req.targetBits === 'number' && req.targetBits >= 0 && req.targetBits <= MAX_TARGET_BITS)) {
-    add('range', `The strength target must be from 0 to ${MAX_TARGET_BITS} bits.`, 'targetBits');
+    add('range', `The ${FIELD_LABELS.targetBits} must be from 0 to ${MAX_TARGET_BITS} bits.`, 'targetBits');
   }
-  if (!COMFORTS.includes(req.comfort)) add('range', 'Typing comfort must be strict, balanced or relaxed.', 'comfort');
+  if (!COMFORTS.includes(req.comfort)) add('range', `${capital(FIELD_LABELS.comfort)} must be ${list(COMFORTS)}.`, 'comfort');
 
   // Style.
-  if (typeof req.separator !== 'string') add('separator-invalid', 'The separator must be text.', 'separator');
+  if (typeof req.separator !== 'string') add('separator-invalid', `The ${FIELD_LABELS.separator} must be text.`, 'separator');
   else if (typeof req.allowedSymbols === 'string') {
     const problem = separatorProblem(req.separator, req);
     if (problem) {
@@ -178,14 +187,14 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
       add(notAllowed ? 'separator-not-allowed' : 'separator-invalid', notAllowed ? `${problem} Choose Auto to use one the site allows.` : problem, 'separator');
     }
   }
-  const shapes: ['initials' | 'shorthand' | 'madeUp' | 'twists', string, number][] = [
-    ['initials', 'Capital initials', MAX_INITIALS],
-    ['shorthand', 'Two-letter words', MAX_SHORTHAND],
-    ['madeUp', 'Made-up nouns', MAX_MADE_UP],
-    ['twists', 'Minimum swaps', MAX_TWISTS],
+  const shapes: ['initials' | 'shorthand' | 'madeUp' | 'twists', number][] = [
+    ['initials', MAX_INITIALS],
+    ['shorthand', MAX_SHORTHAND],
+    ['madeUp', MAX_MADE_UP],
+    ['twists', MAX_TWISTS],
   ];
-  for (const [key, label, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${label} must be a whole number from 0 to ${max}.`, key);
-  if (!whole(req.count, MIN_COUNT, MAX_COUNT)) add('range', `The number of suggestions must be a whole number from ${MIN_COUNT} to ${MAX_COUNT}.`, 'count');
+  for (const [key, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${capital(FIELD_LABELS[key])} must be a whole number from 0 to ${max}.`, key);
+  if (!whole(req.count, MIN_COUNT, MAX_COUNT)) add('range', `The ${FIELD_LABELS.count} must be a whole number from ${MIN_COUNT} to ${MAX_COUNT}.`, 'count');
   return out;
 }
 

@@ -2,8 +2,10 @@
 // lists exactly the flags tep takes.
 
 import { EXIT_MEANINGS } from './errors';
-import { FIELDS, fieldsIn, type CliField, type FieldGroup } from './fields';
+import { CONFIG_VERSION } from './configVersion';
+import { FIELDS, fieldsIn, SEPARATOR_NAMES, type CliField, type FieldGroup } from './fields';
 import { META_FLAGS, SHORT_SETTINGS } from './flagList';
+import { MODE_NAMES } from './names';
 
 const pad = (s: string, width: number) => (s.length >= width ? `${s}  ` : s.padEnd(width));
 
@@ -11,7 +13,7 @@ function fieldFlag(f: CliField): string {
   const short = SHORT_SETTINGS[f.name] ? `-${SHORT_SETTINGS[f.name]}, ` : '    ';
   if (f.kind.type === 'bool') return `${short}--${f.name}, --no-${f.name}`;
   const value =
-    f.kind.type === 'int' ? `<${f.kind.min}-${f.kind.max}>` : f.kind.type === 'choice' ? `<${f.kind.choices.map((c) => c.value).join('|')}>` : f.kind.type === 'symbols' ? '<symbols>' : f.kind.type === 'separator' ? '<auto|space|none|symbol>' : f.kind.type === 'strength' ? '<preset|bits>' : '<n|none>';
+    f.kind.type === 'int' ? `<${f.kind.min}-${f.kind.max}>` : f.kind.type === 'choice' ? `<${f.kind.choices.map((c) => c.value).join('|')}>` : f.kind.type === 'symbols' ? '<symbols>' : f.kind.type === 'separator' ? `<${[...SEPARATOR_NAMES.map((s) => s.name), 'symbol'].join('|')}>` : f.kind.type === 'strength' ? '<preset|bits>' : '<n|none>';
   return `${short}--${f.name} ${value}`;
 }
 
@@ -70,8 +72,8 @@ picked, with the reason. Needs a terminal.
 
 The file, which can also be written by hand (YAML; every key is optional
 except version; the keys are tep g's flags without their dashes):
-  version: 1
-  mode: two-finger          # ten-finger, two-finger, one-handed or quick
+  version: ${CONFIG_VERSION}
+  mode: two-finger          # ${MODE_NAMES.map((m) => m.name).join(', ').replace(/, ([^,]*)$/, ' or $1')}
   site: typical-site        # a site preset, or rules: with min-length, max-length, ...
   rules:
     symbols: "!@#$%"        # symbols are quoted, as YAML gives many a meaning

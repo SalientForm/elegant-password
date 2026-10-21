@@ -8,7 +8,7 @@
 import type { Problem, TargetWarning } from '../lib/consistency';
 import { problemsOf } from '../lib/consistency';
 import { plan, type Requirements } from '../lib/generate';
-import { allowedSymbolSet, MAX_LENGTH } from '../lib/validation';
+import { allowedSymbolSet, MAX_LENGTH, MIN_LENGTH } from '../lib/validation';
 import { describeValue, reqField, type CliField } from './fields';
 import { describeSource, howToChange, type Source } from './sources';
 
@@ -45,7 +45,7 @@ export function smallestWorkingMax(req: Requirements): number | undefined {
 
 /** The largest minimum length below the current one at which the requirements work; undefined when none does. */
 export function largestWorkingMin(req: Requirements): number | undefined {
-  let lo = 1;
+  let lo = MIN_LENGTH;
   let hi = req.minLength - 1;
   if (hi < lo || !ok({ ...req, minLength: lo })) return undefined;
   while (lo < hi) {

@@ -6,9 +6,10 @@
 
 import { describeRemoved, easeOf, type Ease } from './ease';
 import type { Suggestion } from './generate';
-import { isPinkyStretch, type TypingProfile } from './keyboard';
+import { isPinkyStretch, lookupKey, type TypingProfile } from './keyboard';
 import { scoreCold, type ScoredWord } from './score';
 import { MAPPING_KIND_LABELS, type AppliedTwist } from './twists';
+import { isSymbol } from './validation';
 
 export const ROW_NAMES = ['number row', 'top row', 'home row', 'bottom row', 'space bar'];
 
@@ -40,7 +41,7 @@ export function shiftReasons(password: string, words: readonly { text: string }[
     ...(capsWords.length ? [`held once for the word${capsWords.length > 1 ? 's' : ''} in capitals (${capsWords.join(' ')})`] : []),
     ...(opening === 1 ? ['the opening capital'] : opening > 1 ? [`capitals on ${opening} words`] : []),
   ];
-  const shiftedSymbols = [...new Set(password.match(/[!@#$%^&*()_+{}|:"<>?~]/g) ?? [])];
+  const shiftedSymbols = [...new Set(password)].filter((c) => isSymbol(c) && lookupKey(c)?.shifted);
   if (shiftedSymbols.length) reasons.push(shiftedSymbols.map((c) => `"${c}"`).join(' '));
   return reasons.join(' and ');
 }
