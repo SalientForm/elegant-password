@@ -2898,6 +2898,14 @@
       {
         "kind": "test",
         "title": "checks every password against the most common passwords, by exact match only"
+      },
+      {
+        "kind": "group",
+        "title": "made-up nouns and real words"
+      },
+      {
+        "kind": "test",
+        "title": "never reads a real word as a made-up noun, so a kept sentence with \"pods\" still builds"
       }
     ]
   },

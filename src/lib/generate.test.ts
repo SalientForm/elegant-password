@@ -573,3 +573,12 @@ describe('a lowercase minimum and the common-password rule', () => {
     }
   });
 });
+
+describe('made-up nouns and real words', () => {
+  it('never reads a real word as a made-up noun, so a kept sentence with "pods" still builds', () => {
+    expect(isMadeUpNoun('pods')).toBe(false);
+    const sentence = { slots: ['adj', 'noun', 'verb', 'num', 'noun'] as const, words: ['scarlet', 'pods', 'bite', '67', 'toys'] };
+    const r = generate({ ...DEFAULT_REQUIREMENTS, comfort: 'strict' }, { rng: seeded(3), sentence: { slots: [...sentence.slots], words: sentence.words } });
+    expect(r.suggestions.length).toBeGreaterThan(0);
+  });
+});

@@ -19,7 +19,7 @@ interface Props {
 }
 
 /**
- * Attributes that tell password managers (1Password, LastPass,
+ * Attributes that tell password managers (Bitwarden, 1Password, LastPass,
  * Dashlane) to ignore the field. On top of that, nothing about the field
  * says "password": its name, id, label and placeholder are about practice,
  * it is never a password-type input (hiding masks the text with CSS), and
