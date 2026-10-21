@@ -197,6 +197,17 @@ const RAW_POOLS: Record<Exclude<Slot, 'num'>, readonly string[]> = {
   and: ['and'],
 };
 
+let listSets: ReadonlyMap<string, ReadonlySet<string>> | undefined;
+
+/**
+ * Whether a word, as written, is on its slot's full list: before any comfort
+ * share is taken, so a word stays on its list whatever the comfort setting.
+ */
+export function isListWord(slot: Exclude<Slot, 'num'>, word: string): boolean {
+  listSets ??= new Map(Object.entries(RAW_POOLS).map(([s, words]) => [s, new Set(words)]));
+  return listSets.get(slot)!.has(word);
+}
+
 // Pools never shrink below this, so small lists keep some variety.
 export const MIN_POOL = 12;
 

@@ -2884,6 +2884,10 @@
         "title": "says why when it cannot fit, and points at drawing a new one"
       },
       {
+        "kind": "test",
+        "title": "is refused with the way out, not a crash, when the tool could not have drawn it"
+      },
+      {
         "kind": "group",
         "title": "deliberate swaps for typing ease"
       },
@@ -2926,6 +2930,14 @@
       {
         "kind": "test",
         "title": "never reads a real word as a made-up noun, so a kept sentence with \"pods\" still builds"
+      },
+      {
+        "kind": "test",
+        "title": "could have drawn only a known shape with every word on its slot's list"
+      },
+      {
+        "kind": "test",
+        "title": "never draws a sentence it could not have drawn, across seeds and settings"
       }
     ]
   },

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, applyUppercase, checkRequirements, countUpper, type Requirements } from './generate';
+import { closingSymbol, couldBeDrawn, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, applyUppercase, checkRequirements, countUpper, type Requirements } from './generate';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
-import { isMadeUpNoun, pools, twoLetter } from './grammar';
+import { isMadeUpNoun, pools, twoLetter, type Slot } from './grammar';
+import { runInputs } from './engine';
+import { DEFAULT_SENTENCE_OPTIONS } from './fromSentence';
 import { easedText, easeOf, plainOf } from './ease';
 import { scoreCold } from './score';
 
@@ -277,6 +279,7 @@ describe('audit fixes', () => {
       try {
         const g = generate(r, { rng });
         generated++;
+        expect(couldBeDrawn(g.sentence.slots, g.sentence.words), JSON.stringify(g.sentence)).toBe(true);
         for (const s of g.suggestions) {
           for (const c of s.checks) expect(c.met, `${JSON.stringify(r)} => ${s.password}: ${c.rule}`).toBe(true);
           if (r.initials === 0 && r.madeUp === 0 && !r.shiftReach) expect(s.typing.caseChanges, s.password).toBeLessThanOrEqual(1); // Shift reach may put the capitals on a word that is not the first
@@ -462,6 +465,17 @@ describe('a kept sentence', () => {
     expect(fail({ madeUp: 1 })).toThrow(/it has 0 made-up nouns, and these rules ask for 1/);
     expect(fail({ minDigits: 3, twists: 0 })).toThrow(/no version of it meets "At least 3 digits"/);
   });
+
+  it('is refused with the way out, not a crash, when the tool could not have drawn it', () => {
+    const sentence = { slots: ['num', 'adj', 'noun', 'adv', 'verb', 'adj', 'noun'] as Slot[], words: ['42', 'sleepy', 'otters', '', 'paint', 'rusty', 'boats'] };
+    const r = req({ initials: 1 });
+    expect(() => generate(r, { rng: seeded(15), sentence })).toThrow(RequirementsError);
+    expect(() => generate(r, { rng: seeded(15), sentence })).toThrow(/not one this tool makes.*Draw a new sentence/);
+    const outcome = runInputs({ mode: 'generated', req: r, sentence: '', sentenceOptions: DEFAULT_SENTENCE_OPTIONS, mappings: BUILT_IN_MAPPINGS, generated: sentence });
+    expect(outcome.ok).toBe(false);
+    expect(!outcome.ok && outcome.error).toMatch(/not one this tool makes/);
+    expect(!outcome.ok && outcome.unexpected).toBeFalsy();
+  });
 });
 
 describe('deliberate swaps for typing ease', () => {
@@ -580,5 +594,64 @@ describe('made-up nouns and real words', () => {
     const sentence = { slots: ['adj', 'noun', 'verb', 'num', 'noun'] as const, words: ['scarlet', 'pods', 'bite', '67', 'toys'] };
     const r = generate({ ...DEFAULT_REQUIREMENTS, comfort: 'strict' }, { rng: seeded(3), sentence: { slots: [...sentence.slots], words: sentence.words } });
     expect(r.suggestions.length).toBeGreaterThan(0);
+  });
+
+  it('could have drawn only a known shape with every word on its slot\'s list', () => {
+    const drawn = (slots: string, words: readonly string[]) => couldBeDrawn(slots.split(' ') as Slot[], words);
+    const kept = generate(req({ count: 1 }), { rng: seeded(11) }).sentence;
+    expect(couldBeDrawn(kept.slots, kept.words)).toBe(true);
+    expect(drawn('adj noun verb num noun', ['scarlet', 'pods', 'bite', '67', 'toys'])).toBe(true);
+    expect(drawn('num noun verb noun', ['42', 'otters', 'paint', 'boats'])).toBe(true);
+    expect(drawn('num noun verb noun', ['9999', 'dfg', 'paint', 'boats'])).toBe(true);
+    expect(drawn('noun verb noun', ['DFG', 'paint', 'ert'])).toBe(true); // made-up nouns up to the first real noun
+    expect(drawn('adj noun verb noun and noun verb noun', ['sleepy', 'otters', 'paint', 'boats', 'and', 'cadets', 'paint', 'boats'])).toBe(true);
+    const off: [string, string[]][] = [
+      ['num noun verb noun', ['42', 'password', 'password', 'pasword']], // off the lists
+      ['num noun verb noun', ['85', '', 'cadets', 'otters']], // an empty word
+      ['num adj noun adv verb adj noun', ['42', 'sleepy', 'otters', '', 'paint', 'rusty', 'boats']],
+      ['num noun verb noun', ['', 'otters', 'paint', 'boats']], // an empty number
+      ['num noun verb noun', ['abc', 'otters', 'paint', 'boats']],
+      ['num noun verb noun', ['42', 'Otters', 'paint', 'boats']], // capitalised
+      ['num noun verb noun', ['42', 'sea otters', 'paint', 'boats']],
+      ['num noun verb noun', ['42', 'paint', 'otters', 'boats']], // a verb as a noun
+      ['noun num verb noun', ['otters', '42', 'paint', 'boats']], // a number where none is placed
+      ['num noun verb num noun', ['42', 'otters', 'paint', '7', 'boats']], // two numbers
+      ['adj noun', ['sleepy', 'otters']], // not a template
+      ['num noun verb noun', ['42', 'otters', 'paint']], // a word short
+      ['noun verb noun', ['otters', 'seise', 'boats']], // a deliberate swap's spelling
+      ['num noun verb noun', ['07', 'otters', 'paint', 'boats']], // a leading zero
+      ['num noun verb noun', ['1', 'otters', 'paint', 'boats']], // below 2
+      ['num noun verb noun', ['12345', 'otters', 'paint', 'boats']], // more than MAX_DIGITS digits
+      ['noun verb noun', ['otters', 'paint', 'dfg']], // a made-up noun after a real noun
+      ['noun verb noun', ['dfg', 'dfg', 'boats']], // a made-up noun in a verb slot
+      ['noun verb noun', ['and', 'paint', 'boats']], // "and" anywhere but the joiner
+      ['adj noun verb noun and noun verb noun', ['sleepy', 'otters', 'paint', 'boats', 'near', 'cadets', 'paint', 'boats']],
+    ];
+    for (const [slots, words] of off) expect(drawn(slots, words), `${slots}: ${words.join(' ')}`).toBe(false);
+  });
+
+  it('never draws a sentence it could not have drawn, across seeds and settings', { timeout: 60_000 }, () => {
+    const rng = seeded(5);
+    let drawn = 0;
+    let settings = 0;
+    for (const comfort of ['strict', 'balanced', 'relaxed'] as const) {
+      for (const easeSwaps of [true, false]) {
+        for (let madeUp = 0; madeUp <= 3; madeUp++) {
+          settings++;
+          // The rest vary with the setting, so each combination is planned once and drawn from many times.
+          const r = req({ comfort, easeSwaps, madeUp, initials: settings % 4, shorthand: settings % 3, minDigits: settings % 5, includeNumber: settings % 7 !== 0, maxLength: [32, 40, 56][settings % 3]!, targetBits: [30, 45, 60][settings % 3]!, count: 1 });
+          for (let i = 0; i < 12; i++) {
+            try {
+              const { sentence } = generate(r, { rng });
+              drawn++;
+              expect(couldBeDrawn(sentence.slots, sentence.words), `${JSON.stringify(r)} => ${JSON.stringify(sentence)}`).toBe(true);
+            } catch (e) {
+              if (!(e instanceof RequirementsError)) throw e;
+            }
+          }
+        }
+      }
+    }
+    expect(drawn).toBeGreaterThan(200);
   });
 });
