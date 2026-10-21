@@ -187,6 +187,46 @@ twists). It is the lead if the budget is ever missed.
   on the shared Pages origin; the dev server's Tailscale address counts as
   the app's own (`.env.development`).
 
+## Rendering
+
+- **One context, and memo boundaries on the page** (2026-10-21). The
+  provider keeps one memoised value, and every action in it is stable.
+  The page component reads nearly all of it, so splitting it by how often
+  each part changes would not stop the page rendering. Its heavy children
+  instead render only when their own props change: the cards, the
+  strength panel, the requirements form, the swaps panel and the site
+  rules, none of which reads the context. The page keeps their props
+  stable: the cards' context is memoised on the batch and the uppercase
+  rule, Practise is one callback that reads the current column layout
+  through a ref, and the swaps' sentence test is memoised on the mode and
+  the sentence. My list's rows (`ListEntry`) take what they show as props
+  instead of reading the context, and My list passes `removeSelected`
+  itself, not a closure per row. A store with selectors, a context for
+  busy alone and the React Compiler were rejected: the page selects
+  nearly everything, and five explicit wrappers get the same gain.
+  `src/App.tsx`, `src/components/SelectedList.tsx`,
+  `src/components/ListEntry.tsx`.
+- **The boundaries are held by counts, never a clock.**
+  `src/App.renders.test.tsx` wraps each memo component's inner function
+  with a counter; a component that is not a memo fails with its name, and
+  a prop made fresh on each render (an inline object or closure) fails on
+  the count. Dropping a boundary on purpose means deleting its test on
+  purpose.
+- **Busy still flips twice per batch.** The first flip paints "Working…"
+  (see "Where generation runs") and renders the page component and the
+  small consumers, no card, panel or row.
+- **What still renders on every change:** `TypingTest`, `TypingMode`,
+  `ApplyBar`, `SessionControls` and My list itself read the context, at
+  under 0.15 ms each in jsdom (My list 0.1-0.4 ms), and the field a
+  keystroke edits.
+- **Measured when built:** in the production build in Chromium, a
+  keystroke in the made-up sentence with 20 in My list went from 4.6,
+  20.0 and 30.8 ms of work to 2.8, 12.1 and 17.6 ms at 1×, 4× and 6×
+  CPU, and with My list empty from 3.9, 14.2 and 21.9 ms to 2.5, 9.8 and
+  14.8 ms. Paired with the old build on a busier run when built, the 6×
+  figure with 20 in My list went from 32.8-35.8 ms to 18.2-22.2 ms. The
+  rows had cost about 0.2 ms each in jsdom on every change.
+
 ## Wording and presentation
 
 - **One wording for each thing, the best fit kept** (2026-10-20, the
