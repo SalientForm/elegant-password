@@ -2992,6 +2992,14 @@
       {
         "kind": "test",
         "title": "refuses an impossible range"
+      },
+      {
+        "kind": "test",
+        "title": "groups a pool's words by length once, so every model over the pool shares the groups"
+      },
+      {
+        "kind": "test",
+        "title": "counts and samples the same over a shared pool as over a copy of it"
       }
     ]
   },
