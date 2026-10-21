@@ -95,7 +95,9 @@ deliberate swaps are worked out again from the words as written, then the
 swaps and closing marks are drawn per card as usual. When the kept sentence
 cannot fit (the rules add or drop the number or made-up nouns, its length
 falls outside the range, or no version meets a rule), the error says why and
-the sentence stays.
+the sentence stays. A kept sentence must be one the tool could have drawn (a
+shape it makes, every word on its slot's list); one that is not is refused,
+and on load it is dropped and a new one drawn.
 
 ## 3. Use my sentence
 
@@ -204,6 +206,9 @@ persisted; drafts are not.
 - Every generated password passes every check across random requirement
   combinations (`generate.test.ts`), including uppercase rules with
   initials, two-letter words and letter-removing swaps.
+- Every drawn sentence is one the tool could have drawn, and a stored one
+  that is not is dropped, never built (`generate.test.ts`,
+  `sessionStore.test.ts`).
 - Every contradiction is found, named and blocked; Automatic always
   resolves to a separator the rules allow; presets and pasted rules never
   leave a contradiction the text did not state; stored contradictions load

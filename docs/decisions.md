@@ -202,6 +202,22 @@ twists). It is the lead if the budget is ever missed.
   every nested field a card reads. On a shared origin, a session or list
   an earlier version stored there is removed on load.
   `src/state/sessionStore.ts`.
+- **A kept sentence is one the tool could have drawn** (2026-10-21): a
+  template's shape, bare or with its number placed; each word as written
+  on its slot's full list, whatever the comfort, so a change of comfort
+  never refuses it; a number from 2 to 9999 without a leading zero;
+  made-up nouns only in the noun slots before the first real noun. An
+  empty word is on no list. A stored one that is not is dropped on its own
+  with its edit, keeping the rest of the session, and a new one drawn,
+  with no notice (the user's decision); it is not repaired, since it is
+  the app's draw, not the user's choice, and a repaired sentence is a
+  different one. The engine refuses one too, with an ordinary
+  requirements message naming the button that draws a new sentence (the
+  user's decision), so an empty word no longer crashes it. The outcome's
+  own copy is checked for shape only, as nothing reads it back after a
+  load. The price: a release that removes a word from the lists, or moves
+  one between them, replaces the kept sentence of a tab open across it.
+  `couldBeDrawn` in `src/lib/generate.ts`; `src/state/sessionStore.ts`.
 - **Enter during IME composition never submits or runs**: both sentence
   fields, the typing test and its hint field.
 - **Secrets only on the app's own origin** (2026-10-20, the user's

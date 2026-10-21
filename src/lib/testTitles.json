@@ -2888,6 +2888,10 @@
         "title": "says why when it cannot fit, and points at drawing a new one"
       },
       {
+        "kind": "test",
+        "title": "is refused with the way out, not a crash, when the tool could not have drawn it"
+      },
+      {
         "kind": "group",
         "title": "deliberate swaps for typing ease"
       },
@@ -2930,6 +2934,14 @@
       {
         "kind": "test",
         "title": "never reads a real word as a made-up noun, so a kept sentence with \"pods\" still builds"
+      },
+      {
+        "kind": "test",
+        "title": "could have drawn only a known shape with every word on its slot's list"
+      },
+      {
+        "kind": "test",
+        "title": "never draws a sentence it could not have drawn, across seeds and settings"
       }
     ]
   },
@@ -3912,6 +3924,10 @@
       },
       {
         "kind": "test",
+        "title": "draws a new sentence on load when the stored one is not one the tool makes, keeping the user's own sentence"
+      },
+      {
+        "kind": "test",
         "title": "persists applied settings, the mode, the applied sentence and the list; drafts are not persisted"
       },
       {
@@ -4089,6 +4105,10 @@
       {
         "kind": "test",
         "title": "keeps the made-up sentence, and drops only that when it is malformed"
+      },
+      {
+        "kind": "test",
+        "title": "drops a kept sentence the tool could not have drawn, and keeps the rest of the session"
       },
       {
         "kind": "test",

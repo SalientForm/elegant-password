@@ -211,6 +211,25 @@ describe('PasswordsProvider', () => {
     expect(text('hints')).toBe(text('sentence'));
   });
 
+  it('draws a new sentence on load when the stored one is not one the tool makes, keeping the user\'s own sentence', async () => {
+    const { local, session, unmount } = mount(countingEngine());
+    await settled();
+    unmount();
+    const broken = { slots: ['num', 'noun', 'verb', 'noun'], words: ['85', '', 'cadets', 'otters'] };
+    session.setItem(SESSION_KEY, JSON.stringify({ ...loadSession(session)!, sentence: 'my secret sentence', generated: broken }));
+    const gen = countingEngine();
+    mount(gen, local, session);
+    await waitFor(() => expect(gen.runs).toHaveLength(1)); // the stored batch is on screen until this run lands
+    await settled();
+    expect(gen.runs[0]!.generated).toBeNull();
+    await waitFor(() => expect(text('sentence')).not.toBe(''));
+    expect(text('sentence')).not.toBe(broken.words.join(' '));
+    expect(text('error')).toBe('');
+    const stored = loadSession(session)!;
+    expect(stored.sentence).toBe('my secret sentence');
+    expect(stored.generated?.words.join(' ')).toBe(text('sentence'));
+  });
+
   it('persists applied settings, the mode, the applied sentence and the list; drafts are not persisted', async () => {
     const gen = countingEngine();
     const { local, session, unmount } = mount(gen);

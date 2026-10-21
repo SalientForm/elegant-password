@@ -5,6 +5,7 @@ import type { Difficulty } from './difficulty';
 import {
   initialPositions,
   initialsOf,
+  isListWord,
   isMadeUpNoun,
   MADE_UP_NOUNS,
   madeUpPositions,
@@ -30,7 +31,7 @@ import { easedText, plainOf } from './ease';
 import { letterCount } from './text';
 import { checkRequirements, countUpper } from './checks';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
-import { allowedSymbolSet, isSymbol, MAX_TWISTS, RequirementsError, separatorProblem, validate } from './validation';
+import { allowedSymbolSet, isSymbol, MAX_DIGITS, MAX_TWISTS, RequirementsError, separatorProblem, validate } from './validation';
 
 // The checks every password must pass, and crack-time estimates, live in checks.ts; re-exported so callers keep one import.
 export { ATTACK_SCENARIOS, checkRequirements, countLower, countUpper, crackEstimates, formatDuration, type CheckContext, type CrackEstimate } from './checks';
@@ -833,22 +834,49 @@ export function usableMappings(mappings: readonly Mapping[], req: Requirements, 
 
 const same = <T>(a: readonly T[], b: readonly T[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
+let drawnShapes: ReadonlySet<string> | undefined;
+
+/**
+ * Whether some settings draw this sentence: a template's shape, bare or with
+ * its number placed; each word as written on its slot's full list, whatever
+ * the comfort; a number from 2 to 99, or of up to MAX_DIGITS digits, without
+ * a leading zero; made-up nouns only in the noun slots before the first real
+ * noun. An empty word is on no list. It lives here rather than in grammar.ts
+ * because it needs MAX_DIGITS, and takes the two arrays rather than a
+ * GeneratedSentence, so grammar.ts never imports validation.ts.
+ */
+export function couldBeDrawn(slots: readonly Slot[], words: readonly string[]): boolean {
+  drawnShapes ??= new Set(templates().flatMap((t) => [t, ...numberPlacements(t)].map((shape) => shape.slots.join(' '))));
+  if (words.length !== slots.length || !drawnShapes.has(slots.join(' '))) return false;
+  let realNoun = false;
+  return slots.every((slot, i) => {
+    const word = words[i]!;
+    if (slot === 'num') return /^[1-9]\d*$/.test(word) && word.length <= MAX_DIGITS && Number(word) >= 2;
+    if (slot === 'noun' && !realNoun && isMadeUpNoun(word)) return true;
+    if (slot === 'noun') realNoun = true;
+    return isListWord(slot, word);
+  });
+}
+
 /**
  * The plan, variant and typed words for a kept sentence under these rules.
  * Initials, two-letter words and deliberate swaps are worked out again from
  * the words as written, so they follow the rules; the words themselves never
- * change. A RequirementsError says why when the sentence cannot fit.
+ * change. The sentence must be one this tool could have drawn. A
+ * RequirementsError says why when the sentence cannot fit.
  */
 function keptSentence(sentence: GeneratedSentence, req: Requirements): { candidate: Candidate; variant: Variant; typed: string[] } {
   plan(req); // rules no sentence can meet get the general message, not one about this sentence
   const ctx = planContext(req);
   const doesNotFit = (why: string) =>
     new RequirementsError(`The sentence does not fit these rules: ${why}. Draw a new sentence with the button beside it, or change the rules back.`);
+  if (!couldBeDrawn(sentence.slots, sentence.words)) {
+    throw new RequirementsError('The kept sentence is not one this tool makes: its shape, or a word in it, is not from the tool\'s lists. Draw a new sentence with the button beside it.');
+  }
   const hasNumber = sentence.slots.includes('num');
   if (hasNumber && !ctx.withNumber) throw doesNotFit('it has a number, and these rules leave numbers out');
   if (!hasNumber && ctx.withNumber) throw doesNotFit('these rules need a number, and it has none');
-  const template = templates().find((t) => same(t.slots, sentence.slots.filter((slot) => slot !== 'num')));
-  if (!template || sentence.words.length !== sentence.slots.length) throw doesNotFit('its shape is not one this tool makes');
+  const template = templates().find((t) => same(t.slots, sentence.slots.filter((slot) => slot !== 'num')))!;
   const t = candidateFor(template, req, ctx);
   const variant = t.candidate?.variants.find((v) => same(v.shape.slots, sentence.slots));
   if (!t.candidate || !variant) {

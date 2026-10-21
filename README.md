@@ -254,7 +254,8 @@ explanation for each:
   not focused) selects the text instead of silently doing nothing. A render
   error shows a message and a button that forgets the session and reloads,
   never a blank page; a stored session that does not parse is removed on
-  load.
+  load, and a kept sentence the tool could not have drawn is dropped and a
+  new one drawn.
 - **Accessible.** The mode switch is a real tab list (arrow keys, Home,
   End), toggles report their pressed state, and status text is announced.
 - **Difficulty score** (0-100) from a rubric of eleven criteria across the modes, up to ten in one: size,
