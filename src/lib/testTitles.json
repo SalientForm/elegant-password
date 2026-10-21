@@ -3920,6 +3920,10 @@
       },
       {
         "kind": "test",
+        "title": "hands the engine one mapping list for every batch until the mappings change, so the caches keyed on it hold"
+      },
+      {
+        "kind": "test",
         "title": "shows Working… by the time the engine is called, so the status is painted before the thread is taken"
       },
       {

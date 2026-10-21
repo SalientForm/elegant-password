@@ -268,7 +268,9 @@ export function PasswordsProvider({ children, engine = runInputs, local, session
   const setTypingMode = useCallback((next: TypingMode) => setDraft((d) => ({ ...d, typingMode: next, req: withProfile(d.req, next).req })), []);
 
   const mappings = useMemo(() => activeMappings(draft.mappingSettings), [draft.mappingSettings]);
-  const inputs = useMemo<GenerateInputs>(() => inputsFor({ ...applied, mode }, generated), [mode, applied, generated]);
+  // One list object for every batch until the mappings themselves change, so the caches keyed on it hold.
+  const appliedMappings = useMemo(() => activeMappings(applied.mappingSettings), [applied.mappingSettings]);
+  const inputs = useMemo<GenerateInputs>(() => inputsFor({ ...applied, mode }, generated, appliedMappings), [mode, applied, generated, appliedMappings]);
   const key = useMemo(() => inputsKey(inputs), [inputs]);
 
   /** Note whether the write under `key` worked, keeping the same set when nothing changed. */

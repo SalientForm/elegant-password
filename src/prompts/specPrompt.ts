@@ -361,7 +361,7 @@ ${algorithmFlow.replace(/^# .*\n/, '').replace(/^## /gm, '### ')}
 
 ## 16. Security and accessibility
 
-- The built page carries a Content-Security-Policy meta tag (first in head): scripts, styles and the worker from the same origin only; no connections, objects, base URI or form actions. The dev server does not (hot reloading needs inline scripts). ${code('referrer: no-referrer')} always.
+- The built page carries a Content-Security-Policy meta tag (first in head): scripts and styles from the same origin only; no connections, objects, base URI or form actions. The dev server does not (hot reloading needs inline scripts). ${code('referrer: no-referrer')} always.
 - Copy uses the clipboard API; a status region announces success (visually hidden) and, when the API is unavailable or rejects, says that the text was selected instead.
 - Downloads revoke their object URL after a delay, never synchronously.
 - Mode and section tabs follow the WAI-ARIA tabs pattern (one tab stop; arrow keys, Home and End move and select; each tab names its panel). Toggle buttons expose ${code('aria-pressed')}; the results region carries ${code('aria-busy')}; status text uses ${code('role="status"')}; every icon button has an accessible name.

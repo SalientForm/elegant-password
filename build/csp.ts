@@ -1,6 +1,6 @@
 // A Content-Security-Policy for the built app. The app never talks to the
-// network, so the policy says so: scripts, styles and the worker only from
-// the same origin, no connections, no frames, no plugins. Added only to the
+// network, so the policy says so: scripts and styles only from the same
+// origin, no connections, no frames, no plugins. Added only to the
 // production build: the dev server needs inline scripts for hot reloading.
 
 import type { HtmlTagDescriptor, Plugin } from 'vite';
@@ -12,7 +12,6 @@ export const CSP_DIRECTIVES: Record<string, string> = {
   'img-src': "'self' data:",
   'font-src': "'self'",
   'connect-src': "'none'",
-  'worker-src': "'self'",
   'object-src': "'none'",
   'base-uri': "'none'",
   'form-action': "'none'",

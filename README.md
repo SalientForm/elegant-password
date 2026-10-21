@@ -222,11 +222,13 @@ explanation for each:
   the live constants and rendered as formatted text, with Copy and Download
   of the markdown. It embeds the algorithm flow document verbatim as a
   validation section.
-- **Off the main thread.** A provider (`src/state/PasswordsProvider.tsx`)
-  owns all state and runs generation in a Web Worker (inline where there is
-  none), so typing never waits on the maths and the old batch stays on
-  screen until the new one is ready. Sentence mode finds the right
-  compression by binary search over the ladder.
+- **On the page's own thread.** A provider (`src/state/PasswordsProvider.tsx`)
+  owns all state and runs generation where the page runs, 120 ms after a
+  change is applied and within the engine's budget: the worst permitted
+  batch takes about a quarter of a second on a desktop, the defaults a
+  hundredth. The old batch stays on screen until the new one is ready.
+  Sentence mode finds the right compression by binary search over the
+  ladder.
 - **Hardened.** The built page carries a Content-Security-Policy that
   allows only the app itself and no network at all (`build/csp.ts`), plus
   `referrer: no-referrer`. The clipboard failing (insecure context, page
@@ -412,7 +414,6 @@ Shared core, `src/lib/`:
 Web app:
 
 - `src/state/PasswordsProvider.tsx`: the provider that owns state, persistence and generation
-- `src/state/generator.ts`, `src/worker.ts`: generation in a worker or inline
 - `src/state/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`, `mappingStore.ts`: persistence with untrusted-input parsing
 - `src/state/origin.ts`: whether the page is on the app's own origin, where secrets may be stored
 - `src/components/`: React UI

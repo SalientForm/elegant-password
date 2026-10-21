@@ -6,7 +6,6 @@ describe('content security policy', () => {
     expect(CSP).not.toMatch(/unsafe-inline|unsafe-eval|http|\*/);
     expect(CSP_DIRECTIVES['connect-src']).toBe("'none'");
     expect(CSP_DIRECTIVES['script-src']).toBe("'self'");
-    expect(CSP_DIRECTIVES['worker-src']).toBe("'self'");
     expect(CSP_DIRECTIVES['object-src']).toBe("'none'");
     expect(CSP_DIRECTIVES['base-uri']).toBe("'none'");
   });

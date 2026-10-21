@@ -12,6 +12,7 @@ import { loadSession, SESSION_KEY } from './sessionStore';
 import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from './settingsStore';
 import type { ZxcvbnCheck } from './zxcvbnCheck';
 import { memoryStore, type KeyValueStore } from './storage';
+import { BUILT_IN_MAPPINGS, mappingKey } from '../lib/twists';
 import { PasswordsProvider, usePasswords } from './PasswordsProvider';
 
 afterEach(cleanup);
@@ -66,6 +67,7 @@ function Probe() {
       <button onClick={() => p.setMode('sentence')}>sentence-mode</button>
       <button onClick={() => p.setMode('generated')}>generated-mode</button>
       <button onClick={() => p.setSentence('Sally eats sweets on Sundays')}>type</button>
+      <button onClick={() => p.setMappingSettings({ ...p.draft.mappingSettings, disabled: [mappingKey(BUILT_IN_MAPPINGS[0]!)] })}>disable-one</button>
     </div>
   );
 }
@@ -342,6 +344,25 @@ describe('PasswordsProvider', () => {
     expect(gen.runs[1]!.req.twists).toBe(3);
     await new Promise((r) => setTimeout(r, 80));
     expect(gen.runs).toHaveLength(2); // the round on its own never ran
+  });
+
+  it('hands the engine one mapping list for every batch until the mappings change, so the caches keyed on it hold', async () => {
+    const gen = countingEngine();
+    mount(gen);
+    await settled();
+    fireEvent.click(screen.getByText('again'));
+    await waitFor(() => expect(gen.runs).toHaveLength(2));
+    fireEvent.click(screen.getByText('twists3'));
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(gen.runs).toHaveLength(3));
+    const list = gen.runs[0]!.mappings;
+    expect(gen.runs[1]!.mappings).toBe(list);
+    expect(gen.runs[2]!.mappings).toBe(list); // a change that leaves the mappings alone keeps the list
+    fireEvent.click(screen.getByText('disable-one'));
+    fireEvent.click(screen.getByText('apply'));
+    await waitFor(() => expect(gen.runs).toHaveLength(4));
+    expect(gen.runs[3]!.mappings).not.toBe(list);
+    expect(gen.runs[3]!.mappings).toHaveLength(list.length - 1);
   });
 
   it('shows Working… by the time the engine is called, so the status is painted before the thread is taken', async () => {

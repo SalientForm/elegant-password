@@ -2,7 +2,7 @@
 //
 // Two targets, both inside this project's port block (4270-4279, see
 // ~/.claude/CLAUDE.md): the production build on 4272, which checks the
-// Content-Security-Policy and the bundled worker, and the dev server on
+// Content-Security-Policy and the app as built and served, and the dev server on
 // 4273, which checks the React StrictMode path. The user's own dev server on
 // 4270 is left alone.
 

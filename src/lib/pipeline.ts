@@ -10,6 +10,7 @@ import type { SentenceOptions } from './fromSentence';
 import type { GeneratedSentence, Requirements, Suggestion } from './generate';
 import { activeMappings, type MappingSettings } from './mappingSettings';
 import { sortSuggestions, type SortOrder } from './sort';
+import type { Mapping } from './twists';
 
 /** Everything that decides which passwords are made. */
 export interface GenerationSettings {
@@ -28,14 +29,20 @@ export interface GenerationSettings {
   editedSentence?: string | null;
 }
 
-/** The engine's inputs for these settings. `generated` keeps a made-up sentence; null draws a new one. */
-export function inputsFor(settings: GenerationSettings, generated: GeneratedSentence | null = null): GenerateInputs {
+/**
+ * The engine's inputs for these settings. `generated` keeps a made-up
+ * sentence; null draws a new one. `mappings` is the settings' active list;
+ * a caller that makes many batches passes the one list it keeps, so the
+ * caches keyed on the list's identity (the scorer's, the twist spellings)
+ * hold from batch to batch.
+ */
+export function inputsFor(settings: GenerationSettings, generated: GeneratedSentence | null = null, mappings: readonly Mapping[] = activeMappings(settings.mappingSettings)): GenerateInputs {
   return {
     mode: settings.mode,
     req: settings.req,
     sentence: settings.sentence,
     sentenceOptions: settings.sentenceOptions,
-    mappings: activeMappings(settings.mappingSettings),
+    mappings,
     generated,
     edited: settings.editedSentence ?? null,
   };
