@@ -133,6 +133,17 @@ describe('TypingTest', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('holds a password of at most 128 characters and a hint of at most 512, and refuses a longer paste', () => {
+    render(<TypingTest />);
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
+    expect(input.maxLength).toBe(128);
+    fireEvent.paste(input, { clipboardData: { getData: () => 'k'.repeat(129) } });
+    expect(screen.getByRole('alert').textContent).toBe('Not set: the pasted text is longer than 128 characters.');
+    fireEvent.paste(input, { clipboardData: { getData: () => 'k'.repeat(128) } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).maxLength).toBe(512);
+  });
+
   it('leaves Enter alone while an IME is composing', () => {
     render(<TypingTest />);
     const input = screen.getByLabelText('Typing test') as HTMLInputElement;

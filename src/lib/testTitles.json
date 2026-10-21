@@ -2032,6 +2032,10 @@
       },
       {
         "kind": "test",
+        "title": "holds a password of at most 128 characters and a hint of at most 512, and refuses a longer paste"
+      },
+      {
+        "kind": "test",
         "title": "leaves Enter alone while an IME is composing"
       },
       {

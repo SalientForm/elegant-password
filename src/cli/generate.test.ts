@@ -302,9 +302,9 @@ describe('tep g: your own sentence', () => {
     const noWords = await run(['g', '--sentence', '-'], { stdin: '... !!!\n' });
     expect(noWords.code).toBe(EXIT.usage);
     expect(noWords.io.err()).toContain('It has no words');
-    const long = await run(['g', '--sentence', '-'], { stdin: `${'sally eats sweets '.repeat(28)}\n` }); // 504 characters once trimmed
+    const long = await run(['g', '--sentence', '-'], { stdin: `${'sally eats sweets '.repeat(29)}\n` }); // 521 characters once trimmed
     expect(long.code).toBe(EXIT.usage);
-    expect(long.io.err()).toContain('--sentence -: the sentence on stdin cannot be used. The sentence is 503 characters; 500 is the most this tool takes. Use a shorter sentence.');
+    expect(long.io.err()).toContain('--sentence -: the sentence on stdin cannot be used. The sentence is 521 characters; 512 is the most this tool takes. Use a shorter sentence.');
   });
 
   it('asks for it, hidden, at a terminal, refusing a blank one', async () => {

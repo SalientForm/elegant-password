@@ -3,7 +3,7 @@ import { LENGTH_TAG_CHOICES, SHRINK_CHOICES } from '../lib/choices';
 import type { LengthTag } from '../lib/fluff';
 import { lengthTagSymbol, SHRINK_FROM_RANGE, TAG_SYMBOLS, TARGET_LENGTH_RANGE, type SentenceOptions } from '../lib/fromSentence';
 import { comfortableSymbols, type Requirements, type Suggestion } from '../lib/generate';
-import { MAX_SENTENCE_LENGTH } from '../lib/text';
+import { MAX_HINT_LENGTH } from '../lib/text';
 import { NumberField } from './NumberField';
 import { observeResize } from './resize';
 
@@ -37,7 +37,7 @@ export function SentenceInput({ value, onChange, options, onOptionsChange, onSub
           placeholder="Sally eats sweets on Sundays, then Enter"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          maxLength={MAX_SENTENCE_LENGTH}
+          maxLength={MAX_HINT_LENGTH}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && onSubmit && !e.nativeEvent.isComposing) {
               e.preventDefault();
@@ -195,7 +195,7 @@ export function GeneratedSentenceField({ value, onChange, onSubmit, disabled, re
       disabled={disabled}
       value={value}
       onChange={(e) => onChange(e.target.value.replace(/\s*\n\s*/g, ' '))}
-      maxLength={MAX_SENTENCE_LENGTH}
+      maxLength={MAX_HINT_LENGTH}
       onKeyDown={(e) => {
         if (e.key === 'Enter' && !e.nativeEvent.isComposing) { // Enter that accepts an IME candidate is the composition's, not a submit
           e.preventDefault();

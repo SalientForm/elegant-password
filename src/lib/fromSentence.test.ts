@@ -7,7 +7,7 @@ import { rawBits, strengthBits } from './strength';
 import { randomInt, type RandomSource } from './random';
 import { seeded } from './testRandom';
 import { applyTwists, BUILT_IN_MAPPINGS, type Mapping } from './twists';
-import { MAX_SENTENCE_LENGTH } from './text';
+import { MAX_HINT_LENGTH } from './text';
 import { ADJECTIVES, NOUNS, VERBS } from './words';
 
 // The scorers and the twist step are spied on, calling through, so the budget tests below can count them.
@@ -150,10 +150,10 @@ describe('fromSentence', () => {
   });
 
   it('refuses a sentence past the cap the fields enforce, so a stored or scripted sentence cannot run for seconds', () => {
-    const long = 'sally eats sweets '.repeat(28); // 504 characters
+    const long = 'sally eats sweets '.repeat(29); // 522 characters
     expect(() => fromSentence(long, req({}), undefined, { rng: seeded() })).toThrow(RequirementsError);
-    expect(() => fromSentence(long, req({}), undefined, { rng: seeded() })).toThrow('The sentence is 504 characters; 500 is the most this tool takes. Use a shorter sentence.');
-    expect(fromSentence(long.slice(0, 500), req({ count: 1 }), undefined, { rng: seeded() }).suggestions).toHaveLength(1);
+    expect(() => fromSentence(long, req({}), undefined, { rng: seeded() })).toThrow('The sentence is 522 characters; 512 is the most this tool takes. Use a shorter sentence.');
+    expect(fromSentence(long.slice(0, 512), req({ count: 1 }), undefined, { rng: seeded() }).suggestions).toHaveLength(1);
   });
 });
 
@@ -299,7 +299,7 @@ describe('fromSentence: fits found by review', () => {
 
   it('turns a pasted paragraph into initials without enumerating every choice', () => {
     // The longest the engine takes: 500 characters, about 90 words.
-    const paragraph = Array.from({ length: 200 }, (_, i) => ['river', 'otters', 'carry', 'bright', 'stones', 'home', 'under', 'quiet', 'skies'][i % 9]).join(' ').slice(0, MAX_SENTENCE_LENGTH);
+    const paragraph = Array.from({ length: 200 }, (_, i) => ['river', 'otters', 'carry', 'bright', 'stones', 'home', 'under', 'quiet', 'skies'][i % 9]).join(' ').slice(0, MAX_HINT_LENGTH);
     const started = performance.now();
     const r = fromSentence(paragraph, req({ initials: 3, minLength: 12, maxLength: 64, count: 1 }), { ...DEFAULT_SENTENCE_OPTIONS, allowDropping: true }, { rng: seeded(1) });
     expect(performance.now() - started).toBeLessThan(3000);

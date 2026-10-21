@@ -91,7 +91,7 @@ was bounded:
   suffix gives every block length's repeat count in one pass: quadratic
   with no allocation, against cubic with a slice and join per step. 133 ms
   to 1.1 ms for 500 characters. `src/lib/strength.ts`.
-- **The engine caps the sentence at 500 characters** (`MAX_SENTENCE_LENGTH`,
+- **The engine caps the sentence at 512 characters** (`MAX_HINT_LENGTH`,
   `src/lib/text.ts`), not only the fields and the CLI, with one message
   both front ends use.
 - **The budget: the worst permitted batch answers in under 300 ms on a
@@ -168,10 +168,14 @@ twists). It is the lead if the budget is ever missed.
 
 ### Limits and caches
 
-- A sentence, a hint and the password under test are at most 500
-  characters (UTF-16 units) in the fields, the CLI and the engine: scoring
-  a text is quadratic in places, so the length is capped rather than left
-  open.
+- **A password field holds at most 128 characters, a sentence or hint
+  field 512** (2026-10-21, the user's limits; UTF-16 units). 128 is
+  `MAX_LENGTH`, the longest password the tool makes, and holds the typing
+  test's field, typed or pasted; 512 is `MAX_HINT_LENGTH`, for the typing
+  test's hint, both sentence fields, the CLI and the engine. Scoring a text
+  is quadratic in places, and zxcvbn is not bounded at all (250 random
+  characters 21.8 s, 128 about 1.1 s on a desktop), so the lengths are
+  capped rather than left open.
 - The scorer keeps 400 cold scores, each mapping list 5,000 spellings; a
   full cache is emptied rather than evicted one entry at a time.
   `src/lib/score.ts`, `src/lib/twists.ts`.

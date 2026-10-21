@@ -61,7 +61,7 @@ explanation for each:
   sentence is kept in this tab only (sessionStorage) so a refresh does not
   lose it, and is never sent anywhere; it is only kept longer if you add a
   password to your list, as that password's hint. A sentence, like a hint,
-  is at most 500 characters.
+  is at most 512 characters.
 - **Submit, then it sticks.** Edits to the rules, swaps or sentence are a
   draft: a snackbar at the foot of the page holds "Discard" and "Submit
   changes" (Ctrl+Enter also submits; Escape discards, or in a text field
@@ -232,7 +232,7 @@ explanation for each:
   Clear button, a paste or a new list entry replaces it; one that arrived
   without a hint can be given one. Nothing is stored. A pasted password is
   kept exactly, spaces at either end included, with one trailing line
-  break dropped; more than one line, spaces alone or more than 500
+  break dropped; more than one line, spaces alone or more than 128
   characters are refused with the reason. On a soft keyboard that names no
   keys (Android), the typing is read from how the text changes. A keyboard
   button on every card and My list entry makes that password the one
