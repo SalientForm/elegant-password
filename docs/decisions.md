@@ -74,8 +74,7 @@ was bounded:
 - **`collapseBlocks` compares indexes, not slices.** The Z-array of each
   suffix gives every block length's repeat count in one pass: quadratic
   with no allocation, against cubic with a slice and join per step. 133 ms
-  to 1.1 ms for 500 characters, which the typing test pays per keystroke.
-  `src/lib/strength.ts`.
+  to 1.1 ms for 500 characters. `src/lib/strength.ts`.
 - **The engine caps the sentence at 500 characters** (`MAX_SENTENCE_LENGTH`,
   `src/lib/text.ts`), not only the fields and the CLI, with one message
   both front ends use.
@@ -161,6 +160,14 @@ twists). It is the lead if the budget is ever missed.
   planning 400 length models (about a megabyte each); a full cache is
   emptied rather than evicted one entry at a time. `src/lib/score.ts`,
   `src/lib/twists.ts`, `src/lib/generate.ts`.
+- **The typing test scores the password under test once** (2026-10-21).
+  Strength, Raw and the common-list check are memoised on the password,
+  beside Difficulty and Memorability, so a keystroke costs a render and no
+  scoring: at 500 characters 0.5-1.1 ms in jsdom, was 2.1-2.6 ms (122 ms
+  before H1). Each key's time is read when its handler runs, so work per
+  keystroke above the gap between keys would stretch the times the test
+  reports; asserted as counts in `src/components/TypingTest.test.tsx`,
+  never as a wall clock. `src/components/TypingTest.tsx`.
 
 ## Input and persistence
 
