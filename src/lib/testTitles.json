@@ -158,6 +158,43 @@
     ]
   },
   {
+    "file": "src/App.renders.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "App: what renders"
+      },
+      {
+        "kind": "test",
+        "title": "a keystroke in the made-up sentence renders no card, strength panel, requirements form, swaps panel or site rules"
+      },
+      {
+        "kind": "test",
+        "title": "starting a batch renders no card; the batch renders its own cards when it lands"
+      },
+      {
+        "kind": "test",
+        "title": "a card still renders when what it shows changes: Add marks it Added, a new typing mode rescores it"
+      },
+      {
+        "kind": "test",
+        "title": "in sentence mode the swaps follow the sentence as it is typed"
+      },
+      {
+        "kind": "test",
+        "title": "a keystroke in the made-up sentence renders no row of My list; a new typing mode renders every row"
+      },
+      {
+        "kind": "group",
+        "title": "App: what renders when the window narrows"
+      },
+      {
+        "kind": "test",
+        "title": "Practise on a card opens the Testing column when only one column fits, after the columns have changed"
+      }
+    ]
+  },
+  {
     "file": "src/App.test.tsx",
     "titles": [
       {

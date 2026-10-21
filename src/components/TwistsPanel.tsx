@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
 import { isFarShift, isPinkyStretch } from '../lib/keyboard';
 import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
@@ -32,7 +32,7 @@ function separatorInUse(req: Requirements): string | undefined {
   }
 }
 
-export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, relevant }: Props) {
+export const TwistsPanel = memo(function TwistsPanel({ req, onReqChange, settings, onSettingsChange, relevant }: Props) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [error, setError] = useState<string>();
@@ -189,4 +189,4 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
       </button>
     </section>
   );
-}
+});
