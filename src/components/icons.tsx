@@ -79,3 +79,11 @@ export const MenuIcon = ({ size = 18 }: IconProps) => (
     <path d="M4 7h16M4 12h16M4 17h16" />
   </svg>
 );
+
+/** A keyboard: practise typing this password. */
+export const KeyboardIcon = ({ size = 16 }: IconProps) => (
+  <svg {...base(size)}>
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+  </svg>
+);

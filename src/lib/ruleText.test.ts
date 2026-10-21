@@ -9,6 +9,8 @@ interface Case {
   rules: Partial<RuleFields>;
   understood?: string[];
   excluded?: string;
+  /** What the text says that the tool cannot keep; none unless given. */
+  unsupported?: string[];
 }
 
 // Real phrasings, many copied in the shape sign-up forms show them: bullets, ticks, numbered lists, stray
@@ -35,8 +37,8 @@ const CASES: Case[] = [
   {
     name: 'a bulleted checklist under a heading',
     text: 'Your password must contain:\n• 8-64 characters\n• At least one uppercase letter\n• At least one lowercase letter\n• At least one number\n• At least one special character (!@#$%^&*)',
-    rules: { minLength: 8, maxLength: 64, minUppercase: 1, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%^&*' },
-    understood: ['8-64 characters', 'an uppercase letter', 'a lowercase letter (always included)', 'a digit', 'a symbol from !@#$%^&*'],
+    rules: { minLength: 8, maxLength: 64, minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1, allowedSymbols: '!@#$%^&*' },
+    understood: ['8-64 characters', 'an uppercase letter', 'a lowercase letter', 'a digit', 'a symbol from !@#$%^&*'],
   },
   {
     name: 'a copied form with ticks, crosses and labels around the rules',
@@ -46,39 +48,39 @@ const CASES: Case[] = [
   {
     name: 'a numbered list with en dashes and a rule about the username',
     text: '1. Must be 10–64 characters long\n2. Must include a lowercase letter, an uppercase letter and a number\n3. Must not include spaces\n4. Must not be the same as your username',
-    rules: { minLength: 10, maxLength: 64, minUppercase: 1, minDigits: 1, allowSpaces: false },
+    rules: { minLength: 10, maxLength: 64, minUppercase: 1, minLowercase: 1, minDigits: 1, allowSpaces: false },
   },
   {
     name: 'a heading ending in a colon carries "must" to bare items below it',
     text: 'Your password must have:\n8 or more characters\nupper & lowercase letters\nat least one number',
-    rules: { minLength: 8, minUppercase: 1, minDigits: 1 },
+    rules: { minLength: 8, minUppercase: 1, minLowercase: 1, minDigits: 1 },
   },
   {
     name: '"needs to" with "upper and lower case" and "a number or symbol"',
     text: 'Your password needs to:\n- include both lower and upper case characters\n- include at least one number or symbol\n- be at least 8 characters long',
-    rules: { minLength: 8, minUppercase: 1, minDigits: 1, minSymbols: 1 },
+    rules: { minLength: 8, minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1 },
   },
   { name: '"at least N" counts per class', text: 'Password requires 2 uppercase letters, at least 3 digits and a minimum of 2 special characters.', rules: { minUppercase: 2, minDigits: 3, minSymbols: 2 }, understood: ['2 uppercase letters', '3 digits', '2 symbols'] },
   { name: '"capital letter" and "must not exceed"', text: 'Must not exceed 16 characters, at least 1 capital letter', rules: { maxLength: 16, minUppercase: 1 } },
   {
     name: 'classes listed first and "are required" after them; "optional" for symbols',
     text: 'Uppercase, lowercase and numbers are required. Symbols are optional.',
-    rules: { minUppercase: 1, minDigits: 1, minSymbols: 0 },
-    understood: ['an uppercase letter', 'a lowercase letter (always included)', 'a digit', 'symbols optional'],
+    rules: { minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 0 },
+    understood: ['an uppercase letter', 'a lowercase letter', 'a digit', 'symbols optional'],
   },
-  { name: '"Mix uppercase and lowercase letters, numbers and symbols"', text: 'Use at least 12 characters. Mix uppercase and lowercase letters, numbers and symbols. Don\'t use a password from another site.', rules: { minLength: 12, minUppercase: 1, minDigits: 1, minSymbols: 1 } },
+  { name: '"Mix uppercase and lowercase letters, numbers and symbols"', text: 'Use at least 12 characters. Mix uppercase and lowercase letters, numbers and symbols. Don\'t use a password from another site.', rules: { minLength: 12, minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1 } },
   {
     name: '"3 of the following 4 categories": requiring each one satisfies it',
     text: 'Must contain characters from at least 3 of the following 4 categories: English uppercase characters (A through Z), English lowercase characters (a through z), Base 10 digits (0 through 9), Non-alphabetic characters (for example, !, $, #, %)',
-    rules: { minUppercase: 1, minDigits: 1, minSymbols: 1 },
-    understood: ['an uppercase letter', 'a lowercase letter (always included)', 'a digit', 'a symbol, such as !$#%'],
+    rules: { minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1 },
+    understood: ['an uppercase letter', 'a lowercase letter', 'a digit', 'a symbol, such as !$#%'],
   },
   { name: 'a symbol list given as examples ("such as") is not the full allowed set', text: 'Must contain at least two special characters such as @, # or $.', rules: { minSymbols: 2 }, understood: ['2 symbols, such as @#$'] },
   { name: 'an allowed-symbols label with a spaced list', text: 'Special characters allowed: ~ ! @ # $ % ^ & * ( ) _ - + =', rules: { allowedSymbols: '~!@#$%^&*()_-+=' }, understood: ['symbols ~!@#$%^&*()_-+='] },
   {
     name: 'a full keyboard symbol list, quotes and backslash included',
     text: 'Password must contain a minimum of 1 lower case letter [a-z] and a minimum of 1 upper case letter [A-Z] and a minimum of 1 numeric character [0-9] and a minimum of 1 special character: ~`!@#$%^&*()-_+={}[]|\\;:"<>,./?',
-    rules: { minUppercase: 1, minDigits: 1, minSymbols: 1, allowedSymbols: '~`!@#$%^&*()-_+={}[]|\\;:"<>,./?' },
+    rules: { minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1, allowedSymbols: '~`!@#$%^&*()-_+={}[]|\\;:"<>,./?' },
   },
   { name: 'a length label without a unit, and a symbol list after a label', text: 'Password length: 8 - 30. Allowed symbols: !#$%&*+-=?@^_', rules: { minLength: 8, maxLength: 30, allowedSymbols: '!#$%&*+-=?@^_' } },
   {
@@ -105,7 +107,7 @@ const CASES: Case[] = [
   {
     name: 'a guidance paragraph with an em dash and examples',
     text: 'At least 8 characters—the more characters, the better. A mixture of both uppercase and lowercase letters. A mixture of letters and numbers. Inclusion of at least one special character, e.g., ! @ # ? ]',
-    rules: { minLength: 8, minUppercase: 1, minDigits: 1, minSymbols: 1 },
+    rules: { minLength: 8, minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1 },
   },
   { name: 'full-width characters and non-breaking spaces', text: 'Ｐａｓｓｗｏｒｄ：８ - 20 characters， at least one ｎｕｍｂｅｒ', rules: { minLength: 8, maxLength: 20, minDigits: 1 } },
   {
@@ -123,16 +125,47 @@ const CASES: Case[] = [
     rules: { minLength: 12, maxLength: 12 },
     understood: ['exactly 12 characters (a maximum of 8 is below the minimum of 12, so the minimum stands)'],
   },
+  { name: 'a lowercase count', text: 'Must contain at least 5 lowercase letters.', rules: { minLowercase: 5 }, understood: ['5 lowercase letters'] },
+  {
+    name: 'a length past what the tool makes, kept out entirely rather than cut to 256',
+    text: 'Your password must be exactly 300 characters.',
+    rules: {},
+    understood: [],
+    unsupported: ['exactly 300 characters: this tool makes at most 256'],
+  },
+  { name: 'a minimum past what the tool makes', text: 'At least 400 characters long.', rules: {}, understood: [], unsupported: ['at least 400 characters: this tool makes at most 256'] },
+  {
+    name: 'a maximum past what the tool makes is kept: every password is shorter',
+    text: 'Passwords can be 8-300 characters.',
+    rules: { minLength: 8, maxLength: 256 },
+    understood: ['8-300 characters (this tool makes at most 256)'],
+  },
+  {
+    name: 'partly understood text says both what it keeps and what it cannot',
+    text: '8-20 characters, no digits',
+    rules: { minLength: 8, maxLength: 20 },
+    understood: ['8-20 characters'],
+    unsupported: ['no digits: this tool cannot leave digits out'],
+  },
+  {
+    name: 'a maximum count of a class is named, not kept',
+    text: 'Must have at least 1 uppercase letter and at most 2 symbols.',
+    rules: { minUppercase: 1 },
+    understood: ['an uppercase letter'],
+    unsupported: ['at most 2 symbols: this tool cannot set a maximum count'],
+  },
+  { name: '"no uppercase" is named, not kept', text: 'No uppercase letters.', rules: {}, understood: [], unsupported: ['no uppercase letters: this tool cannot leave uppercase letters out'] },
   { name: 'text with no rules at all', text: 'Hello world, I like cats.', rules: {}, understood: [] },
   { name: 'empty text', text: '   ', rules: {}, understood: [] },
 ];
 
 describe('parseRuleText', () => {
-  it.each(CASES)('reads $name', ({ text, rules, understood, excluded }) => {
+  it.each(CASES)('reads $name', ({ text, rules, understood, excluded, unsupported }) => {
     const parsed = parseRuleText(text);
     expect(parsed.rules).toEqual(rules);
     if (understood) expect(parsed.understood).toEqual(understood);
     expect(parsed.excludedSymbols).toBe(excluded ?? '');
+    expect(parsed.unsupported).toEqual(unsupported ?? []);
     // Something was understood exactly when something will change.
     expect(parsed.understood.length > 0).toBe(Object.keys(parsed.rules).length > 0 || !!parsed.excludedSymbols);
   });
@@ -154,7 +187,7 @@ describe('parseRuleText', () => {
   });
 
   it('never returns a field outside the site rules', () => {
-    const keys = new Set(['minLength', 'maxLength', 'minUppercase', 'minDigits', 'minSymbols', 'allowedSymbols', 'allowSpaces']);
+    const keys = new Set(['minLength', 'maxLength', 'minUppercase', 'minLowercase', 'minDigits', 'minSymbols', 'allowedSymbols', 'allowSpaces']);
     for (const { text } of CASES) for (const k of Object.keys(parseRuleText(text).rules)) expect(keys.has(k), k).toBe(true);
   });
 });

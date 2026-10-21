@@ -30,7 +30,24 @@ explanation for each:
   from the password and its hint (`src/lib/score.ts`) and shown beside
   the badges and in the bits panel; it is never saved. Difficulty and
   memorability come from the password and its hint, nothing else. A
-  repeated character never raises a figure.
+  repeated character never raises a figure, and neither does a block typed
+  again ("Password1!" three times) or a walk along the keyboard ("asdf").
+- **Rules it cannot keep are named**: pasted site rules show what was
+  understood and, separately, what was not kept and why (a minimum length
+  above 256, "no digits", "at most 2 symbols"); nothing is quietly weakened.
+  A minimum number of lowercase letters is a rule like the other counts.
+- **No common passwords**: a password that is exactly one of the 10,001
+  most common passwords (SecLists' `10k-most-common.txt`, in
+  `src/lib/commonPasswords.ts`; `pnpm common:passwords` rewrites it) is
+  never suggested, never added to My list, and the typing test says it is
+  not allowed. Its Strength is the guesses it takes to reach it on that list.
+- **A second opinion from zxcvbn, as a fourth badge**: every password
+  carries what the zxcvbn library (4.4.2) says about it: its crack time for
+  an offline attack on a slow hash, read as very weak, weak, good or strong.
+  It runs in the browser, loaded only when first needed. Cards and the
+  typing test work it out as the password appears; My list works it out
+  once, when the password is added, and saves it with the password and
+  hint. Nothing is sent anywhere.
 
 ## Features
 

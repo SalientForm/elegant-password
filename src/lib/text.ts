@@ -1,6 +1,14 @@
 // Word-level text helpers shared by sentence mode and the cold scorer.
 // Kept free of other imports so the scorer never depends on the generator.
 
+/**
+ * The longest sentence, hint or password under test either front end takes,
+ * in characters. Scoring a text is quadratic in places (the alignment, the
+ * twist count), and a 500-character sentence already takes seconds, so
+ * longer input is refused rather than left to freeze the page.
+ */
+export const MAX_SENTENCE_LENGTH = 500;
+
 /** Small words: these become capital initials and are the first to be dropped. */
 export const SMALL_WORDS: ReadonlySet<string> = new Set(
   `a an the of for to in on at by with from into onto over under up off out and or but nor so as than that

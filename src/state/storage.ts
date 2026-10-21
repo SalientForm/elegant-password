@@ -63,6 +63,27 @@ export function removeKey(store: KeyValueStore | undefined, key: string): void {
   }
 }
 
+/**
+ * Call back when another tab changes `key` in this store, with the new raw
+ * value (null when removed). Only the browser's own localStorage tells one
+ * tab about another's writes; for any other store this does nothing.
+ */
+export function watchKey(store: KeyValueStore | undefined, key: string, onChange: (raw: string | null) => void): () => void {
+  if (!store || typeof window === 'undefined') return () => {};
+  let local: Storage | undefined;
+  try {
+    local = globalThis.localStorage;
+  } catch {
+    return () => {};
+  }
+  if (store !== local) return () => {};
+  const listener = (e: StorageEvent) => {
+    if (e.storageArea === local && (e.key === key || e.key === null)) onChange(e.key === null ? null : e.newValue);
+  };
+  window.addEventListener('storage', listener);
+  return () => window.removeEventListener('storage', listener);
+}
+
 export const isRecord = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 export const isString = (x: unknown): x is string => typeof x === 'string';
 export const isFiniteNumber = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);

@@ -50,6 +50,49 @@ export function recordKey(recording: Recording, key: string, at: number): Record
 }
 
 /**
+ * Keys a soft keyboard reports when it does not say which key was pressed
+ * (Android's keyboards send "Unidentified", or "Process" while composing).
+ * For those the typing is read from how the field's text changed instead
+ * (recordChange).
+ */
+export const UNNAMED_KEYS: ReadonlySet<string> = new Set(['Unidentified', 'Process']);
+
+/**
+ * Record a change to the field's text that no named key explains: each
+ * character taken out as a Backspace, each one put in as its key. A soft
+ * keyboard composing a word sends the whole word again with every letter,
+ * so the change is worked out from the text before and after, not from the
+ * event, and each letter is counted once.
+ */
+export function recordChange(recording: Recording, before: string, after: string, at: number): Recording {
+  const a = [...before];
+  const b = [...after];
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) start++;
+  let end = 0;
+  while (end < a.length - start && end < b.length - start && a[a.length - 1 - end] === b[b.length - 1 - end]) end++;
+  for (let i = 0; i < a.length - start - end; i++) recordKey(recording, 'Backspace', at);
+  for (const c of b.slice(start, b.length - end)) recordKey(recording, c, at);
+  return recording;
+}
+
+/**
+ * The password to test from pasted text, exactly as pasted: spaces at
+ * either end are part of it. One line break at the end (copying a whole
+ * line brings one) is dropped; a paste of more than one line is refused,
+ * since a password is one line, and so are spaces alone (a slip, not a
+ * password) and anything longer than `maxLength`. Nothing pasted: undefined.
+ */
+export function pastedTarget(text: string, maxLength: number): { password: string } | { problem: string } | undefined {
+  const line = text.replace(/\r?\n$/, '');
+  if (line === '') return undefined;
+  if (!line.trim()) return { problem: 'Not set: the pasted text is only spaces.' };
+  if (/[\r\n]/.test(line)) return { problem: 'Not set: the pasted text has more than one line. A password is one line; copy just the password and paste again.' };
+  if ([...line].length > maxLength) return { problem: `Not set: the pasted text is longer than ${maxLength} characters.` };
+  return { password: line };
+}
+
+/**
  * Turn a recording into a result. `typed` is the field's text at Enter,
  * `target` the password being tested (use `typed` itself for a first run),
  * `at` the time of Enter.

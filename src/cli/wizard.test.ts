@@ -135,7 +135,7 @@ describe('tep config: questions shaped by earlier answers', () => {
     expect(low).toBeGreaterThanOrEqual(10);
     expect(max.refused![0]!.value).toBe('5');
     expect(max.refused![0]!.reason).toMatch(new RegExp(`^5 is too low: .*The lowest that fits is ${low}\\.$`));
-    expect(parseConfig(text!, 'x').model.rules).toEqual({ 'min-length': 10, 'max-length': 20, 'min-uppercase': 1, 'min-digits': 1, 'min-symbols': 1, symbols: '!@#', spaces: true });
+    expect(parseConfig(text!, 'x').model.rules).toEqual({ 'min-length': 10, 'max-length': 20, 'min-uppercase': 1, 'min-lowercase': 0, 'min-digits': 1, 'min-symbols': 1, symbols: '!@#', spaces: true });
   });
 
   it('a question with one choice left is stated, not asked, with why', async () => {
@@ -256,6 +256,15 @@ describe('tep config: pasted rules', () => {
     expect(paste.refused!.map((r) => r.reason)).toEqual(['Paste the rules, or press Ctrl+C to stop.', expect.stringMatching(/^No password rules found in that\./)]);
     expect(io.prompts.said).toContainEqual({ kind: 'info', message: expect.stringMatching(/^Read as: 8-20 characters/) });
     expect(parseConfig(text!, 'x').model.rules).toMatchObject({ 'min-length': 8, 'max-length': 20, 'min-uppercase': 1, symbols: DEFAULT_REQUIREMENTS.allowedSymbols });
+  });
+
+  it('names what it cannot keep, drops it, and refuses text with nothing it can keep', async () => {
+    const { io, text } = await wizard([{ select: 'Ten-finger' }, { select: 'Paste' }, { text: 'exactly 300 characters' }, { text: '8-20 characters, no digits, at least 2 lowercase letters' }, { select: 'Use the' }, { select: 'Keep' }, { text: 's' }]);
+    const paste = asked(io, 'Paste the site\'s rules (one line)')[0]!;
+    expect(paste.refused!.map((r) => r.reason)).toEqual(['Nothing in that can be kept: exactly 300 characters: this tool makes at most 256.']);
+    expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Read as: 8-20 characters; 2 lowercase letters.' });
+    expect(io.prompts.said).toContainEqual({ kind: 'warn', message: 'Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.' });
+    expect(parseConfig(text!, 'x').model.rules).toMatchObject({ 'min-length': 8, 'max-length': 20, 'min-lowercase': 2 });
   });
 
   it('rules that do not fit together: says why, then asks each rule from the text\'s values', async () => {

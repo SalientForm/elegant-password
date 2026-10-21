@@ -142,10 +142,11 @@ figure is shown only in the session.
 | Figure | The attacker knows | From | Where |
 | --- | --- | --- | --- |
 | Raw | nothing | the password (`strength.ts`): characters × log2 of the alphabet the classes present make; a repeated character once | badge |
-| Strength | English and the usual habits, not this tool | the password (`strength.ts`): letters as English-like text at 2.3 bits each, a repeated letter once, one bit for a capital in a run; digits by their digits, a memorable run one pick; each distinct symbol one pick; no lists, no table, no hint | badge, sorts "Strength" order |
+| Strength | English and the usual habits, not this tool | the password (`strength.ts`): letters as English-like text at 2.3 bits each, a repeated letter once, one bit for a capital in a run; digits by their digits, a memorable run one pick; each distinct symbol one pick; a block typed again once (+ log2 of the times); a keyboard or alphabet walk of 4+ letters one pick of 1,000; a password exactly on the 10,001 most common passwords (`common.ts`) log2 of its place, and not allowed; no other lists, no table, no hint | badge, sorts "Strength" order |
 | Difficulty | — | the password and its memory load (hint words + random swaps; `difficulty.ts`), for the chosen typing mode | badge |
 | Memorability | — | the password and its hint (`score.ts`) | badge |
 | Bits | this tool exactly, and the swaps in force in this session | the password, the hint and the session's swap list (`score.ts`, below) | dim beside a card's badges, the bits panel, `tep g` |
+| zxcvbn | (not a score) the zxcvbn library's second opinion | the password: zxcvbn 4.4.2's crack time at 10^4 guesses/s, read as very weak / weak / good / strong (`zxcvbnReading.ts`, `state/zxcvbnCheck.ts`), worked out in the browser | the fourth badge everywhere; saved with a My list entry |
 
 ```mermaid
 flowchart TD

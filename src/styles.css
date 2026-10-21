@@ -92,10 +92,12 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
 .topbar .tagline { color: var(--muted); margin: 0; max-width: 70ch; font-size: 13pt; }
 /* The credit with the licence link beneath it, right-justified under it. */
 .topbar .credits { flex: none; display: grid; justify-items: end; gap: 0.1rem; }
-.topbar .brand, .topbar .license { font-size: 0.78rem; font-weight: 400; font-style: italic; opacity: 0.3; white-space: nowrap; }
+.topbar .brand, .topbar .license { font-size: 0.78rem; font-weight: 400; font-style: italic; white-space: nowrap; }
+.topbar .brand { opacity: 0.45; }
+.topbar .license { color: var(--muted); } /* a link people may need: muted, at full contrast (4.5:1 or better on both themes), not faded */
 .topbar .brand strong { font-weight: 700; }
-.topbar .license { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.topbar .license:hover, .topbar .license:focus-visible { opacity: 0.7; }
+.topbar .license { text-decoration: underline; text-underline-offset: 2px; }
+.topbar .license:hover, .topbar .license:focus-visible { color: var(--ink); }
 /* Medium widths and below (1100 px): the credit keeps its place at the right of the title row, and the title, description and credit take fixed sizes. */
 @media (max-width: 1100px) {
   .topbar { flex-wrap: nowrap; }
@@ -103,6 +105,12 @@ h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
   .topbar h1 { font-size: 16px; }
   .topbar .tagline { font-size: 13px; }
   .topbar .brand, .topbar .license { font-size: 12px; }
+}
+/* A phone: the description takes the full width, and the credit follows on one line beneath it instead of holding a column. */
+@media (max-width: 600px) {
+  .topbar { flex-wrap: wrap; margin-bottom: 0.4rem; }
+  .topbar-text { flex: 1 1 100%; }
+  .topbar .credits { display: flex; gap: 0.75rem; justify-items: start; }
 }
 
 /* 1 rem between the columns' cards: this gap plus a column's 0.35 rem right and 0.15 rem left padding (room for focus rings at the scroll box's edges). */
@@ -334,6 +342,11 @@ button.ghost { border-color: transparent; color: var(--muted); }
 .badge-tip { display: inline-block; }
 /* This session's bits figure: beside the badges, dim, not a score. */
 .bits { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+/* Raw, the naive figure: a quieter badge than the three scores, so it does not compete with them. */
+.badge.raw { font-weight: 400; color: var(--muted); border-color: var(--line); }
+/* zxcvbn's reading: the fourth badge, in four words. */
+.badge.zxcvbn { font-weight: 600; }
+.badge.zxcvbn.pending { font-weight: 400; color: var(--muted); border-style: dashed; }
 .level-0, .level-1 { background: var(--accent-soft); color: var(--accent); }
 .level-2 { background: var(--warn-soft); color: var(--warn); }
 .level-3, .level-4 { background: var(--bad-soft); color: var(--bad); }
@@ -521,11 +534,12 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
 .snackbar.blocked { border-color: var(--bad); }
 .snackbar-text { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 0.85rem; overflow-wrap: anywhere; }
 .snackbar.blocked .snackbar-text { color: var(--bad); }
-.snackbar-actions { display: flex; gap: 0.4rem; margin-left: auto; flex: none; }
+.snackbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; margin-left: auto; flex: 0 1 auto; min-width: 0; } /* on the narrowest phones the buttons wrap rather than run off the screen */
 .snackbar-actions button { font-size: 0.9rem; padding: 0.5rem 0.9rem; min-height: 0; }
 .snackbar-actions button.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--accent); font-weight: 600; } /* a snackbar's text actions */
 .snackbar.blocked .snackbar-actions button.ghost:first-child { color: var(--bad); } /* Show, in the problem's colour */
-@media (max-width: 600px) { .apply-bar { left: 1rem; right: 1rem; transform: none; width: auto; max-width: none; } .snackbar { flex-wrap: wrap; } } /* a phone: the text may take a line of its own, the buttons under it at the right */
+@media (max-width: 600px) { .apply-bar { left: 1rem; right: 1rem; transform: none; width: auto; max-width: none; } .snackbar { flex-wrap: wrap; } .snackbar-actions { max-width: 100%; } }
+@media (max-width: 360px) { .apply-bar { left: 0.5rem; right: 0.5rem; } .snackbar-actions button { padding: 0.5rem 0.6rem; } } /* 320 px: Show, Discard and Submit changes still fit, or wrap */ /* a phone: the text may take a line of its own, the buttons under it at the right */
 .chip.fluff { background: var(--warn-soft); border: 1px dashed var(--warn); }
 
 /* Test a password, top of the right column */
@@ -579,3 +593,16 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
   button { min-height: 2.5rem; }
   .mapping { padding: 0.35rem 0.6rem; }
 }
+
+/* A storage failure: the message and its Try again button on one row, wrapping on a phone. */
+.storage-failed { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.75rem; }
+.storage-failed p { margin: 0; flex: 1 1 14rem; }
+/* A second click confirms something that cannot be undone. */
+button.danger { border-color: var(--bad); color: var(--bad); }
+/* Longer help behind a disclosure, so the first password is in view sooner on a phone. */
+details.more > summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); width: fit-content; }
+details.more > summary:hover { color: var(--ink); }
+details.more[open] > summary { margin-bottom: 0.25rem; }
+.zxcvbn-line { font-size: 0.8rem; color: var(--muted); }
+/* The pasted rules' summary: what was understood, then what was not kept, a little apart. */
+.paste-status { display: grid; gap: 0.25rem; min-width: 0; }

@@ -118,6 +118,9 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   const shown = await settledPasswords(page);
   const first = cards(page).first();
   const bits = (await first.locator('.badge.strength').textContent())!.replace(/[^0-9]/g, '');
+  // zxcvbn's word is the card's fourth badge, worked out in the page.
+  await expect(first.locator('.badge.zxcvbn')).toHaveText(/^zxcvbn (very weak|weak|good|strong)$/);
+  await expect(first.locator('.card-head .badge').nth(3)).toHaveClass(/zxcvbn/);
   await first.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(first.getByRole('button', { name: 'Added', exact: true })).toBeDisabled();
   const list = page.getByRole('list', { name: 'My passwords' });
@@ -132,10 +135,16 @@ test('adds a password to my list, scores it the same, and keeps the list across 
   await expect(page.getByLabel('Hint for the password under test', { exact: true })).toHaveCount(0);
   await expect(practice.locator('.badge.strength')).toHaveText(`Strength ${bits}`);
   await expect(practice.locator('.badge.memorability')).toHaveText(/^Memorability \d+$/);
+  // The zxcvbn reading: the library loads (a chunk of its own, allowed by the CSP) and the reading is kept with the entry.
+  const reading = list.locator('.badge.zxcvbn');
+  await expect(reading).toHaveText(/^zxcvbn (very weak|weak|good|strong)$/);
+  const said = await reading.textContent();
+  await expect(list.locator('.zxcvbn-line')).toHaveText(/^zxcvbn: (very weak|weak|good|strong) \(.+ to crack\)$/);
 
   await page.reload();
   expect(await settledPasswords(page)).toEqual(shown);
   await expect(page.getByRole('list', { name: 'My passwords' }).getByRole('listitem')).toHaveCount(1);
+  await expect(page.getByRole('list', { name: 'My passwords' }).locator('.badge.zxcvbn')).toHaveText(said!);
   await page.getByRole('button', { name: /^Remove .* from my list$/ }).click();
   await expect(page.getByText('Nothing yet')).toBeVisible();
 });
@@ -379,7 +388,7 @@ test('the Scoring page explains bits and shows the rubric', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Strength, Raw and bits' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Difficulty, 0 to 100' })).toBeVisible();
   await expect(page.getByText('Finger rolls')).toBeVisible();
-  await page.getByRole('link', { name: 'Passwords' }).click();
+  await page.getByRole('link', { name: 'Passwords', exact: true }).click();
   await expect(cards(page).first()).toBeVisible();
 });
 
@@ -557,4 +566,22 @@ test('badge tips are never clipped by a card and stay inside the viewport', asyn
   // The tip is rendered at the document level, outside the card element, so the card's overflow cannot cut it: it is in the body, not the article, and nothing clips it.
   expect(await page.getByRole('tooltip').evaluate((el) => el.closest('article') === null && el.parentElement === document.body)).toBe(true);
   expect(box.height).toBeGreaterThan(10);
+});
+
+test('Practise on a card makes it the password under test without adding it', async ({ page }) => {
+  const shown = await settledPasswords(page);
+  await cards(page).nth(1).getByRole('button', { name: 'Practise', exact: true }).click();
+  await expect(page.locator('.typing-result')).toContainText(`Testing: ${shown[1]}`);
+  await expect(page.getByLabel('Typing test', { exact: true })).toBeFocused();
+  await expect(page.getByText('Nothing yet')).toBeVisible(); // nothing was added
+});
+
+test('Forget this session draws a new sentence and clears the password under test', async ({ page }) => {
+  const shown = await settledPasswords(page);
+  await cards(page).first().getByRole('button', { name: 'Practise', exact: true }).click();
+  const forget = page.getByRole('button', { name: 'Forget this session', exact: true });
+  await forget.click();
+  await page.getByRole('button', { name: 'Really forget?', exact: true }).click();
+  await expect(page.locator('.typing-result')).toHaveCount(0);
+  await expect.poll(async () => (await settledPasswords(page))[0]).not.toBe(shown[0]);
 });

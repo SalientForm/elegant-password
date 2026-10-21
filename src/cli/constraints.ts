@@ -52,6 +52,7 @@ export const LOOSEST: Record<string, unknown> = {
   'min-length': 1,
   'max-length': 256,
   'min-uppercase': 0,
+  'min-lowercase': 0,
   'min-digits': 0,
   'min-symbols': 0,
   symbols: ALL_SYMBOLS,

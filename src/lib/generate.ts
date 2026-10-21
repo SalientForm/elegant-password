@@ -28,8 +28,12 @@ import { scoreCold } from './score';
 import { rawBits, strengthBits } from './strength';
 import { easedText, plainOf } from './ease';
 import { letterCount } from './text';
+import { checkRequirements, countUpper } from './checks';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
 import { allowedSymbolSet, isSymbol, MAX_TWISTS, RequirementsError, separatorProblem, validate } from './validation';
+
+// The checks every password must pass, and crack-time estimates, live in checks.ts; re-exported so callers keep one import.
+export { ATTACK_SCENARIOS, checkRequirements, countLower, countUpper, crackEstimates, formatDuration, type CheckContext, type CrackEstimate } from './checks';
 
 // The rule checks live in validation.ts; re-exported so callers keep one import for requirements.
 export {
@@ -37,6 +41,7 @@ export {
   isSymbol,
   MAX_DIGITS,
   MAX_INITIALS,
+  MAX_LOWERCASE,
   MAX_MADE_UP,
   MAX_SHORTHAND,
   MAX_SYMBOLS,
@@ -60,6 +65,13 @@ export interface Requirements {
   maxLength: number;
   /** At least this many uppercase letters, digits and symbols (0 = not required). */
   minUppercase: number;
+  /**
+   * At least this many lowercase letters (0 = not required). Words are
+   * lower case, so this only bites when capitals take most of the letters:
+   * more than one capital puts whole words in capitals, and a password left
+   * with too few lowercase letters is never shown.
+   */
+  minLowercase: number;
   minDigits: number;
   minSymbols: number;
   /** Symbols the site accepts. Separators and end marks are drawn from these. */
@@ -119,6 +131,7 @@ export const DEFAULT_REQUIREMENTS: Requirements = {
   minLength: 12,
   maxLength: 32,
   minUppercase: 1,
+  minLowercase: 0,
   minDigits: 1,
   minSymbols: 1,
   allowedSymbols: '!@#$%^&*-_.,?;',
@@ -523,7 +536,8 @@ function candidateFor(template: Template, req: Requirements, ctx: PlanContext): 
     const lo = req.minLength - overhead;
     const hi = req.maxLength - overhead;
     if (hi <= 0) continue;
-    if (minLettersOf(shape, req.comfort, req.minDigits, req.easeSwaps) < req.minUppercase) {
+    // One letter cannot be both a capital and a lowercase letter.
+    if (minLettersOf(shape, req.comfort, req.minDigits, req.easeSwaps) < req.minUppercase + req.minLowercase) {
       tooFewLetters = true;
       continue;
     }
@@ -636,6 +650,7 @@ export function plan(req: Requirements): Candidate {
 function withCounts(req: Requirements): string {
   const parts = [
     [req.minUppercase, 'uppercase letter'],
+    [req.minLowercase, 'lowercase letter'],
     [req.minDigits, 'digit'],
     [req.minSymbols, 'symbol'],
   ]
@@ -651,13 +666,15 @@ function noPlan(req: Requirements, ctx: PlanContext, noClosing: boolean, tooFewL
     ? {
         code: 'too-few-letters',
         message:
-          `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase} letters to capitalise. ` +
+          (req.minLowercase > 0
+            ? `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase + req.minLowercase} letters for ${req.minUppercase} capitals and ${req.minLowercase} lowercase letters. `
+            : `No sentence between ${req.minLength} and ${req.maxLength} characters has ${req.minUppercase} letters to capitalise. `) +
           'Raise the maximum length or use fewer initials, two-letter words and made-up nouns.',
       }
     : {
         code: 'no-fit',
         message:
-          `No sentence fits between ${req.minLength} and ${req.maxLength} characters${withCounts(req)}. Try widening the length range${req.minUppercase + req.minDigits + req.minSymbols > 0 ? ' or requiring fewer characters' : ''}, ` +
+          `No sentence fits between ${req.minLength} and ${req.maxLength} characters${withCounts(req)}. Try widening the length range${req.minUppercase + req.minLowercase + req.minDigits + req.minSymbols > 0 ? ' or requiring fewer characters' : ''}, ` +
           'or use your own sentence (Use my sentence), which can be shortened further.',
       };
 }
@@ -710,7 +727,6 @@ function better(a: Plan, b: Plan): boolean {
   return a.bits > b.bits;
 }
 
-export const countUpper = (text: string) => text.replace(/[^A-Z]/g, '').length;
 
 /** True when the first lowercase letter of a word capitalises within one hand's reach of a Shift key. */
 const nearCapital = (word: string) => !isFarShift((word.match(/[a-z]/)?.[0] ?? 'a').toUpperCase());
@@ -766,71 +782,6 @@ function render(words: string[], variant: Variant, plan: Plan, rng?: RandomSourc
   return trimSeparators(joinTokens(cased, variant.shape.glue, plan.separator) + endSymbol, plan.separator);
 }
 
-export interface CheckContext {
-  separator: string;
-  endSymbol: string;
-  /** Overrides for how the uppercase, digit and symbol rules were met. */
-  uppercaseHow?: string;
-  digitsHow?: string;
-  symbolsHow?: string;
-}
-
-export function checkRequirements(password: string, req: Requirements, ctx?: CheckContext): RequirementCheck[] {
-  const allowed = new Set(req.allowedSymbols);
-  const symbols = [...password].filter(isSymbol);
-  const len = [...password].length;
-  const checks: RequirementCheck[] = [
-    {
-      rule: `${req.minLength}-${req.maxLength} characters`,
-      met: len >= req.minLength && len <= req.maxLength,
-      how: `${len} characters`,
-    },
-    {
-      rule: 'Only allowed symbols',
-      met: symbols.every((c) => allowed.has(c)) && (req.allowSpaces || !password.includes(' ')),
-      how: symbols.length ? `uses ${[...new Set(symbols)].map((c) => `"${c}"`).join(' ')}` : 'no symbols used',
-    },
-  ];
-  const atLeast = (n: number, thing: string) => (n === 1 ? `${thing}` : `At least ${n} ${thing}s`);
-  if (req.minUppercase > 0) {
-    const n = countUpper(password);
-    checks.push({
-      rule: atLeast(req.minUppercase, req.minUppercase === 1 ? 'Uppercase letter' : 'uppercase letter'),
-      met: n >= req.minUppercase,
-      how:
-        ctx?.uppercaseHow ??
-        (req.minUppercase === 1
-          ? 'one word starts with a capital, one Shift press, like the start of a sentence'
-          : `${n} capitals from writing ${n > 8 ? 'whole words' : 'a whole word'} in capitals: hold Shift once, no back-and-forth`),
-    });
-  }
-  if (req.minDigits > 0) {
-    const n = password.replace(/[^0-9]/g, '').length;
-    checks.push({
-      rule: atLeast(req.minDigits, req.minDigits === 1 ? 'Digit' : 'digit'),
-      met: n >= req.minDigits,
-      how:
-        ctx?.digitsHow ??
-        (req.minDigits === 1 ? 'a number counts something in the sentence' : `a ${req.minDigits}-digit number counts something in the sentence`),
-    });
-  }
-  if (req.minSymbols > 0) {
-    const how = [
-      ctx && isSymbol(ctx.separator) ? `words are separated by "${ctx.separator}"` : '',
-      ctx?.symbolsHow ?? '',
-      ctx?.endSymbol ? `the sentence ends with "${ctx.endSymbol}"` : '',
-    ]
-      .filter(Boolean)
-      .join(' and ');
-    checks.push({
-      rule: atLeast(req.minSymbols, req.minSymbols === 1 ? 'Symbol' : 'symbol'),
-      met: symbols.length >= req.minSymbols,
-      how: how || `uses ${symbols.length} symbols`,
-    });
-  }
-  return checks;
-}
-
 export interface GenerateOptions {
   rng?: RandomSource;
   /** Mappings twists are drawn from. Defaults to all built-in mappings. */
@@ -876,7 +827,7 @@ function keptSentence(sentence: GeneratedSentence, req: Requirements): { candida
   const variant = t.candidate?.variants.find((v) => same(v.shape.slots, sentence.slots));
   if (!t.candidate || !variant) {
     if (t.noClosing) throw new RequirementsError(noClosingProblem(ctx.allowed, ctx.separator));
-    throw doesNotFit(t.tooFewLetters ? `it has too few letters for ${req.minUppercase} capitals` : `no sentence of its shape fits ${req.minLength}-${req.maxLength} characters`);
+    throw doesNotFit(t.tooFewLetters ? `it has too few letters for ${req.minUppercase} capitals${req.minLowercase ? ` and ${req.minLowercase} lowercase letters` : ''}` : `no sentence of its shape fits ${req.minLength}-${req.maxLength} characters`);
   }
   const { shape } = variant;
   const madeUp = sentence.words.flatMap((w, j) => (shape.slots[j] === 'noun' && isMadeUpNoun(w) ? [j] : []));
@@ -895,7 +846,24 @@ function keptSentence(sentence: GeneratedSentence, req: Requirements): { candida
   return { candidate: t.candidate, variant, typed };
 }
 
+/** No version of one sentence meets a rule (a lowercase minimum its capitals leave no room for): a newly drawn sentence is drawn again. */
+class UnmetRule extends RequirementsError {}
+
+/** Draws a new sentence at most this many times when every version of the one drawn misses a rule. */
+const REDRAWS = 8;
+
 export function generate(req: Requirements, options: MakeUpOptions = {}): GenerateResult {
+  if (options.sentence) return generateOnce(req, options);
+  for (let i = 1; ; i++) {
+    try {
+      return generateOnce(req, options);
+    } catch (e) {
+      if (!(e instanceof UnmetRule) || i >= REDRAWS) throw e;
+    }
+  }
+}
+
+function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult {
   const { rng = cryptoRandom, mappings = BUILT_IN_MAPPINGS, sentence: kept } = options;
   // One sentence per batch: every card is built from the same words and hint, so the cards differ only in
   // their swaps and closing marks. A kept sentence stays whatever the rules; a new one is drawn only without one.
@@ -1025,7 +993,7 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
     });
   }
   if (suggestions.length === 0 && unmet) {
-    throw new RequirementsError(
+    throw new UnmetRule(
       `The sentence does not fit these rules: no version of it meets "${unmet}". Draw a new sentence with the button beside it, or change the rules back.`,
     );
   }
@@ -1051,47 +1019,4 @@ export function fewerSwapsWarning(count: number, minimum: number): string {
     `${count === 1 ? 'One password has' : `${count} passwords have`} fewer than ${minimum} swaps: not enough swappable ` +
     'letters left. Raise the maximum length, use fewer initials or two-letter words, or enable more mappings.'
   );
-}
-
-export interface CrackEstimate {
-  scenario: string;
-  guessesPerSecond: number;
-  seconds: number;
-}
-
-export const ATTACK_SCENARIOS: readonly { scenario: string; guessesPerSecond: number }[] = [
-  { scenario: 'Online attack, rate limited', guessesPerSecond: 10 },
-  { scenario: 'Stolen database, slow hash (bcrypt)', guessesPerSecond: 1e5 },
-  { scenario: 'Stolen database, fast hash, GPU farm', guessesPerSecond: 1e11 },
-];
-
-/** Average time to guess, i.e. half the space, at a few attacker speeds. */
-export function crackEstimates(bits: number): CrackEstimate[] {
-  const guesses = 2 ** (bits - 1);
-  return ATTACK_SCENARIOS.map((s) => ({ ...s, seconds: guesses / s.guessesPerSecond }));
-}
-
-export function formatDuration(seconds: number): string {
-  const units: [string, number][] = [
-    ['year', 365.25 * 24 * 3600],
-    ['day', 24 * 3600],
-    ['hour', 3600],
-    ['minute', 60],
-    ['second', 1],
-  ];
-  if (seconds < 1) return 'instantly';
-  const [unit, size] = units.find(([, s]) => seconds >= s)!;
-  const n = seconds / size;
-  if (unit === 'year' && n >= 1e6) {
-    const scales: [string, number][] = [
-      ['trillion', 1e12],
-      ['billion', 1e9],
-      ['million', 1e6],
-    ];
-    const [word, scale] = scales.find(([, s]) => n >= s)!;
-    const v = n / scale;
-    return v >= 1000 ? `${v.toExponential(1)} ${word} years` : `${Math.round(v)} ${word} years`;
-  }
-  const rounded = n < 10 ? Math.round(n * 10) / 10 : Math.round(n);
-  return `${rounded.toLocaleString('en')} ${unit}${rounded === 1 ? '' : 's'}`;
 }

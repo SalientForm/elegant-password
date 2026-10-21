@@ -103,6 +103,25 @@ describe('parseConfig: every way a file can be wrong, each with its line', () =>
     expect(messages('version: 1\noptions:\n  separator: #\n')[0]).toMatch(/^tep\.yml:3: options\.separator must be auto, space, none, or one symbol such as ";"; found null\. A "#" after a space starts a comment in YAML/);
   });
 
+  it('an alias to nothing: a config error naming its line, not a crash in the YAML reader', () => {
+    const [m] = messages('version: 1\nrules: *missing\n');
+    expect(m).toMatch(/^tep\.yml:2: "\*missing" is a YAML alias, and aliases are not supported in a tep config\. Write the value itself\./);
+  });
+
+  it('an alias that loops back on its own anchor: both named, nothing thrown while describing them', () => {
+    expect(messages('version: 1\noptions: &loop\n  separator: *loop\n')).toEqual([
+      expect.stringMatching(/^tep\.yml:2: "&loop" is a YAML anchor, and anchors are not supported in a tep config\. Take it out\.$/),
+      expect.stringMatching(/^tep\.yml:3: "\*loop" is a YAML alias, and aliases are not supported/),
+    ]);
+  });
+
+  it('an anchor and an alias that would only repeat a value: refused too, with how to quote a symbol list', () => {
+    const lines = messages('version: 1\nrules:\n  min-length: &n 12\n  max-length: *n\n');
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatch(/^tep\.yml:3: "&n" is a YAML anchor/);
+    expect(lines[1]).toMatch(/^tep\.yml:4: "\*n" is a YAML alias.*put a value that has them in double quotes/);
+  });
+
   it('an empty file', () => {
     expect(problems('').title).toBe('tep.yml is empty.');
     expect(problems('# only a comment\n').title).toBe('tep.yml is empty.');
@@ -123,7 +142,7 @@ describe('parseConfig: every way a file can be wrong, each with its line', () =>
       'tep.yml:2: unknown key "rule" in the top level. Did you mean rules? The keys there are: version, mode, site, rules, options, sentence, swaps, output.',
     ]);
     expect(messages('version: 1\nrules:\n  max-lenght: 30\n')).toEqual([
-      'tep.yml:3: unknown key "max-lenght" in rules. Did you mean max-length? The keys there are: min-length, max-length, min-uppercase, min-digits, min-symbols, symbols, spaces.',
+      'tep.yml:3: unknown key "max-lenght" in rules. Did you mean max-length? The keys there are: min-length, max-length, min-uppercase, min-lowercase, min-digits, min-symbols, symbols, spaces.',
     ]);
     expect(messages('version: 1\noptions:\n  swap: 2\n')[0]).toMatch(/^tep\.yml:3: unknown key "swap" in options\. Did you mean swaps\?/);
     expect(messages('version: 1\nswaps:\n  of: []\n')[0]).toMatch(/^tep\.yml:3: unknown key "of" in swaps\. Did you mean off\?/);

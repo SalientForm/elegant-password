@@ -214,6 +214,17 @@ describe('tep g: the command line (exit 2)', () => {
     expect((await run(['g', '-n', '1', '--no-number'])).code).toBe(EXIT.ok); // a setting: fine
   });
   it('rules text with no rules', () => usage(['--rules', 'hello'], '--rules: no password rules found in "hello".'));
+  it('refuses rules text it cannot keep, never making a password that breaks it', async () => {
+    // The audit's case: "exactly 300" once came back as 256 characters with exit 0.
+    const { code, io } = await run(['g', '--no-config', '--rules', 'exactly 300 characters', '--sentence', '-', '--format', 'json'], { stdin: 'ducks\n' });
+    expect(code).toBe(EXIT.usage);
+    expect(io.out()).toBe('');
+    expect(io.err()).toContain('tep g: error: --rules: a rule in "exactly 300 characters" cannot be kept.');
+    expect(io.err()).toContain('Not kept: exactly 300 characters: this tool makes at most 256.');
+    const partly = await run(['g', '--rules', '8-20 characters, no digits']);
+    expect(partly.code).toBe(EXIT.usage);
+    expect(partly.io.err()).toContain('Not kept: no digits: this tool cannot leave digits out.');
+  });
 });
 
 describe('tep g: config files', () => {

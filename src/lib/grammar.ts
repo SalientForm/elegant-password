@@ -116,7 +116,10 @@ export const MADE_UP_NOUNS: readonly string[] = (() => {
       if (w.length >= 3 && w.length <= 8) lower.add(w);
     }
   }
-  const words = [...lower].sort();
+  // A roll that spells a real word on the lists ("pods") is that word, never a made-up noun: read back, it
+  // would be taken for one, and a kept sentence holding the word refused for a made-up noun it never had.
+  const real = new Set([ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS].flat());
+  const words = [...lower].filter((w) => !real.has(w)).sort();
   return [...words, ...words.map((w) => w.toUpperCase())];
 })();
 

@@ -1,19 +1,22 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useZxcvbn } from './useZxcvbn';
 import { typingModeLabel, type Difficulty } from '../lib/difficulty';
 import { describeRemoved } from '../lib/ease';
 import { changedWordsOf, easedOf, twistKind, twistOptionsLine, typingLines } from '../lib/explain';
 import { roleLabel, type Suggestion } from '../lib/generate';
 import { isMadeUpNoun } from '../lib/grammar';
+import { ZXCVBN_LEVELS, zxcvbnLine, type ZxcvbnLabel } from '../lib/zxcvbnReading';
 import { READING_ORDER, scoreReadings } from '../lib/readings';
 import { MEMORABILITY, scoreCold } from '../lib/score';
 import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
-import { CheckIcon, ChevronUpIcon, InfoIcon, PlusIcon } from './icons';
+import { CheckIcon, ChevronUpIcon, InfoIcon, KeyboardIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
 import { InstantTip } from './InstantTip';
 import { PasswordText } from './PasswordText';
 import { observeResize } from './resize';
 import { TOUCH, useMediaQuery } from './useMediaQuery';
+import type { ZxcvbnState } from './useZxcvbn';
 
 interface BadgeProps {
   /** Strength: for an attacker who knows English and the usual habits, not this tool. */
@@ -23,21 +26,53 @@ interface BadgeProps {
   difficulty: Pick<Difficulty, 'score' | 'level' | 'label' | 'mode'>;
   /** Undefined when there is no hint to compare with (a password typed in by hand). */
   memorability?: number;
+  /** What the zxcvbn library says; undefined leaves its badge out. */
+  zxcvbn?: ZxcvbnState;
 }
 
-/** The four score badges, "Strength 63", "Raw 184", "Difficulty 44" and "Memorability 71", with the full reading in each tooltip (src/lib/readings.ts). */
-export function ScoreBadges({ strength, raw, difficulty, memorability }: BadgeProps) {
+/** zxcvbn's four words in the app's colours: strong and good green, weak yellow, very weak red. */
+const ZXCVBN_BAND: Record<ZxcvbnLabel, string> = { strong: 'high', good: 'high', weak: 'mid', 'very weak': 'low' };
+
+/** The fourth badge: zxcvbn's word for the password, "zxcvbn strong", or a placeholder while it is worked out. */
+export function ZxcvbnBadge({ state }: { state: ZxcvbnState }) {
+  if (state === 'pending' || state === 'failed') {
+    const text = state === 'failed' ? 'zxcvbn: not available (the library did not load)' : 'zxcvbn: checking…';
+    return (
+      <span className="badge zxcvbn pending" role="img" aria-label={text}>
+        {state === 'failed' ? 'zxcvbn n/a' : 'zxcvbn…'}
+      </span>
+    );
+  }
+  const text = `${zxcvbnLine(state)}: a second opinion from the zxcvbn library (4.4.2), its crack time for an offline attack on a slow hash, 10,000 guesses a second (${state.label}: ${ZXCVBN_LEVELS[state.label]}). Worked out here in this browser; not one of this app's scores`;
+  return (
+    <InstantTip content={text} className="badge-tip">
+      <span className={`badge zxcvbn memo-${ZXCVBN_BAND[state.label]}`} role="img" aria-label={text}>
+        zxcvbn {state.label}
+      </span>
+    </InstantTip>
+  );
+}
+
+/**
+ * The score badges, "Strength 63", "Raw 184", "Difficulty 44", zxcvbn's
+ * word ("zxcvbn strong") fourth when given, and "Memorability 71", with
+ * the full reading in each tooltip (src/lib/readings.ts).
+ */
+export function ScoreBadges({ strength, raw, difficulty, memorability, zxcvbn }: BadgeProps) {
   const r = scoreReadings({ strength, raw, difficulty, memorability });
   const colour = { strength: `memo-${r.strength.band}`, raw: 'memo-none', difficulty: `level-${r.difficulty.level}`, memorability: `memo-${r.memorability.band ?? 'none'}` };
   // Each badge opens the app's instant tip with its full reading; no browser tooltip. The badge is an image to a screen reader: its name is the whole reading.
   return (
     <>
       {READING_ORDER.map((key) => (
-        <InstantTip key={key} content={r[key].text} className="badge-tip">
-          <span className={`badge ${key} ${colour[key]}`} role="img" aria-label={r[key].text}>
-            {r[key].label} {r[key].value}
-          </span>
-        </InstantTip>
+        <Fragment key={key}>
+          {key === 'memorability' && zxcvbn && <ZxcvbnBadge state={zxcvbn} />}
+          <InstantTip content={r[key].text} className="badge-tip">
+            <span className={`badge ${key} ${colour[key]}`} role="img" aria-label={r[key].text}>
+              {r[key].label} {r[key].value}
+            </span>
+          </InstantTip>
+        </Fragment>
       ))}
     </>
   );
@@ -45,11 +80,11 @@ export function ScoreBadges({ strength, raw, difficulty, memorability }: BadgePr
 
 /** This session's figure for an attacker who knows the tool and the swaps in force; shown dim beside the badges and never saved. */
 export function BitsFigure({ bits }: { bits: number }) {
-  const text = `${bits.toFixed(1)} bits for an attacker who knows this tool and this session's swaps: the words drawn and where the swaps landed. This session only; not saved with the password`;
+  const text = `${bits.toFixed(1)} bits for an attacker who knows this tool and this session's swaps: the words drawn and where the swaps landed. This session only; not saved with the password. Unlike the plan's figure, it counts this one password, not every length the rules allow`;
   return (
     <InstantTip content={text} className="badge-tip">
       <span className="bits" role="img" aria-label={text}>
-        {bits.toFixed(1)} bits
+        {bits.toFixed(1)} bits if the tool is known
       </span>
     </InstantTip>
   );
@@ -68,7 +103,9 @@ interface Props {
   index: number;
   /** Whether this password is already in the user's list. */
   selected?: boolean;
-  onAdd?: (s: Suggestion) => void;
+  onAdd?: (s: Suggestion) => unknown;
+  /** Make this password the one under test in the typing test, without adding it. */
+  onPractise?: (s: Suggestion) => void;
 }
 
 /** The width of an element's content as laid out, whatever its own box is stretched or clipped to. */
@@ -94,7 +131,7 @@ export function needsStack(head: HTMLElement): boolean | undefined {
   return contentWidth(password) + contentWidth(buttons) + gap > row.clientWidth + 1;
 }
 
-export function SuggestionCard({ suggestion, context, index, selected = false, onAdd }: Props) {
+export function SuggestionCard({ suggestion, context, index, selected = false, onAdd, onPractise }: Props) {
   const mine = context.source === 'sentence';
   const touch = useMediaQuery(TOUCH); // a Copy button only where selecting text is hard
   const [open, setOpen] = useState(false); // every "Why?" starts closed
@@ -114,6 +151,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
     return observeResize(el, measure); // one observer serves every card; a hidden column's cards measure again once shown
   }, [password]);
   const whyId = `why-${index}`;
+  const zxcvbn = useZxcvbn(password);
   // The memorability breakdown comes from the same cold score as the badge.
   const cold = useMemo(() => scoreCold(password, hint), [password, hint]);
   const memo = cold.memorability;
@@ -132,6 +170,11 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
               {open ? <ChevronUpIcon /> : <InfoIcon />}
             </button>
             {touch && <CopyButton text={password} fallback={code} icon />}
+            {onPractise && (
+              <button type="button" className="icon-button ghost" onClick={() => onPractise(suggestion)} aria-label="Practise" title="Practise typing it in the typing test">
+                <KeyboardIcon />
+              </button>
+            )}
             {onAdd && (
               <button
                 type="button"
@@ -149,7 +192,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
         </div>
         <div className="card-row">
           <div className="actions">
-            <ScoreBadges strength={suggestion.strength} raw={suggestion.raw} difficulty={difficulty} memorability={suggestion.memorability} />
+            <ScoreBadges strength={suggestion.strength} raw={suggestion.raw} difficulty={difficulty} zxcvbn={zxcvbn} memorability={suggestion.memorability} />
             <BitsFigure bits={suggestion.bits} />
           </div>
         </div>

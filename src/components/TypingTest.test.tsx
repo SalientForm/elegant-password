@@ -108,9 +108,55 @@ describe('TypingTest', () => {
     typeInto(input, 'jr;B;5ls;Fpc', clock);
     enter(input, clock);
     expect(screen.getByRole('status').textContent).toMatch(/Typed correctly/);
-    // An empty paste changes nothing.
+    // An empty paste changes nothing; spaces alone are refused, and say so.
+    fireEvent.paste(input, { clipboardData: { getData: () => '' } });
+    expect(screen.getByRole('status').textContent).toContain('Testing: jr;B;5ls;Fpc');
     fireEvent.paste(input, { clipboardData: { getData: () => '  ' } });
     expect(screen.getByRole('status').textContent).toContain('Testing: jr;B;5ls;Fpc');
+    expect(screen.getByRole('alert').textContent).toContain('only spaces');
+  });
+
+  it('keeps a pasted password exactly, spaces at either end included, and refuses more than one line', () => {
+    render(<TypingTest />);
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
+    fireEvent.paste(input, { clipboardData: { getData: () => '  Audit Secret  ' } });
+    expect(screen.getByRole('status').querySelector('.password')?.textContent).toBe('  Audit Secret  ');
+    fireEvent.paste(input, { clipboardData: { getData: () => 'first line\nsecond line' } });
+    expect(screen.getByRole('alert').textContent).toContain('more than one line');
+    expect(screen.getByRole('status').querySelector('.password')?.textContent).toBe('  Audit Secret  '); // the old one stands
+    fireEvent.paste(input, { clipboardData: { getData: () => 'one line\r\n' } }); // a line copied whole brings its line break
+    expect(screen.getByRole('status').querySelector('.password')?.textContent).toBe('one line');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('leaves Enter alone while an IME is composing', () => {
+    render(<TypingTest />);
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'かな' } });
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    expect(input.value).toBe('かな'); // no run: the Enter accepted a candidate
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('measures a soft keyboard that names no keys from how the text changes', () => {
+    const clock = { t: 0 };
+    render(<TypingTest now={() => clock.t} />);
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
+    for (const value of ['c', 'ca', 'cat', 'ca', 'cat']) {
+      clock.t += 200;
+      fireEvent.keyDown(input, { key: 'Unidentified' });
+      fireEvent.change(input, { target: { value } });
+    }
+    clock.t += 200;
+    enter(input, clock);
+    expect(screen.getByRole('status').textContent).toMatch(/1 correction \(Backspace or Delete\).*over 5 keystrokes/);
+  });
+
+  it('says a common password is not allowed', () => {
+    render(<TypingTest />);
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
+    fireEvent.paste(input, { clipboardData: { getData: () => 'dragon' } });
+    expect(screen.getByRole('alert').textContent).toMatch(/Not allowed: number \d+ of the 10,001 most common passwords/);
   });
 
   it('can hide the text as it is typed, and gives password managers nothing to latch on to', () => {

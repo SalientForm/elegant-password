@@ -9,7 +9,7 @@ import type { Comfort } from './grammar';
 import { automaticSeparator, SEPARATOR_PREFERENCE, type Requirements } from './generate';
 import { isFarShift, isPinkyStretch } from './keyboard';
 import type { SortOrder } from './sort';
-import { allowedSymbolSet, MAX_DIGITS, MAX_SYMBOLS, MAX_UPPERCASE, separatorProblem } from './validation';
+import { allowedSymbolSet, MAX_DIGITS, MAX_LOWERCASE, MAX_SYMBOLS, MAX_UPPERCASE, separatorProblem } from './validation';
 
 export interface Choice<T> {
   value: T;
@@ -80,8 +80,9 @@ export function separatorNote(req: Requirements): SeparatorNote {
 }
 
 /** The "must contain" counts, in form order. */
-export const MUST_CONTAIN: readonly { key: 'minUppercase' | 'minDigits' | 'minSymbols'; label: string; max: number }[] = [
+export const MUST_CONTAIN: readonly { key: 'minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols'; label: string; max: number }[] = [
   { key: 'minUppercase', label: 'Uppercase letters', max: MAX_UPPERCASE },
+  { key: 'minLowercase', label: 'Lowercase letters', max: MAX_LOWERCASE },
   { key: 'minDigits', label: 'Digits', max: MAX_DIGITS },
   { key: 'minSymbols', label: 'Symbols', max: MAX_SYMBOLS },
 ];

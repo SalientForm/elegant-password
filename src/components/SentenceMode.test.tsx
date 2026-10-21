@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { DEFAULT_SENTENCE_OPTIONS, fromSentence, type SentenceOptions } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { seeded } from '../lib/testRandom';
-import { SentenceInput, SentenceStrength } from './SentenceMode';
+import { GeneratedSentenceField, SentenceInput, SentenceStrength } from './SentenceMode';
+import { MAX_SENTENCE_LENGTH } from '../lib/text';
 
 afterEach(cleanup);
 
@@ -49,8 +50,21 @@ describe('SentenceInput', () => {
     expect(field.tagName).toBe('INPUT');
     fireEvent.keyDown(field, { key: 'a' });
     expect(onSubmit).not.toHaveBeenCalled();
+    fireEvent.keyDown(field, { key: 'Enter', isComposing: true }); // accepting an IME candidate
+    expect(onSubmit).not.toHaveBeenCalled();
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it('leaves Enter in the made-up sentence to an IME while it composes, and caps both fields', () => {
+    const onSubmit = vi.fn();
+    render(<GeneratedSentenceField value="sleepy otters" onChange={() => {}} onSubmit={onSubmit} />);
+    const field = screen.getByTestId('generated-sentence') as HTMLTextAreaElement;
+    fireEvent.keyDown(field, { key: 'Enter', isComposing: true });
+    expect(onSubmit).not.toHaveBeenCalled();
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(field.maxLength).toBe(MAX_SENTENCE_LENGTH);
   });
 
   it('controls padding and its length tag', () => {

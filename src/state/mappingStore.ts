@@ -21,4 +21,5 @@ export function parseMappingSettings(raw: unknown): MappingSettings {
 
 export const loadMappingSettings = (store: KeyValueStore | undefined): MappingSettings => parseMappingSettings(readJson(store, STORAGE_KEY));
 
-export const saveMappingSettings = (settings: MappingSettings, store: KeyValueStore | undefined): void => void writeJson(store, STORAGE_KEY, settings);
+/** Write the settings; false when storage is blocked or full. */
+export const saveMappingSettings = (settings: MappingSettings, store: KeyValueStore | undefined): boolean => writeJson(store, STORAGE_KEY, settings);

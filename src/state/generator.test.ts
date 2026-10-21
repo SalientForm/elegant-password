@@ -50,18 +50,91 @@ describe('generators', () => {
   });
 
   it('matches worker answers to requests by id, and a newer request supersedes an older one at once', async () => {
-    const worker = fakeWorker('lifo');
+    const worker = fakeWorker();
     const gen = workerGenerator(() => worker, { timeoutMs: 30 });
     const a = gen.run(request(1, { req: { ...DEFAULT_REQUIREMENTS, count: 1 } }));
     const b = gen.run(request(2, { req: { ...DEFAULT_REQUIREMENTS, count: 3 } }));
     expect(await a).toBe(SUPERSEDED); // settled before the worker answers, and its timer is off
-    worker.flush(); // the old answer arrives too; nobody is waiting for it
+    worker.flush(); // the old answer arrives; nobody is waiting for it, and the newer request is sent
+    worker.flush();
     const ob = await b;
     expect(ob.ok && ob.suggestions.length).toBe(3);
     await new Promise((r) => setTimeout(r, 60));
     expect(worker.terminated).toBe(false); // no timeout fired for the superseded request
     gen.dispose();
     expect(worker.terminated).toBe(true);
+  });
+
+  it('sends one request at a time: newer ones wait in one slot, each taking it from the last', async () => {
+    const worker = fakeWorker();
+    const gen = workerGenerator(() => worker, { restartAfterMs: 10_000 });
+    const a = gen.run(request(1));
+    const b = gen.run(request(2));
+    const c = gen.run(request(3, { req: { ...DEFAULT_REQUIREMENTS, count: 2 } }));
+    expect(worker.queue.map((r) => r.id)).toEqual([1]); // 2 and 3 were never sent
+    expect(await a).toBe(SUPERSEDED);
+    expect(await b).toBe(SUPERSEDED); // replaced in the slot by 3 without ever reaching the worker
+    worker.flush(); // the worker finishes 1, and only then gets 3
+    expect(worker.queue.map((r) => r.id)).toEqual([3]);
+    worker.flush();
+    const oc = await c;
+    expect(oc.ok && oc.suggestions.length).toBe(2);
+    gen.dispose();
+  });
+
+  it('answers the newest request straight away when it is the one the worker is on', async () => {
+    const worker = fakeWorker();
+    const gen = workerGenerator(() => worker);
+    const p = gen.run(request(5));
+    worker.flush();
+    expect((await p).ok).toBe(true);
+    const q = gen.run(request(6)); // the worker is free again: sent at once
+    expect(worker.queue.map((r) => r.id)).toEqual([6]);
+    worker.flush();
+    expect((await q).ok).toBe(true);
+    gen.dispose();
+  });
+
+  it('replaces a worker still busy with superseded work, and ignores the old one if it answers after all', async () => {
+    const workers: Fake[] = [];
+    const gen = workerGenerator(
+      () => {
+        const w = fakeWorker();
+        workers.push(w);
+        return w;
+      },
+      { restartAfterMs: 20 },
+    );
+    void gen.run(request(1));
+    const b = gen.run(request(2, { req: { ...DEFAULT_REQUIREMENTS, count: 2 } }));
+    expect(workers).toHaveLength(1);
+    await new Promise((r) => setTimeout(r, 40));
+    expect(workers[0]!.terminated).toBe(true);
+    expect(workers).toHaveLength(2);
+    expect(workers[1]!.queue.map((r) => r.id)).toEqual([2]);
+    workers[0]!.flush(); // a late answer from the thrown-away worker changes nothing
+    workers[1]!.flush();
+    const ob = await b;
+    expect(ob.ok && ob.suggestions.length).toBe(2);
+    gen.dispose();
+  });
+
+  it('replaces the busy worker at once when it has already been busy past the limit', async () => {
+    const workers: Fake[] = [];
+    const gen = workerGenerator(
+      () => {
+        const w = fakeWorker();
+        workers.push(w);
+        return w;
+      },
+      { restartAfterMs: 15 },
+    );
+    void gen.run(request(1));
+    await new Promise((r) => setTimeout(r, 25));
+    void gen.run(request(2));
+    expect(workers[0]!.terminated).toBe(true);
+    expect(workers[1]!.queue.map((r) => r.id)).toEqual([2]);
+    gen.dispose();
   });
 
   it('ignores answers it did not ask for', async () => {

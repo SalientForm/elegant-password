@@ -5,11 +5,11 @@
 
 import { closeSync, fsyncSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { isMap, isPair, isScalar, isSeq, LineCounter, parseDocument, type Document, type Node } from 'yaml';
+import { isAlias, isMap, isPair, isScalar, isSeq, LineCounter, parseDocument, visit, type Document, type Node } from 'yaml';
 import { z } from 'zod';
 import { mappingSettingsProblems, type MappingSettings } from '../lib/mappingSettings';
 import { CliError, configError } from './errors';
-import { fieldsIn, keyPath, parseValue, type FieldGroup } from './fields';
+import { fieldsIn, keyPath, parseValue, shownValue, type FieldGroup } from './fields';
 import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
@@ -64,6 +64,20 @@ export function parseConfig(text: string, file: string): LoadedConfig {
           : `${e.message.split('\n')[0]}${YAML_SPECIAL.test(lines[line - 1]?.split(':').slice(1).join(':') ?? '') ? `. ${quoteHint(keyOnLine(lines[line - 1]))}` : ''}`;
     add(line, what);
   }
+  // Anchors (&name) and aliases (*name) only repeat a value elsewhere in the file, which a tep config never needs; an
+  // alias to nothing, or one that loops back on itself, would otherwise fail deep inside the YAML reader.
+  if (doc.contents) visit(doc, (_key, node) => {
+    // A map's range starts at its first key, a line below its anchor: the anchor is found on the line that has it.
+    const anchor = isScalar(node) || isMap(node) || isSeq(node) ? node.anchor : undefined;
+    const anchorLine = anchor ? lines.findIndex((l) => l.includes(`&${anchor}`)) + 1 : 0;
+    const line = anchorLine || lineAt((node as Node).range?.[0]);
+    // A value starting with "*" or "&" (a symbol list, a separator) is read as one, so the quoting hint comes too.
+    const hint = ` ${quoteHint(keyOnLine(lines[line - 1]))}`;
+    if (isAlias(node)) add(line, `"*${node.source}" is a YAML alias, and aliases are not supported in a tep config. Write the value itself.${hint}`);
+    else if (anchor) {
+      add(line, `"&${anchor}" is a YAML anchor, and anchors are not supported in a tep config. Take it out.${isScalar(node) ? hint : ''}`);
+    }
+  });
   if (issues.length) throw invalid(file, issues, lines);
 
   const model = emptyModel();
@@ -78,7 +92,13 @@ export function parseConfig(text: string, file: string): LoadedConfig {
 
   const keyLine = (path: (string | number)[]) => lineAt(nodeAt(doc, path, true)?.range?.[0]);
   const valueLine = (path: (string | number)[]) => lineAt(nodeAt(doc, path, false)?.range?.[0] ?? nodeAt(doc, path, true)?.range?.[0]);
-  const data = doc.toJS() as Record<string, unknown>;
+  let data: Record<string, unknown>;
+  try {
+    data = doc.toJS({ maxAliasCount: 0 }) as Record<string, unknown>;
+  } catch (e) {
+    // Aliases are refused above; anything else the reader cannot turn into values is still the file's problem, not tep's.
+    throw invalid(file, [{ line: 1, message: `the file cannot be read as values: ${e instanceof Error ? e.message.split('\n')[0] : String(e)}` }], lines);
+  }
 
   // The shape, with zod: which keys may be where, and which must be maps.
   const group = (g: FieldGroup) => z.strictObject(Object.fromEntries(fieldsIn(g).map((f) => [f.name, z.unknown().optional()]))).nullable();
@@ -235,7 +255,7 @@ function nodeAt(doc: Document, path: (string | number)[], key: boolean): Node | 
 function kindOf(node: unknown): string {
   if (isSeq(node)) return 'a list';
   if (isMap(node)) return 'a map';
-  if (isScalar(node)) return node.value === null ? 'nothing' : typeof node.value === 'string' ? `the text "${node.value}"` : `${JSON.stringify(node.value)}`;
+  if (isScalar(node)) return node.value === null ? 'nothing' : typeof node.value === 'string' ? `the text ${shownValue(node.value)}` : shownValue(node.value);
   return 'something else';
 }
 

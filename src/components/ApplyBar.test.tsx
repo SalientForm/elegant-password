@@ -24,12 +24,12 @@ function Probe() {
   );
 }
 
-function mount(onShowProblems?: () => void) {
+function mount(onShowProblems?: () => void, active = true) {
   const local = memoryStore();
   render(
     <PasswordsProvider generator={syncGenerator()} local={local} session={memoryStore()} debounceMs={0}>
       <Probe />
-      <ApplyBar onShowProblems={onShowProblems} />
+      <ApplyBar onShowProblems={onShowProblems} active={active} />
     </PasswordsProvider>,
   );
   return local;
@@ -37,6 +37,16 @@ function mount(onShowProblems?: () => void) {
 const bar = () => screen.queryByRole('region', { name: 'Unapplied changes' });
 
 describe('ApplyBar', () => {
+  it('takes no keys while another page is showing: neither Enter nor Escape touches the hidden draft', () => {
+    mount(undefined, false);
+    fireEvent.click(screen.getByText('edit'));
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: 'Enter' });
+    expect(screen.getByTestId('applied').textContent).not.toBe('3');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(bar()).toBeTruthy(); // the draft is still there
+  });
+
   it('appears only with a draft, submits on click or Ctrl+Enter, and discards', async () => {
     const local = mount();
     expect(bar()).toBeNull();

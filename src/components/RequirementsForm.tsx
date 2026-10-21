@@ -19,6 +19,7 @@ const ANCHORS: Partial<Record<keyof Requirements, Anchor>> = {
   minLength: 'length',
   maxLength: 'length',
   minUppercase: 'must',
+  minLowercase: 'must',
   minDigits: 'must',
   minSymbols: 'must',
   allowedSymbols: 'allows',
