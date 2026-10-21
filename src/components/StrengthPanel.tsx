@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { crackEstimates, formatDuration, type Plan } from '../lib/generate';
 
 /**
@@ -7,7 +8,7 @@ import { crackEstimates, formatDuration, type Plan } from '../lib/generate';
  * (Strength, Raw) assume an attacker who does not know the tool, and travel
  * with the password.
  */
-export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) {
+export const StrengthPanel = memo(function StrengthPanel({ plan, target }: { plan: Plan; target: number }) {
   const counted = plan.breakdown.filter((b) => b.poolSize > 1);
 
   return (
@@ -77,4 +78,4 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
       <p className="hint">Average time to guess, for an attacker who knows the tool, at 10, 100,000 and 100 billion guesses per second.</p>
     </section>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useZxcvbn } from './useZxcvbn';
 import { typingModeLabel, type Difficulty } from '../lib/difficulty';
 import { describeRemoved } from '../lib/ease';
@@ -131,7 +131,8 @@ export function needsStack(head: HTMLElement): boolean | undefined {
   return contentWidth(password) + contentWidth(buttons) + gap > row.clientWidth + 1;
 }
 
-export function SuggestionCard({ suggestion, context, index, selected = false, onAdd, onPractise }: Props) {
+// The card renders only when its own props change; the page keeps those props stable, so a keystroke or a busy flip elsewhere passes it by.
+export const SuggestionCard = memo(function SuggestionCard({ suggestion, context, index, selected = false, onAdd, onPractise }: Props) {
   const mine = context.source === 'sentence';
   const touch = useMediaQuery(TOUCH); // a Copy button only where selecting text is hard
   const [open, setOpen] = useState(false); // every "Why?" starts closed
@@ -350,4 +351,4 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
       )}
     </article>
   );
-}
+});

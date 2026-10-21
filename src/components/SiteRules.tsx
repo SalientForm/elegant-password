@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import type { Requirements } from '../lib/generate';
 import { applyParsedRules, parseRuleText } from '../lib/ruleText';
 import { applyPreset, matchingPreset, SITE_PRESETS } from '../lib/sitePresets';
@@ -33,7 +33,7 @@ interface PresetNote {
  * the tool cannot keep (a length past 128, "no digits") is never applied
  * cut down: it is listed under "Not kept", with why.
  */
-export function SiteRules({ value, onChange }: Props) {
+export const SiteRules = memo(function SiteRules({ value, onChange }: Props) {
   const active = matchingPreset(value);
   const [text, setText] = useState('');
   const [filled, setFilled] = useState<Filled | null>(null);
@@ -129,4 +129,4 @@ export function SiteRules({ value, onChange }: Props) {
       </div>
     </section>
   );
-}
+});

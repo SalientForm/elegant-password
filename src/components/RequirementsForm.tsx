@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { DEFAULT_TYPING_MODE, type TypingMode } from '../lib/difficulty';
 import { COMFORT_CHOICES, isSymbolSeparator, MUST_CONTAIN, SEPARATOR_KINDS, separatorNote } from '../lib/choices';
 import { MAX_INITIALS, MAX_MADE_UP, MAX_SHORTHAND, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
@@ -47,7 +48,7 @@ function Problems({ list, anchor }: { list: RuleProblem[]; anchor: Anchor }) {
   );
 }
 
-export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_MODE }: Props) {
+export const RequirementsForm = memo(function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_MODE }: Props) {
   const set = <K extends keyof Requirements>(key: K, v: Requirements[K]) => onChange({ ...value, [key]: v });
   /** Why an option has no meaning in the typing mode, when it has none; its control is disabled and the hint says why. */
   const unused = (key: ProfileKey) => unusedIn(typingMode).find((u) => u.key === key)?.reason;
@@ -330,4 +331,4 @@ export function RequirementsForm({ value, onChange, typingMode = DEFAULT_TYPING_
       </fieldset>
     </form>
   );
-}
+});
