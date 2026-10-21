@@ -10,6 +10,9 @@
 import type { Requirements } from './generate';
 import { lookupKey } from './keyboard';
 
+/** The shortest a length rule may be, and the fewest suggestions a batch may ask for. */
+export const MIN_LENGTH = 1;
+export const MIN_COUNT = 1;
 export const MAX_LENGTH = 128;
 export const MAX_TARGET_BITS = 256;
 export const MAX_COUNT = 20;
@@ -114,10 +117,10 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
   const add = (code: RuleProblemCode, message: string, ...fields: (keyof Requirements)[]) => out.push({ code, fields, message });
 
   // Length.
-  const minOk = whole(req.minLength, 1, MAX_LENGTH);
-  const maxOk = whole(req.maxLength, 1, MAX_LENGTH);
-  if (!minOk) add('range', `The minimum length must be a whole number from 1 to ${MAX_LENGTH}.`, 'minLength');
-  if (!maxOk) add('range', `The maximum length must be a whole number from 1 to ${MAX_LENGTH}.`, 'maxLength');
+  const minOk = whole(req.minLength, MIN_LENGTH, MAX_LENGTH);
+  const maxOk = whole(req.maxLength, MIN_LENGTH, MAX_LENGTH);
+  if (!minOk) add('range', `The minimum length must be a whole number from ${MIN_LENGTH} to ${MAX_LENGTH}.`, 'minLength');
+  if (!maxOk) add('range', `The maximum length must be a whole number from ${MIN_LENGTH} to ${MAX_LENGTH}.`, 'maxLength');
   if (minOk && maxOk && req.minLength > req.maxLength) {
     add('min-above-max', `The minimum length (${req.minLength}) is above the maximum (${req.maxLength}).`, 'minLength', 'maxLength');
   }
@@ -182,7 +185,7 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
     ['twists', 'Minimum swaps', MAX_TWISTS],
   ];
   for (const [key, label, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${label} must be a whole number from 0 to ${max}.`, key);
-  if (!whole(req.count, 1, MAX_COUNT)) add('range', `The number of suggestions must be a whole number from 1 to ${MAX_COUNT}.`, 'count');
+  if (!whole(req.count, MIN_COUNT, MAX_COUNT)) add('range', `The number of suggestions must be a whole number from ${MIN_COUNT} to ${MAX_COUNT}.`, 'count');
   return out;
 }
 

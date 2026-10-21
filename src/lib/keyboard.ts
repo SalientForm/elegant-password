@@ -223,3 +223,12 @@ export function typingProfile(text: string): TypingProfile {
 export function wordCost(word: string): number {
   return typingProfile(word).averageCost;
 }
+
+const PRINTABLE = Array.from({ length: 94 }, (_, i) => String.fromCharCode(33 + i));
+const isSymbolChar = (c: string) => /[^A-Za-z0-9]/.test(c);
+/** Every printable symbol a pinky stretches for (isPinkyStretch), in ASCII order: for text that names them. */
+export const PINKY_STRETCH_SYMBOLS: readonly string[] = PRINTABLE.filter((c) => isSymbolChar(c) && isPinkyStretch(c));
+/** Every shifted symbol out of one hand's reach (isFarShift), in ASCII order. */
+export const FAR_SHIFT_SYMBOLS: readonly string[] = PRINTABLE.filter((c) => isSymbolChar(c) && isFarShift(c));
+/** Every capital letter out of one hand's reach while holding Shift, in ASCII order. */
+export const FAR_SHIFT_LETTERS: readonly string[] = PRINTABLE.filter((c) => /[A-Z]/.test(c) && isFarShift(c));

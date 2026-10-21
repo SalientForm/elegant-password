@@ -65,9 +65,10 @@ const SEQUENCES: Record<number, readonly string[]> = {
   5: ['12345', '54321', '13579'],
 };
 
-const MAX_REPEATS = 3;
+export const MAX_REPEATS = 3;
 const MAX_SEQUENCE = 5;
-const MIN_WORD = 3;
+/** Words shorter than this are short words, for the padding's choice. */
+export const MIN_WORD = 3;
 const MAX_WORD = 8;
 
 export const digitsOf = (n: number) => String(n).length;

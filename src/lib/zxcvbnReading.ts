@@ -6,8 +6,11 @@
 // is tested on its own; the password never leaves the browser.
 
 export const ZXCVBN_URL = 'https://github.com/dropbox/zxcvbn';
-/** The estimator and its settings, saved with each reading so an old one can be told from a new one. */
-export const ZXCVBN_ESTIMATOR = 'zxcvbn 4.4.2, offline slow hashing (10^4 guesses/s)';
+export const ZXCVBN_VERSION = '4.4.2';
+/** The attack the reading is for: an offline attack on a slow hash, at this many guesses a second. */
+export const ZXCVBN_GUESSES_PER_SECOND = 10_000;
+/** The estimator and its settings, saved with each reading so an old one can be told from a new one. Its text must not change while the estimator does not. */
+export const ZXCVBN_ESTIMATOR = `zxcvbn ${ZXCVBN_VERSION}, offline slow hashing (10^4 guesses/s)`;
 
 export const ZXCVBN_LABELS = ['very weak', 'weak', 'good', 'strong'] as const;
 export type ZxcvbnLabel = (typeof ZXCVBN_LABELS)[number];

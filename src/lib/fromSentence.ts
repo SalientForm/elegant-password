@@ -166,7 +166,7 @@ export function lengthTagSymbol(tag: LengthTag, comfortable: readonly string[]):
 }
 
 /** Digit and symbol swaps made for a rule stop here; the rest of the rule comes from an appended number or closing marks (every extra swap multiplies the choices to search). */
-const MAX_RULE_TWISTS = 3;
+export const MAX_RULE_TWISTS = 3;
 
 const toInitial = (t: Token): Token => ({ ...t, text: t.original[0]!.toUpperCase(), kind: 'initial' });
 
