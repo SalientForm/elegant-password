@@ -1,6 +1,7 @@
 # Generation on the page's own thread
 
-Status: **proposed**, 2026-10-21. Acts on item H2 of
+Status: **built**, 2026-10-21, on `feature/audit-follow-up` (M1 `0fc536f`,
+M2 `f12e95f`; plan: `docs/plans/2026-10-21-no-worker-plan.md`). Acts on item H2 of
 `docs/audits/2026-10-21-audit-checklist.md` and closes L2, L3 and L10
 with it. It is the second of the two steps that take the audit's 90-day
 bet: H1 (`2026-10-21-engine-budget-design.md`, commit `8699fd5`) made the
@@ -251,6 +252,17 @@ the library keyed on the settings object would be hidden state in a pure
 function; the provider owns the identity of its objects and already
 memoises the draft's list the same way.
 
-Measured when built: the chunks of the build, the first batch after load
-in the built app, the suite's size, and the phone figure if the user
-takes it.
+Measured when built, 2026-10-21, on the audit desktop:
+
+| | Before (`8699fd5`) | After |
+| --- | --- | --- |
+| Chunks of the build carrying the engine | two: the page's, 176.4 KB gzipped, and the worker's, 69.8 KB | one: the page's, 175.8 KB |
+| Navigation to the first batch on screen, built app served locally, median of seven, twice | 435 ms, 439 ms | 326 ms, 330 ms |
+| Unit suite | 836 tests in 76 files | 826 tests in 75 files |
+
+The first batch lands about 110 ms sooner: the worker chunk's fetch,
+parse and start were on that path, and the 120 ms debounce and the cold
+ranking of the pools are on both. The main chunk is 0.6 KB smaller, the
+worker's glue. The smoke suites pass, 61 of 61, against the build under
+the CSP and against the dev server.
+The phone figure was not taken; the estimate of §2.6 stands until it is.
