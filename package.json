@@ -25,6 +25,7 @@
     "test:titles": "node scripts/testTitles.mjs",
     "stats": "node scripts/devStats.mjs",
     "measure:modes": "MEASURE_MODES=1 vitest run src/lib/modeProfiles.test.ts --reporter=verbose --silent=false",
+    "measure:wizard": "MEASURE_WIZARD=1 vitest run src/cli/walk.test.ts -t 'times every question' --reporter=verbose --silent=false",
     "common:passwords": "node scripts/commonPasswords.mjs"
   },
   "dependencies": {

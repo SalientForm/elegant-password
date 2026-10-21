@@ -21,8 +21,10 @@ import { MODE_NAMES, SITE_NAMES } from './names';
 import type { Source } from './sources';
 
 
-/** How long working out one question's choices may take, in milliseconds of CPU time (user decision, 2026-10-20). src/cli/walk.test.ts holds it. */
+/** How long working out one question's choices may take, in milliseconds on a typical laptop (user decision, 2026-10-20). src/cli/walk.test.ts asserts it as work; pnpm measure:wizard times it, naming the questions over it. */
 export const QUESTION_BUDGET_MS = 750;
+/** The time past which pnpm measure:wizard fails a question, in milliseconds (user decision, 2026-10-21): the budget is the target, this is the failure. */
+export const QUESTION_FAIL_MS = 2000;
 
 /** What the wizard has been told. Fields absent are not answered yet. */
 export interface Answers {
