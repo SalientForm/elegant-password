@@ -1,8 +1,8 @@
 // The web app and the CLI share one core (src/lib) and must not drift
-// apart. These tests hold the layout of docs/plans/2026-10-20-tep-cli-plan.md
-// §0 in place: what each directory may import, and that both front ends
-// reach the engine through the same shared calls instead of their own
-// copies.
+// apart. These tests hold the layout of docs/decisions.md ("One core, two
+// front ends") in place: what each directory may import, and that both
+// front ends reach the engine through the same shared calls instead of
+// their own copies.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';

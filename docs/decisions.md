@@ -180,22 +180,164 @@ twists). It is the lead if the budget is ever missed.
 - **Raw is the quieter badge** (muted, thin border), so it does not compete
   with the three scores.
 
+## One core, two front ends
+
+- **The web app and `tep` make and score passwords through the same code**
+  (2026-10-20, the user's decision), so a change to an algorithm reaches
+  both or neither. `src/lib` holds every algorithm, rule, preset, label and
+  reading in plain TypeScript; `src/state` and `src/components` are the web
+  app, `src/cli` is `tep`, `src/prompts` the Fun page's prompts.
+  `src/boundaries.test.ts` holds three rules: what each directory may
+  import (`src/lib` names no browser or Node global, the CLI imports no
+  React or web state, the web never imports the CLI); that the CLI reaches
+  the engine only through `inputsFor`, `runInputs`, `presentSuggestions`
+  and `scoreReadings`, the calls the web makes, and rebuilds no reading;
+  and that for each site preset and typing mode the web provider and `tep`
+  build the same inputs from the same settings.
+- **The CLI modules the Fun page's prompt draws on stay free of Node
+  APIs** (the field table, names, messages, constraints, the config writer,
+  help), so the browser can run them; the boundaries test follows the
+  browser's imports to hold that.
+- **The Fun page has two rebuild prompts**, the app's and then the CLI's,
+  which builds on the app's shared core by name instead of redefining it
+  (2026-10-20, the user's decision). A test checks the CLI prompt's file
+  list against `src/cli/`.
+
 ## The command line
 
-The CLI's design is in `docs/specs/2026-10-20-tep-cli-design.md` until
-that spec is folded in (the checklist's D1); `TODO.md` lists its decisions
-to revisit. Settled since:
+What `tep` does is in the README's "Command line"; `TODO.md` lists the
+decisions taken on the recommendation alone, to revisit once it is in use.
 
-- **JSON warnings stay strings**, their lines joined by newlines; a
-  structured shape would change the documented interface.
-- **YAML anchors and aliases are config errors** (exit 4, with file and
-  line), as is anything the YAML reader cannot turn into plain values.
-- **A config file written by `tep config` leaves out the options the typing
-  mode has no use for**, so `tep g` never warns about its own file.
-- **Esc during the wizard's first questions stops like Ctrl+C.** There is
-  no earlier question to return to; going back one would need the first
+- **Two words for two kinds of mode.** `--mode` is the typing mode
+  (`TypingMode`); `--sentence` is the engine's sentence mode. Preset slugs
+  are derived from the labels in `src/lib`, never a second list, and a test
+  fails if two collide. `quick` is the typing mode's id; `minimal-quick`,
+  from its label, is accepted too.
+- **`tep` never generates from, saves or carries forward settings that
+  contradict each other, and never fixes them quietly** (2026-10-20). The
+  web form's automatic fixes (`settleRules`: a maximum raised to fit, the
+  separator set to Automatic) are not applied. `problemsOf` in
+  `src/lib/consistency.ts` runs `ruleProblems`, then the early-exit
+  `planProblem`, and returns every problem with the fields involved; in
+  sentence mode `fromSentence` stands in for planning, as the sentence is
+  known only at run time. A mode profile's "space if allowed" separator is
+  the profile's own rule, not a fix, and is kept.
+- **A strength target the rules cannot reach is a warning, not a
+  contradiction** (2026-10-20, the user's decision): `tep g` makes the
+  strongest passwords the rules allow and says on stderr how many bits they
+  reach; the wizard marks the target and lets it be chosen. `warningsOf`
+  returns it.
+- **Settings are layered, each layer replacing only the fields it states**:
+  the defaults, then the config file (its site preset, its `rules`, the
+  mode's profile, its own `options`), then flags in the same order. The
+  file is `-c <file>` or `./tep.yml`, with no parent-directory search and
+  no global config. `--mode` over a file's own options replaces them with
+  the mode's profile, as picking a mode does in the web app.
+  `src/cli/resolve.ts` records where each value came from, and every
+  message names it (`--max-length 10 (flag)` against `min-length 12
+  (tep.yml:5)`).
+- **Flags take `--x v` or `--x=v`, never a bare `x=v`**, which would be
+  ambiguous beside a file name. Options a typing mode has no use for are
+  accepted with a warning naming the reason, not refused.
+- **A sentence is never an argument**: `--sentence -` reads one line from
+  stdin, or prompts with echo off at a terminal, as an argument would land
+  in shell history and `ps`.
+- **At a terminal, the table prints each password's hint under it**, and a
+  dim first line names the config file the settings came from.
+- **Piped output is the passwords alone**, one per line and one by default
+  (five at a terminal), so `tep g | pbcopy` works; the config note goes to
+  stderr. `--explain` with no `--format` prints the table, as plain output
+  cannot carry the why.
+- **The JSON is a documented interface with stable names**: `strength` and
+  `raw` are the scores, `bits` the session's figure (2026-10-20); warnings
+  stay strings, their lines joined by newlines, since a structured shape
+  would change the interface.
+- **No clipboard tool is an error, never a silent no-op**, as in the web
+  app. `--copy` tries `pbcopy`, `wl-copy`, `xclip` and `xsel` by platform
+  and session, and does not clear the clipboard afterwards.
+- **The exit codes are one list**, in `src/cli/errors.ts`, which the help
+  line is built from: 0 done, 1 a bug or a failed tool, 2 usage, 3 a
+  contradiction or a sentence that cannot fit, 4 a config file, 130
+  interrupted.
+
+### Config files
+
+- **`options: preset` stores only the typing mode**, so a re-measured
+  profile reaches an existing config; "Set each option" in the wizard
+  writes every option, fixed. A file written by `tep config` leaves out the
+  options its typing mode has no use for, so `tep g` never warns about its
+  own file.
+- **Checked with a zod schema after `yaml`'s parser**: unknown keys, wrong
+  types and out-of-range numbers are errors with the file, line and key
+  (exit 4), and "did you mean" for near misses. YAML anchors and aliases
+  are errors too, as is anything that does not read as plain values.
+  `version` is required, and a newer one than the CLI knows says to
+  upgrade. A file that parses but contradicts itself is exit 3, naming its
+  keys and lines.
+- **A config holds no secret, no sentence and no password**, and is written
+  0644, atomically (a temp file in the same directory, then a rename).
+  Mappings and sentence options may be set by hand; the wizard does not ask
+  about them and keeps them as they were.
+
+### The wizard
+
+- **Interactive only**: with stdin not a terminal, `tep config` exits 2 and
+  points at the file format. Ctrl+C writes nothing.
+- **No answer can contradict another.** A choice is allowed when the
+  answers so far, the choice, and the loosest value of every question not
+  yet answered pass `problemsOf`. The loosest values are fixed in
+  `src/cli/constraints.ts` (the widest length window, every symbol, spaces,
+  nothing required, the Minimal target, relaxed comfort, no initials,
+  two-letter words or made-up nouns, Automatic separator); a property test
+  walks the wizard at random and proves they always leave a way to finish
+  (confirmed by the user, 2026-10-20). A choice not allowed is shown dimmed
+  with the answer that rules it out; a question left with one choice is
+  stated, not asked; a number's range is shown, found by binary search
+  where a field is monotonic (a test proves which are) and by checking
+  every value elsewhere.
+- **A contradiction that gets through is a bug, and says so**: after each
+  answer the wizard checks again, and a problem is shown at once in red,
+  the answer dropped and the question asked again without it. The wizard
+  never moves on, reviews or saves while one stands.
+- **Shaping a question may take up to 750 ms on a typical laptop**
+  (2026-10-20, the user's decision, first set at 333 ms). Each choice is
+  checked with `planProblem`, shapes that cannot fit the length window are
+  skipped before their length models are built, and results are
+  remembered; the slowest question measured about 70 ms.
+- **The review numbers every answer** (one line per option when set one by
+  one); a typed number changes that line, `s` saves after one more check,
+  `q` leaves. On the review a line is shaped by every other answer, and a
+  choice another line rules out names it; a blocked choice cannot be taken
+  (2026-10-20, the user's decision), so the user changes the line that
+  blocks it first. Changing the mode while options follow the preset
+  updates them; with options set one by one, the new mode's preset is
+  offered only when it fits the rules.
+- **Esc means back** (2026-10-20, the user's decision): from a line to the
+  review unchanged, and out of the review without saving. The prompter
+  listens for the key itself, as the prompt library reports Esc and Ctrl+C
+  alike. During the first questions Esc stops like Ctrl+C: there is no
+  earlier question to return to, and going back one would need the first
   pass restructured as a list of steps with a history.
+- **A pasted rule the wizard cannot keep is never dropped in silence**
+  (2026-10-20, the user's decision): it is named as it is dropped and
+  listed on the review for as long as the answer differs from the text. A
+  loaded file's value that cannot be kept is treated the same way, and a
+  loaded file that contradicts itself opens with the conflict named and the
+  later question asked again.
 - **Help lists the modes in the core's order.**
+
+### Build
+
+- **One ESM file, bundled by tsdown**, with its dependencies (`yaml`,
+  `zod`, `@clack/prompts`) inlined, so `dist-cli/tep.mjs` needs only Node
+  24. The dependencies stay inside `src/cli/` so they can be replaced
+  (`TODO.md`, "A CLI with no dependencies").
+- **Not on npm**: the package stays private and the name `tep` is taken.
+  `pnpm link:cli` builds and links `~/.local/bin/tep` instead of `pnpm
+  link`, which from pnpm 10 on adds a directory to the project's
+  dependencies.
+- **Randomness is `crypto.getRandomValues`**, as in the browser. No
+  `--seed` flag, no network, no telemetry, no update check.
 
 ## Build and deploy
 

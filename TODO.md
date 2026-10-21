@@ -69,48 +69,48 @@ Follow-ups:
 
 ## tep CLI: decisions to revisit
 
-The CLI spec (`docs/specs/2026-10-20-tep-cli-design.md`) was accepted on
-2026-10-20 with these decisions taken on the recommendation alone, with
-low confidence. Examine each once `tep` is in use, most uncertain first.
+The CLI was designed on 2026-10-20 with these decisions taken on the
+recommendation alone, with low confidence; `docs/decisions.md` ("The
+command line") has the design as built. Examine each once `tep` is in use,
+most uncertain first.
 
 Settled by the user on 2026-10-20, kept here for the record:
 
-- An unreachable strength target is a warning, not a contradiction (§3).
+- An unreachable strength target is a warning, not a contradiction.
 - Blocked review items cannot be edited: change the line that blocks
-  them first (§7.3).
-- Shaping a question may take up to 750 ms (§7.2; first set at 333 ms, raised the same day).
-- The loosest-completion assumption stands; the property test proves it
-  (§7.2).
+  them first.
+- Shaping a question may take up to 750 ms (first set at 333 ms, raised
+  the same day).
+- The loosest-completion assumption stands; the property test proves it.
 
 Still open:
 
-- **`options: preset` follows the profile** (§6). A re-measured mode
+- **`options: preset` follows the profile**. A re-measured mode
   profile changes what an existing config generates, without the file
   changing. Freezing the values at save time is the alternative.
-- **`--mode` replaces a config's own options** (§5.1), as in the web app.
+- **`--mode` replaces a config's own options**, as in the web app.
   The alternative: `--mode` only changes which mode difficulty is scored
   for.
-- **Count 5 at a terminal, 1 when piped** (§5.2). Output that changes with
+- **Count 5 at a terminal, 1 when piped**. Output that changes with
   where it goes can surprise; a fixed default is the alternative.
-- **Hint printed under each password by default** (§5.3). It leaves the
+- **Hint printed under each password by default**. It leaves the
   sentence in the terminal's scrollback beside the password. Showing it
   only with `--explain` is the alternative.
-- **Sentence mode reads stdin or a hidden prompt only** (§5.2), never
-  inline text. Check it is not too awkward to use.
-- **`./tep.yml` only** (§5.1): no parent-directory search, no global
+- **Sentence mode reads stdin or a hidden prompt only**, never inline
+  text. Check it is not too awkward to use.
+- **`./tep.yml` only**: no parent-directory search, no global
   `~/.config/tep/config.yml`.
-- **Unused options warn, not fail** (§5.2): `--avoid-pinky` with
-  two-finger.
-- **No `key=value` arguments** (§5.2). The request's own example was
+- **Unused options warn, not fail**: `--avoid-pinky` with two-finger.
+- **No `key=value` arguments**. The request's own example was
   `mode=ten-finger`.
-- **`quick` and `minimal-quick` both accepted** (§2), instead of one name
+- **`quick` and `minimal-quick` both accepted**, instead of one name
   everywhere.
 - **Arrow-key menus** for the questions and a typed line number on the
-  review screen (§8). Two input styles in one wizard.
-- **No clipboard clearing** after `--copy` (§5.4).
-- **Not on npm; `pnpm link:cli` links a checkout's build** (§8). Publishing would need a
-  scoped name (`tep` is taken).
-- **Commands left out of v1** (§4): `tep score <password>`, `tep list`,
+  review screen. Two input styles in one wizard.
+- **No clipboard clearing** after `--copy`.
+- **Not on npm; `pnpm link:cli` links a checkout's build**. Publishing
+  would need a scoped name (`tep` is taken).
+- **Commands left out of v1**: `tep score <password>`, `tep list`,
   `tep config show`, shell completions.
 
 ## Future considerations

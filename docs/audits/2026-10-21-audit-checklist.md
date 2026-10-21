@@ -49,7 +49,7 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 | L5 | Stored sentence options have no upper bounds | `src/state/settingsStore.ts:121` | open | |
 | L6 | The Fun page renders markdown to raw HTML with no sanitiser (constants only; CSP blocks scripts) | `src/components/FunPage.tsx:10`, `:88` | open | |
 | L7 | The CSP is a meta tag, so it cannot carry `frame-ancestors`; the Pages site can be framed | `build/csp.ts` | open | |
-| L8 | Coverage artefacts are committed and stale (600 KB from 2026-10-15); `.gitignore` lacks `coverage` | `coverage/` | open | |
+| L8 | Coverage artefacts are committed and stale (600 KB from 2026-10-15); `.gitignore` lacks `coverage` | `coverage/` | built | no spec needed; `coverage/` untracked and ignored, 2026-10-21, with D1 |
 | L9 | The check job is copy-pasted between `ci.yml` and `pages.yml` | `.github/workflows/` | open | |
 | L10 | The common-password list ships in both the page and worker chunks and is split eagerly at import | `src/lib/common.ts:21` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
 | L11 | zxcvbn 4.4.2 has had no release since 2017 (398 KB gzipped, loaded lazily) | `package.json` | open | |
@@ -63,7 +63,7 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 
 | Id | Item | Where | Status | Spec |
 | --- | --- | --- | --- | --- |
-| D1 | The CLI spec and plan of 2026-10-20: every decision that remains accurate recorded in the README's command line section or `docs/decisions.md`, then the files deleted (the rule of H2's spec §2.9; done for the other four specs with H2) | `docs/specs/2026-10-20-tep-cli-design.md`; `docs/plans/2026-10-20-tep-cli-plan.md` | open | no spec needed; `TODO.md` keeps "tep CLI: decisions to revisit" |
+| D1 | The CLI spec and plan of 2026-10-20: every decision that remains accurate recorded in the README's command line section or `docs/decisions.md`, then the files deleted (the rule of H2's spec §2.9; done for the other four specs with H2) | `docs/specs/2026-10-20-tep-cli-design.md`; `docs/plans/2026-10-20-tep-cli-plan.md` | built | `docs/decisions.md`, "One core, two front ends" and "The command line" (the spec and plan folded in and removed), 2026-10-21; `TODO.md` keeps "tep CLI: decisions to revisit" |
 
 ## Order
 

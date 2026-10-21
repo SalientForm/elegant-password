@@ -353,7 +353,7 @@ happened, undo it with
   not be removed, 2 the command line, 3 a contradiction, 4 a config file,
   130 interrupted.
 
-The design is in [docs/specs/2026-10-20-tep-cli-design.md](docs/specs/2026-10-20-tep-cli-design.md).
+The decisions behind it are in [docs/decisions.md](docs/decisions.md), "The command line".
 
 ## How it works
 
