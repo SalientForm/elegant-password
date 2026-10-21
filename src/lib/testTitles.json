@@ -3916,6 +3916,10 @@
       },
       {
         "kind": "test",
+        "title": "draws a new sentence on load when the stored one is not one the tool makes, keeping the user's own sentence"
+      },
+      {
+        "kind": "test",
         "title": "persists applied settings, the mode, the applied sentence and the list; drafts are not persisted"
       },
       {
@@ -4093,6 +4097,10 @@
       {
         "kind": "test",
         "title": "keeps the made-up sentence, and drops only that when it is malformed"
+      },
+      {
+        "kind": "test",
+        "title": "drops a kept sentence the tool could not have drawn, and keeps the rest of the session"
       },
       {
         "kind": "test",

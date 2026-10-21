@@ -7,7 +7,7 @@
 import type { Outcome } from '../lib/engine';
 import type { GeneratedSentence, Suggestion } from '../lib/generate';
 import { LEVELS } from '../lib/difficulty';
-import { ROLE_LABELS } from '../lib/generate';
+import { couldBeDrawn, ROLE_LABELS } from '../lib/generate';
 import { SLOT_LABELS } from '../lib/grammar';
 import { MAPPING_KIND_LABELS } from '../lib/twists';
 import { isBoolean, isFiniteNumber, isRecord, isString, readJson, removeKey, writeJson, type KeyValueStore } from './storage';
@@ -93,6 +93,11 @@ const isTyping = (t: unknown): boolean =>
   isFiniteNumber(t.averageDistance) &&
   isFiniteNumber(t.sameFingerPairs);
 
+/**
+ * A made-up sentence record's shape: all the outcome's own copy needs, as
+ * nothing reads that copy back after a load. The kept sentence is also
+ * checked against the word lists (parseSession).
+ */
 export const isGeneratedSentence = (x: unknown): x is GeneratedSentence =>
   isRecord(x) &&
   isStringArray(x.slots) &&
@@ -120,8 +125,9 @@ export function isOutcome(x: unknown): x is Outcome {
 export function parseSession(raw: unknown): StoredSession | undefined {
   if (!isRecord(raw) || !isString(raw.key) || !isFiniteNumber(raw.round) || !isString(raw.sentence)) return undefined;
   if (raw.outcome !== null && !isOutcome(raw.outcome)) return undefined;
-  // A made-up sentence that does not parse is dropped on its own: the app draws a new one.
-  const generated = isGeneratedSentence(raw.generated) ? { generated: raw.generated } : {};
+  // A made-up sentence that does not parse, or that the tool could not have drawn (a word off its slot's list, an
+  // empty word, a shape it never makes), is dropped on its own, not repaired: the app draws a new one.
+  const generated = isGeneratedSentence(raw.generated) && couldBeDrawn(raw.generated.slots, raw.generated.words) ? { generated: raw.generated } : {};
   const edited = generated.generated && isString(raw.edited) ? { edited: raw.edited } : {}; // an edit only means something with its sentence
   return { key: raw.key, round: raw.round, sentence: raw.sentence, outcome: raw.outcome as Outcome | null, ...generated, ...edited };
 }

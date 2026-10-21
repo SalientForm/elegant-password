@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { inputsKey, runInputs, type GenerateInputs } from '../lib/engine';
 import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
-import { clearSession, isOutcome, isSuggestion, loadSession, parseSession, saveSession } from './sessionStore';
+import { clearSession, isOutcome, isSuggestion, loadSession, parseSession, saveSession, SESSION_KEY } from './sessionStore';
 import { memoryStore } from './storage';
 import { BUILT_IN_MAPPINGS } from '../lib/twists';
 
@@ -30,7 +30,7 @@ describe('session store', () => {
   });
 
   it('keeps the made-up sentence, and drops only that when it is malformed', () => {
-    const generated = { slots: ['adj', 'noun'], words: ['sleepy', 'otters'] };
+    const generated = { slots: ['noun', 'verb', 'noun'], words: ['otters', 'paint', 'boats'] };
     expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated })?.generated).toEqual(generated);
     for (const bad of [{ slots: ['adj'], words: ['a', 'b'] }, { slots: ['toString'], words: ['x'] }, { slots: [], words: [] }, 'sleepy otters']) {
       const back = parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated: bad });
@@ -39,8 +39,21 @@ describe('session store', () => {
     }
   });
 
+  it('drops a kept sentence the tool could not have drawn, and keeps the rest of the session', () => {
+    const outcome = runInputs(inputs);
+    const slots = ['num', 'noun', 'verb', 'noun'];
+    for (const words of [['42', 'password', 'password', 'pasword'], ['85', '', 'cadets', 'otters']]) {
+      const raw = { key: 'k', round: 3, sentence: 'my secret sentence', outcome, generated: { slots, words }, edited: 'my edit' };
+      expect(parseSession(raw), words.join(' ')).toEqual({ key: 'k', round: 3, sentence: 'my secret sentence', outcome });
+      const store = memoryStore();
+      store.setItem(SESSION_KEY, JSON.stringify(raw));
+      expect(loadSession(store)?.sentence).toBe('my secret sentence');
+      expect(store.getItem(SESSION_KEY)).not.toBeNull();
+    }
+  });
+
   it('keeps an edit to the made-up sentence only alongside that sentence', () => {
-    const generated = { slots: ['adj', 'noun'], words: ['sleepy', 'otters'] };
+    const generated = { slots: ['noun', 'verb', 'noun'], words: ['otters', 'paint', 'boats'] };
     expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated, edited: 'sleepy owls' })?.edited).toBe('sleepy owls');
     expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, edited: 'sleepy owls' })?.edited).toBeUndefined();
     expect(parseSession({ key: 'k', round: 0, sentence: '', outcome: null, generated, edited: 3 })?.edited).toBeUndefined();
