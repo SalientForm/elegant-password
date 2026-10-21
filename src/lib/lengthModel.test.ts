@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LengthModel } from './lengthModel';
+import { LengthModel, wordsByLength } from './lengthModel';
 import { seeded } from './testRandom';
 
 const POOLS = [
@@ -52,5 +52,27 @@ describe('LengthModel', () => {
 
   it('refuses an impossible range', () => {
     expect(() => model.sample(30, 40, seeded())).toThrow(RangeError);
+  });
+
+  it("groups a pool's words by length once, so every model over the pool shares the groups", () => {
+    const pool = POOLS[1]!;
+    expect(wordsByLength(pool)).toBe(wordsByLength(pool));
+    expect([...wordsByLength(['a', 'bb', 'cc', 'd'])]).toEqual([
+      [1, ['a', 'd']],
+      [2, ['bb', 'cc']],
+    ]);
+  });
+
+  it('counts and samples the same over a shared pool as over a copy of it', () => {
+    const pool = POOLS[1]!;
+    const shared = new LengthModel([pool, pool]);
+    const copied = new LengthModel([[...pool], [...pool]]);
+    for (const [lo, hi] of [[0, 100], [2, 4], [5, 5], [6, 8], [9, 20]] as const) {
+      expect(shared.count(lo, hi)).toBe(copied.count(lo, hi));
+      expect(shared.meanLength(lo, hi)).toBe(copied.meanLength(lo, hi));
+    }
+    const a = seeded(7);
+    const b = seeded(7);
+    for (let i = 0; i < 200; i++) expect(shared.sample(3, 7, a)).toEqual(copied.sample(3, 7, b));
   });
 });

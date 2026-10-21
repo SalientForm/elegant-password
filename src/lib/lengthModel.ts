@@ -8,22 +8,32 @@
 
 import { randomInt, weightedIndex, type RandomSource } from './random';
 
+const groupsCache = new WeakMap<readonly string[], ReadonlyMap<number, readonly string[]>>();
+
+/** A pool's words grouped by length, in pool order, built once per pool: every model over a pool shares its groups, so a model holds only its counts. */
+export function wordsByLength(pool: readonly string[]): ReadonlyMap<number, readonly string[]> {
+  let groups = groupsCache.get(pool);
+  if (!groups) {
+    const m = new Map<number, string[]>();
+    for (const w of pool) {
+      const bucket = m.get(w.length);
+      if (bucket) bucket.push(w);
+      else m.set(w.length, [w]);
+    }
+    groups = m;
+    groupsCache.set(pool, groups);
+  }
+  return groups;
+}
+
 export class LengthModel {
-  /** byLength[i] maps a word length to the slot-i words of that length. */
-  private readonly byLength: Map<number, readonly string[]>[];
+  /** byLength[i] maps a word length to the slot-i words of that length, shared with every model over the pool. */
+  private readonly byLength: ReadonlyMap<number, readonly string[]>[];
   /** suffix[i][n] = number of ways to fill slots i.. using exactly n letters. */
   private readonly suffix: number[][];
 
   constructor(pools: readonly (readonly string[])[]) {
-    this.byLength = pools.map((pool) => {
-      const m = new Map<number, string[]>();
-      for (const w of pool) {
-        const bucket = m.get(w.length);
-        if (bucket) bucket.push(w);
-        else m.set(w.length, [w]);
-      }
-      return m;
-    });
+    this.byLength = pools.map(wordsByLength);
 
     const n = pools.length;
     this.suffix = new Array(n + 1);

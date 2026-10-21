@@ -2942,6 +2942,18 @@
       {
         "kind": "test",
         "title": "never draws a sentence it could not have drawn, across seeds and settings"
+      },
+      {
+        "kind": "group",
+        "title": "the planning cache"
+      },
+      {
+        "kind": "test",
+        "title": "plans the same settings twice without building a length model again, even at the widest lengths"
+      },
+      {
+        "kind": "test",
+        "title": "keeps at most MODEL_CACHE_LIMIT length models and drops the one used longest ago"
       }
     ]
   },
@@ -3008,6 +3020,14 @@
       {
         "kind": "test",
         "title": "refuses an impossible range"
+      },
+      {
+        "kind": "test",
+        "title": "groups a pool's words by length once, so every model over the pool shares the groups"
+      },
+      {
+        "kind": "test",
+        "title": "counts and samples the same over a shared pool as over a copy of it"
       }
     ]
   },

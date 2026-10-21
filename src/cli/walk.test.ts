@@ -46,9 +46,9 @@ vi.mock('../lib/lengthModel', async (importOriginal) => {
 /**
  * The budget expressed as work: what one question may cost, from one answer
  * to the next question. About twice the worst measured (183 plannings, 181
- * length models, 2026-10-21), and the planning cache's limit
- * (MODEL_CACHE_LIMIT in src/lib/generate.ts): a question that built more
- * would empty the cache it relies on. Counts, not a clock, so a coverage run
+ * length models, 2026-10-21), and well inside the planning cache's limit
+ * (MODEL_CACHE_LIMIT in src/lib/generate.ts), so one question never pushes
+ * out the models the next relies on. Counts, not a clock, so a coverage run
  * or a busy machine cannot fail it; pnpm measure:wizard takes the time.
  */
 const MAX_PLANNINGS_PER_QUESTION = 400;
