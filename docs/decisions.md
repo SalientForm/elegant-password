@@ -157,10 +157,27 @@ twists). It is the lead if the budget is ever missed.
   characters (UTF-16 units) in the fields, the CLI and the engine: scoring
   a text is quadratic in places, so the length is capped rather than left
   open.
-- The scorer keeps 400 cold scores, each mapping list 5,000 spellings, and
-  planning 400 length models (about a megabyte each); a full cache is
-  emptied rather than evicted one entry at a time. `src/lib/score.ts`,
-  `src/lib/twists.ts`, `src/lib/generate.ts`.
+- The scorer keeps 400 cold scores, each mapping list 5,000 spellings; a
+  full cache is emptied rather than evicted one entry at a time.
+  `src/lib/score.ts`, `src/lib/twists.ts`.
+- **Planning keeps 1,000 length models and drops the one used longest
+  ago** (2026-10-21). A model holds only its counts, about 12 KB, because
+  a pool's words grouped by length are built once per pool
+  (`wordsByLength`, a `WeakMap` on the pool) and shared, read-only, by
+  every model over it; each model used to copy them, 77 to 176 KB a
+  model over a plan. 1,000 holds three plans at the widest lengths (288 shapes), so a
+  Refresh, or a change and back, never rebuilds. Full, it is about 12 MB,
+  where 400 unshared models measured 42 to 81 MB, and the clear-all cap
+  of 400 it replaces never hit for two wide settings used in turn. The
+  key is the comfort level, the digit count, the ease setting and the
+  shape; the length window is not in it. Not taken: no cache (a plan at
+  a maximum of 128 is 24 ms built against 3.6 ms cached on the
+  development desktop, and a phone is several times slower); least
+  recently used at 400 (under two wide plans) or 2,000 (no more hits than
+  1,000); a cap in bytes (models differ by at most 15 times, and the count
+  already bounds the cache near 12 MB). The groups being shared, `sample`
+  must never write to them. `src/lib/lengthModel.ts`,
+  `src/lib/generate.ts`.
 
 ## Input and persistence
 
@@ -367,3 +384,10 @@ decisions taken on the recommendation alone, to revisit once it is in use.
   `frame-ancestors`, which needs a header the app's host does not send yet.
 - **The smoke suites are the check that the built app works under the
   CSP**, on this project's own ports: 4272 the build, 4273 the dev server.
+- **The unit suite runs in Node's default heap** (2026-10-21). It passes
+  at 256 MB, and at 128 MB, a file at a time; the 4 GB flag of 2026-10-16
+  was for a planning cache with no cap and came out when the cap, `mayFit`
+  and the shared word groups had made it unneeded. No heap ceiling is set
+  instead: it would also fail on growth in jsdom or Vitest, with an error
+  that names no cause, and the planning cache's bound is asserted by
+  count in its tests.
