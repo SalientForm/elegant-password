@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, RequirementsError, trimSeparators, applyUppercase, checkRequirements, countUpper, type Requirements } from './generate';
+import { cachedModelCount, closingSymbol, crackEstimates, DEFAULT_REQUIREMENTS, formatDuration, generate, MODEL_CACHE_LIMIT, plan, RequirementsError, trimSeparators, applyUppercase, checkRequirements, countUpper, type Requirements } from './generate';
 import { seeded } from './testRandom';
 import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
 import { isMadeUpNoun, pools, twoLetter } from './grammar';
@@ -580,5 +580,31 @@ describe('made-up nouns and real words', () => {
     const sentence = { slots: ['adj', 'noun', 'verb', 'num', 'noun'] as const, words: ['scarlet', 'pods', 'bite', '67', 'toys'] };
     const r = generate({ ...DEFAULT_REQUIREMENTS, comfort: 'strict' }, { rng: seeded(3), sentence: { slots: [...sentence.slots], words: sentence.words } });
     expect(r.suggestions.length).toBeGreaterThan(0);
+  });
+});
+
+describe('the planning cache', () => {
+  it('plans the same settings twice without building a length model again, even at the widest lengths', () => {
+    const first = plan(req({ maxLength: 128 }));
+    const second = plan(req({ maxLength: 128 }));
+    expect(second.variants).toHaveLength(first.variants.length);
+    second.variants.forEach((v, i) => expect(v.model).toBe(first.variants[i]!.model));
+  });
+
+  it('keeps at most MODEL_CACHE_LIMIT length models and drops the one used longest ago', () => {
+    const settings: Requirements[] = [];
+    for (const comfort of ['strict', 'balanced', 'relaxed'] as const)
+      for (const easeSwaps of [true, false])
+        for (const initials of [0, 1]) settings.push(req({ maxLength: 128, comfort, easeSwaps, initials }));
+    const [first, second, ...rest] = settings as [Requirements, Requirements, ...Requirements[]];
+    const firstModel = plan(first).variants[0]!.model;
+    const secondModel = plan(second).variants[0]!.model;
+    for (const r of rest) {
+      plan(r);
+      plan(first);
+      expect(cachedModelCount()).toBeLessThanOrEqual(MODEL_CACHE_LIMIT);
+    }
+    expect(plan(first).variants[0]!.model).toBe(firstModel);
+    expect(plan(second).variants[0]!.model).not.toBe(secondModel);
   });
 });

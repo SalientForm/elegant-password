@@ -355,8 +355,17 @@ function endSymbolFor(separators: number, separator: string, req: Requirements, 
 }
 
 const modelCache = new Map<string, LengthModel>();
-/** Length models are about a megabyte each; the cache is emptied once it holds this many, like the scorer's caches. */
-const MODEL_CACHE_LIMIT = 400;
+/**
+ * Length models hold only their counts (the word groups are shared per
+ * pool), about 12 KB; the one used longest ago is dropped when the cache is
+ * full. 1,000 holds three plans at the widest lengths.
+ */
+export const MODEL_CACHE_LIMIT = 1000;
+
+/** How many length models planning holds, for the tests. */
+export function cachedModelCount(): number {
+  return modelCache.size;
+}
 
 // The length model counts words as typed: with deliberate swaps on, a whole
 // word's pool holds its swapped spellings, so a swap that shortens a word
@@ -366,11 +375,14 @@ const MODEL_CACHE_LIMIT = 400;
 function modelFor(shape: Shape, comfort: Comfort, minDigits: number, eased: boolean): LengthModel {
   const key = `${comfort}:${minDigits}:${eased ? 1 : 0}:${shape.slots.join(' ')}:${shape.initials.join(',')}:${shape.shorthand.join(',')}:${shape.madeUp.join(',')}`;
   let model = modelCache.get(key);
-  if (!model) {
-    model = new LengthModel(shape.slots.map((_, i) => slotPool(shape, i, comfort, minDigits, eased)));
-    if (modelCache.size >= MODEL_CACHE_LIMIT) modelCache.clear();
+  if (model) {
+    modelCache.delete(key); // to the end of the Map: the most recently used
     modelCache.set(key, model);
+    return model;
   }
+  model = new LengthModel(shape.slots.map((_, i) => slotPool(shape, i, comfort, minDigits, eased)));
+  if (modelCache.size >= MODEL_CACHE_LIMIT) modelCache.delete(modelCache.keys().next().value!);
+  modelCache.set(key, model);
   return model;
 }
 

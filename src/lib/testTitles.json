@@ -2926,6 +2926,18 @@
       {
         "kind": "test",
         "title": "never reads a real word as a made-up noun, so a kept sentence with \"pods\" still builds"
+      },
+      {
+        "kind": "group",
+        "title": "the planning cache"
+      },
+      {
+        "kind": "test",
+        "title": "plans the same settings twice without building a length model again, even at the widest lengths"
+      },
+      {
+        "kind": "test",
+        "title": "keeps at most MODEL_CACHE_LIMIT length models and drops the one used longest ago"
       }
     ]
   },
