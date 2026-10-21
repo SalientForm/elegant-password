@@ -80,7 +80,8 @@ Settled by the user on 2026-10-20, kept here for the record:
 - Blocked review items cannot be edited: change the line that blocks
   them first.
 - Shaping a question may take up to 750 ms (first set at 333 ms, raised
-  the same day).
+  the same day). On 2026-10-21: the suite holds it as work, and `pnpm
+  measure:wizard` names the questions over 750 ms and fails one over 2 s.
 - The loosest-completion assumption stands; the property test proves it.
 
 Still open:

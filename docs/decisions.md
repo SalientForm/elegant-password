@@ -322,7 +322,32 @@ decisions taken on the recommendation alone, to revisit once it is in use.
   (2026-10-20, the user's decision, first set at 333 ms). Each choice is
   checked with `planProblem`, shapes that cannot fit the length window are
   skipped before their length models are built, and results are
-  remembered; the slowest question measured about 70 ms.
+  remembered; the slowest question measured 151 ms of wall time on a
+  desktop (Ryzen 9 3900X, WSL2, Node 24; seed 3, "Strength target", 148
+  length models), 2026-10-21.
+- **The budget is held as work in the suite, and timed by hand**
+  (2026-10-21). The random walk in `src/cli/walk.test.ts` counts, from one
+  answer to the next question, the plannings the CLI asks for
+  (`problemsOf`) and the length models built, through two `vi.mock`
+  factories in the test, and fails a question over 400 of either: about
+  twice the worst measured (183 plannings, 181 models) and the planning
+  cache's limit, so a question that built more would empty the cache it
+  relies on. It also asserts the worst question did at least one of each,
+  so the counters cannot stop counting unseen. No time is asserted in the
+  suite or CI: the CPU time it used to assert measured the run, not the
+  wizard, and a coverage run of the whole suite reached 81 to 94 % of the
+  budget for a question that takes about 150 ms alone. `pnpm
+  measure:wizard` runs the same walks on fresh caches and takes each
+  question's wall time: 750 ms (`QUESTION_BUDGET_MS`) is the target,
+  printed beside each time, and the questions over it are named; a
+  question over 2 s (`QUESTION_FAIL_MS`) fails it (the user's decision,
+  2026-10-21). It is run by hand on an idle machine before merging a
+  change to `src/cli/constraints.ts`, `src/lib/consistency.ts` or the
+  planning in `src/lib/generate.ts` and `src/lib/grammar.ts`, never in
+  CI. The price: a change that makes each planning or each length model
+  slower at the same counts passes the suite and is found only by `pnpm
+  measure:wizard`; and the ceilings catch a change in kind (planning in
+  full, which built 1,142 models in one question), not a creep of 20 %.
 - **The review numbers every answer** (one line per option when set one by
   one); a typed number changes that line, `s` saves after one more check,
   `q` leaves. On the review a line is shaped by every other answer, and a
