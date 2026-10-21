@@ -186,7 +186,7 @@ describe('tep g: the command line (exit 2)', () => {
   it('a flag given twice', () => usage(['--max-length', '12', '--max-length=20'], '--max-length is given 2 times (--max-length 12, --max-length 20).'));
   it('on and off both', () => usage(['--spaces', '--no-spaces'], '--spaces and --no-spaces are both given; they contradict each other.'));
   it('-c and --no-config', () => usage(['-c', 'x.yml', '--no-config'], '-c and --no-config contradict each other: one names a config file, the other says to read none.'));
-  it('a value out of range', () => usage(['--max-length', '0'], '--max-length must be from 1 to 256; found 0.', 'For example: --max-length 12'));
+  it('a value out of range', () => usage(['--max-length', '0'], '--max-length must be from 1 to 128; found 0.', 'For example: --max-length 12'));
   it('a value of the wrong kind', () => usage(['--comfort', 'loose'], '--comfort must be one of strict, balanced, relaxed; found "loose".'));
   it('a symbol that is not one', () => usage(['--symbols', '!a'], /^tep g: error: --symbols cannot include the letter "a"/));
   it('an unknown mode, preset or format', async () => {
@@ -220,7 +220,7 @@ describe('tep g: the command line (exit 2)', () => {
     expect(code).toBe(EXIT.usage);
     expect(io.out()).toBe('');
     expect(io.err()).toContain('tep g: error: --rules: a rule in "exactly 300 characters" cannot be kept.');
-    expect(io.err()).toContain('Not kept: exactly 300 characters: this tool makes at most 256.');
+    expect(io.err()).toContain('Not kept: exactly 300 characters: this tool makes at most 128.');
     const partly = await run(['g', '--rules', '8-20 characters, no digits']);
     expect(partly.code).toBe(EXIT.usage);
     expect(partly.io.err()).toContain('Not kept: no digits: this tool cannot leave digits out.');
@@ -302,6 +302,9 @@ describe('tep g: your own sentence', () => {
     const noWords = await run(['g', '--sentence', '-'], { stdin: '... !!!\n' });
     expect(noWords.code).toBe(EXIT.usage);
     expect(noWords.io.err()).toContain('It has no words');
+    const long = await run(['g', '--sentence', '-'], { stdin: `${'sally eats sweets '.repeat(28)}\n` }); // 504 characters once trimmed
+    expect(long.code).toBe(EXIT.usage);
+    expect(long.io.err()).toContain('--sentence -: the sentence on stdin cannot be used. The sentence is 503 characters; 500 is the most this tool takes. Use a shorter sentence.');
   });
 
   it('asks for it, hidden, at a terminal, refusing a blank one', async () => {
@@ -360,7 +363,7 @@ describe('tep: commands, help and version', () => {
     expect((await run(['help'])).io.out()).toMatch(/^tep: the elegant passwords generator/);
     const g = (await run(['help', 'g'])).io.out();
     expect(g).toMatch(/^Usage: tep g \[flags\]/);
-    for (const flag of ['--max-length <1-256>', '--spaces, --no-spaces', '-n, --count <1-20>', '--separator <auto|space|none|symbol>', '-c, --config <file>', '--sentence -']) expect(g).toContain(flag);
+    for (const flag of ['--max-length <1-128>', '--spaces, --no-spaces', '-n, --count <1-20>', '--separator <auto|space|none|symbol>', '-c, --config <file>', '--sentence -']) expect(g).toContain(flag);
     expect((await run(['g', '--help'])).io.out()).toBe(g);
     expect((await run(['help', 'config'])).io.out()).toMatch(/^Usage: tep config \[file\]/);
   });

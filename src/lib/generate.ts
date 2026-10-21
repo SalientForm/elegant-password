@@ -260,7 +260,7 @@ export interface GenerateResult {
  * A made-up sentence, kept from batch to batch until the user draws a new
  * one: the template's slots with any number placed, and the words as
  * written, one per slot (the hint). Plain data, so it can be stored and
- * sent to a worker.
+ * restored.
  */
 export interface GeneratedSentence {
   slots: Slot[];

@@ -163,7 +163,7 @@ describe('parseConfig: every way a file can be wrong, each with its line', () =>
 
   it('values out of range or of the wrong kind, with the key, what was found and what is expected', () => {
     expect(messages('version: 1\nrules:\n  min-length: 0\n  spaces: yes\n  symbols: "!a"\noutput:\n  count: 50\n')).toEqual([
-      'tep.yml:3: rules.min-length must be from 1 to 256; found 0.',
+      'tep.yml:3: rules.min-length must be from 1 to 128; found 0.',
       'tep.yml:4: rules.spaces must be true or false; found "yes".',
       'tep.yml:5: rules.symbols cannot include the letter "a": the letter "a" is not a symbol; letters and digits are always allowed, so list only symbols.',
       'tep.yml:7: output.count must be from 1 to 20; found 50.',
@@ -174,9 +174,9 @@ describe('parseConfig: every way a file can be wrong, each with its line', () =>
     const p = problems('version: 1\nrules:\n  min-length: 0\n  max-length: 999\n');
     expect(p.title).toBe('tep.yml is not a valid tep config (2 problems):');
     expect(p.details).toEqual([
-      'tep.yml:3: rules.min-length must be from 1 to 256; found 0.',
+      'tep.yml:3: rules.min-length must be from 1 to 128; found 0.',
       '      3 |   min-length: 0',
-      'tep.yml:4: rules.max-length must be from 1 to 256; found 999.',
+      'tep.yml:4: rules.max-length must be from 1 to 128; found 999.',
       '      4 |   max-length: 999',
     ]);
   });

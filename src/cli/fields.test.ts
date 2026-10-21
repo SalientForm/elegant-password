@@ -39,10 +39,10 @@ describe('parseValue', () => {
   it('whole numbers: from text or YAML, in range', () => {
     expect(ok('max-length', '20')).toEqual({ ok: true, value: 20 });
     expect(ok('max-length', 20)).toEqual({ ok: true, value: 20 });
-    expect(ok('max-length', '0')).toEqual({ ok: false, error: 'must be from 1 to 256; found 0' });
-    expect(ok('max-length', 257)).toEqual({ ok: false, error: 'must be from 1 to 256; found 257' });
-    expect(ok('max-length', '12.5')).toEqual({ ok: false, error: 'must be a whole number from 1 to 256; found "12.5"' });
-    expect(ok('max-length', 'twelve')).toEqual({ ok: false, error: 'must be a whole number from 1 to 256; found "twelve"' });
+    expect(ok('max-length', '0')).toEqual({ ok: false, error: 'must be from 1 to 128; found 0' });
+    expect(ok('max-length', 129)).toEqual({ ok: false, error: 'must be from 1 to 128; found 129' });
+    expect(ok('max-length', '12.5')).toEqual({ ok: false, error: 'must be a whole number from 1 to 128; found "12.5"' });
+    expect(ok('max-length', 'twelve')).toEqual({ ok: false, error: 'must be a whole number from 1 to 128; found "twelve"' });
     expect(ok('min-digits', '5')).toEqual({ ok: false, error: 'must be from 0 to 4; found 5' });
     expect(ok('swaps', 3)).toEqual({ ok: true, value: 3 });
     expect(ok('count', 21)).toEqual({ ok: false, error: 'must be from 1 to 20; found 21' });
@@ -96,11 +96,11 @@ describe('parseValue', () => {
     expect(ok('strength', true)).toMatchObject({ ok: false });
   });
 
-  it('target length: none or 1-256', () => {
+  it('target length: none or 1-128', () => {
     expect(ok('target-length', 'none')).toEqual({ ok: true, value: null });
     expect(ok('target-length', null)).toEqual({ ok: true, value: null });
     expect(ok('target-length', '12')).toEqual({ ok: true, value: 12 });
-    expect(ok('target-length', 0)).toEqual({ ok: false, error: 'must be none or a whole number from 1 to 256; found 0' });
+    expect(ok('target-length', 0)).toEqual({ ok: false, error: 'must be none or a whole number from 1 to 128; found 0' });
   });
 
   it('symbolProblem says why a character cannot be a symbol, or nothing when it can', () => {
@@ -175,6 +175,6 @@ describe('shownValue: a value quoted in a message', () => {
     const loop: unknown[] = [];
     loop.push(loop);
     const r = parseValue(fieldNamed('min-length')!, loop);
-    expect(r).toEqual({ ok: false, error: 'must be a whole number from 1 to 256; found ["[circular]"]' });
+    expect(r).toEqual({ ok: false, error: 'must be a whole number from 1 to 128; found ["[circular]"]' });
   });
 });

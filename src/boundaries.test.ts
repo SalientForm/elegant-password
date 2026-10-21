@@ -63,7 +63,7 @@ function importsOf(file: string): Import[] {
 
 const LIB = filesUnder('src/lib');
 const CLI = filesUnder('src/cli');
-const WEB = [...filesUnder('src/components'), ...filesUnder('src/state'), 'src/App.tsx', 'src/main.tsx', 'src/worker.ts'];
+const WEB = [...filesUnder('src/components'), ...filesUnder('src/state'), 'src/App.tsx', 'src/main.tsx'];
 
 describe('src/lib, the shared core', () => {
   it('imports only from src/lib', () => {
@@ -178,7 +178,7 @@ function reachable(entries: string[]): Set<string> {
 
 describe('the browser bundle', () => {
   it('loads nothing that needs Node or the CLI\'s packages, though the Fun page shows the CLI\'s prompt', () => {
-    const files = reachable(['src/main.tsx', 'src/worker.ts']);
+    const files = reachable(['src/main.tsx']);
     expect([...files].some((f) => f.startsWith('src/cli/'))).toBe(true); // the CLI prompt draws on the CLI's pure modules
     const bad = [...files].flatMap((f) =>
       importsOf(f)

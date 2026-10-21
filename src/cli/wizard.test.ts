@@ -131,7 +131,7 @@ describe('tep config: questions shaped by earlier answers', () => {
     const { io, text } = await wizard([{ select: 'Ten-finger' }, { select: 'Set each rule' }, { text: '10' }, { text: '5' }, { text: '20' }, { text: '!@#' }, { select: 'Allowed' }, { select: '1' }, { select: '1' }, { select: '1' }, { select: 'Use the' }, { select: 'Keep' }, { text: 's' }]);
     expect(asked(io, /^Minimum length/)[0]!.message).toMatch(/^Minimum length \(1-\d+\)$/);
     const max = asked(io, /^Maximum length/)[0]!;
-    const low = Number(max.message.match(/\((\d+)-256\)/)![1]);
+    const low = Number(max.message.match(/\((\d+)-128\)/)![1]);
     expect(low).toBeGreaterThanOrEqual(10);
     expect(max.refused![0]!.value).toBe('5');
     expect(max.refused![0]!.reason).toMatch(new RegExp(`^5 is too low: .*The lowest that fits is ${low}\\.$`));
@@ -261,7 +261,7 @@ describe('tep config: pasted rules', () => {
   it('names what it cannot keep, drops it, and refuses text with nothing it can keep', async () => {
     const { io, text } = await wizard([{ select: 'Ten-finger' }, { select: 'Paste' }, { text: 'exactly 300 characters' }, { text: '8-20 characters, no digits, at least 2 lowercase letters' }, { select: 'Use the' }, { select: 'Keep' }, { text: 's' }]);
     const paste = asked(io, 'Paste the site\'s rules (one line)')[0]!;
-    expect(paste.refused!.map((r) => r.reason)).toEqual(['Nothing in that can be kept: exactly 300 characters: this tool makes at most 256.']);
+    expect(paste.refused!.map((r) => r.reason)).toEqual(['Nothing in that can be kept: exactly 300 characters: this tool makes at most 128.']);
     expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Read as: 8-20 characters; 2 lowercase letters.' });
     expect(io.prompts.said).toContainEqual({ kind: 'warn', message: 'Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.' });
     expect(parseConfig(text!, 'x').model.rules).toMatchObject({ 'min-length': 8, 'max-length': 20, 'min-lowercase': 2 });

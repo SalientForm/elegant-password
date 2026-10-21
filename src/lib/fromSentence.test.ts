@@ -1,12 +1,19 @@
-import { describe, expect, it } from 'vitest';
-import { compressions, DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, normalizeSentence, trimInterior, type SentenceOptions, type ShrinkStyle } from './fromSentence';
+import { describe, expect, it, vi } from 'vitest';
+import { compressions, DEFAULT_SENTENCE_OPTIONS, dropVowels, fromSentence, MAX_ATTEMPTS_PER_SUGGESTION, normalizeSentence, trimInterior, type SentenceOptions, type ShrinkStyle } from './fromSentence';
 import { DEFAULT_REQUIREMENTS, RequirementsError, type Requirements } from './generate';
 import { easedText } from './ease';
 import { scoreCold } from './score';
+import { rawBits, strengthBits } from './strength';
 import { randomInt, type RandomSource } from './random';
 import { seeded } from './testRandom';
-import { BUILT_IN_MAPPINGS, type Mapping } from './twists';
+import { applyTwists, BUILT_IN_MAPPINGS, type Mapping } from './twists';
+import { MAX_SENTENCE_LENGTH } from './text';
 import { ADJECTIVES, NOUNS, VERBS } from './words';
+
+// The scorers and the twist step are spied on, calling through, so the budget tests below can count them.
+vi.mock('./score', { spy: true });
+vi.mock('./strength', { spy: true });
+vi.mock('./twists', { spy: true });
 
 const req = (over: Partial<Requirements>): Requirements => ({ ...DEFAULT_REQUIREMENTS, minLength: 8, ...over });
 
@@ -140,6 +147,13 @@ describe('fromSentence', () => {
     expect(() => fromSentence('hi', req({ minLength: 20 }), noPadding, { rng: seeded() })).toThrow(/under the 20 minimum/);
     const noDropping = { ...DEFAULT_SENTENCE_OPTIONS, allowDropping: false };
     expect(() => fromSentence('a b c d e f g h i j k l m n o p', req({ maxLength: 12 }), noDropping, { rng: seeded() })).toThrow(RequirementsError);
+  });
+
+  it('refuses a sentence past the cap the fields enforce, so a stored or scripted sentence cannot run for seconds', () => {
+    const long = 'sally eats sweets '.repeat(28); // 504 characters
+    expect(() => fromSentence(long, req({}), undefined, { rng: seeded() })).toThrow(RequirementsError);
+    expect(() => fromSentence(long, req({}), undefined, { rng: seeded() })).toThrow('The sentence is 504 characters; 500 is the most this tool takes. Use a shorter sentence.');
+    expect(fromSentence(long.slice(0, 500), req({ count: 1 }), undefined, { rng: seeded() }).suggestions).toHaveLength(1);
   });
 });
 
@@ -284,7 +298,8 @@ describe('fromSentence: fits found by review', () => {
   });
 
   it('turns a pasted paragraph into initials without enumerating every choice', () => {
-    const paragraph = Array.from({ length: 200 }, (_, i) => ['river', 'otters', 'carry', 'bright', 'stones', 'home', 'under', 'quiet', 'skies'][i % 9]).join(' ');
+    // The longest the engine takes: 500 characters, about 90 words.
+    const paragraph = Array.from({ length: 200 }, (_, i) => ['river', 'otters', 'carry', 'bright', 'stones', 'home', 'under', 'quiet', 'skies'][i % 9]).join(' ').slice(0, MAX_SENTENCE_LENGTH);
     const started = performance.now();
     const r = fromSentence(paragraph, req({ initials: 3, minLength: 12, maxLength: 64, count: 1 }), { ...DEFAULT_SENTENCE_OPTIONS, allowDropping: true }, { rng: seeded(1) });
     expect(performance.now() - started).toBeLessThan(3000);
@@ -515,5 +530,43 @@ describe('a lowercase minimum and the common-password rule', () => {
   it('refuses a sentence that comes out as one of the most common passwords', () => {
     const r = req({ minLength: 8, maxLength: 8, minUppercase: 0, minDigits: 0, minSymbols: 0, twists: 0, includeNumber: false, easeSwaps: false });
     expect(() => fromSentence('password', r, plain, { rng: seeded(1) })).toThrow(/Your sentence makes "password"\. Not allowed: number 1 of the 10,001 most common passwords/);
+  });
+});
+
+describe('the budget: what a batch may cost', () => {
+  const words = ['sally', 'eats', 'sweets', 'on', 'sundays', 'while', 'the', 'purple', 'otters', 'gently', 'paint', 'rusty', 'boats', 'near', 'quiet', 'lakes'];
+  const long = Array.from({ length: 60 }, (_, i) => words[i % words.length]).join(' ');
+
+  it('scores a password once, after it is kept: never a candidate the search discards, never a repeat', () => {
+    vi.mocked(scoreCold).mockClear();
+    vi.mocked(strengthBits).mockClear();
+    vi.mocked(rawBits).mockClear();
+    const r = fromSentence(long, req({ maxLength: 40, count: 8, twists: 1 }), undefined, { rng: seeded(4) });
+    expect(r.suggestions.length).toBeGreaterThan(1);
+    expect(scoreCold).toHaveBeenCalledTimes(r.suggestions.length);
+    expect(strengthBits).toHaveBeenCalledTimes(r.suggestions.length);
+    expect(rawBits).toHaveBeenCalledTimes(r.suggestions.length);
+    for (const sg of r.suggestions) {
+      expect(sg.strength).toBe(strengthBits(sg.password));
+      expect(sg.bits).toBe(scoreCold(sg.password, sg.hint, BUILT_IN_MAPPINGS).bits);
+    }
+  });
+
+  it('makes at most three attempts per password asked for, then settles for fewer with the variety warning', () => {
+    // One word, nothing random left: every attempt makes the same password, so the attempts, not the count, end the batch.
+    const run = (count: number) => {
+      vi.mocked(applyTwists).mockClear();
+      const r = fromSentence('supercalifragilistic', req({ minLength: 1, twists: 0, initials: 0, minDigits: 0, minSymbols: 0, count }), undefined, { rng: seeded(1) });
+      return { r, twistCalls: vi.mocked(applyTwists).mock.calls.length };
+    };
+    const one = run(1);
+    expect(one.r.suggestions).toHaveLength(1);
+    expect(one.twistCalls).toBeGreaterThan(0);
+    const many = run(20);
+    expect(many.r.suggestions).toHaveLength(1);
+    expect(many.r.warnings).toContain('Only 1 different versions fit; add twists or initials for more variety.');
+    // Each attempt finishes the same candidates, so the twist step is called the same number of times per attempt.
+    expect(MAX_ATTEMPTS_PER_SUGGESTION).toBe(3);
+    expect(many.twistCalls).toBe(MAX_ATTEMPTS_PER_SUGGESTION * 20 * one.twistCalls);
   });
 });

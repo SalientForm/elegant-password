@@ -92,7 +92,7 @@ export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv):
     if (layer.rulesText) {
       const parsed = parseRuleText(layer.rulesText.value);
       const where = describeSource(layer.rulesText.source);
-      // A rule the tool cannot keep is refused, never applied cut down: "exactly 300 characters" must not come back as 256.
+      // A rule the tool cannot keep is refused, never applied cut down: "exactly 300 characters" must not come back as 128.
       if (parsed.unsupported.length) {
         throw usageError(
           `${where}: ${parsed.unsupported.length === 1 ? 'a rule' : `${parsed.unsupported.length} rules`} in "${layer.rulesText.value}" cannot be kept.`,

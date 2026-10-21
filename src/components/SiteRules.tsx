@@ -30,7 +30,7 @@ interface PresetNote {
  * until it is submitted. Neither ever leaves the form contradicting itself:
  * a separator the new rules forbid becomes Automatic, and each such fix is
  * said (beside the presets, or in the paste box's message). A pasted rule
- * the tool cannot keep (a length past 256, "no digits") is never applied
+ * the tool cannot keep (a length past 128, "no digits") is never applied
  * cut down: it is listed under "Not kept", with why.
  */
 export function SiteRules({ value, onChange }: Props) {

@@ -156,6 +156,24 @@ with a passphrase (WebCrypto: PBKDF2 or Argon2 to AES-GCM), or a "hints
 only" mode that keeps the sentence and drops the password. Scoring is
 unaffected either way: it already needs only the password and hint.
 
+### A worker again, once everything works without one
+
+Asked for by the user on 2026-10-21, when the audit's bet was taken: the
+engine is bounded first and the worker removed on that measurement
+(`docs/decisions.md`, "Generation"; checklist H1 and H2). Once the
+app runs without one and the real stall on a phone is known, consider
+putting a worker back, and only if there is a reason the measurement
+gives: the worst permitted batch stalls a slow phone for longer than a
+user tolerates, or a feature needs work that cannot be bounded (a Stop
+button, a batch the user can watch grow). If it comes back, it comes back
+without the faults the audit found: the worker says when it is ready and
+a slow or dead worker settles the request with an error and is replaced,
+never run inline for the rest of the session (H1's withdrawn first spec
+had that design); caches keyed by content, not array identity, so a
+structured clone still hits (L2); no replacement of a busy worker that
+re-ranks every pool (L3); one copy of the common-password list across the
+chunks (L10).
+
 ### Recall practice
 
 The typing test measures typing, not memory. A spaced-repetition drill would
@@ -191,7 +209,8 @@ since this is the password people actually forget.
 
 ## From the 2026-10-20 follow-up audit: still open
 
-The rest of the audit is done (`docs/specs/2026-10-20-follow-up-fixes-design.md`).
+The rest of the audit was done on 2026-10-20; its decisions are in
+`docs/decisions.md`.
 
 - A phone typing model. The typing test now reads a soft keyboard's
   typing from how the text changes, but difficulty is still scored for

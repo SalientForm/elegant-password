@@ -14,7 +14,7 @@ import type { MappingSettings } from '../lib/mappingSettings';
 import { MINIMAL_BITS, modeLabel, profileValues, PROFILE_KEYS, unusedIn } from '../lib/modeProfiles';
 import { ALL_SYMBOLS, RULE_KEYS } from '../lib/sitePresets';
 import { DEFAULT_SORT } from '../lib/sort';
-import { MAX_TARGET_BITS } from '../lib/validation';
+import { MAX_LENGTH, MAX_TARGET_BITS } from '../lib/validation';
 import { explainProblem } from './messages';
 import { COUNT_AT_TERMINAL, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
 import { MODE_NAMES, SITE_NAMES } from './names';
@@ -50,7 +50,7 @@ export const noAnswers = (): Answers => ({ rules: {}, rulesAnswered: false, opti
 /** The value a question not yet answered is checked with: the one that rules out least. */
 export const LOOSEST: Record<string, unknown> = {
   'min-length': 1,
-  'max-length': 256,
+  'max-length': MAX_LENGTH,
   'min-uppercase': 0,
   'min-lowercase': 0,
   'min-digits': 0,

@@ -25,6 +25,14 @@
 //      word kept whole, pad it: a word when more than 3 short, a repeated
 //      digit or symbol, a run of digits, closing marks, and a length tag
 //      last ("%50": 50 characters in all). Planned exactly; see fluff.ts.
+//   8. Score, once per password kept. The search finishes several
+//      candidates per attempt and keeps one, and an attempt can repeat an
+//      earlier password; neither a discarded candidate nor a duplicate is
+//      ever scored, since scoring costs more than all the steps above.
+//
+// A batch makes at most MAX_ATTEMPTS_PER_SUGGESTION attempts per password
+// asked for; a sentence with less variety than that returns fewer, with a
+// warning, rather than spending the attempts on repeats.
 //
 // Strength: the sentence is the user's secret and its guessability cannot be
 // measured here. The card's figure is scored cold from the password and the
@@ -61,8 +69,9 @@ import { easedText } from './ease';
 import { cryptoRandom, randomInt, type RandomSource } from './random';
 import { scoreCold } from './score';
 import { rawBits, strengthBits } from './strength';
-import { dropVowels, letterCount, normalizeSentence, SMALL_WORDS, trimInterior } from './text';
+import { dropVowels, letterCount, normalizeSentence, sentenceLengthProblem, SMALL_WORDS, trimInterior } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
+import { MAX_LENGTH } from './validation';
 
 export { dropVowels, normalizeSentence, SMALL_WORDS, trimInterior } from './text';
 
@@ -85,9 +94,9 @@ export interface SentenceOptions {
   lengthTag: LengthTag;
 }
 
-/** The range of "Shrink words of N+ letters" and of "Compress toward N characters", for every front end. */
+/** The range of "Shrink words of N+ letters" and of "Compress toward N characters" (up to the longest password the tool makes), for every front end. */
 export const SHRINK_FROM_RANGE = { min: 2, max: 20 } as const;
-export const TARGET_LENGTH_RANGE = { min: 1, max: 256 } as const;
+export const TARGET_LENGTH_RANGE = { min: 1, max: MAX_LENGTH } as const;
 
 export const DEFAULT_SENTENCE_OPTIONS: SentenceOptions = {
   shrink: 'vowels',
@@ -207,8 +216,29 @@ function randomInitials(tokens: Token[], count: number, minLetters: number, rng:
   return tokens.map((t, i) => (chosen.includes(i) ? toInitial(t) : t));
 }
 
+/** How many attempts a batch makes per password asked for before it settles for fewer. */
+export const MAX_ATTEMPTS_PER_SUGGESTION = 3;
+
+/**
+ * A finished candidate before scoring: everything a Suggestion carries that
+ * the search and the duplicate check need. Step 8 adds the scores to the
+ * drafts that are kept.
+ */
+interface Draft {
+  password: string;
+  hint: string;
+  words: Suggestion['words'];
+  steps: string[];
+  twists: AppliedTwist[];
+  /** What checkRequirements is told about how the rules were met. */
+  endSymbol: string;
+  uppercaseHow?: string;
+  digitsHow?: string;
+  symbolsHow?: string;
+}
+
 interface Attempt {
-  suggestion?: Suggestion;
+  draft?: Draft;
   problem?: string;
   missedTarget?: boolean;
   /** The least compressed state was already under the minimum length. */
@@ -343,8 +373,8 @@ function attempt(ctx: Context): Attempt {
     const shrinkable = shrinkableOf(initials);
     for (let keepWhole = 0; keepWhole <= shrinkable.length; keepWhole++) {
       result = fitLength(shaped(initials, keepWhole), ctx);
-      if (result.suggestion && keepWhole > 0) result.suggestion.steps.push('kept some long words whole to reach the minimum length');
-      if (result.suggestion && count < req.initials) result.suggestion.steps.push('used fewer random initials to reach the minimum length');
+      if (result.draft && keepWhole > 0) result.draft.steps.push('kept some long words whole to reach the minimum length');
+      if (result.draft && count < req.initials) result.draft.steps.push('used fewer random initials to reach the minimum length');
       if (!result.tooShort) return result;
     }
   }
@@ -358,7 +388,7 @@ function attempt(ctx: Context): Attempt {
 }
 
 interface Finished {
-  suggestion: Suggestion;
+  draft: Draft;
   length: number;
 }
 
@@ -457,10 +487,10 @@ function fitLength(start: Token[], ctx: Context, pad = false): Attempt {
       problem: `Even compressed, your sentence makes ${best.length} characters, over the ${req.maxLength} maximum. Use fewer words or raise the maximum.`,
     };
   }
-  return { suggestion: best.suggestion, missedTarget: opts.targetLength !== null && best.length > limit };
+  return { draft: best.draft, missedTarget: opts.targetLength !== null && best.length > limit };
 }
 
-/** Steps 4-7 on one compression state: deliberate swaps, required digits and symbols, random twists, case and joining, and padding when asked. */
+/** Steps 4-7 on one compression state: deliberate swaps, required digits and symbols, random twists, case and joining, and padding when asked. Not scored: see `scored`. */
 function finish(state: readonly Token[], limit: number, ctx: Context, pad = false): Finished | Problem {
   const { base, req, opts, separator, mappings, rng } = ctx;
   // This password's own closing mark, drawn from the allowed comfortable symbols other than the separator.
@@ -624,31 +654,41 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   if (endSymbol) steps.push(`ended with “${endSymbol}” for the symbol rule`);
   if (fluff) steps.push(describeFluff(fluff, req.minLength));
 
-  const score = scoreCold(password, hint, ctx.active);
   return {
     length,
-    suggestion: {
+    draft: {
       password,
       hint,
       words: tokens.map((t) => ({ text: t.text, original: t.original, slot: t.kind === 'fluff' ? ('fluff' as const) : ('yours' as const) })),
       steps,
       twists: random.applied,
-      twistBits: score.twistBits,
-      twistOptions: score.twistOptions,
-      bits: score.bits,
-      strength: strengthBits(password),
-      raw: rawBits(password),
-      typing: score.typing,
-      difficulty: score.difficulty,
-      memorability: score.memorability.score,
-      checks: checkRequirements(password, req, {
-        separator,
-        endSymbol: ending,
-        uppercaseHow: inits.length ? `capital initials: ${inits.map((t) => t.text).join(' ')}` : undefined,
-        digitsHow: digitTwists.length ? `twisted ${digitTwists.map(describeTwist).join(', ')}` : undefined,
-        symbolsHow: symbolTwists.length ? `twisted ${symbolTwists.map(describeTwist).join(', ')}` : undefined,
-      }),
+      endSymbol: ending,
+      uppercaseHow: inits.length ? `capital initials: ${inits.map((t) => t.text).join(' ')}` : undefined,
+      digitsHow: digitTwists.length ? `twisted ${digitTwists.map(describeTwist).join(', ')}` : undefined,
+      symbolsHow: symbolTwists.length ? `twisted ${symbolTwists.map(describeTwist).join(', ')}` : undefined,
     },
+  };
+}
+
+/** Step 8, on a draft that is kept: the cold score over the session's list, Strength and Raw from the password alone, and the rule checks. */
+function scored(d: Draft, ctx: Context): Suggestion {
+  const { password, hint, words, steps, twists, endSymbol, uppercaseHow, digitsHow, symbolsHow } = d;
+  const score = scoreCold(password, hint, ctx.active);
+  return {
+    password,
+    hint,
+    words,
+    steps,
+    twists,
+    twistBits: score.twistBits,
+    twistOptions: score.twistOptions,
+    bits: score.bits,
+    strength: strengthBits(password),
+    raw: rawBits(password),
+    typing: score.typing,
+    difficulty: score.difficulty,
+    memorability: score.memorability.score,
+    checks: checkRequirements(password, ctx.req, { separator: ctx.separator, endSymbol, uppercaseHow, digitsHow, symbolsHow }),
   };
 }
 
@@ -663,6 +703,9 @@ export function fromSentence(
 ): SentenceResult {
   const { rng = cryptoRandom, mappings = BUILT_IN_MAPPINGS } = options;
   validate(req);
+  // The cap the fields and tep enforce, enforced here too: a sentence restored from storage or passed by any other caller is not left to run for seconds.
+  const tooLong = sentenceLengthProblem(sentence);
+  if (tooLong) throw new RequirementsError(tooLong);
   const words = normalizeSentence(sentence);
   if (words.length === 0) {
     throw new RequirementsError(
@@ -702,13 +745,13 @@ export function fromSentence(
   const seen = new Set<string>();
   let problem: string | undefined;
   let missedTarget = false;
-  for (let tries = 0; suggestions.length < req.count && tries < req.count * 10; tries++) {
+  for (let attempts = 0; suggestions.length < req.count && attempts < req.count * MAX_ATTEMPTS_PER_SUGGESTION; attempts++) {
     const a = attempt(ctx);
     if (a.problem) problem = a.problem;
-    if (!a.suggestion || seen.has(a.suggestion.password)) continue;
+    if (!a.draft || seen.has(a.draft.password)) continue;
     missedTarget ||= !!a.missedTarget;
-    seen.add(a.suggestion.password);
-    suggestions.push(a.suggestion);
+    seen.add(a.draft.password);
+    suggestions.push(scored(a.draft, ctx));
   }
   if (suggestions.length === 0) throw new RequirementsError(problem ?? 'Could not fit this sentence to the requirements.');
   const short = suggestions.filter((s) => s.twists.length < req.twists).length;

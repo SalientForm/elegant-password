@@ -688,7 +688,7 @@
       },
       {
         "kind": "test",
-        "title": "target length: none or 1-256"
+        "title": "target length: none or 1-128"
       },
       {
         "kind": "test",
@@ -2506,6 +2506,10 @@
         "title": "explains what cannot be fitted"
       },
       {
+        "kind": "test",
+        "title": "refuses a sentence past the cap the fields enforce, so a stored or scripted sentence cannot run for seconds"
+      },
+      {
         "kind": "group",
         "title": "padding"
       },
@@ -2656,6 +2660,18 @@
       {
         "kind": "test",
         "title": "refuses a sentence that comes out as one of the most common passwords"
+      },
+      {
+        "kind": "group",
+        "title": "the budget: what a batch may cost"
+      },
+      {
+        "kind": "test",
+        "title": "scores a password once, after it is kept: never a candidate the search discards, never a repeat"
+      },
+      {
+        "kind": "test",
+        "title": "makes at most three attempts per password asked for, then settles for fewer with the variety warning"
       }
     ]
   },
@@ -3538,6 +3554,10 @@
       },
       {
         "kind": "test",
+        "title": "reads every block length off one pass, giving exactly what comparing slices gave"
+      },
+      {
+        "kind": "test",
         "title": "reads a walk along a keyboard row or the alphabet as one pick"
       },
       {
@@ -3564,6 +3584,23 @@
       {
         "kind": "test",
         "title": "lists every unit and smoke test; run `pnpm test:titles` when this fails"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/text.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "sentenceLengthProblem"
+      },
+      {
+        "kind": "test",
+        "title": "takes a sentence up to the cap and refuses one past it, naming both lengths"
+      },
+      {
+        "kind": "test",
+        "title": "counts UTF-16 code units, as the fields and the CLI do"
       }
     ]
   },
@@ -3698,7 +3735,7 @@
       },
       {
         "kind": "test",
-        "title": "length: each bound a whole number from 1 to 256, and the minimum not above the maximum"
+        "title": "length: each bound a whole number from 1 to 128, and the minimum not above the maximum"
       },
       {
         "kind": "test",
@@ -3879,15 +3916,23 @@
       },
       {
         "kind": "test",
-        "title": "drops answers to superseded requests"
-      },
-      {
-        "kind": "group",
-        "title": "PasswordsProvider: a request still in flight for inputs no longer wanted"
+        "title": "runs once, for the newer inputs, when a change is applied during the debounce"
       },
       {
         "kind": "test",
-        "title": "never lands on top of the batch the inputs went back to"
+        "title": "hands the engine one mapping list for every batch until the mappings change, so the caches keyed on it hold"
+      },
+      {
+        "kind": "test",
+        "title": "shows Working… by the time the engine is called, so the status is painted before the thread is taken"
+      },
+      {
+        "kind": "group",
+        "title": "PasswordsProvider: inputs that go back to what is on screen within the debounce"
+      },
+      {
+        "kind": "test",
+        "title": "runs nothing, keeps the batch those inputs have, and is not busy"
       },
       {
         "kind": "group",
@@ -3940,63 +3985,6 @@
       {
         "kind": "test",
         "title": "forgets the session: a new sentence and batch, the stored session replaced, the practice target dropped; the list stays"
-      }
-    ]
-  },
-  {
-    "file": "src/state/generator.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "generators"
-      },
-      {
-        "kind": "test",
-        "title": "runs inline"
-      },
-      {
-        "kind": "test",
-        "title": "matches worker answers to requests by id, and a newer request supersedes an older one at once"
-      },
-      {
-        "kind": "test",
-        "title": "sends one request at a time: newer ones wait in one slot, each taking it from the last"
-      },
-      {
-        "kind": "test",
-        "title": "answers the newest request straight away when it is the one the worker is on"
-      },
-      {
-        "kind": "test",
-        "title": "replaces a worker still busy with superseded work, and ignores the old one if it answers after all"
-      },
-      {
-        "kind": "test",
-        "title": "replaces the busy worker at once when it has already been busy past the limit"
-      },
-      {
-        "kind": "test",
-        "title": "ignores answers it did not ask for"
-      },
-      {
-        "kind": "test",
-        "title": "makes the worker on first use and again after dispose, so a StrictMode cleanup cannot strand it"
-      },
-      {
-        "kind": "test",
-        "title": "falls back to running inline when the worker fails"
-      },
-      {
-        "kind": "test",
-        "title": "falls back to running inline when the worker stays silent"
-      },
-      {
-        "kind": "test",
-        "title": "forgets outstanding requests on dispose and ignores a late answer from the old worker"
-      },
-      {
-        "kind": "test",
-        "title": "creates an inline generator where there are no workers"
       }
     ]
   },
