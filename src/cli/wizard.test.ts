@@ -7,6 +7,7 @@ import { layerOf, parseConfig } from './config';
 import { configCommand } from './configCommand';
 import { fieldShape, type SelectShape } from './constraints';
 import { EXIT } from './errors';
+import { COUNT_AT_TERMINAL, COUNT_PIPED } from './fields';
 import { main } from './main';
 import { resolve } from './resolve';
 import { fakeIo, flagsLayer, scratch, type Step } from './testing';
@@ -38,7 +39,7 @@ describe('tep config: a new file', () => {
       'How will you type it?',
       'The site\'s rules',
       'Options',
-      'Output: 5 passwords at a terminal (1 when piped), easiest to type first',
+      `Output: ${COUNT_AT_TERMINAL} passwords at a terminal (${COUNT_PIPED} when piped), easiest to type first`,
       'Change a line (1-5), s to save, q to quit without saving',
     ]);
     expect(io.prompts.said[0]).toEqual({ kind: 'info', message: 'Writing tep.yml. Ctrl+C stops at any point without writing anything.' });
@@ -71,7 +72,7 @@ describe('tep config: a new file', () => {
       '1  Typing mode  Two-finger',
       '2  Site rules   Typical site (12-32, A + 1 + #)',
       expect.stringMatching(/^3 {2}Options {6}the Two-finger preset: strength target Everyday \(40 bits\), shortest that meets the target off, typing comfort Balanced, keep Shift within reach off, separator a space, include a number on, minimum swaps 1, capital initials 1, two-letter words 1, made-up nouns 1, glue on$/),
-      '4  Count        5 at a terminal, 1 when piped',
+      `4  Count        ${COUNT_AT_TERMINAL} at a terminal, ${COUNT_PIPED} when piped`,
       '5  Order        Difficulty',
       '',
       expect.stringMatching(/^Sample: .+ {3}Strength \d+ {2}Raw \d+ {2}Difficulty \d+ {2}Memorability \d+$/),

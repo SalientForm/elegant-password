@@ -1031,6 +1031,23 @@
     ]
   },
   {
+    "file": "src/cli/help.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "help and examples"
+      },
+      {
+        "kind": "test",
+        "title": "name only typing modes and site presets that exist"
+      },
+      {
+        "kind": "test",
+        "title": "give, with each refused value, an example that parses"
+      }
+    ]
+  },
+  {
     "file": "src/cli/messages.test.ts",
     "titles": [
       {

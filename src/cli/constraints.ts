@@ -15,9 +15,9 @@ import type { MappingSettings } from '../lib/mappingSettings';
 import { MINIMAL_BITS, modeLabel, profileValues, PROFILE_KEYS, unusedIn } from '../lib/modeProfiles';
 import { ALL_SYMBOLS, RULE_KEYS } from '../lib/sitePresets';
 import { DEFAULT_SORT } from '../lib/sort';
-import { MAX_LENGTH, MAX_TARGET_BITS } from '../lib/validation';
+import { MAX_LENGTH, MAX_TARGET_BITS, MIN_LENGTH } from '../lib/validation';
 import { explainProblem } from './messages';
-import { COUNT_AT_TERMINAL, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
+import { COUNT_AT_TERMINAL, COUNT_PIPED, DEFAULT_SORT_HINT, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
 import { MODE_NAMES, SITE_NAMES } from './names';
 import type { Source } from './sources';
 
@@ -52,7 +52,7 @@ export const noAnswers = (): Answers => ({ rules: {}, rulesAnswered: false, opti
 
 /** The value a question not yet answered is checked with: the one that rules out least. */
 export const LOOSEST: Record<string, unknown> = {
-  'min-length': 1,
+  'min-length': MIN_LENGTH,
   'max-length': MAX_LENGTH,
   'min-uppercase': 0,
   'min-lowercase': 0,
@@ -431,7 +431,7 @@ function numberShape(f: CliField, a: Answers, where: Where, message: string, fal
       min = lo;
     }
   } else if (f.name === 'min-length') {
-    // Allowed minimums run from 1 up to the largest that works.
+    // Allowed minimums run from the shortest a length can be up to the largest that works.
     if (!ok(min)) max = min - 1;
     else {
       let lo = min;
@@ -488,7 +488,7 @@ function symbolsShape(f: CliField, a: Answers, where: Where, message: string, fa
 /** The strength choice that asks for a number of bits instead. */
 export const OTHER_BITS = -1;
 
-/** A number of bits for the strength target: any from 0 to 256 (a target out of reach is a warning, not a contradiction). */
+/** A number of bits for the strength target: any from 0 to MAX_TARGET_BITS (a target out of reach is a warning, not a contradiction). */
 export function bitsShape(initial: number): NumberShape {
   const f = fieldNamed('strength')!;
   return { kind: 'number', own: [f.name], message: 'Strength target, in bits', min: 0, max: MAX_TARGET_BITS, initial, limits: { min: 0, max: MAX_TARGET_BITS }, apply: (x, n) => withField(x, f, n) };
@@ -498,7 +498,7 @@ export function bitsShape(initial: number): NumberShape {
 export function outputHowShape(): SelectShape<boolean> {
   return {
     kind: 'select',
-    message: `Output: ${COUNT_AT_TERMINAL} passwords at a terminal (1 when piped), easiest to type first`,
+    message: `Output: ${COUNT_AT_TERMINAL} passwords at a terminal (${COUNT_PIPED} when piped), ${DEFAULT_SORT_HINT}`,
     choices: [
       { value: false, label: 'Keep these' },
       { value: true, label: 'Change them' },

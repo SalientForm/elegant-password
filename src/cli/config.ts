@@ -14,11 +14,9 @@ import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
 
-export { CONFIG_VERSION } from './configVersion';
-import { CONFIG_VERSION } from './configVersion';
+export { CONFIG_VERSION, MAX_CONFIG_BYTES } from './configVersion';
+import { CONFIG_VERSION, MAX_CONFIG_BYTES } from './configVersion';
 export const DEFAULT_CONFIG_FILE = 'tep.yml';
-/** A tep config is a few hundred bytes; anything this big is the wrong file. */
-export const MAX_CONFIG_BYTES = 64 * 1024;
 
 const TOP_KEYS = ['version', 'mode', 'site', 'rules', 'options', 'sentence', 'swaps', 'output'] as const;
 

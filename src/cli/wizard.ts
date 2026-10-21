@@ -13,7 +13,8 @@ import { DEFAULT_MAPPING_SETTINGS } from '../lib/mappingSettings';
 import { modeLabel, unusedIn } from '../lib/modeProfiles';
 import { inputsFor, presentSuggestions } from '../lib/pipeline';
 import { scoreReadings } from '../lib/readings';
-import { parseRuleText } from '../lib/ruleText';
+import { mergeParsedRules, parseRuleText } from '../lib/ruleText';
+import { DEFAULT_SITE_PRESET } from '../lib/sitePresets';
 import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
 import type { ConfigModel } from './configModel';
 import {
@@ -37,12 +38,15 @@ import {
   type Where,
 } from './constraints';
 import { CliError, EXIT, ISSUES } from './errors';
-import { describeValue, fieldNamed, fieldsIn, reqField, type CliField } from './fields';
+import { COUNT_PIPED, describeValue, fieldNamed, fieldsIn, reqField, type CliField } from './fields';
 import { Cancelled, type Prompter } from './io';
 import { explainProblem, explainWarning } from './messages';
-import { SITE_NAMES } from './names';
+import { SITE_NAMES, siteName } from './names';
 import { badges, PLAIN } from './output';
 import { wrapHanging } from './wrap';
+
+/** The site preset pasted rules and a file without one start from, by name. */
+const DEFAULT_SITE = siteName(DEFAULT_SITE_PRESET);
 
 /** The order rules are asked in, each limiting the next (spec §7.1). */
 const RULE_ORDER = ['min-length', 'max-length', 'symbols', 'spaces', 'min-uppercase', 'min-digits', 'min-symbols']; // a lowercase count comes from pasted rules, a flag or the file, never asked: sites almost never set one
@@ -105,7 +109,7 @@ export function reviewLines(a: Answers): ReviewLine[] {
       .join(', ');
     lines.push({ label: 'Options', value: `the ${modeLabel(mode)} preset: ${summary}`, edit: { kind: 'options-how' }, fields: options.map((f) => f.name) });
   }
-  for (const f of fieldsIn('output')) lines.push({ label: cap(f.name === 'count' ? 'count' : f.label), value: f.name === 'count' && !('count' in a.output) ? `${value(f)} at a terminal, 1 when piped` : value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
+  for (const f of fieldsIn('output')) lines.push({ label: cap(f.name === 'count' ? 'count' : f.label), value: f.name === 'count' && !('count' in a.output) ? `${value(f)} at a terminal, ${COUNT_PIPED} when piped` : value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
   return lines.map((l, i) => ({ ...l, n: i + 1 }));
 }
 
@@ -165,7 +169,7 @@ export function answersOf(model: ConfigModel): Answers {
     a.site = model.site;
     a.rules = { ...model.rules };
   } else {
-    a.rules = { ...rulesOf({ ...a, rules: {}, site: 'typical-site' }), ...model.rules };
+    a.rules = { ...rulesOf({ ...a, rules: {}, site: DEFAULT_SITE }), ...model.rules };
   }
   if (model.options === 'preset') a.optionsHow = 'preset';
   else {
@@ -396,10 +400,9 @@ export class Wizard {
     });
     const parsed = parseRuleText(text);
     // What the text does not say stays as it was: the rules so far, or the Typical site's before any.
-    const base = a.site || Object.keys(a.rules).length ? rulesOf(a) : rulesOf({ ...a, site: 'typical-site', rules: {} });
-    const values: Record<string, unknown> = { ...base };
-    for (const [key, v] of Object.entries(parsed.rules)) values[reqField(key as keyof Requirements)!.name] = v;
-    if (parsed.excludedSymbols) values.symbols = [...String(values.symbols)].filter((c) => !parsed.excludedSymbols.includes(c)).join('');
+    const from = a.site || Object.keys(a.rules).length ? a : { ...a, site: DEFAULT_SITE, rules: {} };
+    const merged = mergeParsedRules(reqOf(from), parsed).rules;
+    const values: Record<string, unknown> = Object.fromEntries(fieldsIn('rules').map((f) => [f.name, merged[f.target.key as keyof Requirements]]));
     this.p.info(`Read as: ${parsed.understood.join('; ')}.`);
     // What the text says that the tool cannot keep is dropped, and said, never applied cut down.
     if (parsed.unsupported.length) this.p.warn(`Dropped, as this tool cannot keep ${parsed.unsupported.length === 1 ? 'it' : 'them'}: ${parsed.unsupported.join('; ')}.`);
