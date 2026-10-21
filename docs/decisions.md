@@ -166,6 +166,24 @@ twists). It is the lead if the budget is ever missed.
   capital, wherever it is, so the bits count what generation can make.
   At the defaults a seeded batch is the same passwords as before.
 
+### Slow work (2026-10-21)
+
+- **Any one piece of work on the page's thread over 2 s is a failure**
+  (the user's line; `SLOW_MS` in `src/state/slow.ts`). Timed: a batch
+  (the provider's engine call), a zxcvbn reading (the library call, not
+  its lazy load) and the typing test's scoring of the password under test.
+- **A failure shows a floating error until it is dismissed**: a snackbar
+  in the error colour on every page, above the unapplied-changes bar when
+  both show, naming what was slow and how long it took, with Dismiss
+  (Escape inside it too). A newer failure replaces it. `SlowNotice`.
+- **It shows when the work ends.** Work on the page's thread cannot be
+  stopped part-way; the line makes a stall visible, it does not cut one
+  short. A worker could stop it, at the price `TODO.md` ("A worker
+  again") sets out.
+- **The clock is the web app's.** `src/lib` stays free of one, and the CLI
+  is unchanged: its wizard's 2 s line is `pnpm measure:wizard`. Nothing
+  goes to the console, which the smoke suite fails on.
+
 ### Limits and caches
 
 - **A password field holds at most 128 characters, a sentence or hint
