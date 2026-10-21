@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scoreDifficulty } from './difficulty';
-import { memorabilityLevel, READING_LABELS, READING_ORDER, scoreReadings, strengthLevel, strengthWord } from './readings';
+import { STRENGTH_PRESETS } from './generate';
+import { memorabilityLevel, READING_LABELS, READING_ORDER, scoreReadings, STRENGTH_WORDS, strengthLevel, strengthWord } from './readings';
 
 describe('memorability badge colours', () => {
   it('is green above 75, yellow above 45, red at or below 45', () => {
@@ -14,18 +15,27 @@ describe('memorability badge colours', () => {
 });
 
 describe('strength badge', () => {
-  it('is green from 50 bits, yellow from 40, red below, and names the preset reached', () => {
+  it('is green from 50 bits, yellow from 40, red below, and says high, fair or low', () => {
     expect(strengthLevel(72)).toBe('high');
     expect(strengthLevel(50)).toBe('high');
     expect(strengthLevel(49)).toBe('mid');
     expect(strengthLevel(40)).toBe('mid');
     expect(strengthLevel(39)).toBe('low');
-    expect(strengthWord(80)).toBe('master password');
-    expect(strengthWord(65)).toBe('very strong');
-    expect(strengthWord(55)).toBe('strong');
-    expect(strengthWord(41)).toBe('everyday');
-    expect(strengthWord(12)).toBe('weak'); // the Minimal preset (4 bits) is a target, not a strength
-    expect(strengthWord(4)).toBe('weak');
+    expect(strengthWord(72)).toBe('high');
+    expect(strengthWord(50)).toBe('high');
+    expect(strengthWord(49)).toBe('fair');
+    expect(strengthWord(40)).toBe('fair');
+    expect(strengthWord(39)).toBe('low');
+    expect(strengthWord(12)).toBe('low');
+    expect(strengthWord(4)).toBe('low');
+  });
+
+  it('names its band and never a preset, at every figure from 0 to 256', () => {
+    const presets = STRENGTH_PRESETS.map((p) => p.label.toLowerCase());
+    for (let n = 0; n <= 256; n++) {
+      expect(strengthWord(n)).toBe(STRENGTH_WORDS[strengthLevel(n)]);
+      expect(presets).not.toContain(strengthWord(n));
+    }
   });
 });
 
@@ -34,7 +44,7 @@ describe('score readings', () => {
 
   it('reads each score as its badge shows it: label, figure, band and the full sentence', () => {
     const r = scoreReadings({ strength: 48.6, raw: 120.4, difficulty, memorability: 71 });
-    expect(r.strength).toEqual({ label: 'Strength', value: '49', band: 'mid', text: 'Strength 49 bits, everyday: for an attacker who knows English and the usual habits but not this tool; from the password alone' });
+    expect(r.strength).toEqual({ label: 'Strength', value: '49', band: 'mid', text: 'Strength 49 bits, fair: for an attacker who knows English and the usual habits but not this tool; from the password alone' });
     expect(r.raw).toEqual({ label: 'Raw', value: '120', band: null, text: 'Raw 120 bits: brute force over the characters used, a repeated character counted once; what a naive meter reads' });
     expect(r.difficulty.label).toBe('Difficulty');
     expect(r.difficulty.value).toBe(String(difficulty.score));
@@ -47,7 +57,7 @@ describe('score readings', () => {
     const r = scoreReadings({ strength: 49.6, raw: 0, difficulty });
     expect(r.strength.value).toBe('50');
     expect(r.strength.band).toBe('high');
-    expect(r.strength.text).toMatch(/^Strength 50 bits, strong:/);
+    expect(r.strength.text).toMatch(/^Strength 50 bits, high:/);
     expect(scoreReadings({ strength: 39.6, raw: 0, difficulty }).strength).toMatchObject({ value: '40', band: 'mid' });
     expect(scoreReadings({ strength: 39.4, raw: 0, difficulty }).strength).toMatchObject({ value: '39', band: 'low' });
   });

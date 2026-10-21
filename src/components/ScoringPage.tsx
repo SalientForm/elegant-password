@@ -1,6 +1,7 @@
 import { RUBRIC, RUBRICS } from '../lib/difficulty';
 import { ATTACK_SCENARIOS, crackEstimates, formatDuration, STRENGTH_PRESETS } from '../lib/generate';
 import { MEMORABILITY, STRENGTH_BANDS } from '../lib/score';
+import { STRENGTH_WORDS } from '../lib/readings';
 import { ZXCVBN_LEVELS, ZXCVBN_URL } from '../lib/zxcvbnReading';
 import { COMMON_PASSWORD_COUNT } from '../lib/common';
 import { COMMON_PASSWORDS_SOURCE } from '../lib/commonPasswords';
@@ -52,8 +53,9 @@ export function ScoringPage() {
           <code>Password1!</code> and 1.6 bits; two letters count only from three times, so <code>banana</code> stays a
           word). A walk of {MIN_KEY_WALK} letters or more along a keyboard row or the alphabet (<code>asdf</code>,{' '}
           <code>poiu</code>, <code>abcd</code>) is one pick of {KEY_WALK_CHOICES.toLocaleString('en')}. The badge
-          is green from the Strong preset at {STRENGTH_BANDS.green} bits, yellow from Everyday at {STRENGTH_BANDS.yellow},
-          and red below, judged on the figure as shown.
+          is green from {STRENGTH_BANDS.green} bits, yellow from {STRENGTH_BANDS.yellow} and red below, judged on the figure
+          as shown; its tip says {STRENGTH_WORDS.high}, {STRENGTH_WORDS.mid} or {STRENGTH_WORDS.low}. The presets below
+          are targets for the bits, not Strength readings.
         </p>
         <h3>zxcvbn: a second opinion</h3>
         <p>

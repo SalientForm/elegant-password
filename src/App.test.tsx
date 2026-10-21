@@ -349,6 +349,9 @@ describe('App: order and pages', () => {
     // Deliberate swaps come with their words: no memory load, no memorability penalty.
     expect(screen.getByText(/adds nothing to memory load and costs no memorability/)).toBeTruthy();
     expect(screen.getByText(/a deliberate swap costs nothing/)).toBeTruthy();
+    // Strength's tip names its band, never a preset: the presets are targets for the bits.
+    expect(screen.getByText(/its tip says high, fair or low/)).toBeTruthy();
+    expect(screen.queryByText(/green from the Strong preset/)).toBeNull();
     expect(screen.getByRole('link', { name: 'Scoring' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText(/read like a sentence/)).toBeTruthy(); // the one app description, on every page
     // The options each mode fills in, one column per mode, and what they measure.

@@ -76,7 +76,7 @@ describe('SuggestionCard', () => {
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(screen.getByText(`Memorability ${s.memorability}`)).toBeTruthy();
     fireEvent.mouseEnter(screen.getByText(`Strength ${Math.round(s.strength)}`).parentElement!);
-    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak): for an attacker who knows English and the usual habits but not this tool; from the password alone$/);
+    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (high|fair|low): for an attacker who knows English and the usual habits but not this tool; from the password alone$/);
   });
 
   it('toggles "Why?", marks unmet checks, and adds to the list', () => {
