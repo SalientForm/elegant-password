@@ -3389,6 +3389,18 @@
       {
         "kind": "test",
         "title": "never leaves the rules contradicting themselves, from any starting point, for any text it reads"
+      },
+      {
+        "kind": "group",
+        "title": "mergeParsedRules"
+      },
+      {
+        "kind": "test",
+        "title": "puts in what the text states, takes out the symbols it rules out, and fixes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "is the step applyParsedRules then settles"
       }
     ]
   },

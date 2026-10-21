@@ -13,7 +13,7 @@
 // scores differently in each; a score is a pure function of the password,
 // its memory load and the mode.
 
-import { isFarShift, isPinkyStretch, isRoll, pressFor, transitionCost, type Key } from './keyboard';
+import { isFarShift, isPinkyStretch, isRoll, ONE_HAND_SHIFT_REACH, pressFor, transitionCost, type Key } from './keyboard';
 
 export const LEVELS = ['Effortless', 'Easy', 'Moderate', 'Demanding', 'Hard'] as const;
 export type Level = 0 | 1 | 2 | 3 | 4;
@@ -66,7 +66,7 @@ export const TYPING_MODES: readonly { id: TypingMode; label: string; hint: strin
   {
     id: 'one-handed',
     label: 'One-handed',
-    hint: 'One hand on the keyboard. That hand holds Shift too, so each capital or symbol counts, and one more than 4 keys from either Shift key counts most.',
+    hint: `One hand on the keyboard. That hand holds Shift too, so each capital or symbol counts, and one more than ${ONE_HAND_SHIFT_REACH} keys from either Shift key counts most.`,
   },
   {
     id: 'quick',
@@ -97,7 +97,7 @@ const CRITERIA: Record<keyof Measurements, Omit<Criterion, 'weight' | 'cutPoints
   farShifts: {
     id: 'farShifts',
     name: 'One-hand Shift',
-    measures: 'Capitals and symbols more than 4 keys from both Shift keys, out of reach of the hand holding Shift',
+    measures: `Capitals and symbols more than ${ONE_HAND_SHIFT_REACH} keys from both Shift keys, out of reach of the hand holding Shift`,
     format: fixed(0),
   },
   offLetterKeys: { id: 'offLetterKeys', name: 'Off-letter keys', measures: 'Digits and symbols, which pull the hands off the letters', format: fixed(0) },

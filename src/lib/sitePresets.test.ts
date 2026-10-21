@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, generate, ruleProblems, separatorProblem, validate } from './generate';
 import { seeded } from './testRandom';
-import { applyPreset, matchingPreset, RULE_KEYS, rulesOf, sameRules, SITE_PRESETS, withRules } from './sitePresets';
+import { applyPreset, DEFAULT_SITE_PRESET, matchingPreset, RULE_KEYS, rulesOf, sameRules, SITE_PRESETS, withRules } from './sitePresets';
 
 describe('site rule presets', () => {
   it('are each a full, valid set of site rules and nothing else', () => {
@@ -18,7 +18,9 @@ describe('site rule presets', () => {
 
   it('start with "Typical site", which is the defaults', () => {
     expect(SITE_PRESETS[0]!.label).toBe('Typical site');
-    expect(matchingPreset(DEFAULT_REQUIREMENTS)?.label).toBe('Typical site');
+    expect(SITE_PRESETS[0]).toBe(DEFAULT_SITE_PRESET);
+    expect(matchingPreset(DEFAULT_REQUIREMENTS)).toBe(DEFAULT_SITE_PRESET);
+    expect(DEFAULT_SITE_PRESET.note).toBe(`${DEFAULT_REQUIREMENTS.minLength}-${DEFAULT_REQUIREMENTS.maxLength}, A + 1 + #`);
   });
 
   it('leave strength, comfort, style, swaps and count as they were', () => {

@@ -18,7 +18,7 @@
 // nothing of it is applied.
 
 import type { Requirements } from './generate';
-import { settleRules, type RuleFields } from './sitePresets';
+import { settleRules, type RuleFields, type RuleKey } from './sitePresets';
 import { MAX_LENGTH } from './validation'; // the form's own limit
 
 export interface ParsedRules {
@@ -493,8 +493,19 @@ function finish(l: Lengths, f: Found): ParsedRules {
  * named.
  */
 export function applyParsedRules(req: Requirements, parsed: ParsedRules): { req: Requirements; notes: string[] } {
-  const { rules } = parsed;
-  const next: Requirements = { ...req, ...rules };
-  if (parsed.excludedSymbols) next.allowedSymbols = [...next.allowedSymbols].filter((c) => !parsed.excludedSymbols.includes(c)).join('');
-  return settleRules(next, new Set(Object.keys(rules) as (keyof RuleFields)[]));
+  return settleRules(mergeParsedRules(req, parsed).rules, new Set(Object.keys(parsed.rules) as (keyof RuleFields)[]));
+}
+
+/**
+ * The rules with what the text states put in and the symbols it rules out
+ * taken from the allowed ones: nothing else changes and nothing is fixed to
+ * fit. `fields` are the ones it set. The form settles the result
+ * (applyParsedRules); tep keeps it as it is and reports a contradiction.
+ */
+export function mergeParsedRules<T extends RuleFields>(rules: T, parsed: ParsedRules): { rules: T; fields: RuleKey[] } {
+  const merged: T = { ...rules, ...parsed.rules };
+  const fields = Object.keys(parsed.rules) as RuleKey[];
+  if (!parsed.excludedSymbols) return { rules: merged, fields };
+  const allowedSymbols = [...merged.allowedSymbols].filter((c) => !parsed.excludedSymbols.includes(c)).join('');
+  return { rules: { ...merged, allowedSymbols }, fields: fields.includes('allowedSymbols') ? fields : [...fields, 'allowedSymbols'] };
 }

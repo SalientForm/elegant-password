@@ -22,7 +22,7 @@ import {
   type Slot,
   type Template,
 } from './grammar';
-import { isFarShift, isPinkyStretch, type TypingProfile } from './keyboard';
+import { FAR_SHIFT_LETTERS, isFarShift, isPinkyStretch, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
 import { scoreCold } from './score';
@@ -976,7 +976,7 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
   }
   const capitalAt = capitalWord(typed, chosen.minUppercase, (j) => shape.madeUp.includes(j), req.shiftReach);
   if (req.shiftReach && capitalAt !== undefined && !nearCapital(typed[capitalAt]!)) {
-    warnings.push('No word in this sentence starts with a letter one hand can capitalise while holding Shift (T G B Y H N U J I are out of reach).');
+    warnings.push(`No word in this sentence starts with a letter one hand can capitalise while holding Shift (${FAR_SHIFT_LETTERS.join(' ')} are out of reach).`);
   }
   // Twists never touch the number, initials, made-up nouns or two-letter
   // words, so what the card says about those stays true.

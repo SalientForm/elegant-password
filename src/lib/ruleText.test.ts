@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, ruleProblems, validate } from './generate';
-import { applyParsedRules, parseRuleText } from './ruleText';
+import { applyParsedRules, mergeParsedRules, parseRuleText } from './ruleText';
 import type { RuleFields } from './sitePresets';
 
 interface Case {
@@ -281,5 +281,18 @@ describe('applyParsedRules', () => {
         for (const p of ruleProblems(req)) expect(p.fields[0], `${text} from ${JSON.stringify(start)}: ${p.message}`).toBe('maxLength');
       }
     }
+  });
+});
+
+describe('mergeParsedRules', () => {
+  it('puts in what the text states, takes out the symbols it rules out, and fixes nothing', () => {
+    const { rules, fields } = mergeParsedRules({ ...DEFAULT_REQUIREMENTS, separator: '#' }, parseRuleText('At least 40 characters. Must not contain & or *.'));
+    expect(rules).toEqual({ ...DEFAULT_REQUIREMENTS, separator: '#', minLength: 40, allowedSymbols: [...DEFAULT_REQUIREMENTS.allowedSymbols].filter((c) => c !== '&' && c !== '*').join('') });
+    expect([...fields].sort()).toEqual(['allowedSymbols', 'minLength']);
+  });
+
+  it('is the step applyParsedRules then settles', () => {
+    const parsed = parseRuleText('Must be 8-20 characters and include at least one number and one of !@#$%.');
+    expect(applyParsedRules(DEFAULT_REQUIREMENTS, parsed).req).toEqual(mergeParsedRules(DEFAULT_REQUIREMENTS, parsed).rules);
   });
 });
