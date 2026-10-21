@@ -1,37 +1,37 @@
 {
-  "asOf": "2026-10-16T01:18:04.588Z",
+  "asOf": "2026-10-20T23:52:36.588Z",
   "firstPrompt": "2026-10-15T02:27:33.540Z",
-  "lastCommit": "2026-10-16T01:18:04.000Z",
-  "activeMinutes": 525,
-  "commits": 88,
+  "lastCommit": "2026-10-20T23:48:04.000Z",
+  "activeMinutes": 1045,
+  "commits": 122,
   "lines": {
-    "app": 9034,
-    "tests": 6066,
-    "files": 111
+    "app": 14926,
+    "tests": 9728,
+    "files": 183
   },
-  "tests": 377,
-  "prompts": 64,
-  "toolCalls": 1438,
-  "sessions": 3,
-  "subagents": 10,
+  "tests": 719,
+  "prompts": 143,
+  "toolCalls": 3400,
+  "sessions": 16,
+  "subagents": 20,
   "models": [
     {
       "model": "claude-opus-5-5",
-      "calls": 842,
-      "input": 1694,
-      "cacheWrite": 3120103,
-      "cacheWrite1h": 1415575,
-      "cacheRead": 179394014,
-      "output": 1023696
+      "calls": 2087,
+      "input": 4198,
+      "cacheWrite": 7199192,
+      "cacheWrite1h": 4396476,
+      "cacheRead": 390097898,
+      "output": 2147183
     },
     {
       "model": "claude-fable-5-1",
-      "calls": 363,
-      "input": 8676,
-      "cacheWrite": 3415180,
-      "cacheWrite1h": 2475303,
-      "cacheRead": 157395586,
-      "output": 1228875
+      "calls": 653,
+      "input": 17326,
+      "cacheWrite": 5443176,
+      "cacheWrite1h": 4275948,
+      "cacheRead": 290105541,
+      "output": 1942725
     }
   ]
 }
