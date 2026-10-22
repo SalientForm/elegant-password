@@ -1811,6 +1811,10 @@
       },
       {
         "kind": "test",
+        "title": "fills in \"3 of the following 4\" as three named kinds, says which, and leaves the symbol count as it was"
+      },
+      {
+        "kind": "test",
         "title": "fills in at once when text is pasted"
       },
       {
@@ -1927,6 +1931,35 @@
       {
         "kind": "test",
         "title": "summarises the random bits across the batch"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SiteRules.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SiteRules"
+      },
+      {
+        "kind": "test",
+        "title": "reads the text once per change: renders, \"Fill in\" and a paste with its preview read nothing more"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a paste that would take the text past the cap, says why, and changes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "counts only what a paste leaves: replacing a selection with text that fits is taken"
+      },
+      {
+        "kind": "test",
+        "title": "holds at most the cap and says when it is full; any other way past it is refused"
+      },
+      {
+        "kind": "test",
+        "title": "reports a reading over 2 s as slow work"
       }
     ]
   },
@@ -3403,6 +3436,10 @@
       {
         "kind": "test",
         "title": "is deterministic: the same text always reads the same"
+      },
+      {
+        "kind": "test",
+        "title": "reads a text up to the length cap, and none of a longer one, saying so"
       },
       {
         "kind": "test",

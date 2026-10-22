@@ -221,6 +221,16 @@ describe('RequirementsForm', () => {
     expect(req().minLowercase).toBe(1);
   });
 
+  it('fills in "3 of the following 4" as three named kinds, says which, and leaves the symbol count as it was', () => {
+    const noSymbols = { ...DEFAULT_REQUIREMENTS, minUppercase: 0, minDigits: 0, minSymbols: 0 };
+    render(<Harness initial={noSymbols} />);
+    const box = screen.getByRole('textbox', { name: "The site's password rules" });
+    fireEvent.paste(box);
+    fireEvent.change(box, { target: { value: 'Your password must contain at least 3 of the following:\n• Uppercase letters\n• Lowercase letters\n• Numbers\n• Symbols' } });
+    expect(req()).toEqual({ ...noSymbols, minUppercase: 1, minLowercase: 1, minDigits: 1 });
+    expect(pasteStatus().textContent).toBe('Filled in: at least 3 of uppercase, lowercase, digits and symbols (kept as an uppercase letter, a lowercase letter and a digit).');
+  });
+
   it('fills in at once when text is pasted', () => {
     render(<Harness />);
     const box = screen.getByRole('textbox', { name: "The site's password rules" });
