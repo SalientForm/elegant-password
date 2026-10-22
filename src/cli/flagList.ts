@@ -2,6 +2,7 @@
 // table's): what each takes and does. Pure, so help and the Fun page's CLI
 // prompt can list them without the parser.
 
+import { MAX_RULES_TEXT_LENGTH } from '../lib/ruleText';
 import { MODE_NAMES, SITE_NAMES } from './names';
 
 /** Short forms of the settings' flags: -n for --count. */
@@ -16,7 +17,7 @@ export const META_FLAGS = [
   { name: 'no-config', value: '', description: 'Read no config file, not even ./tep.yml' },
   { name: 'mode', short: 'm', value: '<mode>', description: `Typing mode: ${MODE_NAMES.map((m) => m.name).join(', ')}; fills in the options that suit it` },
   { name: 'site', short: 's', value: '<preset>', description: `Site rules preset: ${SITE_NAMES.map((s) => s.name).join(', ')}` },
-  { name: 'rules', value: '<text>', description: 'The site\'s rules as written on its sign-up form ("8-20 characters, one number")' },
+  { name: 'rules', value: '<text>', description: `The site's rules as written on its sign-up form ("8-20 characters, one number"), at most ${MAX_RULES_TEXT_LENGTH} characters` },
   { name: 'sentence', value: '-', description: 'Use your own sentence, read from stdin (or typed, hidden, at a terminal)' },
   { name: 'format', short: 'f', value: '<format>', description: 'table (at a terminal), plain (piped: passwords only) or json' },
   { name: 'copy', value: '', description: 'Also copy the first password to the clipboard' },

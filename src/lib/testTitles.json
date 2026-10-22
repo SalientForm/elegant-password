@@ -97,6 +97,10 @@
       },
       {
         "kind": "test",
+        "title": "pasted \"3 of the following 4\" rules fill in three named kinds and make passwords that meet them; a paste past the cap is refused"
+      },
+      {
+        "kind": "test",
         "title": "an impossible combination shows its error beside the fields, blocks Submit, Enter and Refresh, and works once corrected"
       },
       {
@@ -954,6 +958,10 @@
       },
       {
         "kind": "test",
+        "title": "rules text past the core's cap, refused whole"
+      },
+      {
+        "kind": "test",
         "title": "refuses rules text it cannot keep, never making a password that breaks it"
       },
       {
@@ -1291,6 +1299,14 @@
       },
       {
         "kind": "test",
+        "title": "keeps \"3 of the following 4\" as three named kinds and says which, leaving the fourth as it was"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a rules text past the core's cap whole, as a usage error with the core's message"
+      },
+      {
+        "kind": "test",
         "title": "refuses text with no rules in it, as a usage error that says what rules text looks like"
       },
       {
@@ -1483,6 +1499,10 @@
       {
         "kind": "test",
         "title": "names what it cannot keep, drops it, and refuses text with nothing it can keep"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a paste past the core's cap whole and asks again; keeps \"3 of 4\" as three named kinds"
       },
       {
         "kind": "test",
@@ -1827,6 +1847,10 @@
       },
       {
         "kind": "test",
+        "title": "fills in \"3 of the following 4\" as three named kinds, says which, and leaves the symbol count as it was"
+      },
+      {
+        "kind": "test",
         "title": "fills in at once when text is pasted"
       },
       {
@@ -1972,6 +1996,35 @@
       {
         "kind": "test",
         "title": "drops the question when focus leaves the button, so a later click asks again"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SiteRules.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SiteRules"
+      },
+      {
+        "kind": "test",
+        "title": "reads the text once per change: renders, \"Fill in\" and a paste with its preview read nothing more"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a paste that would take the text past the cap, says why, and changes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "counts only what a paste leaves: replacing a selection with text that fits is taken"
+      },
+      {
+        "kind": "test",
+        "title": "holds at most the cap and says when it is full; any other way past it is refused"
+      },
+      {
+        "kind": "test",
+        "title": "reports a reading over 2 s as slow work"
       }
     ]
   },
@@ -3468,7 +3521,15 @@
       },
       {
         "kind": "test",
+        "title": "keeps a choice of N kinds as exactly N, never all of them, and says which"
+      },
+      {
+        "kind": "test",
         "title": "is deterministic: the same text always reads the same"
+      },
+      {
+        "kind": "test",
+        "title": "reads a text up to the length cap, and none of a longer one, saying so"
       },
       {
         "kind": "test",

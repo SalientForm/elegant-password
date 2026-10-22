@@ -36,7 +36,8 @@ explanation for each:
   three times) or a walk along the keyboard ("asdf").
 - **Rules it cannot keep are named**: pasted site rules show what was
   understood and, separately, what was not kept and why (a minimum length
-  above 128, "no digits", "at most 2 symbols"); nothing is quietly weakened.
+  above 128, "no digits", "at most 2 symbols", "3 of" a list it cannot
+  read); nothing is quietly weakened.
   A minimum number of lowercase letters is a rule like the other counts.
 - **No common passwords**: a password that is exactly one of the 10,001
   most common passwords (SecLists' `10k-most-common.txt`, in
@@ -89,6 +90,21 @@ explanation for each:
   what the text did not say, and named ("maximum raised to 40 to fit",
   "separator set to Auto"). Presets and pasted rules are drafts like
   any edit.
+- **"3 of the following 4" is kept as three.** A choice of kinds ("at
+  least 3 of: uppercase, lowercase, numbers, symbols", "a number or a
+  symbol") is kept by requiring that many of the kinds listed, the
+  cheapest to type first (letters, which every password has, then a
+  lowercase letter, an uppercase letter, a digit, a symbol), never a kind
+  the text rules out, and the line says both what was asked and what was
+  kept: "at least 3 of uppercase, lowercase, digits and symbols (kept as
+  an uppercase letter, a lowercase letter and a digit)". It never claims
+  all four. A choice it cannot keep (it recognises fewer kinds than asked)
+  is listed under "Not kept".
+- **The box takes up to 2,000 characters** (`MAX_RULES_TEXT_LENGTH`, the
+  CLI's cap too), several times a sign-up form's rules with their labels.
+  A paste that would pass it is refused whole, with the reason, never cut,
+  so no rule past a cut is dropped unseen. The text is read once per
+  change.
 - **Rules that cannot all hold are caught, never generated.** One pure
   function (`src/lib/validation.ts`) finds every contradiction: a minimum
   above the maximum, more required uppercase letters, digits and symbols
@@ -326,7 +342,8 @@ happened, undo it with
 
 - **Settings** come from the defaults, then a config file (`./tep.yml`, or
   `-c`), then flags: a site preset, the site's rules (or their wording with
-  `--rules`), a typing mode, which fills in the options that suit it, and
+  `--rules`, read as the web app reads a paste, up to the same 2,000
+  characters), a typing mode, which fills in the options that suit it, and
   any option by hand. `tep help g` lists every flag.
 - **No contradictions.** Settings that contradict each other make no
   passwords (exit 3), and nothing is quietly fixed. Every message says what

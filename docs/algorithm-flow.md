@@ -53,6 +53,35 @@ throws its first, so no password is ever made from a contradiction.
 | Custom or built-in swap whose output is not allowed | Narrowing the symbols | Not a contradiction: the swap is skipped (struck through, with the reason), with a warning if none is left. |
 | Compress-toward target outside the length range | Sentence options | Not a contradiction: clamped into the range. |
 
+## 1b. Pasted rules: a choice of kinds
+
+The criteria above are per-class minimums, so a site's "at least 3 of the
+following 4: uppercase, lowercase, numbers, symbols" has no field of its
+own. `parseRuleText` (`src/lib/ruleText.ts`) keeps it as minimums: it
+requires that many of the kinds listed, set to 1 (or the kind's own count,
+"2 digits"), and leaves the others as the form had them, so every password
+meets the site's rule. The kinds are chosen from the text alone, so the
+web preview and `tep` agree:
+
+1. letters, when listed: every password has them, so they set nothing;
+2. kinds the text requires anyway, or an earlier choice kept;
+3. then the cheapest to type: a lowercase letter, an uppercase letter, a
+   digit, a symbol.
+
+A kind the text rules out ("no special characters", "letters and numbers
+only") is never chosen. A choice is read from a count of kinds ("3 of",
+"3 out of 4", "any 2 of", "3 character types") with the kinds after it in
+the clause, or on the lines under it (a bulleted or numbered list, ending
+at the first line naming no kind, or at the stated total); with no list
+and a class word, the usual four. Kinds joined by "or" ("a number or a
+symbol", "numbers and/or symbols") are a choice of one. "One of each" is
+all of them, and a count over one kind ("one of !@#$%", "2 of the
+following special characters") is a count of that kind. A choice it
+cannot keep (fewer kinds recognised than asked, too few left after the
+text's own exclusions, an unnamed count other than four) is named in
+`unsupported` and nothing of it is applied. A text past
+`MAX_RULES_TEXT_LENGTH` (2,000 characters) is not read at all.
+
 ## 2. Make up a sentence
 
 ```mermaid
@@ -214,6 +243,9 @@ persisted; drafts are not.
   leave a contradiction the text did not state; stored contradictions load
   repaired (`validation.test.ts`, `sitePresets.test.ts`,
   `ruleText.test.ts`, `settingsStore.test.ts`).
+- A pasted choice of N kinds is kept as exactly N named kinds, never all
+  of them, and every password then meets it (`ruleText.test.ts`, the
+  smoke suite).
 - Any sentence with a letter reduces to 12 characters that pass every rule
   (`reduceTo12.test.ts`).
 - Swap counts are exact and sampling is uniform; a word never vanishes;

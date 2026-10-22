@@ -2,6 +2,7 @@ import {writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { checkRequirements, DEFAULT_REQUIREMENTS } from '../lib/generate';
+import { MAX_RULES_TEXT_LENGTH } from '../lib/ruleText';
 import { EXIT } from './errors';
 import { main, VERSION } from './main';
 import { fakeIo, scratch, type FakeIo } from './testing';
@@ -214,6 +215,8 @@ describe('tep g: the command line (exit 2)', () => {
     expect((await run(['g', '-n', '1', '--no-number'])).code).toBe(EXIT.ok); // a setting: fine
   });
   it('rules text with no rules', () => usage(['--rules', 'hello'], '--rules: no password rules found in "hello".'));
+  it('rules text past the core\'s cap, refused whole', () =>
+    usage(['--rules', `8-20 characters ${'x'.repeat(MAX_RULES_TEXT_LENGTH)}`], '--rules: the rules text is too long to read.', new RegExp(`^The rules text is ${MAX_RULES_TEXT_LENGTH + 16} characters; ${MAX_RULES_TEXT_LENGTH} is the most this tool reads`)));
   it('refuses rules text it cannot keep, never making a password that breaks it', async () => {
     // The audit's case: "exactly 300" once came back as 256 characters with exit 0.
     const { code, io } = await run(['g', '--no-config', '--rules', 'exactly 300 characters', '--sentence', '-', '--format', 'json'], { stdin: 'ducks\n' });

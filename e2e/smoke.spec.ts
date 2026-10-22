@@ -237,6 +237,36 @@ test('a site preset that rules out the separator still makes passwords: the sepa
   await everyCheckMet(page);
 });
 
+test('pasted "3 of the following 4" rules fill in three named kinds and make passwords that meet them; a paste past the cap is refused', async ({ page, context }) => {
+  await settledPasswords(page);
+  const box = page.getByRole('textbox', { name: "The site's password rules" });
+  const status = page.locator('#paste-rules').getByRole('status');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => navigator.clipboard.writeText('Your password must be 10-24 characters and contain at least 3 of the following:\n• Uppercase letters (A-Z)\n• Lowercase letters (a-z)\n• Numbers (0-9)\n• Symbols'));
+  await box.click();
+  await page.keyboard.press('Control+V');
+  await expect(status).toHaveText('Filled in: 10-24 characters, at least 3 of uppercase, lowercase, digits and symbols (kept as an uppercase letter, a lowercase letter and a digit).');
+  await applyBar(page).getByRole('button', { name: 'Submit changes', exact: true }).click();
+  await expect(applyBar(page)).toHaveCount(0);
+  for (const password of await settledPasswords(page)) {
+    expect(password).toMatch(/[A-Z]/);
+    expect(password).toMatch(/[a-z]/);
+    expect(password).toMatch(/[0-9]/);
+  }
+  await everyCheckMet(page);
+
+  // The box's cap is the core's: a paste that would pass it is refused whole, and the text stays.
+  const cap = Number(await box.getAttribute('maxlength'));
+  expect(cap).toBeGreaterThan(0);
+  const before = await box.inputValue();
+  await page.evaluate((n) => navigator.clipboard.writeText('x'.repeat(n)), cap);
+  await box.click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Control+V');
+  await expect(status).toHaveText(new RegExp(`^Not pasted\\. The rules text is ${before.length + cap} characters; ${cap} is the most this tool reads\\.`));
+  await expect(box).toHaveValue(before);
+});
+
 test('an impossible combination shows its error beside the fields, blocks Submit, Enter and Refresh, and works once corrected', async ({ page }) => {
   const before = await settledPasswords(page);
   const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('elegant-passwords:requirements:v1') ?? '{}'));

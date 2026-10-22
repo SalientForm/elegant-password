@@ -9,6 +9,7 @@
 // Only the CLI's pure modules are imported: the Fun page runs in a browser.
 
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
+import { MAX_RULES_TEXT_LENGTH } from '../lib/ruleText';
 import { DEFAULT_SITE_PRESET } from '../lib/sitePresets';
 import { capitalise } from '../lib/text';
 import { MAX_LENGTH, MAX_TARGET_BITS } from '../lib/validation';
@@ -19,7 +20,7 @@ import { emptyModel } from '../cli/configModel';
 import { serializeConfig } from '../cli/configText';
 import { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../cli/configVersion';
 import { fieldShape, LOOSEST, noAnswers, QUESTION_BUDGET_MS, type SelectShape } from '../cli/constraints';
-import { EXIT, EXIT_MEANINGS } from '../cli/errors';
+import { CliError, EXIT, EXIT_MEANINGS } from '../cli/errors';
 import { COUNT_AT_TERMINAL, COUNT_PIPED, DEFAULT_SORT_HINT, describeValue, FIELDS, fieldNamed, keyPath, SEPARATOR_NAMES, STRENGTH_INPUTS, type CliField } from '../cli/fields';
 import { FORMATS } from '../cli/flagList';
 import { CONFIG_HELP, generateHelp, OVERVIEW } from '../cli/help';
@@ -97,6 +98,18 @@ function flagRow(f: CliField): string {
 }
 
 /** Flags with a source each, as tep g's parser would give them. */
+/** tep's refusal of a rules text past the core's cap, as `resolve` throws it. */
+const RULES_TOO_LONG = (() => {
+  const layer = emptyLayer();
+  layer.rulesText = { value: 'x'.repeat(MAX_RULES_TEXT_LENGTH + 1), source: { kind: 'flag', flag: '--rules' } };
+  try {
+    resolve(undefined, layer, { tty: true });
+  } catch (e) {
+    return e as CliError;
+  }
+  throw new Error('a rules text past the cap was read');
+})();
+
 function flagged(values: Record<string, unknown>, extra: { site?: string; mode?: (typeof MODE_NAMES)[number]['value'] } = {}): Layer {
   const layer = emptyLayer();
   const flag = (name: string): Source => ({ kind: 'flag', flag: `--${name}` });
@@ -202,7 +215,7 @@ ${code('tep uninstall')} removes each ${code('tep')} in ${code('$TEP_BIN_DIR')},
 
 ### 4.1 Where settings come from
 
-Lowest to highest, each layer replacing only the fields it states: the core's defaults (${code('DEFAULT_REQUIREMENTS')}, ${code('DEFAULT_SENTENCE_OPTIONS')}, all built-in swaps); the config file (${code('-c <file>')}, else ${code('./tep.yml')} if present; no parent-directory search, no global file); then the flags. Within the file, then within the flags: the site preset, the rules text (${code('--rules')}, flags only, read with ${code('parseRuleText')}: only the fields the text states, symbols it rules out removed; text with no rules is exit ${EXIT.usage}, and so is text stating a rule tep cannot keep (a length past ${MAX_LENGTH}, "no digits", "at most 2 symbols"), each named, "Not kept: exactly 300 characters: this tool makes at most ${MAX_LENGTH}.", rather than made into passwords that break it; what it read is a note on stderr), the rule values, the typing mode's preset (${code('profileValues(mode, rules)')}: its "space if allowed" separator resolves by whether spaces are allowed), then the option values. A ${code('--mode')} on the command line replaces the file's own options, as picking a mode does in the web app. Then the sentence options and the output. The count defaults to ${COUNT_AT_TERMINAL} when stdout is a terminal and ${COUNT_PIPED} when it is piped. Every field remembers where its value came from. Options set by hand that the mode has no use for (${code('unusedIn')}) are warnings ("${resolve(undefined, flagged({ 'avoid-pinky': true }, { mode: 'two-finger' }), { tty: true }).warnings[0]}"), not errors.
+Lowest to highest, each layer replacing only the fields it states: the core's defaults (${code('DEFAULT_REQUIREMENTS')}, ${code('DEFAULT_SENTENCE_OPTIONS')}, all built-in swaps); the config file (${code('-c <file>')}, else ${code('./tep.yml')} if present; no parent-directory search, no global file); then the flags. Within the file, then within the flags: the site preset, the rules text (${code('--rules')}, flags only, read with ${code('parseRuleText')}: only the fields the text states, symbols it rules out removed; text with no rules is exit ${EXIT.usage}, and so is text stating a rule tep cannot keep (a length past ${MAX_LENGTH}, "no digits", "at most 2 symbols"), each named, "Not kept: exactly 300 characters: this tool makes at most ${MAX_LENGTH}.", rather than made into passwords that break it; a choice of kinds ("at least 3 of the following 4: ...") is kept as that many named kinds, as in the web app; a text past ${MAX_RULES_TEXT_LENGTH} characters (${code('MAX_RULES_TEXT_LENGTH')}) is exit ${EXIT.usage} too, refused whole, never cut: "${RULES_TOO_LONG.title}" then "${RULES_TOO_LONG.details[0]}"; what it read is a note on stderr), the rule values, the typing mode's preset (${code('profileValues(mode, rules)')}: its "space if allowed" separator resolves by whether spaces are allowed), then the option values. A ${code('--mode')} on the command line replaces the file's own options, as picking a mode does in the web app. Then the sentence options and the output. The count defaults to ${COUNT_AT_TERMINAL} when stdout is a terminal and ${COUNT_PIPED} when it is piped. Every field remembers where its value came from. Options set by hand that the mode has no use for (${code('unusedIn')}) are warnings ("${resolve(undefined, flagged({ 'avoid-pinky': true }, { mode: 'two-finger' }), { tty: true }).warnings[0]}"), not errors.
 
 Then ${code('problemsOf')} (only ${code('ruleProblems')} with ${code('--sentence')}, as there is no made-up sentence to plan); any problem is exit ${EXIT.contradiction} with no password made. Then ${code('runInputs(inputsFor(settings))')} and ${code('presentSuggestions(suggestions, typingMode, sort)')}. An engine failure marked unexpected is exit ${EXIT.unexpected}; any other (a sentence that cannot be fitted) is exit ${EXIT.contradiction}.
 
@@ -249,7 +262,7 @@ Needs a terminal (otherwise exit ${EXIT.usage}, pointing at the file format, whi
 ### 6.1 Questions, in order
 
 1. **Typing mode**: the core's four modes with their hints, Ten-finger first chosen.
-2. **The site's rules**: each site preset with its note; "Paste the site's rules" (one line, read with ${code('parseRuleText')} over the ${DEFAULT_SITE_PRESET.label}'s rules, "Read as: ..." said; rules that do not fit together are said and each rule is asked, starting from the text's values where they fit; what the text states that tep cannot keep is said as it is read, "Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.", and text with nothing else is refused; a rule the question cannot take is named as it is dropped, "Dropped the pasted rule for required symbols, 3: ... tep's passwords will not meet it; check what the site accepts", and listed on the review as "Dropped: ..." while the answer differs from what the text asked); or "Set each rule", asked in an order where each limits the next: minimum length, maximum length, allowed symbols, spaces, required uppercase letters, digits, symbols.
+2. **The site's rules**: each site preset with its note; "Paste the site's rules" (one line, read with ${code('parseRuleText')} over the ${DEFAULT_SITE_PRESET.label}'s rules, "Read as: ..." said; rules that do not fit together are said and each rule is asked, starting from the text's values where they fit; what the text states that tep cannot keep is said as it is read, "Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.", and text with nothing else is refused, as is a text past ${MAX_RULES_TEXT_LENGTH} characters, with the core's message, the question asked again; a rule the question cannot take is named as it is dropped, "Dropped the pasted rule for required symbols, 3: ... tep's passwords will not meet it; check what the site accepts", and listed on the review as "Dropped: ..." while the answer differs from what the text asked); or "Set each rule", asked in an order where each limits the next: minimum length, maximum length, allowed symbols, spaces, required uppercase letters, digits, symbols.
 3. **Options**: "Use the <mode> preset" or "Set each option", asked in the core's ${code('PROFILE_KEYS')} order, skipping the mode's unused options (set to the preset's neutral values). Strength offers the presets and "Another number of bits".
 4. **Output**: keep ${COUNT_AT_TERMINAL} passwords (${COUNT_PIPED} piped), ${DEFAULT_SORT_HINT}, or change the count and order (the review's lines "Count" and "Order").
 

@@ -13,7 +13,7 @@ import { DEFAULT_MAPPING_SETTINGS } from '../lib/mappingSettings';
 import { modeLabel, unusedIn } from '../lib/modeProfiles';
 import { inputsFor, presentSuggestions } from '../lib/pipeline';
 import { scoreReadings } from '../lib/readings';
-import { mergeParsedRules, parseRuleText } from '../lib/ruleText';
+import { mergeParsedRules, parseRuleText, rulesTextLengthProblem } from '../lib/ruleText';
 import { DEFAULT_SITE_PRESET } from '../lib/sitePresets';
 import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
 import { capitalise, lowerFirst } from '../lib/text';
@@ -392,6 +392,8 @@ export class Wizard {
       placeholder: 'Must be 8-20 characters and include a number and one of !@#$%',
       validate: (v) => {
         if (!v.trim()) return 'Paste the rules, or press Ctrl+C to stop.';
+        const tooLong = rulesTextLengthProblem(v); // refused whole, never cut
+        if (tooLong) return tooLong;
         const read = parseRuleText(v);
         if (read.understood.length) return undefined;
         if (read.unsupported.length) return `Nothing in that can be kept: ${read.unsupported.join('; ')}.`;
