@@ -3,7 +3,7 @@ import { commonPasswordProblem, commonRank } from '../lib/common';
 import { criterionOf, DEFAULT_TYPING_MODE, difficultyIn } from '../lib/difficulty';
 import { difficultyAlone, scoreCold } from '../lib/score';
 import { rawBits, strengthBits } from '../lib/strength';
-import { MAX_HINT_LENGTH } from '../lib/text';
+import { MAX_HINT_LENGTH, plural } from '../lib/text';
 import { MAX_LENGTH } from '../lib/validation';
 import { finishAttempt, nextTarget, pastedTarget, recordChange, recordKey, startRecording, UNNAMED_KEYS, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
@@ -285,7 +285,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               <li>
                 {last.corrections === 0
                   ? 'No corrections'
-                  : `${last.corrections} correction${last.corrections === 1 ? '' : 's'} (Backspace or Delete)`}
+                  : `${plural(last.corrections, 'correction')} (Backspace or Delete)`}
                 , {Math.round(last.accuracy * 100)}% accuracy over {last.keystrokes} keystrokes
               </li>
             </ul>
@@ -295,7 +295,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               Previous runs:{' '}
               {attempts
                 .slice(1)
-                .map((a) => `${a.seconds.toFixed(1)} s, ${a.corrections} fix${a.corrections === 1 ? '' : 'es'}${a.matched ? '' : ', mismatch'}`)
+                .map((a) => `${a.seconds.toFixed(1)} s, ${plural(a.corrections, 'fix', 'fixes')}${a.matched ? '' : ', mismatch'}`)
                 .join(' · ')}
             </p>
           )}

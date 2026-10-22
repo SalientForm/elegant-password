@@ -16,6 +16,7 @@ import { scoreReadings } from '../lib/readings';
 import { mergeParsedRules, parseRuleText } from '../lib/ruleText';
 import { DEFAULT_SITE_PRESET } from '../lib/sitePresets';
 import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
+import { capitalise, lowerFirst } from '../lib/text';
 import type { ConfigModel } from './configModel';
 import {
   bitsShape,
@@ -95,13 +96,13 @@ export function reviewLines(a: Answers): ReviewLine[] {
     edit: { kind: 'rules-how' },
     fields: rules.filter((f) => !ruleLines.includes(f)).map((f) => f.name),
   });
-  for (const f of ruleLines) lines.push({ label: `  ${cap(f.label)}`, value: value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
+  for (const f of ruleLines) lines.push({ label: `  ${capitalise(f.label)}`, value: value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
 
   const options = fieldsIn('options');
   const unused = new Set(unusedIn(mode).map((u) => reqField(u.key)!.name));
   if (a.optionsHow === 'each') {
     lines.push({ label: 'Options', value: 'set one by one:', edit: { kind: 'options-how' }, fields: options.filter((f) => unused.has(f.name)).map((f) => f.name) });
-    for (const f of options.filter((x) => !unused.has(x.name))) lines.push({ label: `  ${cap(f.label)}`, value: value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
+    for (const f of options.filter((x) => !unused.has(x.name))) lines.push({ label: `  ${capitalise(f.label)}`, value: value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
   } else {
     const summary = options
       .filter((f) => !unused.has(f.name))
@@ -109,11 +110,10 @@ export function reviewLines(a: Answers): ReviewLine[] {
       .join(', ');
     lines.push({ label: 'Options', value: `the ${modeLabel(mode)} preset: ${summary}`, edit: { kind: 'options-how' }, fields: options.map((f) => f.name) });
   }
-  for (const f of fieldsIn('output')) lines.push({ label: cap(f.name === 'count' ? 'count' : f.label), value: f.name === 'count' && !('count' in a.output) ? `${value(f)} at a terminal, ${COUNT_PIPED} when piped` : value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
+  for (const f of fieldsIn('output')) lines.push({ label: capitalise(f.name === 'count' ? 'count' : f.label), value: f.name === 'count' && !('count' in a.output) ? `${value(f)} at a terminal, ${COUNT_PIPED} when piped` : value(f), edit: { kind: 'field', field: f }, fields: [f.name] });
   return lines.map((l, i) => ({ ...l, n: i + 1 }));
 }
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The review's lines as shown: number, label and value in columns, a value that runs past `width` wrapped under its column. */
 export function formatReview(lines: ReviewLine[], width = Number.POSITIVE_INFINITY): string[] {
@@ -575,7 +575,6 @@ export class Wizard {
   }
 }
 
-const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /** The command to run once a file is saved. */
 export const runHint = (file: string) => (file === 'tep.yml' ? 'tep g' : `tep g -c ${file}`);

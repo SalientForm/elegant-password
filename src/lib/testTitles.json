@@ -384,11 +384,23 @@
       },
       {
         "kind": "group",
+        "title": "the import graph"
+      },
+      {
+        "kind": "test",
+        "title": "has no cycle in src, type-only imports included"
+      },
+      {
+        "kind": "group",
         "title": "this test"
       },
       {
         "kind": "test",
         "title": "reads imports of every shape the code uses"
+      },
+      {
+        "kind": "test",
+        "title": "finds each import cycle as the chain that closes it, counting type-only imports"
       }
     ]
   },
@@ -1931,6 +1943,35 @@
       {
         "kind": "test",
         "title": "summarises the random bits across the batch"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SessionControls.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SessionControls"
+      },
+      {
+        "kind": "test",
+        "title": "says the session is kept through a reload on the app's own origin, and offers no retry"
+      },
+      {
+        "kind": "test",
+        "title": "says the session is in memory only on a shared origin"
+      },
+      {
+        "kind": "test",
+        "title": "says when the session could not be saved, and Try saving again saves it once storage takes writes again"
+      },
+      {
+        "kind": "test",
+        "title": "asks before forgetting: the first click only asks, the second forgets and says so"
+      },
+      {
+        "kind": "test",
+        "title": "drops the question when focus leaves the button, so a later click asks again"
       }
     ]
   },
@@ -3819,6 +3860,18 @@
   {
     "file": "src/lib/text.test.ts",
     "titles": [
+      {
+        "kind": "group",
+        "title": "the wording helpers"
+      },
+      {
+        "kind": "test",
+        "title": "pairs a count with the noun that agrees with it, the plural given when it is not an s"
+      },
+      {
+        "kind": "test",
+        "title": "turns only the first character up or down, and leaves an empty text empty"
+      },
       {
         "kind": "group",
         "title": "sentenceLengthProblem"

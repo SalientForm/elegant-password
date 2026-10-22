@@ -7,7 +7,7 @@ import { FAR_SHIFT_LETTERS, FAR_SHIFT_SYMBOLS, isPinkyStretch, ONE_HAND_SHIFT_RE
 import { EASE_EXCLUDED, EASE_RULES, LONG_REACH } from '../lib/ease';
 import { DEFAULT_SENTENCE_OPTIONS, MAX_RULE_TWISTS, SHRINK_FROM_RANGE, SMALL_WORDS, TAG_SYMBOLS, TARGET_LENGTH_RANGE } from '../lib/fromSentence';
 import { MAX_COUNT, MAX_LENGTH, MAX_TARGET_BITS, MIN_COUNT, MIN_LENGTH, MUST_CONTAIN } from '../lib/validation';
-import { MAX_HINT_LENGTH } from '../lib/text';
+import { lowerFirst, MAX_HINT_LENGTH } from '../lib/text';
 import { SLOW_MS } from '../lib/budget';
 import { SORT_CHOICES } from '../lib/choices';
 import { MAX_REPEATS, MIN_WORD } from '../lib/fluff';
@@ -16,12 +16,14 @@ import { ZXCVBN_GUESSES_PER_SECOND, ZXCVBN_VERSION } from '../lib/zxcvbnReading'
 import {
   ATTACK_SCENARIOS,
   DEFAULT_REQUIREMENTS,
+  DRAWS_PER_CARD,
   END_PREFERENCE,
   MAX_DIGITS,
   MAX_INITIALS,
   MAX_LOWERCASE,
   MAX_SHORTHAND,
   MAX_MADE_UP,
+  MAX_SENTENCE_DRAWS,
   MAX_SYMBOLS,
   MAX_TWISTS,
   MAX_UPPERCASE,
@@ -36,6 +38,7 @@ import {
   KEY_ROLLS,
   MADE_UP_NOUNS,
   MIN_POOL,
+  NUMBER_RANGE,
   SHORTHAND_PRIORITY,
   SLOT_LABELS,
   SMALL_SLOTS,
@@ -50,8 +53,8 @@ import { SELECTED_KEY } from '../state/selectedStore';
 import { SESSION_KEY } from '../state/sessionStore';
 import { MODE_KEY, REQUIREMENTS_KEY, SENTENCE_OPTIONS_KEY, SORT_KEY, TYPING_MODE_KEY } from '../state/settingsStore';
 import { RULE_KEYS, SITE_PRESETS } from '../lib/sitePresets';
-import { BUILT_IN_KINDS, BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS } from '../lib/twists';
-import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from '../lib/words';
+import { BUILT_IN_KINDS, BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, MAX_MAPPING_LENGTH } from '../lib/twists';
+import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS, WORD_LENGTH_RANGE } from '../lib/words';
 import algorithmFlow from '../../docs/algorithm-flow.md?raw';
 import testTitles from '../lib/testTitles.json';
 
@@ -61,7 +64,6 @@ const code = (s: string) => `\`${s}\``;
 const codeAny = (s: string) => (s.includes('`') ? `\`\` ${s} \`\`` : code(s));
 const list = (items: readonly string[]) => items.map((i) => `- ${i}`).join('\n');
 const inWords = (items: readonly string[], last = 'and') => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} ${last} ${items.at(-1)}`);
-const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 /** A count chosen with buttons: "None / 1 / 2 / 3". */
 const buttons = (max: number) => ['None', ...Array.from({ length: max }, (_, i) => String(i + 1))].join(' / ');
 /** "10^4" for 10 000. */
@@ -237,9 +239,9 @@ ${requirementsTable()}
 
 ### Word pools
 ${list(pools.map(([name, n]) => `${n} ${name}`))}
-- Lowercase a-z, 3-8 letters, common, no duplicates; a joiner pool of only ${code('and')}.
+- Lowercase a-z, ${WORD_LENGTH_RANGE.min}-${WORD_LENGTH_RANGE.max} letters, common, no duplicates; a joiner pool of only ${code('and')}.
 - **Typing comfort** ranks each pool (words and numbers) by mean transition cost (of each word as typed with its deliberate swap when easeSwaps is on, section 7; the pools keep the words as written and the same sizes) and keeps the easiest share (${Object.entries(COMFORT_SHARE).map(([k, v]) => `${k} ${v * 100}%`).join(', ')}), never fewer than ${MIN_POOL}.
-- **Made-up nouns**: ${KEY_ROLLS.length} key rolls (2-4 contiguous letters along one row under one hand, either direction: ${code('ert')}, ${code('dfg')}, ${code('lkj')}); a made-up noun is one roll or two joined (${code('ertdfg')}), 3-8 letters, all lowercase or ALL CAPS: ${MADE_UP_NOUNS.length.toLocaleString('en')} words, about ${Math.log2(MADE_UP_NOUNS.length).toFixed(1)} bits each, filling the first N noun slots.
+- **Made-up nouns**: ${KEY_ROLLS.length} key rolls (2-4 contiguous letters along one row under one hand, either direction: ${code('ert')}, ${code('dfg')}, ${code('lkj')}); a made-up noun is one roll or two joined (${code('ertdfg')}), ${WORD_LENGTH_RANGE.min}-${WORD_LENGTH_RANGE.max} letters, all lowercase or ALL CAPS: ${MADE_UP_NOUNS.length.toLocaleString('en')} words, about ${Math.log2(MADE_UP_NOUNS.length).toFixed(1)} bits each, filling the first N noun slots.
 
 ### Sentence templates
 Clauses, shortest first:
@@ -248,15 +250,15 @@ ${list(CLAUSES.map((c) => c.map((s) => SLOT_LABELS[s]).join(' ')))}
 Plus every "clause + ${code('and')} + clause" whose first clause has at least 4 words.
 
 ### Number
-- 2-99 (plural nouns stay grammatical); for N required digits, every N-digit number; comfort-filtered like words.
+- ${NUMBER_RANGE.min}-${NUMBER_RANGE.max} (plural nouns stay grammatical); for N required digits, every N-digit number; comfort-filtered like words.
 - Placed before a randomly chosen noun phrase (sentence start, after the verb, after a preposition, after "and"); each placement is a variant and the position is counted as bits.
 
 ### Exact entropy and sampling
 - Per variant, count by dynamic programming the word sequences whose letters fit minLength/maxLength less separators and closing marks. Entropy = log2 of the sum over variants.
-- Sample uniformly from exactly that set: variant ∝ count, total length ∝ count, each word's length ∝ remaining completions, then a uniform word of that length. One sentence is drawn and every card is built from it, differing only in its swaps and closing mark; a repeated password is dropped (up to 10 draws per card), with a warning when fewer than the requested count are different. The sentence (its slots with the number placed, and its words as written) is kept and sent with every later request: Refresh and applied rule changes rebuild the cards from it, re-deriving initials, two-letter words and deliberate swaps from the words under the new rules. Only "New sentence" (or having none yet, or applying a new typing mode) draws another. When the kept sentence cannot fit the rules (its number or made-up nouns no longer match, its length is outside the range, or no version meets a rule) the error says why and points at "New sentence"; the sentence stays. The strength panel shows the plan for the kept sentence's own template. The kept sentence can be edited in its box, as a draft like any other edit (Enter submits; a newline is never typed): an edited sentence is no longer a random draw, so it is built and scored exactly as in Use my sentence, with that tab's options, and the strength panel is that mode's. Edited back to the words as drawn it is unedited again; submitted blank it goes back to the drawn sentence; "New sentence" or a new typing mode replaces it, edit and all. The edit is kept in sessionStorage with the sentence.
+- Sample uniformly from exactly that set: variant ∝ count, total length ∝ count, each word's length ∝ remaining completions, then a uniform word of that length. One sentence is drawn and every card is built from it, differing only in its swaps and closing mark; a repeated password is dropped (up to ${DRAWS_PER_CARD} draws per card), with a warning when fewer than the requested count are different. The sentence (its slots with the number placed, and its words as written) is kept and sent with every later request: Refresh and applied rule changes rebuild the cards from it, re-deriving initials, two-letter words and deliberate swaps from the words under the new rules. Only "New sentence" (or having none yet, or applying a new typing mode) draws another. When the kept sentence cannot fit the rules (its number or made-up nouns no longer match, its length is outside the range, or no version meets a rule) the error says why and points at "New sentence"; the sentence stays. The strength panel shows the plan for the kept sentence's own template. The kept sentence can be edited in its box, as a draft like any other edit (Enter submits; a newline is never typed): an edited sentence is no longer a random draw, so it is built and scored exactly as in Use my sentence, with that tab's options, and the strength panel is that mode's. Edited back to the words as drawn it is unedited again; submitted blank it goes back to the drawn sentence; "New sentence" or a new typing mode replaces it, edit and all. The edit is kept in sessionStorage with the sentence.
 - **Plan choice**: among templates that meet the target bits, the shortest expected length; otherwise the strongest, with a warning saying what to relax. With **Shortest that meets the target** on, every template's windows are first cut, together, to the fewest characters at which the summed count over its number placements reaches 2^targetBits (one length when the first that fits already does; untouched when no cut reaches the target), so bits stay exact over the cut set, the plan's maximum length is the cut, no swap may lengthen a password, and the strength panel's penalty row reads "Shortest sentence". A kept sentence is never shortened: a warning says it is longer than the shortest plan and points at "New sentence".
 - **Uppercase guarantee**: never plan a shape whose fewest possible letters (initials 1, two-letter words 2, whole words the pool's shortest; numbers and made-up nouns 0) is below minUppercase plus minLowercase (one letter cannot be both). If none is left, the error says to raise the maximum or use fewer initials, two-letter words and made-up nouns.
-- **Every rule checked on every card**: each password is checked against every rule before it is shown (length, allowed symbols, each "at least N" count, and that it is not exactly one of the ${COMMON_PASSWORD_COUNT.toLocaleString('en')} most common passwords from SecLists' ${code('10k-most-common.txt')}, an exact match only); a card that misses one is dropped. Whole-word capitals can leave too few lowercase letters: a newly drawn sentence none of whose versions keeps the lowercase minimum is drawn again, up to 8 times, before the error. In Use my sentence, a sentence that comes out as a common password is refused, naming its place on the list.
+- **Every rule checked on every card**: each password is checked against every rule before it is shown (length, allowed symbols, each "at least N" count, and that it is not exactly one of the ${COMMON_PASSWORD_COUNT.toLocaleString('en')} most common passwords from SecLists' ${code('10k-most-common.txt')}, an exact match only); a card that misses one is dropped. Whole-word capitals can leave too few lowercase letters: a newly drawn sentence none of whose versions keeps the lowercase minimum is drawn again, up to ${MAX_SENTENCE_DRAWS} sentences in all, before the error. In Use my sentence, a sentence that comes out as a common password is refused, naming its place on the list.
 
 ### Rendering
 - **Separator**: as chosen; Automatic is ${code(SEPARATOR_PREFERENCE[0])} whenever it is allowed (home row, no Shift, and it counts toward the symbol rule; so the default rules give exactly the old ${code(';')} default), else a space if allowed, else the first allowed and comfortable of ${SEPARATOR_PREFERENCE.slice(1).map(code).join(' ')}, else none. Automatic is never a problem, whatever the rules. Saved requirements carry ${code('version: 2')}. In an older record ${code(';')} was the default rather than a choice and loads as Automatic (the same passwords wherever ${code(';')} is allowed), and "auto" (which meant a space first) with spaces allowed loads as a space, so no passwords change. An older "Ease awkward words" off was likewise the default then (off) and loads as the default now (on).
@@ -275,7 +277,7 @@ Random swaps and misspellings applied after the sentence is chosen. "Minimum swa
 
 ${mappingSection()}
 
-- The panel, headed "Swaps": "Minimum swaps" as ${buttons(MAX_TWISTS)} buttons; the mappings in groups with a count of those on; each a toggle whose tip says why it is skipped, if it is. Any built-in mapping can be switched off; custom ones: replace = 1-8 lowercase letters, with = up to 8 lowercase letters, digits or keyboard symbols (empty deletes; capitals rejected). Saved in localStorage under ${code(STORAGE_KEY)} as ${code('{ disabled: string[], custom: {from,to}[] }')}; malformed data dropped, blocked storage tolerated; "Reset mappings to defaults" (disabled while they are) restores them.
+- The panel, headed "Swaps": "Minimum swaps" as ${buttons(MAX_TWISTS)} buttons; the mappings in groups with a count of those on; each a toggle whose tip says why it is skipped, if it is. Any built-in mapping can be switched off; custom ones: replace = 1-${MAX_MAPPING_LENGTH} lowercase letters, with = up to ${MAX_MAPPING_LENGTH} lowercase letters, digits or keyboard symbols (empty deletes; capitals rejected). Saved in localStorage under ${code(STORAGE_KEY)} as ${code('{ disabled: string[], custom: {from,to}[] }')}; malformed data dropped, blocked storage tolerated; "Reset mappings to defaults" (disabled while they are) restores them.
 - Mappings whose output uses a disallowed symbol, the separator character (a swap could put it at a word's edge, where the edge trim would remove it), a pinky stretch while that rule is on, or a far Shift symbol while Keep Shift within reach is on, are skipped (struck through, with the reason). In "Use my sentence", mappings whose "replace" letters occur nowhere in the sentence are disabled.
 - Swaps never touch the number, initials, made-up nouns or two-letter words; match lowercase letters only; never overlap; keep the first character of the word chosen for the capital a letter (cold scoring counts that word's start as kept, wherever it is); never make a word vanish.
 - **Counting**: per word, every distinct spelling reachable with up to N non-overlapping swaps, at the fewest swaps that make it; combine words with a DP over (swaps used, length change, letter change) so results stay within the length limits and keep enough letters for the uppercase rule; pick uniformly; bits = log2(count); fall back to fewer swaps if none fit. The same table counts outcomes when a password is scored cold.

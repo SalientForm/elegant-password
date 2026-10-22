@@ -425,7 +425,8 @@ Shared core, `src/lib/`:
 - `ease.ts`: deliberate swaps for typing ease
 - `grammar.ts`: sentence templates and comfort-filtered pools
 - `lengthModel.ts`: exact counting and uniform sampling under length limits
-- `generate.ts`: requirements, plan selection, explanations
+- `requirements.ts`: the shape of a site's requirements and the defaults
+- `generate.ts`: plan selection, explanations
 - `validation.ts`: every contradiction in a set of requirements, each with a code
 - `consistency.ts`: contradictions including what only planning finds, and the unreachable-target warning
 - `twists.ts`, `mappingSettings.ts`: the 64 mappings, exact twist counting, and which are on

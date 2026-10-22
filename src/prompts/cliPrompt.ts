@@ -10,6 +10,7 @@
 
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { DEFAULT_SITE_PRESET } from '../lib/sitePresets';
+import { capitalise } from '../lib/text';
 import { MAX_LENGTH, MAX_TARGET_BITS } from '../lib/validation';
 import { problemsOf, warningsOf } from '../lib/consistency';
 import testTitles from '../lib/testTitles.json';
@@ -31,7 +32,6 @@ import type { Source } from '../cli/sources';
 import { answersOf, formatReview, reviewLines } from '../cli/wizard';
 
 const code = (s: string) => `\`${s}\``;
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const block = (s: string, lang = '') => `\`\`\`${lang}\n${s.trimEnd()}\n\`\`\``;
 
 /**
@@ -261,7 +261,7 @@ A choice is allowed when the answers so far, the choice, and the loosest value o
 
 | Setting | Loosest |
 | --- | --- |
-${Object.entries(LOOSEST).map(([name, v]) => `| ${capital(fieldNamed(name)!.label)} | ${describeValue(fieldNamed(name)!, v)} |`).join('\n')}
+${Object.entries(LOOSEST).map(([name, v]) => `| ${capitalise(fieldNamed(name)!.label)} | ${describeValue(fieldNamed(name)!, v)} |`).join('\n')}
 
 - A choice not allowed is shown, dimmed, and cannot be picked, with the reason naming the answer that rules it out ("(from your answer for spaces)" while asking, "(see line 2)" on the review).
 - A question left with one allowed choice is not asked: the wizard states the value and why.

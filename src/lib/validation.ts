@@ -7,9 +7,10 @@
 // found by planning, so the engine still reports that after Submit, and
 // never makes a password that breaks a rule instead.
 
-import type { Requirements } from './generate';
-import { COMFORT_SHARE, type Comfort } from './grammar';
+import type { Requirements } from './requirements';
+import { COMFORTS } from './grammar';
 import { lookupKey } from './keyboard';
+import { capitalise, plural } from './text';
 
 /** The shortest a length rule may be, and the fewest suggestions a batch may ask for. */
 export const MIN_LENGTH = 1;
@@ -25,9 +26,6 @@ export const MAX_UPPERCASE = 8;
 export const MAX_LOWERCASE = 8;
 export const MAX_DIGITS = 4;
 export const MAX_SYMBOLS = 8;
-
-/** The typing comfort levels, strictest first: the ones the word pools are cut for. */
-const COMFORTS = Object.keys(COMFORT_SHARE) as Comfort[];
 
 export class RequirementsError extends Error {}
 
@@ -84,17 +82,16 @@ export const FIELD_LABELS: Record<keyof Requirements, string> = {
   count: 'number of suggestions',
 };
 
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const list = (items: readonly string[]) => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} or ${items.at(-1)}`);
 
 export type CountKey = 'minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols';
 
 /** The "must contain" counts, in form order: the field, its label, one of what it counts, and its most. */
 export const MUST_CONTAIN: readonly { key: CountKey; label: string; one: string; max: number }[] = [
-  { key: 'minUppercase', label: capital(FIELD_LABELS.minUppercase), one: 'uppercase letter', max: MAX_UPPERCASE },
-  { key: 'minLowercase', label: capital(FIELD_LABELS.minLowercase), one: 'lowercase letter', max: MAX_LOWERCASE },
-  { key: 'minDigits', label: capital(FIELD_LABELS.minDigits), one: 'digit', max: MAX_DIGITS },
-  { key: 'minSymbols', label: capital(FIELD_LABELS.minSymbols), one: 'symbol', max: MAX_SYMBOLS },
+  { key: 'minUppercase', label: capitalise(FIELD_LABELS.minUppercase), one: 'uppercase letter', max: MAX_UPPERCASE },
+  { key: 'minLowercase', label: capitalise(FIELD_LABELS.minLowercase), one: 'lowercase letter', max: MAX_LOWERCASE },
+  { key: 'minDigits', label: capitalise(FIELD_LABELS.minDigits), one: 'digit', max: MAX_DIGITS },
+  { key: 'minSymbols', label: capitalise(FIELD_LABELS.minSymbols), one: 'symbol', max: MAX_SYMBOLS },
 ];
 
 /**
@@ -124,7 +121,6 @@ export interface RuleProblem {
 }
 
 const whole = (n: unknown, lo: number, hi: number) => typeof n === 'number' && Number.isInteger(n) && n >= lo && n <= hi;
-const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 
 /** Every contradiction in these requirements, in form order. Empty when they can be submitted. */
 export function ruleProblems(req: Requirements): RuleProblem[] {
@@ -176,7 +172,7 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
   if (!(typeof req.targetBits === 'number' && req.targetBits >= 0 && req.targetBits <= MAX_TARGET_BITS)) {
     add('range', `The ${FIELD_LABELS.targetBits} must be from 0 to ${MAX_TARGET_BITS} bits.`, 'targetBits');
   }
-  if (!COMFORTS.includes(req.comfort)) add('range', `${capital(FIELD_LABELS.comfort)} must be ${list(COMFORTS)}.`, 'comfort');
+  if (!COMFORTS.includes(req.comfort)) add('range', `${capitalise(FIELD_LABELS.comfort)} must be ${list(COMFORTS)}.`, 'comfort');
 
   // Style.
   if (typeof req.separator !== 'string') add('separator-invalid', `The ${FIELD_LABELS.separator} must be text.`, 'separator');
@@ -193,7 +189,7 @@ export function ruleProblems(req: Requirements): RuleProblem[] {
     ['madeUp', MAX_MADE_UP],
     ['twists', MAX_TWISTS],
   ];
-  for (const [key, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${capital(FIELD_LABELS[key])} must be a whole number from 0 to ${max}.`, key);
+  for (const [key, max] of shapes) if (!whole(req[key], 0, max)) add('range', `${capitalise(FIELD_LABELS[key])} must be a whole number from 0 to ${max}.`, key);
   if (!whole(req.count, MIN_COUNT, MAX_COUNT)) add('range', `The ${FIELD_LABELS.count} must be a whole number from ${MIN_COUNT} to ${MAX_COUNT}.`, 'count');
   return out;
 }

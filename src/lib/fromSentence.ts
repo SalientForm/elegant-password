@@ -69,7 +69,7 @@ import { easedText } from './ease';
 import { cryptoRandom, randomInt, type RandomSource } from './random';
 import { scoreCold } from './score';
 import { rawBits, strengthBits } from './strength';
-import { dropVowels, letterCount, normalizeSentence, sentenceLengthProblem, SMALL_WORDS, trimInterior } from './text';
+import { dropVowels, letterCount, normalizeSentence, plural, sentenceLengthProblem, SMALL_WORDS, trimInterior } from './text';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
 import { MAX_LENGTH } from './validation';
 
@@ -627,7 +627,7 @@ function finish(state: readonly Token[], limit: number, ctx: Context, pad = fals
   }
   if (countLower(password) < req.minLowercase) {
     return {
-      problem: `Your sentence does not leave ${req.minLowercase} lowercase letter${req.minLowercase === 1 ? '' : 's'} beside its ${req.minUppercase} capital${req.minUppercase === 1 ? '' : 's'}. Add a word, or require fewer capitals.`,
+      problem: `Your sentence does not leave ${plural(req.minLowercase, 'lowercase letter')} beside its ${plural(req.minUppercase, 'capital')}. Add a word, or require fewer capitals.`,
       length,
     };
   }

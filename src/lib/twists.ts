@@ -52,6 +52,10 @@ export const BUILT_IN_MAPPINGS: readonly Mapping[] = [
 
 export const mappingKey = (m: Pick<Mapping, 'from' | 'to'>) => `${m.from}>${m.to}`;
 
+/** The most characters either side of a custom swap may have: Replace is 1 to this many lowercase letters, With at most this many characters. */
+export const MAX_MAPPING_LENGTH = 8;
+const CUSTOM_FROM = new RegExp(`^[a-z]{1,${MAX_MAPPING_LENGTH}}$`);
+
 /**
  * Reason a custom mapping is unusable, or undefined if it is fine. The
  * output may only use lowercase letters, digits and keyboard symbols: a
@@ -59,8 +63,8 @@ export const mappingKey = (m: Pick<Mapping, 'from' | 'to'>) => `${m.from}>${m.to
  * typing model never allows, and it would be silently skipped anyway.
  */
 export function validateMapping(from: string, to: string): string | undefined {
-  if (!/^[a-z]{1,8}$/.test(from)) return 'Replace: 1-8 lowercase letters.';
-  if (to.length > 8) return 'With: at most 8 characters.';
+  if (!CUSTOM_FROM.test(from)) return `Replace: 1-${MAX_MAPPING_LENGTH} lowercase letters.`;
+  if (to.length > MAX_MAPPING_LENGTH) return `With: at most ${MAX_MAPPING_LENGTH} characters.`;
   if (to === from) return 'Replace and With are the same.';
   for (const c of to) {
     if (c === ' ') return 'With: spaces are not allowed.';
