@@ -217,6 +217,34 @@ twists). It is the lead if the budget is ever missed.
   is quadratic in places, and zxcvbn is not bounded at all (250 random
   characters 21.8 s, 128 about 1.1 s on a desktop), so the lengths are
   capped rather than left open.
+- **A pasted rules text is at most 2,000 characters** (2026-10-22, audit
+  L4; `MAX_RULES_TEXT_LENGTH` in `src/lib/ruleText.ts`, UTF-16 units), in
+  the web box (`maxLength`, and the paste) and in `tep` (`--rules`, the
+  wizard's paste). Four times a hint, because a copied sign-up form
+  carries labels, headings and advice round its rules; the longest real
+  rules text in the tests is 240. Not for speed: reading is linear
+  to mildly quadratic, measured on the development desktop at 512 / 2,048
+  / 8,192 / 65,536 characters as 1.0 / 3.2 / 21.7 / 399 ms for the worst
+  shape (one line of class words with no sentence end), and under 3 ms at
+  2,048 for every other shape tried (checklists, symbol soup, random
+  ASCII, random rule words, unclosed brackets, "or" chains), so a phone
+  several times slower is far inside the 2 s line; the cap bounds the work
+  and keeps the box to what a sign-up page shows. **Refused whole, never
+  cut**: a cut paste would fill in the rules from its first part and drop
+  the rest with only a note to say so. The one message is
+  `rulesTextLengthProblem`'s ("The rules text is 5300 characters; 2000 is
+  the most this tool reads. Copy just the password rules."): the web box
+  shows it in the error colour, the text unchanged, until the text
+  changes, and says when typing has filled the box; `tep --rules` is exit
+  2; the wizard's prompt asks again. `parseRuleText` itself reads nothing
+  of a longer text and names it in `unsupported`, so no route reads an
+  unbounded text.
+- **The paste box reads its text once per change** (2026-10-22, audit
+  L4): a `useMemo` on the text, so the renders a fill causes read nothing,
+  and a one-entry memo of the last text read, so a paste's fill and its
+  preview share one reading and "Fill in" on previewed text reads none.
+  The reading is `timed` ("Reading the pasted rules"), so work over 2 s
+  shows the slow-work notice. `src/components/SiteRules.tsx`.
 - The scorer keeps 400 cold scores, each mapping list 5,000 spellings; a
   full cache is emptied rather than evicted one entry at a time.
   `src/lib/score.ts`, `src/lib/twists.ts`.
@@ -287,6 +315,38 @@ twists). It is the lead if the budget is ever missed.
   load. The price: a release that removes a word from the lists, or moves
   one between them, replaces the kept sentence of a tab open across it.
   `couldBeDrawn` in `src/lib/generate.ts`; `src/state/sessionStore.ts`.
+- **A pasted choice of kinds is kept as that many named kinds**
+  (2026-10-22, audit L1; the user authorised the recommendation). "At
+  least 3 of the following 4: uppercase, lowercase, numbers, symbols" was
+  read as all four required and said as understood. The rules are
+  per-kind minimums, so the choice is kept by requiring N of the kinds
+  listed: letters first (every password has them), then kinds the text
+  requires anyway or an earlier choice kept, then the cheapest to type, a
+  lowercase letter, an uppercase letter, a digit, a symbol; never a kind
+  the text rules out. Chosen from the text alone, not the form, so the
+  preview and `tep` say the same for the same words; a kind not kept
+  stays as the form had it (a symbol already required stays, and still
+  meets the rule). One line says what was asked and what was kept, "at
+  least 3 of uppercase, lowercase, digits and symbols (kept as an
+  uppercase letter, a lowercase letter and a digit)"; for one of two or
+  more, "a digit or a symbol (kept as a digit)"; a choice met by letters
+  alone sets nothing and says nothing. Not taken: all of them (says what
+  the site did not ask, and costs a symbol, the hardest kind on most
+  keyboards and the one the modes avoid); refusing it as not kept (the
+  tool can keep it, and `tep --rules` would fail on the most common rule
+  on the web); an "N of M" field (the generator, validation, checks, CLI
+  fields, config file and both forms, for a rule minimums already meet).
+  What it cannot keep is named under "Not kept", nothing of it applied:
+  fewer kinds recognised than asked, too few left once the text's own
+  exclusions are out, an unnamed count other than four. Read as a choice:
+  "N of", "N out of M", "any N of", "N or more of", "at least N of the
+  following (M) (categories / character types / ...)", "N character
+  types", with the kinds after it or in the list under it, the usual four
+  when a class word names none; kinds joined by "or" or "and/or"; "A-Z",
+  "a-z", "0-9" as kinds. Not a choice: "one of each" (all), a count over
+  one kind ("one of !@#$%"; "2 of the following special characters" is
+  two symbols), "1 of your last 5 passwords". `src/lib/ruleText.ts`;
+  `docs/algorithm-flow.md`, section 1b.
 - **Enter during IME composition never submits or runs**: both sentence
   fields, the typing test and its hint field.
 - **Secrets only on the app's own origin** (2026-10-20, the user's
