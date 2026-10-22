@@ -159,7 +159,8 @@ Still open:
   everywhere.
 - **Arrow-key menus** for the questions and a typed line number on the
   review screen. Two input styles in one wizard.
-- **No clipboard clearing** after `--copy`.
+- **No clipboard clearing** after `--copy`: see "Clear the clipboard after
+  a copy" below.
 - **Not on npm; `pnpm link:cli` links a checkout's build**. Publishing
   would need a scoped name (`tep` is taken).
 - **Commands left out of v1**: `tep score <password>`, `tep list`,
@@ -168,6 +169,30 @@ Still open:
 ## Future considerations
 
 Not planned yet; kept here so they are not lost. Roughly smallest first.
+
+### Clear the clipboard after a copy
+
+Accepted for now on 2026-10-22 (audit L16), to revisit. Neither Copy
+button nor `tep --copy` clears the clipboard, so the password stays there
+until something replaces it: clipboard history (Windows' Win+V, KDE's
+Klipper and other managers) keeps it, some sync it to other devices, any
+program can read it, and it can be pasted by mistake later. Password
+managers clear it 10-90 seconds after a copy.
+
+- In the browser, a page can overwrite the clipboard only while it is open
+  and usually focused, so a delayed clear after switching to the sign-up
+  tab often fails silently; it cannot check the clipboard still holds the
+  password without a permission prompt, so a blind clear could wipe
+  something copied since; and it cannot mark the copy to skip clipboard
+  history.
+- `tep` can do it properly: after about 30 s, read the clipboard back and
+  clear it only if it still holds the password (a short-lived background
+  process outlives the command), and mark the copy to skip history where
+  the platform's tool supports it.
+- Neither can remove a copy that clipboard history or sync already holds.
+
+The recommendation when this is revisited: clear in `tep` only, as above,
+and leave the web app as it is, with the reason recorded.
 
 ### What knowing the app is worth
 

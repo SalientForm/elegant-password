@@ -7,7 +7,7 @@ index. Delete this file once every line is closed.
 
 Status: **open** (no spec yet), **spec** (design written, link in the
 Spec column), **built** (merged, with the commit), **declined** (with
-why).
+why), **accepted** (the finding stands, its reason recorded).
 
 A spec is a working document (decided by the user on 2026-10-21, H2's
 spec §2.9): once built, every decision in it that remains accurate is
@@ -49,17 +49,17 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 | L3 | A busy worker is replaced after 300 ms; the fresh one re-imports and re-ranks every pool (cold 80 ms vs warm 19 ms) | `src/state/generator.ts:43` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
 | L4 | The pasted-rules box re-parses on every render and has no length cap | `src/components/SiteRules.tsx:58`, `:100` | open | |
 | L5 | Stored sentence options have no upper bounds | `src/state/settingsStore.ts:121` | built | no spec needed; commit `c1ba3fa`, 2026-10-21: `parseSentenceOptions` keeps each number inside `SHRINK_FROM_RANGE` / `TARGET_LENGTH_RANGE` (`src/lib/fromSentence.ts`), else the default |
-| L6 | The Fun page renders markdown to raw HTML with no sanitiser (constants only; CSP blocks scripts) | `src/components/FunPage.tsx:10`, `:88` | open | |
+| L6 | The Fun page renders markdown to raw HTML with no sanitiser (constants only; CSP blocks scripts) | `src/components/FunPage.tsx:10`, `:88` | declined | `docs/decisions.md`, "One core, two front ends": no sanitiser, the user's decision of 2026-10-22 (the markdown is the app's own constants; the CSP blocks scripts) |
 | L7 | The CSP is a meta tag, so it cannot carry `frame-ancestors`; the Pages site can be framed | `build/csp.ts` | open | |
 | L8 | Coverage artefacts are committed and stale (600 KB from 2026-10-15); `.gitignore` lacks `coverage` | `coverage/` | built | no spec needed; `coverage/` untracked and ignored, 2026-10-21, with D1 |
 | L9 | The check job is copy-pasted between `ci.yml` and `pages.yml` | `.github/workflows/` | open | |
 | L10 | The common-password list ships in both the page and worker chunks and is split eagerly at import | `src/lib/common.ts:21` | built | with H2, `f12e95f` (L2) and `0fc536f` (L3, L10); `docs/decisions.md`, "Where generation runs" |
-| L11 | zxcvbn 4.4.2 has had no release since 2017 (398 KB gzipped, loaded lazily) | `package.json` | open | |
+| L11 | zxcvbn 4.4.2 has had no release since 2017 (398 KB gzipped, loaded lazily) | `package.json` | accepted | `docs/decisions.md`, "Scoring": zxcvbn stays at 4.4.2, 2026-10-22 |
 | L12 | Duplicated helpers (`plural` ×3, `COMFORTS` ×2, capitalise/lower-first ×4) and a type-only import cycle through `generate.ts` for `Requirements` | `src/lib/validation.ts:109`, `src/lib/ruleText.ts:410`, `src/cli/messages.ts:29`, `src/lib/score.ts:160`, `src/lib/checks.ts:7`, `src/lib/validation.ts:10` | open | |
-| L13 | The three largest modules are unchanged since the prior audit: `generate.ts` 1,022 lines, `score.ts` 727, `fromSentence.ts` 723 | `src/lib/` | open | |
-| L14 | The web bundle carries fifteen CLI modules through the Fun page prompt (fenced by `boundaries.test.ts`) | `src/prompts/cliPrompt.ts` | open | |
+| L13 | The three largest modules are unchanged since the prior audit: `generate.ts` 1,022 lines, `score.ts` 727, `fromSentence.ts` 723 | `src/lib/` | accepted | `docs/decisions.md`, "One core, two front ends": split as a change needs it, 2026-10-22; `TODO.md` keeps the work |
+| L14 | The web bundle carries fifteen CLI modules through the Fun page prompt (fenced by `boundaries.test.ts`) | `src/prompts/cliPrompt.ts` | accepted | `docs/decisions.md`, "One core, two front ends": the modules ride in the lazily loaded Fun page chunk (about 98 KB gzipped with `marked`), 2026-10-22 |
 | L15 | `SessionControls.tsx` is at 50 % line coverage, the only real gap | `src/components/SessionControls.test.tsx` (none) | open | |
-| L16 | Neither Copy button nor the CLI clears the clipboard (an accepted decision in `TODO.md`) | `src/components/clipboard.ts`, `src/cli/clipboard.ts` | open | |
+| L16 | Neither Copy button nor the CLI clears the clipboard (an accepted decision in `TODO.md`) | `src/components/clipboard.ts`, `src/cli/clipboard.ts` | accepted | `docs/decisions.md`, "Input and persistence", 2026-10-22; `TODO.md`, "Clear the clipboard after a copy", to revisit |
 | L17 | In Minimal-quick mode Strength reads below the card's bits for 58 % of suggestions (median -0.5 bits, p5 -7.0; 1 % or less in the other modes): reading short made-up nouns and capitals at 2.3 bits a letter gives less than the tool's own pick. Strength assumes less knowledge than the bits, so it should not read lower (found with M3) | `src/lib/strength.ts` | open | |
 
 ## Housekeeping

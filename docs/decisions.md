@@ -42,6 +42,11 @@ to revisit.
   app's scores and sorts nothing. A reading saved with a My list entry is
   worked out again only when the estimator changes (`ZXCVBN_ESTIMATOR` in
   `src/lib/zxcvbnReading.ts`).
+- **zxcvbn stays at 4.4.2** (accepted 2026-10-22, audit L11). It has had
+  no release since 2017, but the badge names that library and its estimate,
+  it runs offline, and it loads only when a reading is first needed (about
+  400 KB gzipped, its own chunk). Moving to another estimator is a change to
+  `src/lib/zxcvbnReading.ts` and `ZXCVBN_ESTIMATOR` (`TODO.md`).
 - **The bits panel's green means "meets your target"; a badge's green means
   50 bits or more** (2026-10-20). The panel says its figure is for an
   attacker who knows the tool and that the badges assume one who does not.
@@ -244,6 +249,13 @@ twists). It is the lead if the budget is ever missed.
 
 ## Input and persistence
 
+- **Copy never clears the clipboard** (accepted 2026-10-22, audit L16;
+  to revisit, `TODO.md`), in the web app or `tep --copy`. A password left
+  there can reach clipboard history, sync to other devices or be pasted by
+  mistake. A page can clear it only while open and focused, cannot check
+  the clipboard still holds the password without a permission prompt, so
+  could wipe something copied since, and cannot mark the copy to skip
+  clipboard history; nothing can recall a copy history already keeps.
 - **Every write to the browser's storage reports whether it worked**
   (2026-10-20). Persistence is `saved`, `visit-only` (a shared origin) or
   `failed`; My list and the settings show an alert with Try again when a
@@ -356,6 +368,10 @@ twists). It is the lead if the budget is ever missed.
   `readings.ts` write them into a sentence), so the text says what the
   code does. Which score or level is which colour is decided only in
   `readings.ts`; the stylesheet paints the bands.
+- **The three largest core modules are split only as a change needs it**
+  (accepted 2026-10-22, audit L13): `generate.ts`, `score.ts` and
+  `fromSentence.ts` (1,100, 729 and 765 lines on 2026-10-22). Each split
+  takes out one responsibility, as `checks.ts` did (`TODO.md`).
 - **The CLI modules the Fun page's prompt draws on stay free of Node
   APIs** (the field table, names, messages, constraints, the config writer,
   help), so the browser can run them; the boundaries test follows the
@@ -364,6 +380,13 @@ twists). It is the lead if the budget is ever missed.
   which builds on the app's shared core by name instead of redefining it
   (2026-10-20, the user's decision). A test checks the CLI prompt's file
   list against `src/cli/`.
+- **The Fun page renders its prompts' markdown with no sanitiser**
+  (2026-10-22, the user's decision, audit L6): the markdown is built from
+  the app's own constants, never from input, and the CSP blocks scripts.
+- **The CLI modules the prompts read ride in the Fun page's chunk**
+  (accepted 2026-10-22, audit L14). The page is loaded only when opened
+  (about 98 KB gzipped with `marked`), never with the first page, and the
+  boundaries test keeps those modules free of Node.
 
 ## The command line
 
