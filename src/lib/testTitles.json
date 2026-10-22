@@ -97,6 +97,10 @@
       },
       {
         "kind": "test",
+        "title": "pasted \"3 of the following 4\" rules fill in three named kinds and make passwords that meet them; a paste past the cap is refused"
+      },
+      {
+        "kind": "test",
         "title": "an impossible combination shows its error beside the fields, blocks Submit, Enter and Refresh, and works once corrected"
       },
       {
