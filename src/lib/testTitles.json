@@ -3398,6 +3398,10 @@
       },
       {
         "kind": "test",
+        "title": "keeps a choice of N kinds as exactly N, never all of them, and says which"
+      },
+      {
+        "kind": "test",
         "title": "is deterministic: the same text always reads the same"
       },
       {

@@ -16,6 +16,12 @@
 // cannot keep (a length past what the tool makes, "no digits", "at most 2
 // symbols") is never weakened quietly: it is named in `unsupported`, and
 // nothing of it is applied.
+//
+// A choice of kinds ("at least 3 of the following 4: uppercase, lowercase,
+// numbers, symbols", "a number or a symbol") cannot be a field: the rules
+// are per-kind minimums. It is kept by requiring that many of the kinds
+// listed, the ones already met first and then the cheapest to type, and
+// the line says what was asked and what was kept; never all of them.
 
 import type { Requirements } from './generate';
 import { settleRules, type RuleFields, type RuleKey } from './sitePresets';
@@ -46,6 +52,28 @@ interface Mention {
   list?: number;
   pol?: Polarity;
   skip?: boolean;
+  /** One of a choice's kinds: kept by the choice, not on its own. */
+  chosen?: boolean;
+}
+
+/** The kinds a choice can be among: the counted ones, and letters, which every password has. */
+type ChoiceKind = 'upper' | 'lower' | 'digit' | 'symbol' | 'letter';
+
+interface Choice {
+  /** How many of the kinds the text asks for. */
+  n: number;
+  /** The kinds listed, each with the count its own words give ("at least 2 digits"), else 1. */
+  kinds: Map<ChoiceKind, number>;
+}
+
+/** A choice being read: its count, and the mentions that are its kinds so far. */
+interface ChoiceDraft {
+  n: number;
+  /** How many kinds the text says there are ("3 of the following 4"), when it says. */
+  total?: number;
+  /** Said with a class word ("character types", "categories"): with none listed, the usual four are meant. */
+  named: boolean;
+  members: { m: Mention; hasList: boolean; count: number }[];
 }
 
 interface SymbolList {
@@ -72,6 +100,10 @@ function normalise(text: string): string {
     .replace(/[‘’‚′]/g, "'")
     .replace(/[“”„″]/g, '"')
     .replace(/[‐-―−]/g, '-')
+    // "A-Z", "a-z" and "0-9" standing alone name a kind; read before lowercasing tells the first two apart.
+    .replace(/\[A-Z\]|(?<![\w-])A-Z(?![\w-])/g, ' uppercase')
+    .replace(/\[a-z\]|(?<![\w-])a-z(?![\w-])/g, ' lowercase')
+    .replace(/\[0-9\]|(?<![\w-])0-9(?![\w-])/g, ' digits')
     .replace(/≥/g, ' at least ')
     .replace(/≤/g, ' at most ')
     .replace(/[•‣⁃∙▪▫●○◦✓✔✖✗✘❌✅·]/g, '\n') // bullets and ticks start a rule
@@ -280,6 +312,32 @@ function ownPolarity(before: string, after: string): Polarity | undefined {
   return cuesIn(piece).at(-1) ?? following;
 }
 
+// ------------------------------------------------------------------- choices
+
+const KINDS_WORD = `(?:(?:different|distinct|separate)\\s+)?(?:(?:character|char)\\s+)?${CLASS_WORD}`;
+/**
+ * A count of kinds: "at least 3 of the following 4", "any 2 of", "3 out of
+ * 4 categories", "3 character types". Never "one of each" (all of them).
+ * Groups: the count, the total, a class word, "following" or the like.
+ */
+const CHOICE = new RegExp(
+  `\\b(?:(?:at least|a minimum of|minimum of|min|any)\\s+)?(\\d)\\s*(?:\\+|or more)?\\s+(?:(?:out\\s+)?of(?!\\s+each\\b)(?:\\s+(?:the|these|those))?(?:\\s+(following|listed|below))?(?:\\s+(\\d)\\b)?(?:\\s+(following|listed|below))?(?:\\s+(${KINDS_WORD}))?|(${KINDS_WORD}))\\b`,
+);
+/** What joins two kinds into a choice of one: "a number or a symbol", "numbers and/or symbols". */
+const OR_GAP = /^\s*,?\s*(?:either\s+)?(?:and\s*\/\s*)?or\s+(?:(?:at least\s+)?(?:an?|1)\s+)?$/;
+const USUAL_KINDS: ChoiceKind[] = ['upper', 'lower', 'digit', 'symbol'];
+/** The order kinds are said in. */
+const SAID_ORDER: ChoiceKind[] = ['letter', 'upper', 'lower', 'digit', 'symbol'];
+/** The order kinds are kept in when nothing else decides: letters are in every password; then the cheapest to type. */
+const CHEAPEST: ChoiceKind[] = ['letter', 'lower', 'upper', 'digit', 'symbol'];
+
+const choiceKind = (k: Kind): ChoiceKind | undefined => (k === 'list' ? 'symbol' : k === 'space' ? undefined : k);
+/** A mention that can be one of a choice's kinds: a kind it can keep, not "no", "optional" or "at most". */
+const canChoose = (m: Mention) => choiceKind(m.kind) !== undefined && m.pol?.kind !== 'neg' && m.pol?.kind !== 'opt' && m.pol?.kind !== 'max';
+
+/** The count a choice's kind asks for, from its own words: "at least 2 digits" is 2, anything else 1. */
+const countOf = (pol: Polarity | undefined) => (pol?.kind === 'req' ? pol.n : 1);
+
 // --------------------------------------------------------------------- reading
 
 const ONLY_ALNUM = new RegExp(
@@ -307,13 +365,20 @@ interface Found {
   unsupported: string[];
   /** Classes the text says "no" to that the tool cannot leave out; said in `unsupported` unless the text also requires them. */
   ruledOut: Set<'upper' | 'lower' | 'digit'>;
+  /** Choices of kinds ("3 of the following 4"), kept in `finish` once the whole text is read. */
+  choices: Choice[];
 }
 
 export function parseRuleText(input: string): ParsedRules {
   const { text, lists } = liftSymbolLists(normalise(input));
   const lengths: Lengths = { mins: [], maxes: [], bare: [] };
-  const f: Found = { req: {}, opt: new Set(), noSymbols: false, allowed: [], examples: [], excluded: [], unsupported: [], ruledOut: new Set() };
+  const f: Found = { req: {}, opt: new Set(), noSymbols: false, allowed: [], examples: [], excluded: [], unsupported: [], ruledOut: new Set(), choices: [] };
   let heading: Polarity | undefined; // from a line such as "Password must contain:"
+  let pending: ChoiceDraft | undefined; // a choice whose kinds are the lines under it
+  const close = () => {
+    if (pending) settleChoice(pending, lists, f);
+    pending = undefined;
+  };
 
   for (const raw of text.split(/\n|[.!?;](?=\s|$)/)) {
     let clause = readLengths(raw, lengths);
@@ -323,6 +388,8 @@ export function parseRuleText(input: string): ParsedRules {
     });
     const mentions = findMentions(clause);
     if (!mentions.length) {
+      if (raw.trim()) close(); // a line that names no kind ends the list under a choice
+      pending ??= readChoices(clause, raw, [], false, lists, f);
       if (raw.trim().endsWith(':')) heading = cuesIn(clause).at(-1);
       continue;
     }
@@ -353,10 +420,98 @@ export function parseRuleText(input: string): ParsedRules {
     }
 
     const hasList = live.some((m) => m.kind === 'list');
-    for (const m of live) record(m, hasList, lists, f);
+    if (pending) {
+      // A line of kinds under "at least 3 of the following:" is one of the choice's kinds, not a rule of its own.
+      if (live.length && live.every(canChoose)) {
+        for (const m of live) pending.members.push({ m, hasList, count: countOf(m.pol) });
+        if (pending.total !== undefined && new Set(pending.members.map(({ m }) => choiceKind(m.kind))).size >= pending.total) close();
+        continue;
+      }
+      close();
+    }
+    pending = readChoices(clause, raw, live, hasList, lists, f);
+    for (const m of live) if (!m.chosen) record(m, hasList, lists, f);
   }
+  close();
 
   return finish(lengths, f);
+}
+
+/**
+ * Finds the choices a clause states, marks their kinds and keeps them: a
+ * count of kinds with its kinds after it ("at least 3 of: uppercase,
+ * lowercase, numbers, symbols"), and kinds joined by "or" ("a number or a
+ * symbol"). Returns the choice when its kinds are the lines under it
+ * ("at least 3 of the following:" then a list).
+ */
+function readChoices(clause: string, raw: string, live: Mention[], hasList: boolean, lists: SymbolList[], f: Found): ChoiceDraft | undefined {
+  let opened: ChoiceDraft | undefined;
+  const t = CHOICE.exec(clause);
+  const cue = t && cuesIn(clause.slice(0, t.index)).at(-1);
+  if (t && Number(t[1]) >= 1 && cue?.kind !== 'neg' && cue?.kind !== 'opt') {
+    const end = t.index + t[0].length;
+    const draft: ChoiceDraft = { n: Number(t[1]), ...(t[3] ? { total: Number(t[3]) } : {}), named: !!(t[5] ?? t[6]), members: [] };
+    for (const [i, m] of live.entries()) {
+      if (m.start < end) continue;
+      if (!canChoose(m)) break;
+      // Its own words only, never the count of kinds before it: "any 3 of uppercase" is one uppercase letter.
+      const before = clause.slice(Math.max(end, live[i - 1]?.end ?? 0), m.start);
+      draft.members.push({ m, hasList, count: countOf(ownPolarity(before, clause.slice(m.end, live[i + 1]?.start ?? clause.length))) });
+    }
+    const kinds = new Set(draft.members.map(({ m }) => choiceKind(m.kind)));
+    if (kinds.size >= 2) {
+      for (const { m } of draft.members) m.chosen = true;
+      settleChoice(draft, lists, f);
+    } else if (kinds.size === 1) {
+      // One kind after the count is a count of that kind: "one of !@#$%" is a symbol, "2 of the following symbols: ! @ #" two.
+      for (const { m } of draft.members) if (m.pol?.kind === 'req') m.pol = { kind: 'req', n: Math.max(m.pol.n, draft.n) };
+    } else if (raw.trim().endsWith(':') || t[2] || t[4]) opened = draft;
+    else if (draft.named) settleChoice(draft, lists, f); // "3 of 4 character types": the usual four
+  }
+
+  let chain: Mention[] = [];
+  const flush = () => {
+    if (new Set(chain.map((m) => choiceKind(m.kind))).size >= 2) {
+      for (const m of chain) m.chosen = true;
+      settleChoice({ n: 1, named: false, members: chain.map((m) => ({ m, hasList, count: countOf(m.pol) })) }, lists, f);
+    }
+    chain = [];
+  };
+  for (const [i, m] of live.entries()) {
+    const prev = live[i - 1];
+    const joined =
+      prev && !prev.chosen && !m.chosen && prev.pol?.kind === 'req' && m.pol?.kind === 'req' && choiceKind(prev.kind) && choiceKind(m.kind) && OR_GAP.test(clause.slice(prev.end, m.start));
+    if (!joined) flush();
+    else {
+      if (!chain.length) chain.push(prev);
+      chain.push(m);
+    }
+  }
+  flush();
+  return opened;
+}
+
+/** Keeps a choice read whole: its kinds and counts, and the symbols a list among them allows. */
+function settleChoice(d: ChoiceDraft, lists: SymbolList[], f: Found) {
+  if (!d.members.length) {
+    if (d.named && (d.total === undefined || d.total === 4)) f.choices.push({ n: d.n, kinds: new Map(USUAL_KINDS.map((k) => [k, 1])) });
+    else f.unsupported.push(d.named ? `at least ${d.n} of ${d.total} kinds: the text does not name them` : `at least ${d.n} of the kinds listed: this tool recognised none of them`);
+    return;
+  }
+  const kinds = new Map<ChoiceKind, number>();
+  for (const { m, count } of d.members) {
+    const k = choiceKind(m.kind)!;
+    kinds.set(k, Math.max(kinds.get(k) ?? 0, count));
+  }
+  if (kinds.size < 2) {
+    // One kind it knows under "3 of the following:": the others are kinds it cannot read, so the choice cannot be kept.
+    if (d.n >= 2) f.unsupported.push(`at least ${d.n} of the kinds listed: this tool recognised only ${CHOICE_WORDS[[...kinds.keys()][0]!].listed}`);
+    else for (const { m, hasList } of d.members) record(m, hasList, lists, f); // "1 of the following:" over one kind: that kind
+    return;
+  }
+  // A list inside a choice ("special characters (!@#$%^&*)") is still the set the site accepts; examples only describe the kind.
+  for (const { m } of d.members) if (m.kind === 'list' && !lists[m.list!]!.example) f.allowed.push(lists[m.list!]!.chars);
+  f.choices.push({ n: d.n, kinds });
 }
 
 /** How each kind of character is named in an unsupported rule. */
@@ -408,6 +563,53 @@ function record(m: Mention, hasList: boolean, lists: SymbolList[], f: Found) {
 
 const unique = (parts: string[]) => [...new Set(parts.join(''))].join('');
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : `${n} ${many}`);
+const inWords = (items: string[], last: string) => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} ${last} ${items.at(-1)}`);
+
+type CountKind = Exclude<ChoiceKind, 'letter'>;
+/** How a choice's kinds are said: in its list ("uppercase"), and as a count ("an uppercase letter", "2 uppercase letters"). */
+const CHOICE_WORDS: Record<ChoiceKind, { listed: string; one: string; many: string }> = {
+  upper: { listed: 'uppercase', one: 'an uppercase letter', many: 'uppercase letters' },
+  lower: { listed: 'lowercase', one: 'a lowercase letter', many: 'lowercase letters' },
+  digit: { listed: 'digits', one: 'a digit', many: 'digits' },
+  symbol: { listed: 'symbols', one: 'a symbol', many: 'symbols' },
+  letter: { listed: 'letters', one: 'a letter', many: 'letters' },
+};
+const counting = (k: ChoiceKind, n: number) => (k === 'letter' ? 'letters' : plural(n, CHOICE_WORDS[k].one, CHOICE_WORDS[k].many));
+
+/**
+ * Keeps each choice by requiring that many of its kinds: letters first (every
+ * password has them), then kinds the text requires anyway or an earlier
+ * choice kept, then the cheapest to type; never one the text rules out. A
+ * choice it cannot keep is said, with why, and nothing of it is kept.
+ */
+function keepChoices(f: Found): { kept: Partial<Record<CountKind, number>>; lines: string[]; unsupported: string[] } {
+  const kept: Partial<Record<CountKind, number>> = {};
+  const lines: string[] = [];
+  const unsupported: string[] = [];
+  const met = (k: ChoiceKind) => k === 'letter' || (f.req[k] ?? 0) > 0 || kept[k] !== undefined;
+  const ruledOut = (k: ChoiceKind) => (k === 'symbol' ? f.noSymbols && !f.req.symbol : k !== 'letter' && f.ruledOut.has(k) && !f.req[k]);
+  for (const c of f.choices) {
+    const listed = SAID_ORDER.filter((k) => c.kinds.has(k));
+    const named = (ks: ChoiceKind[]) => inWords(ks.map((k) => CHOICE_WORDS[k].listed), 'and');
+    const said = c.n === 1 ? inWords(listed.map((k) => counting(k, c.kinds.get(k)!).replace(/^letters$/, 'a letter')), 'or') : `at least ${c.n} of ${named(listed)}`;
+    if (listed.length < c.n) {
+      unsupported.push(`at least ${c.n} of the kinds listed: this tool recognised only ${named(listed)}`);
+      continue;
+    }
+    const open = listed.filter((k) => !ruledOut(k));
+    if (open.length < c.n) {
+      unsupported.push(`${said}: the text rules out ${named(listed.filter(ruledOut))}`);
+      continue;
+    }
+    const chosen = [...open].sort((a, b) => Number(met(b)) - Number(met(a)) || CHEAPEST.indexOf(a) - CHEAPEST.indexOf(b)).slice(0, c.n);
+    // All of them ("2 of the following: uppercase, digits") is no choice: each is required, and said, on its own.
+    const into = chosen.length === listed.length ? f.req : kept;
+    for (const k of chosen) if (k !== 'letter') into[k] = Math.max(into[k] ?? 0, c.kinds.get(k)!);
+    if (into === f.req || chosen.every((k) => k === 'letter')) continue; // met by every password: nothing to keep, nothing to say
+    lines.push(`${said} (kept as ${inWords(SAID_ORDER.filter((k) => chosen.includes(k)).map((k) => counting(k, c.kinds.get(k)!)), 'and')})`);
+  }
+  return { kept, lines, unsupported };
+}
 
 function finish(l: Lengths, f: Found): ParsedRules {
   const rules: Partial<RuleFields> = {};
@@ -438,11 +640,15 @@ function finish(l: Lengths, f: Found): ParsedRules {
   else if (min !== undefined) understood.push(`at least ${min} characters`);
   else if (max !== undefined) understood.push(`at most ${max} characters${cap}`);
 
-  const counted = (key: 'upper' | 'lower' | 'digit' | 'symbol', field: 'minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols', one: string, many: string, optional: string) => {
+  const choices = keepChoices(f);
+  unsupported.push(...choices.unsupported);
+  // A kind a choice kept is set here and said on the choice's line, not on a line of its own.
+  const counted = (key: CountKind, field: 'minUppercase' | 'minLowercase' | 'minDigits' | 'minSymbols', one: string, many: string, optional: string) => {
     const n = f.req[key];
-    if (n !== undefined) {
-      rules[field] = n;
-      return plural(n, one, many);
+    const kept = choices.kept[key];
+    if (n !== undefined || kept !== undefined) {
+      rules[field] = Math.max(n ?? 0, kept ?? 0);
+      return n === undefined ? undefined : plural(n, one, many);
     }
     if (f.opt.has(key)) {
       rules[field] = 0;
@@ -456,6 +662,7 @@ function finish(l: Lengths, f: Found): ParsedRules {
   if (lower) understood.push(lower);
   const digit = counted('digit', 'minDigits', 'a digit', 'digits', 'digits optional');
   if (digit) understood.push(digit);
+  understood.push(...choices.lines);
 
   const allowed = unique(f.allowed);
   const symbol = counted('symbol', 'minSymbols', 'a symbol', 'symbols', 'symbols optional');

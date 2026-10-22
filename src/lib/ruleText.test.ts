@@ -13,6 +13,10 @@ interface Case {
   unsupported?: string[];
 }
 
+/** "3 of the 4 kinds", as every such case says it, and what it keeps: the three cheapest to type. */
+const THREE_OF_FOUR = 'at least 3 of uppercase, lowercase, digits and symbols';
+const KEPT_THREE = { minUppercase: 1, minLowercase: 1, minDigits: 1 };
+
 // Real phrasings, many copied in the shape sign-up forms show them: bullets, ticks, numbered lists, stray
 // headings and sentences that are not rules at all.
 const CASES: Case[] = [
@@ -56,9 +60,10 @@ const CASES: Case[] = [
     rules: { minLength: 8, minUppercase: 1, minLowercase: 1, minDigits: 1 },
   },
   {
-    name: '"needs to" with "upper and lower case" and "a number or symbol"',
+    name: '"needs to" with "upper and lower case", and "a number or symbol" kept as a digit',
     text: 'Your password needs to:\n- include both lower and upper case characters\n- include at least one number or symbol\n- be at least 8 characters long',
-    rules: { minLength: 8, minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1 },
+    rules: { minLength: 8, minUppercase: 1, minLowercase: 1, minDigits: 1 },
+    understood: ['at least 8 characters', 'an uppercase letter', 'a lowercase letter', 'a digit or a symbol (kept as a digit)'],
   },
   { name: '"at least N" counts per class', text: 'Password requires 2 uppercase letters, at least 3 digits and a minimum of 2 special characters.', rules: { minUppercase: 2, minDigits: 3, minSymbols: 2 }, understood: ['2 uppercase letters', '3 digits', '2 symbols'] },
   { name: '"capital letter" and "must not exceed"', text: 'Must not exceed 16 characters, at least 1 capital letter', rules: { maxLength: 16, minUppercase: 1 } },
@@ -70,10 +75,106 @@ const CASES: Case[] = [
   },
   { name: '"Mix uppercase and lowercase letters, numbers and symbols"', text: 'Use at least 12 characters. Mix uppercase and lowercase letters, numbers and symbols. Don\'t use a password from another site.', rules: { minLength: 12, minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1 } },
   {
-    name: '"3 of the following 4 categories": requiring each one satisfies it',
+    name: '"3 of the following 4 categories" kept as three named kinds, never all four',
     text: 'Must contain characters from at least 3 of the following 4 categories: English uppercase characters (A through Z), English lowercase characters (a through z), Base 10 digits (0 through 9), Non-alphabetic characters (for example, !, $, #, %)',
-    rules: { minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 1 },
-    understood: ['an uppercase letter', 'a lowercase letter', 'a digit', 'a symbol, such as !$#%'],
+    rules: { minUppercase: 1, minLowercase: 1, minDigits: 1 },
+    understood: [`${THREE_OF_FOUR} (kept as an uppercase letter, a lowercase letter and a digit)`],
+  },
+  // Choices of kinds: kept by requiring that many, the cheapest first, and said as asked and as kept.
+  { name: '"at least 3 of the following 4:" and the kinds after it', text: 'At least 3 of the following 4: uppercase, lowercase, numbers, symbols', rules: KEPT_THREE, understood: [`${THREE_OF_FOUR} (kept as an uppercase letter, a lowercase letter and a digit)`] },
+  { name: '"3 of 4 character types" with no list means the usual four', text: '3 of 4 character types', rules: KEPT_THREE, understood: [`${THREE_OF_FOUR} (kept as an uppercase letter, a lowercase letter and a digit)`] },
+  { name: '"characters from 3 character classes" with no list', text: 'Include characters from 3 character classes.', rules: KEPT_THREE },
+  { name: '"three of these categories:" over a bulleted list', text: 'Include characters from at least three of these categories:\n• Uppercase letters\n• Lowercase letters\n• Numbers\n• Symbols', rules: KEPT_THREE },
+  {
+    name: '"3 of the following:" over "A ..." bullets, the list ending at the next rule',
+    text: 'Your password must contain at least 3 of the following:\n- An uppercase letter\n- A lowercase letter\n- A number\n- A special character\nMust be 8-64 characters.',
+    rules: { minLength: 8, maxLength: 64, ...KEPT_THREE },
+    understood: ['8-64 characters', `${THREE_OF_FOUR} (kept as an uppercase letter, a lowercase letter and a digit)`],
+  },
+  {
+    name: 'a copied checklist with blank lines, ranges and a symbol list under "3 of the following:"',
+    text: 'Your password must contain at least 3 of the following:\n\n• Uppercase letters (A-Z)\n\n• Lowercase letters (a-z)\n\n• Numbers (0-9)\n\n• Symbols (!@#$%^&*)\n\nNo spaces',
+    rules: { ...KEPT_THREE, allowedSymbols: '!@#$%^&*', allowSpaces: false },
+    understood: [`${THREE_OF_FOUR} (kept as an uppercase letter, a lowercase letter and a digit)`, 'symbols !@#$%^&*', 'no spaces'],
+  },
+  {
+    name: 'a numbered list under "3 of the following 4 categories:" ends at the fourth kind',
+    text: 'Must contain characters from 3 of the following 4 categories:\n1. Uppercase\n2. Lowercase\n3. Digits\n4. Special characters\n5. At least 10 characters',
+    rules: { minLength: 10, ...KEPT_THREE },
+  },
+  { name: '"three of the following" in a sentence with a length', text: 'Must be 8-64 characters and contain three of the following: uppercase letters, lowercase letters, numbers, and symbols.', rules: { minLength: 8, maxLength: 64, ...KEPT_THREE } },
+  {
+    name: '"any 3 of" A-Z, a-z, 0-9 and a symbol list',
+    text: 'Must contain any 3 of: A-Z, a-z, 0-9, !@#$%',
+    rules: { ...KEPT_THREE, allowedSymbols: '!@#$%' },
+    understood: [`${THREE_OF_FOUR} (kept as an uppercase letter, a lowercase letter and a digit)`, 'symbols !@#$%'],
+  },
+  { name: '"two of: letters, numbers, symbols" counts the letters every password has', text: 'Use at least two of: letters, numbers, symbols', rules: { minDigits: 1 }, understood: ['at least 2 of letters, digits and symbols (kept as letters and a digit)'] },
+  {
+    name: 'a kind the text requires anyway is kept first, the symbol here',
+    text: 'Must include at least one special character. Use at least 3 of: uppercase, lowercase, numbers, symbols.',
+    rules: { minUppercase: 1, minLowercase: 1, minSymbols: 1 },
+    understood: [`${THREE_OF_FOUR} (kept as an uppercase letter, a lowercase letter and a symbol)`, 'a symbol'],
+  },
+  {
+    name: 'a choice\'s own counts are kept with it',
+    text: 'At least 3 of the following: 2 uppercase letters, lowercase letters, 2 digits, symbols',
+    rules: { minUppercase: 2, minLowercase: 1, minDigits: 2 },
+    understood: [`${THREE_OF_FOUR} (kept as 2 uppercase letters, a lowercase letter and 2 digits)`],
+  },
+  {
+    name: 'a kind the text rules out is never kept: "2 of" uppercase, lowercase and digits, letters and numbers only',
+    text: 'Password must be 8-20 characters, letters and numbers only, and include 2 of: uppercase, lowercase, digits',
+    rules: { minLength: 8, maxLength: 20, minUppercase: 1, minLowercase: 1, allowedSymbols: '', minSymbols: 0 },
+    understood: ['8-20 characters', 'at least 2 of uppercase, lowercase and digits (kept as an uppercase letter and a lowercase letter)', 'no symbols'],
+  },
+  {
+    name: '"1 uppercase letter or number" is a choice of one',
+    text: 'At least 12 characters. Contain at least 1 uppercase letter or number',
+    rules: { minLength: 12, minUppercase: 1 },
+    understood: ['at least 12 characters', 'an uppercase letter or a digit (kept as an uppercase letter)'],
+  },
+  {
+    name: '"one number or symbol" after required kinds: those stay required, the pair is a choice',
+    text: 'At least one uppercase, one lowercase, and one number or symbol',
+    rules: KEPT_THREE,
+    understood: ['an uppercase letter', 'a lowercase letter', 'a digit or a symbol (kept as a digit)'],
+  },
+  { name: '"numbers and/or symbols" is a choice of one', text: 'Must contain numbers and/or symbols', rules: { minDigits: 1 }, understood: ['a digit or a symbol (kept as a digit)'] },
+  { name: '"a letter or a number" is met by every password and changes nothing', text: 'Must start with a letter or a number', rules: {}, understood: [] },
+  { name: '"no spaces or symbols" rules both out, never a choice', text: 'Must not contain spaces or symbols.', rules: { allowedSymbols: '', minSymbols: 0, allowSpaces: false }, understood: ['no symbols', 'no spaces'] },
+  { name: '"one of each" is all of them', text: 'Include at least one of each: uppercase, lowercase, number', rules: KEPT_THREE, understood: ['an uppercase letter', 'a lowercase letter', 'a digit'] },
+  { name: '"2 of the following" over two kinds is both', text: 'Password must include 2 of the following: a number, a symbol', rules: { minDigits: 1, minSymbols: 1 }, understood: ['a digit', 'a symbol'] },
+  { name: '"2 of the following special characters" is two symbols from the list', text: 'Must include 2 of the following special characters: ! @ # $', rules: { minSymbols: 2, allowedSymbols: '!@#$' }, understood: ['2 symbols from !@#$'] },
+  { name: '"1 of your last 5 passwords" is not a choice of kinds', text: 'Must include a number. It cannot be 1 of your last 5 passwords.', rules: { minDigits: 1 }, understood: ['a digit'] },
+  {
+    name: 'a choice the text\'s own exclusions leave short is named, not kept',
+    text: 'Use 2 of: uppercase, symbols. No special characters.',
+    rules: { allowedSymbols: '', minSymbols: 0 },
+    understood: ['no symbols'],
+    unsupported: ['at least 2 of uppercase and symbols: the text rules out symbols'],
+  },
+  {
+    name: 'a choice with fewer kinds recognised than it asks for is named, not kept',
+    text: 'Use at least 3 of the following: uppercase letters, emoji, numbers',
+    rules: {},
+    understood: [],
+    unsupported: ['at least 3 of the kinds listed: this tool recognised only uppercase and digits'],
+  },
+  { name: 'a count of kinds other than the usual four, unnamed, is named, not kept', text: 'Use 3 of 5 character types', rules: {}, understood: [], unsupported: ['at least 3 of 5 kinds: the text does not name them'] },
+  {
+    name: '"3 of the following:" over kinds it does not know is named, not kept',
+    text: 'Must contain 3 of the following:\n• Emoji\n• Pictographs\n\nMust be 8 characters or more.',
+    rules: { minLength: 8 },
+    understood: ['at least 8 characters'],
+    unsupported: ['at least 3 of the kinds listed: this tool recognised none of them'],
+  },
+  {
+    name: '"3 of the following:" over one kind it knows is named, not kept as that kind',
+    text: 'Must contain 3 of the following:\n• Uppercase letters\n• Emoji\n• Pictographs',
+    rules: {},
+    understood: [],
+    unsupported: ['at least 3 of the kinds listed: this tool recognised only uppercase'],
   },
   { name: 'a symbol list given as examples ("such as") is not the full allowed set', text: 'Must contain at least two special characters such as @, # or $.', rules: { minSymbols: 2 }, understood: ['2 symbols, such as @#$'] },
   { name: 'an allowed-symbols label with a spaced list', text: 'Special characters allowed: ~ ! @ # $ % ^ & * ( ) _ - + =', rules: { allowedSymbols: '~!@#$%^&*()_-+=' }, understood: ['symbols ~!@#$%^&*()_-+='] },
@@ -181,6 +282,24 @@ describe('parseRuleText', () => {
       expect(parseRuleText(text).rules.minLength, text).toBeUndefined();
     }
     expect(parseRuleText('Use 8 characters or more').rules.minLength).toBe(8); // a real length still reads
+  });
+
+  it('keeps a choice of N kinds as exactly N, never all of them, and says which', () => {
+    const choices: [string, number][] = [
+      ['Use any 2 of: uppercase, lowercase, numbers, symbols.', 2],
+      ['Must contain characters from 3 out of 4 categories: upper case, lower case, digits, special characters.', 3],
+      ['Password must contain at least 1 of the following: an uppercase letter, a number, a symbol', 1],
+      ['Include a capital or a digit or a symbol', 1],
+      ['Use characters from at least 2 different character sets', 2],
+      ['Contain 3 or more of the following: uppercase, lowercase, numbers, symbols', 3],
+    ];
+    for (const [text, n] of choices) {
+      const { rules, understood, unsupported } = parseRuleText(text);
+      const required = (['minUppercase', 'minLowercase', 'minDigits', 'minSymbols'] as const).filter((k) => (rules[k] ?? 0) > 0);
+      expect(required, text).toHaveLength(n);
+      expect(understood, text).toEqual([expect.stringMatching(/\(kept as [^)]+\)$/)]);
+      expect(unsupported, text).toEqual([]);
+    }
   });
 
   it('is deterministic: the same text always reads the same', () => {
