@@ -28,7 +28,7 @@ import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './ran
 import { scoreCold } from './score';
 import { rawBits, strengthBits } from './strength';
 import { easedText, plainOf } from './ease';
-import { letterCount } from './text';
+import { letterCount, plural } from './text';
 import { checkRequirements, countUpper } from './checks';
 import type { RequirementCheck, Requirements } from './requirements';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
@@ -809,7 +809,7 @@ function keptSentence(sentence: GeneratedSentence, req: Requirements): { candida
   const { shape } = variant;
   const madeUp = sentence.words.flatMap((w, j) => (shape.slots[j] === 'noun' && isMadeUpNoun(w) ? [j] : []));
   if (!same(madeUp, shape.madeUp)) {
-    throw doesNotFit(`it has ${madeUp.length} made-up noun${madeUp.length === 1 ? '' : 's'}, and these rules ask for ${shape.madeUp.length}`);
+    throw doesNotFit(`it has ${plural(madeUp.length, 'made-up noun')}, and these rules ask for ${shape.madeUp.length}`);
   }
   const typed = sentence.words.map((w, j) => {
     if (shape.initials.includes(j)) return w[0]!.toUpperCase();

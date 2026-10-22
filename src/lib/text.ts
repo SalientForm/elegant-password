@@ -1,5 +1,8 @@
-// Word-level text helpers shared by sentence mode and the cold scorer.
-// Kept free of other imports so the scorer never depends on the generator.
+// Word-level text helpers shared by sentence mode and the cold scorer, and
+// the small wording helpers every module that writes a sentence uses (a
+// count and its noun, a first letter up or down). Kept free of other
+// imports so the scorer never depends on the generator, and any module,
+// either front end's included, can take a helper without drawing in more.
 
 /**
  * The longest sentence or hint either front end takes, in characters (the
@@ -51,3 +54,12 @@ export function trimInterior(word: string): string {
 
 /** Count of letters a-z or A-Z. */
 export const letterCount = (text: string) => text.replace(/[^a-zA-Z]/g, '').length;
+
+/** A count and the noun that agrees with it: "1 digit", "3 digits", "2 fixes" (with `many`). */
+export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** The text with its first character in upper case: the start of a sentence. */
+export const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** The text with its first character in lower case: a sentence carried into another. */
+export const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);

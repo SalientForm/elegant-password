@@ -15,6 +15,7 @@ import type { MappingSettings } from '../lib/mappingSettings';
 import { MINIMAL_BITS, modeLabel, profileValues, PROFILE_KEYS, unusedIn } from '../lib/modeProfiles';
 import { ALL_SYMBOLS, RULE_KEYS } from '../lib/sitePresets';
 import { DEFAULT_SORT } from '../lib/sort';
+import { capitalise } from '../lib/text';
 import { MAX_LENGTH, MAX_TARGET_BITS, MIN_LENGTH } from '../lib/validation';
 import { explainProblem } from './messages';
 import { COUNT_AT_TERMINAL, COUNT_PIPED, DEFAULT_SORT_HINT, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
@@ -272,7 +273,6 @@ function check<T>(a: Answers, choices: Omit<Choice<T>, 'blocked'>[], apply: (a: 
   });
 }
 
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The typing mode question. With options following the preset, a mode whose preset contradicts the rules is not allowed. */
 export function modeShape(a: Answers, where: Where): SelectShape<TypingMode> {
@@ -355,7 +355,7 @@ export function fieldShape(f: CliField, a: Answers, where: Where, defaults: Reco
   const apply = (x: Answers, v: unknown) => (v === OTHER_BITS ? x : withField(x, f, v));
   const current = f.name in (f.group === 'rules' ? a.rules : f.group === 'options' ? a.options : a.output) ? valueIn(a, f) : undefined;
   const fallback = current ?? (f.name in defaults ? defaults[f.name] : undefined) ?? (f.group === 'options' ? reqOf({ ...a, optionsHow: 'preset' })[f.target.key as keyof Requirements] : f.group === 'rules' ? (a.site ? valueIn(a, f) : reqOf(a, DEFAULT_RULE_FILL)[f.target.key as keyof Requirements]) : valueIn(a, f));
-  const message = capital(f.label);
+  const message = capitalise(f.label);
   const k = f.kind;
 
   if (k.type === 'int' && k.max - k.min > 20) return numberShape(f, a, where, message, fallback as number);

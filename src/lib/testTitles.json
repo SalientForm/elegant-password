@@ -3804,6 +3804,18 @@
     "titles": [
       {
         "kind": "group",
+        "title": "the wording helpers"
+      },
+      {
+        "kind": "test",
+        "title": "pairs a count with the noun that agrees with it, the plural given when it is not an s"
+      },
+      {
+        "kind": "test",
+        "title": "turns only the first character up or down, and leaves an empty text empty"
+      },
+      {
+        "kind": "group",
         "title": "sentenceLengthProblem"
       },
       {

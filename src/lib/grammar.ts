@@ -176,6 +176,9 @@ export const COMFORT_SHARE: Record<Comfort, number> = {
   relaxed: 1,
 };
 
+/** The typing comfort levels, strictest first: the ones the word pools are cut for. */
+export const COMFORTS: readonly Comfort[] = Object.keys(COMFORT_SHARE) as Comfort[];
+
 /**
  * The leading number. For one digit (or none) it is 2-99; for n digits it is
  * every n-digit number, so the digit count is guaranteed. Numbers start at 2

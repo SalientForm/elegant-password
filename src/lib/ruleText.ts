@@ -19,6 +19,7 @@
 
 import type { Requirements } from './generate';
 import { settleRules, type RuleFields, type RuleKey } from './sitePresets';
+import { plural } from './text';
 import { MAX_LENGTH } from './validation'; // the form's own limit
 
 export interface ParsedRules {
@@ -407,7 +408,6 @@ function record(m: Mention, hasList: boolean, lists: SymbolList[], f: Found) {
 }
 
 const unique = (parts: string[]) => [...new Set(parts.join(''))].join('');
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : `${n} ${many}`);
 
 function finish(l: Lengths, f: Found): ParsedRules {
   const rules: Partial<RuleFields> = {};
@@ -442,7 +442,7 @@ function finish(l: Lengths, f: Found): ParsedRules {
     const n = f.req[key];
     if (n !== undefined) {
       rules[field] = n;
-      return plural(n, one, many);
+      return n === 1 ? one : plural(n, one, many); // one is "a digit", with its article
     }
     if (f.opt.has(key)) {
       rules[field] = 0;

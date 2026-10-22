@@ -17,6 +17,7 @@
 
 import type { RandomSource } from './random';
 import { randomInt } from './random';
+import { plural } from './text';
 
 export type LengthTag = 'total' | 'factor' | 'none';
 
@@ -199,7 +200,7 @@ export function describeFluff(plan: FluffPlan, min: number): string {
       case 'word':
         return `the word “${p.text}”`;
       case 'repeat':
-        return `“${p.char}” repeated ${p.text.length} more time${p.text.length === 1 ? '' : 's'}`;
+        return `“${p.char}” repeated ${plural(p.text.length, 'more time')}`;
       case 'sequence':
         return `the digits ${p.text}`;
       case 'marks':

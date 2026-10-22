@@ -48,6 +48,7 @@
 
 import { scoreDifficulty, type Difficulty } from './difficulty';
 import {
+  COMFORTS,
   initialsOf,
   isMadeUpNoun,
   MADE_UP_NOUNS,
@@ -159,7 +160,6 @@ export interface ColdScore {
 export const MAX_TWISTS_PER_WORD = 3;
 /** Fewer for long words: enumerating spellings grows combinatorially with length (a 34-letter word with three swaps took seconds). */
 export const twistsToTry = (length: number) => (length <= 10 ? MAX_TWISTS_PER_WORD : length <= 16 ? 2 : 1);
-const COMFORTS: readonly Comfort[] = ['strict', 'balanced', 'relaxed'];
 const POOL_SLOTS: readonly Exclude<Slot, 'num' | 'and'>[] = ['adj', 'noun', 'verb', 'adv', 'end', 'prep'];
 
 /** Base forms a hint word can take in a password, longest first, each with its kind. */

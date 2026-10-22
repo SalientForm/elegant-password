@@ -7,7 +7,7 @@ import { FAR_SHIFT_LETTERS, FAR_SHIFT_SYMBOLS, isPinkyStretch, ONE_HAND_SHIFT_RE
 import { EASE_EXCLUDED, EASE_RULES, LONG_REACH } from '../lib/ease';
 import { DEFAULT_SENTENCE_OPTIONS, MAX_RULE_TWISTS, SHRINK_FROM_RANGE, SMALL_WORDS, TAG_SYMBOLS, TARGET_LENGTH_RANGE } from '../lib/fromSentence';
 import { MAX_COUNT, MAX_LENGTH, MAX_TARGET_BITS, MIN_COUNT, MIN_LENGTH, MUST_CONTAIN } from '../lib/validation';
-import { MAX_HINT_LENGTH } from '../lib/text';
+import { lowerFirst, MAX_HINT_LENGTH } from '../lib/text';
 import { SLOW_MS } from '../lib/budget';
 import { SORT_CHOICES } from '../lib/choices';
 import { MAX_REPEATS, MIN_WORD } from '../lib/fluff';
@@ -61,7 +61,6 @@ const code = (s: string) => `\`${s}\``;
 const codeAny = (s: string) => (s.includes('`') ? `\`\` ${s} \`\`` : code(s));
 const list = (items: readonly string[]) => items.map((i) => `- ${i}`).join('\n');
 const inWords = (items: readonly string[], last = 'and') => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} ${last} ${items.at(-1)}`);
-const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 /** A count chosen with buttons: "None / 1 / 2 / 3". */
 const buttons = (max: number) => ['None', ...Array.from({ length: max }, (_, i) => String(i + 1))].join(' / ');
 /** "10^4" for 10 000. */
