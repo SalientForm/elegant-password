@@ -551,13 +551,43 @@ decisions taken on the recommendation alone, to revisit once it is in use.
 
 ## Build and deploy
 
-- **A deploy runs the same checks as CI, the browser suite included**
-  (`pages.yml`'s `check` job, before `build`).
+- **The checks live once, in `check.yml`** (2026-10-22, audit L9): a
+  reusable workflow (`on: workflow_call`) that `ci.yml` calls on every
+  branch push and pull request and `pages.yml` calls before `build`
+  (`needs: check`), so a deploy runs the same checks as CI, the browser
+  suite included. Its job holds only `contents: read`, and `pages.yml`'s
+  calling job grants no more, though that workflow grants `pages: write`
+  and `id-token: write` for the deploy. The callers own the triggers and
+  the concurrency; in the checks list the job reads `check / check`. A
+  workflow cannot run locally, so `src/workflows.test.ts` holds that shape.
 - **The Content-Security-Policy is a meta tag** added to the built page
-  only, since the dev server needs inline scripts. It cannot carry
-  `frame-ancestors`, which needs a header the app's host does not send yet.
+  only, since the dev server needs inline scripts. GitHub Pages sends no
+  headers the app can set, a custom domain included.
+- **The built app refuses to run in a frame** (2026-10-22, audit L7). A
+  meta-tag policy cannot carry `frame-ancestors` (browsers ignore it
+  there, and `X-Frame-Options` too), so any page could frame the app and
+  lay its own over it. At start-up, before React, `src/frameGuard.ts`
+  checks `window.top !== window.self` (an access that throws counts as
+  framed); framed, nothing is mounted and the root holds a notice, a link
+  that opens the app in a new tab and the address to type. The link is
+  `target="_blank"` with `rel="noopener noreferrer"`, not `_top`: a
+  sandboxed frame may not navigate the page above it, and a new tab shows
+  the app's real address. Only in the production build, as the CSP is:
+  preview panes frame the dev server (`pnpm preview` serves the build, so
+  it refuses frames). The check is in the bundle because the CSP forbids
+  inline scripts. The notice is plain DOM, not static markup in
+  `index.html` (a script would be needed to show or hide it either way)
+  nor React (a root for one paragraph and a link); it uses no
+  `innerHTML` and no inline style (its look is `.framed-notice` in
+  `styles.css`). The proper fix is the header
+  `Content-Security-Policy: frame-ancestors 'none'` on a host that sends
+  one (`TODO.md`, "Protect the saved list").
 - **The smoke suites are the check that the built app works under the
   CSP**, on this project's own ports: 4272 the build, 4273 the dev server.
+  The framing test needs no port: its framing page is served by request
+  interception on `https://framer.test`, granted local network access,
+  which Chromium requires before a page off the local network frames one
+  on it.
 - **The unit suite runs in Node's default heap** (2026-10-21). It passes
   at 256 MB, and at 128 MB, a file at a time; the 4 GB flag of 2026-10-16
   was for a planning cache with no cap and came out when the cap, `mayFit`

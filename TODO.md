@@ -233,6 +233,13 @@ with a passphrase (WebCrypto: PBKDF2 or Argon2 to AES-GCM), or a "hints
 only" mode that keeps the sentence and drops the password. Scoring is
 unaffected either way: it already needs only the password and hint.
 
+A custom domain on GitHub Pages still sends no headers. Once the app is on
+a host that does, send `Content-Security-Policy: frame-ancestors 'none'`
+(the rest of the policy may move into the header with it): framing is then
+refused before any script runs, which the meta tag cannot do, and the
+start-up check in `src/frameGuard.ts` can go (audit L7, 2026-10-22;
+`docs/decisions.md`, "Build and deploy").
+
 ### A worker again, once everything works without one
 
 Asked for by the user on 2026-10-21, when the audit's bet was taken: the
