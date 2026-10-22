@@ -3189,6 +3189,10 @@
       },
       {
         "kind": "test",
+        "title": "no mode uses made-up nouns: they are left for the user to choose"
+      },
+      {
+        "kind": "test",
         "title": "two-finger has no use for the pinky rule or deliberate swaps; the other modes use every option"
       },
       {

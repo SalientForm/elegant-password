@@ -47,6 +47,10 @@ describe('mode profiles', () => {
     expect(matchesProfile(withProfile({ ...DEFAULT_REQUIREMENTS, allowSpaces: false }, 'two-finger').req, 'two-finger')).toBe(true);
   });
 
+  it('no mode uses made-up nouns: they are left for the user to choose', () => {
+    for (const mode of TYPING_MODE_IDS) expect(withProfile(DEFAULT_REQUIREMENTS, mode).req.madeUp, mode).toBe(0);
+  });
+
   it('two-finger has no use for the pinky rule or deliberate swaps; the other modes use every option', () => {
     expect(unusedIn('two-finger').map((u) => u.key)).toEqual(['avoidPinkyStretch', 'easeSwaps']);
     for (const u of unusedIn('two-finger')) expect(MODE_PROFILES['two-finger'].values[u.key]).toBe(false); // their neutral value
@@ -57,7 +61,7 @@ describe('mode profiles', () => {
     expect(formatProfileValue('targetBits', 'ten-finger')).toBe('40 bits (Everyday)');
     expect(formatProfileValue('separator', 'two-finger')).toBe('Space if allowed, else Auto');
     expect(formatProfileValue('comfort', 'one-handed')).toBe('Strict');
-    expect(formatProfileValue('madeUp', 'quick')).toBe('3');
+    expect(formatProfileValue('madeUp', 'quick')).toBe('None');
     expect(formatProfileValue('initials', 'quick')).toBe('None');
   });
 

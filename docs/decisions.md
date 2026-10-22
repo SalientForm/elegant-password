@@ -166,6 +166,24 @@ twists). It is the lead if the budget is ever missed.
   capital, wherever it is, so the bits count what generation can make.
   At the defaults a seeded batch is the same passwords as before.
 
+### Made-up nouns only by choice (2026-10-22)
+
+- **No typing mode uses made-up nouns** (the user's decision, first asked
+  for by Dossier). The default was already none; Two-finger and One-handed
+  set one and Minimal-quick three. They are now used only when chosen, in
+  the web app's Style options, `tep`'s `made-up` option or a config file.
+  `src/lib/modeProfiles.ts`; a test holds every mode at none.
+- **The profiles were re-measured without them** (`pnpm measure:modes`,
+  600 suggestions at the Typical site rules), and the tuning rule kept: a
+  value stays only if it lowers the mode's difficulty in its own rubric.
+  Two-finger loses its capital initial (38.6 without it, 46.8 with it; it
+  helped only beside a made-up noun) and Minimal-quick its glue (38.2
+  against 41.6). In each mode's own rubric: Two-finger 33.0 to 38.6,
+  One-handed 36.4 to 38.0, Minimal-quick 10.1 to 38.2 and 13 to 16
+  characters. Every mode is still easier than the defaults scored in it
+  and meets its target. A config with `options: preset` follows the
+  profile, so an existing one now generates without made-up nouns.
+
 ### Slow work (2026-10-21)
 
 - **Any one piece of work on the page's thread over 2 s is a failure**

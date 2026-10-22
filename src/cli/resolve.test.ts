@@ -78,7 +78,7 @@ describe('resolve: the layers', () => {
     expect(r.sources.swaps).toEqual(fileAt(3, 'options.swaps'));
     expect(r.generation.req.comfort).toBe('strict');
     expect(r.sources.comfort).toEqual(flag('comfort'));
-    expect(r.generation.req.madeUp).toBe(1); // still the two-finger preset's
+    expect(r.generation.req.shorthand).toBe(1); // still the two-finger preset's
   });
 
   it('a mode on the command line replaces the file\'s own options, as picking a mode does in the web app', () => {

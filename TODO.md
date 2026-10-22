@@ -3,8 +3,9 @@
 ## Asked for by Dossier (2026-10-22)
 
 Dossier v1 will use the core as a package for its password dialog. Its
-password generator is blocked until the first item ships; the other three
-it picks up as they ship. Asked for by the user on 2026-10-22, first item
+password generator is blocked until the first item ships; the other two
+it picks up as they ship (no made-up nouns in any mode was built on
+2026-10-22, `docs/decisions.md`). Asked for by the user on 2026-10-22, first item
 most urgent.
 
 - **The core as an npm package, configured by mode, preset and
@@ -38,14 +39,6 @@ most urgent.
   The choice comes from `crypto.getRandomValues` and counts toward the
   bits exactly (log2 of the choices, once per draw). Space, None and a
   fixed symbol stay as they are.
-- **No made-up nouns by default, in every mode.** `DEFAULT_REQUIREMENTS`
-  already has `madeUp: 0`, but the mode profiles in `src/lib/modeProfiles.ts`
-  set 1 (Two-finger, One-handed) and 3 (Minimal-quick). Set them to 0, so
-  made-up nouns are never used unless chosen. Re-measure the profiles
-  (`pnpm measure:modes`), as Minimal-quick will come out longer and the
-  README's "13 characters at the defaults" may change. A config with
-  `options: preset` follows the profile, so existing ones change too (see
-  "`options: preset` follows the profile" below).
 - **One sentence mode: one UI and one algorithm.** Merge "Make up a
   sentence" and "Use my sentence" into one sentence box. Generate fills it
   with a made-up sentence the user can edit, and passwords are always made

@@ -109,7 +109,7 @@ describe('App: typing mode', () => {
     fireEvent.click(within(card).getByRole('button', { name: 'One-handed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
     await waitFor(() => expect(window.localStorage.getItem(TYPING_MODE_KEY)).toBe('"one-handed"'));
-    expect(JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!)).toMatchObject({ comfort: 'strict', shiftReach: true, separator: ' ', madeUp: 1 });
+    expect(JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!)).toMatchObject({ comfort: 'strict', shiftReach: true, separator: ' ', shorthand: 1, madeUp: 0 });
     await waitFor(() => expect(passwordsShown()).not.toEqual(passwords), { timeout: 10_000 });
     // An option edited away from the mode's can be put back from the card.
     fireEvent.click(screen.getByRole('button', { name: 'Balanced' }));

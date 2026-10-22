@@ -71,7 +71,7 @@ describe('tep config: a new file', () => {
     expect(lines).toEqual([
       '1  Typing mode  Two-finger',
       '2  Site rules   Typical site (12-32, A + 1 + #)',
-      expect.stringMatching(/^3 {2}Options {6}the Two-finger preset: strength target Everyday \(40 bits\), shortest that meets the target off, typing comfort Balanced, keep Shift within reach off, separator a space, include a number on, minimum swaps 1, capital initials 1, two-letter words 1, made-up nouns 1, glue on$/),
+      expect.stringMatching(/^3 {2}Options {6}the Two-finger preset: strength target Everyday \(40 bits\), shortest that meets the target off, typing comfort Balanced, keep Shift within reach off, separator a space, include a number on, minimum swaps 1, capital initials 0, two-letter words 1, made-up nouns 0, glue on$/),
       `4  Count        ${COUNT_AT_TERMINAL} at a terminal, ${COUNT_PIPED} when piped`,
       '5  Order        Difficulty',
       '',
@@ -92,7 +92,9 @@ describe('tep config: a new file', () => {
     expect(passwords - options).toBeGreaterThan(3);
     for (const l of lines.slice(options + 1, passwords)) expect(l).toMatch(/^ {16}\S/);
     const sample = lines.findIndex((l) => l.startsWith('Sample: '));
-    for (const l of lines.slice(sample + 1)) expect(l).toMatch(/^ {8}\S/);
+    const hint = lines.findIndex((l) => l.startsWith('        hint: '));
+    for (const l of lines.slice(sample + 1, hint)) expect(l).toMatch(/^ {8}\S/);
+    for (const l of lines.slice(hint + 1)) expect(l).toMatch(/^ {14}\S/); // a long hint hangs under its text
     // The answers' words are the ones the full-width review shows, in order.
     const full = (await wizard([...quick('One-handed', 'NIST passphrase'), { text: 's' }])).io.prompts.said.find((s) => s.kind === 'note')!.message.split('\n');
     const words = (ls: string[]) => ls.slice(0, ls.findIndex((l) => l.startsWith('Sample: '))).join(' ').split(/\s+/).filter(Boolean);

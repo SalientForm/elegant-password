@@ -273,14 +273,14 @@ explanation for each:
   (strength, comfort and style; never the site's rules) as a draft, like a
   site preset: Submit applies both and draws a new sentence, Discard
   reverts both.
-  Ten-finger is the defaults; Two-finger takes a space separator, a
-  made-up noun, one capital initial and one two-letter word, and has no use
-  for the pinky rule or deliberate swaps (disabled, with the reason);
-  One-handed takes strict comfort, Keep Shift within reach, a space, a
-  made-up noun and a two-letter word; Minimal-quick takes the Minimal
-  target with Shortest that meets the target, strict comfort, a space and
-  made-up nouns throughout, so it makes the shortest password the site's
-  rules allow. Each value was kept only if it measured easier in the mode's
+  Ten-finger is the defaults; Two-finger takes a space separator, one
+  two-letter word and glue, and has no use for the pinky rule or deliberate
+  swaps (disabled, with the reason); One-handed takes strict comfort, Keep
+  Shift within reach, a space, a two-letter word and glue; Minimal-quick
+  takes the Minimal target with Shortest that meets the target, strict
+  comfort and a space, so it makes the shortest password the site's rules
+  allow. No mode uses made-up nouns: they are only ever used when you choose
+  them. Each value was kept only if it measured easier in the mode's
   own rubric than the defaults; the table and the figures are on the Scoring
   page (`pnpm measure:modes` reruns the measurement).
 - **Scroll bars** where the browser's take up room (Windows): no arrows and
