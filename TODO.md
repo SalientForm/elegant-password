@@ -1,5 +1,63 @@
 # To do
 
+## Asked for by Dossier (2026-10-22)
+
+Dossier v1 will use the core as a package for its password dialog. Its
+password generator is blocked until the first item ships; the other three
+it picks up as they ship. Asked for by the user on 2026-10-22, first item
+most urgent.
+
+- **The core as an npm package, configured by mode, preset and
+  overrides.** Publish `src/lib` as a library with a documented, stable
+  API (a scoped name, as `tep` is taken). Today a caller has to build a
+  complete `GenerationSettings` (every field of `Requirements`, the
+  sentence options and the mapping settings); the layering that turns a
+  typing mode, a site preset and a few values into those settings lives in
+  `src/cli/resolve.ts`. Move it into the package, so a caller passes the
+  typing mode, the site preset and only the values it overrides, and every
+  value it leaves out takes the package's default (a caller can leave made-up
+  nouns alone, for example). The package resolves and checks the result
+  (`problemsOf`, `warningsOf`) and returns the problems, never fixing them
+  quietly.
+  The config format `tep` writes becomes the one way Elegant Passwords
+  manages its configuration, in the web app and the CLI alike, provided by
+  the package: the model (`version`, `mode`, `site`, `rules`, `options`,
+  `sentence`, `swaps`), its zod schema and version, the mode and preset
+  names, and reading and writing it as YAML text. File access and the
+  line-numbered error messages stay in `src/cli`, and the `output` section
+  (count, format, copy, explain) stays CLI-only. The web app saves the last
+  configuration in localStorage in this format, in place of its own shape,
+  and My list saves each password with the whole configuration that made it
+  (with no sentence, as a config never holds one), beside its hint.
+- **Auto picks a random symbol separator.** Today Auto is a fixed order:
+  `;` when the site allows it, else a space, else the first allowed and
+  comfortable of `. - , _`, else none. Make Auto choose at random among
+  the symbols the rules allow and the comfort rules permit (pinky stretch,
+  Shift reach), falling back to a space and then none when no symbol is
+  allowed. To decide: one separator for the whole password or one per gap.
+  The choice comes from `crypto.getRandomValues` and counts toward the
+  bits exactly (log2 of the choices, once per draw). Space, None and a
+  fixed symbol stay as they are.
+- **No made-up nouns by default, in every mode.** `DEFAULT_REQUIREMENTS`
+  already has `madeUp: 0`, but the mode profiles in `src/lib/modeProfiles.ts`
+  set 1 (Two-finger, One-handed) and 3 (Minimal-quick). Set them to 0, so
+  made-up nouns are never used unless chosen. Re-measure the profiles
+  (`pnpm measure:modes`), as Minimal-quick will come out longer and the
+  README's "13 characters at the defaults" may change. A config with
+  `options: preset` follows the profile, so existing ones change too (see
+  "`options: preset` follows the profile" below).
+- **One sentence mode: one UI and one algorithm.** Merge "Make up a
+  sentence" and "Use my sentence" into one sentence box. Generate fills it
+  with a made-up sentence the user can edit, and passwords are always made
+  from the sentence in the box. Today these are two paths: planning and
+  sampling slots with exact bits (`generate.ts`), and fitting a given
+  sentence (`fromSentence.ts`), with an edited made-up sentence already
+  built as the user's own (`editedSentence`). To decide: how strength is
+  counted once a made-up sentence is edited. Dossier's choice: an edited
+  sentence is the user's, so it shows the scores (Strength, zxcvbn) rather
+  than exact bits. `tep`'s `--sentence` and the config's `sentence`
+  options follow.
+
 ## Deliberate swaps for typing ease: done, on by default
 
 Built in `src/lib/ease.ts` (rule and table), wired through planning,
@@ -112,38 +170,6 @@ Still open:
   scoped name (`tep` is taken).
 - **Commands left out of v1** (§4): `tep score <password>`, `tep list`,
   `tep config show`, shell completions.
-
-## Asked for by Dossier (2026-10-22)
-
-Dossier v1 will use the core (`src/lib`) as a package for its password
-dialog. The user asked for these three changes on 2026-10-22. Dossier
-builds without them and picks them up once they ship.
-
-- **Random symbol separators.** A separator setting beside Auto, Space,
-  None and one fixed symbol: a symbol chosen at random from the ones the
-  rules allow and the comfort rules permit (pinky stretch, Shift reach).
-  To decide: one separator for the whole password or one per gap, and
-  whether a space is among the choices. The choice comes from
-  `crypto.getRandomValues` and counts toward the bits exactly (log2 of the
-  choices, once per draw). The web form, `tep`'s `--separator` and the
-  config file all take it. Dossier uses Auto until it ships.
-- **No made-up nouns by default, in every mode.** `DEFAULT_REQUIREMENTS`
-  already has `madeUp: 0`, but the mode profiles in `src/lib/modeProfiles.ts`
-  set 1 (Two-finger, One-handed) and 3 (Minimal-quick). Set them to 0, so
-  made-up nouns are never used unless chosen. Re-measure the profiles
-  (`pnpm measure:modes`), as Minimal-quick will come out longer and the
-  README's "13 characters at the defaults" may change. A config with
-  `options: preset` follows the profile, so existing ones change too (see
-  "`options: preset` follows the profile" above).
-- **One sentence mode: one UI and one algorithm.** Merge "Make up a
-  sentence" and "Use my sentence" into one sentence box. Generate fills it
-  with a made-up sentence the user can edit, and passwords are always made
-  from the sentence in the box. Today these are two paths: planning and
-  sampling slots with exact bits (`generate.ts`), and fitting a given
-  sentence (`fromSentence.ts`). To decide: how strength is counted once a
-  made-up sentence is edited. Dossier's choice: an edited sentence is the
-  user's, so it shows the scores (Strength, zxcvbn) rather than exact bits.
-  `tep`'s `--sentence` and the config's `sentence` options follow.
 
 ## Future considerations
 
