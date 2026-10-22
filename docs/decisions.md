@@ -10,7 +10,9 @@ A spec in `docs/specs/` is a working document (decided 2026-10-21): once it
 is built, every decision in it that remains accurate is recorded here, in
 the README or in the algorithm flow, and the spec, its plan and the audit
 it acted on are deleted. `TODO.md` keeps what is deferred and the decisions
-to revisit.
+to revisit. An id such as H1 or L17 names an item of the 2026-10-21 audit,
+whose checklist was deleted on 2026-10-22 once every item was built,
+accepted or declined; each item's decisions are recorded here.
 
 ## Scoring
 

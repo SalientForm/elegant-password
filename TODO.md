@@ -265,7 +265,7 @@ start-up check in `src/frameGuard.ts` can go (audit L7, 2026-10-22;
 
 Asked for by the user on 2026-10-21, when the audit's bet was taken: the
 engine is bounded first and the worker removed on that measurement
-(`docs/decisions.md`, "Generation"; checklist H1 and H2). Once the
+(`docs/decisions.md`, "Generation"; audit H1 and H2). Once the
 app runs without one and the real stall on a phone is known, consider
 putting a worker back, and only if there is a reason the measurement
 gives: the worst permitted batch stalls a slow phone for longer than a
