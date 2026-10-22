@@ -762,7 +762,7 @@ let drawnShapes: ReadonlySet<string> | undefined;
 /**
  * Whether some settings draw this sentence: a template's shape, bare or with
  * its number placed; each word as written on its slot's full list, whatever
- * the comfort; a number from 2 to 99, or of up to MAX_DIGITS digits, without
+ * the comfort; a number in NUMBER_RANGE, or of up to MAX_DIGITS digits, without
  * a leading zero; made-up nouns only in the noun slots before the first real
  * noun. An empty word is on no list. It lives here rather than in grammar.ts
  * because it needs MAX_DIGITS, and takes the two arrays rather than a
@@ -826,8 +826,14 @@ function keptSentence(sentence: GeneratedSentence, req: Requirements): { candida
 /** No version of one sentence meets a rule (a lowercase minimum its capitals leave no room for): a newly drawn sentence is drawn again. */
 class UnmetRule extends RequirementsError {}
 
-/** Draws a new sentence at most this many times when every version of the one drawn misses a rule. */
-const REDRAWS = 8;
+/**
+ * The most sentences one batch draws, the first included, while every
+ * version of each one drawn misses a rule: then the last one's error stands.
+ */
+export const MAX_SENTENCE_DRAWS = 8;
+
+/** A batch draws a closing symbol and swaps at most this many times per card asked for (count × this in all); one that keeps repeating a password stops there, with fewer cards. */
+export const DRAWS_PER_CARD = 10;
 
 export function generate(req: Requirements, options: MakeUpOptions = {}): GenerateResult {
   if (options.sentence) return generateOnce(req, options);
@@ -835,7 +841,7 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
     try {
       return generateOnce(req, options);
     } catch (e) {
-      if (!(e instanceof UnmetRule) || i >= REDRAWS) throw e;
+      if (!(e instanceof UnmetRule) || i >= MAX_SENTENCE_DRAWS) throw e;
     }
   }
 }
@@ -913,7 +919,7 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
   const suggestions: Suggestion[] = [];
   const seen = new Set<string>();
   let unmet: string | undefined;
-  for (let tries = 0; suggestions.length < req.count && tries < req.count * 10; tries++) {
+  for (let tries = 0; suggestions.length < req.count && tries < req.count * DRAWS_PER_CARD; tries++) {
     const endSymbol = variant.endSymbol ? closings[randomInt(closings.length, rng)]!.repeat(variant.endSymbol.length) : '';
     // Random swaps land on the words as typed, deliberate swaps included, and are counted from there.
     const twisted = applyTwists(

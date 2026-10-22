@@ -4,7 +4,7 @@
 //   adj noun adv verb num adj noun prep adj noun end
 //   "sleepy otters gently paint 7 rusty boats near quiet lakes tonight"
 
-import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS } from './words';
+import { ADJECTIVES, ADVERBS, ENDINGS, NOUNS, PREPOSITIONS, VERBS, WORD_LENGTH_RANGE } from './words';
 import { easedText } from './ease';
 import { wordCost } from './keyboard';
 
@@ -104,16 +104,18 @@ export const KEY_ROLLS: readonly string[] = (() => {
 })();
 
 /**
- * Every made-up noun: one or two key rolls joined ("ertdfg"), 3-8 letters,
- * in all lowercase or ALL CAPS (never mixed). Treated as nouns.
+ * Every made-up noun: one or two key rolls joined ("ertdfg"), as long as a
+ * word on the lists (WORD_LENGTH_RANGE, 3-8 letters), in all lowercase or
+ * ALL CAPS (never mixed). Treated as nouns.
  */
 export const MADE_UP_NOUNS: readonly string[] = (() => {
+  const fits = (w: string) => w.length >= WORD_LENGTH_RANGE.min && w.length <= WORD_LENGTH_RANGE.max;
   const lower = new Set<string>();
   for (const a of KEY_ROLLS) {
-    if (a.length >= 3) lower.add(a);
+    if (fits(a)) lower.add(a);
     for (const b of KEY_ROLLS) {
       const w = a + b;
-      if (w.length >= 3 && w.length <= 8) lower.add(w);
+      if (fits(w)) lower.add(w);
     }
   }
   // A roll that spells a real word on the lists ("pods") is that word, never a made-up noun: read back, it
@@ -179,13 +181,15 @@ export const COMFORT_SHARE: Record<Comfort, number> = {
 /** The typing comfort levels, strictest first: the ones the word pools are cut for. */
 export const COMFORTS: readonly Comfort[] = Object.keys(COMFORT_SHARE) as Comfort[];
 
+/** The leading number when at most one digit is required. It starts at 2 so plural nouns stay grammatical. */
+export const NUMBER_RANGE = { min: 2, max: 99 } as const;
+
 /**
- * The leading number. For one digit (or none) it is 2-99; for n digits it is
- * every n-digit number, so the digit count is guaranteed. Numbers start at 2
- * so plural nouns stay grammatical.
+ * The leading number. For one digit (or none) it is NUMBER_RANGE; for n
+ * digits it is every n-digit number, so the digit count is guaranteed.
  */
 function numbers(minDigits: number): string[] {
-  if (minDigits <= 1) return Array.from({ length: 98 }, (_, i) => String(i + 2));
+  if (minDigits <= 1) return Array.from({ length: NUMBER_RANGE.max - NUMBER_RANGE.min + 1 }, (_, i) => String(NUMBER_RANGE.min + i));
   const lo = 10 ** (minDigits - 1);
   return Array.from({ length: 9 * lo }, (_, i) => String(lo + i));
 }
