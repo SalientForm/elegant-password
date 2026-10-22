@@ -27,6 +27,23 @@ import type { Requirements } from './generate';
 import { settleRules, type RuleFields, type RuleKey } from './sitePresets';
 import { MAX_LENGTH } from './validation'; // the form's own limit
 
+/**
+ * The longest rules text either front end reads, in characters (UTF-16
+ * units, as every field counts them). A sign-up form's rules with the
+ * labels and advice copied round them fit several times over; a longer
+ * text is refused, never cut, so no rule past the cut is dropped unseen.
+ * At this length the worst text measured reads in about 3 ms on a desktop
+ * (docs/decisions.md, "Limits and caches").
+ */
+export const MAX_RULES_TEXT_LENGTH = 2000;
+
+/** Why a rules text is too long to read, or undefined when it is not: the one check and wording for the web box and for tep. */
+export function rulesTextLengthProblem(text: string): string | undefined {
+  return text.length > MAX_RULES_TEXT_LENGTH
+    ? `The rules text is ${text.length} characters; ${MAX_RULES_TEXT_LENGTH} is the most this tool reads. Copy just the password rules.`
+    : undefined;
+}
+
 export interface ParsedRules {
   /** Only the fields the text spoke to. */
   rules: Partial<RuleFields>;
@@ -369,7 +386,16 @@ interface Found {
   choices: Choice[];
 }
 
+/**
+ * What the text says about the site's rules. A text past
+ * MAX_RULES_TEXT_LENGTH is not read at all: it comes back with nothing
+ * but a line in `unsupported` (front ends check first, with
+ * rulesTextLengthProblem, and say it better).
+ */
 export function parseRuleText(input: string): ParsedRules {
+  if (input.length > MAX_RULES_TEXT_LENGTH) {
+    return { rules: {}, excludedSymbols: '', understood: [], unsupported: [`a text of ${input.length} characters: this tool reads at most ${MAX_RULES_TEXT_LENGTH}`] };
+  }
   const { text, lists } = liftSymbolLists(normalise(input));
   const lengths: Lengths = { mins: [], maxes: [], bare: [] };
   const f: Found = { req: {}, opt: new Set(), noSymbols: false, allowed: [], examples: [], excluded: [], unsupported: [], ruledOut: new Set(), choices: [] };

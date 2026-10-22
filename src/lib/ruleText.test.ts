@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_REQUIREMENTS, ruleProblems, validate } from './generate';
-import { applyParsedRules, mergeParsedRules, parseRuleText } from './ruleText';
+import { applyParsedRules, MAX_RULES_TEXT_LENGTH, mergeParsedRules, parseRuleText, rulesTextLengthProblem } from './ruleText';
 import type { RuleFields } from './sitePresets';
 
 interface Case {
@@ -304,6 +304,17 @@ describe('parseRuleText', () => {
 
   it('is deterministic: the same text always reads the same', () => {
     for (const { text } of CASES) expect(parseRuleText(text)).toEqual(parseRuleText(text));
+  });
+
+  it('reads a text up to the length cap, and none of a longer one, saying so', () => {
+    const rules = 'Must be 8-20 characters and include at least one number. ';
+    const atCap = rules.padEnd(MAX_RULES_TEXT_LENGTH, ' ');
+    expect(rulesTextLengthProblem(atCap)).toBeUndefined();
+    expect(parseRuleText(atCap).rules).toEqual({ minLength: 8, maxLength: 20, minDigits: 1 });
+    const over = atCap + ' ';
+    expect(rulesTextLengthProblem(over)).toBe(`The rules text is ${MAX_RULES_TEXT_LENGTH + 1} characters; ${MAX_RULES_TEXT_LENGTH} is the most this tool reads. Copy just the password rules.`);
+    // Not cut to fit: nothing of it is read, and that is said.
+    expect(parseRuleText(over)).toEqual({ rules: {}, excludedSymbols: '', understood: [], unsupported: [`a text of ${MAX_RULES_TEXT_LENGTH + 1} characters: this tool reads at most ${MAX_RULES_TEXT_LENGTH}`] });
   });
 
   it('never returns a field outside the site rules', () => {
