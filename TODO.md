@@ -204,6 +204,27 @@ bits for the same password, or the two side by side with the difference
 named. It needs the session (the bits do), so it would show beside the bits
 figure, never be saved, and never feed a score.
 
+### Strength below a card's bits
+
+Left open when audit L17 was built (2026-10-22; the figures are in
+`docs/decisions.md`, Scoring). Two ways to narrow what remains, each for
+the user to decide:
+
+- **A card's bits in a shortest plan.** They ignore the length window, so
+  with "shortest" on (Minimal-quick, or the Minimal target) a card can
+  read well above the plan's exact figure, and Strength below the card
+  (84 % of Minimal-quick cards with two made-up nouns) though never below
+  the exact figure. Capping a card's bits at the plan's bits plus its swap
+  bits would make the two agree; it changes the bits, not Strength, and
+  the cards' bits would no longer be `scoreCold` alone.
+- **Letter pairs English never uses.** Made-up nouns with a vowel
+  (`cviu`, `OIFD`) still read as English letters: 16.5 % of ten-finger
+  cards with two made-up nouns read below their bits. A table of the letter
+  pairs English words do not contain, built from an English word list as
+  `commonPasswords.ts` is from SecLists, flags 25 to 48 % of those nouns,
+  but also 0.1 to 0.2 % of English words (`halfway`, `briefcase`,
+  `pyjamas`), which would then read too high.
+
 ### A CLI with no dependencies
 
 `tep` v1 uses `yaml`, `zod` and `@clack/prompts`, all inlined into the
