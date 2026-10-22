@@ -114,6 +114,38 @@ Still open:
 - **Commands left out of v1**: `tep score <password>`, `tep list`,
   `tep config show`, shell completions.
 
+## Asked for by Dossier (2026-10-22)
+
+Dossier v1 will use the core (`src/lib`) as a package for its password
+dialog. The user asked for these three changes on 2026-10-22. Dossier
+builds without them and picks them up once they ship.
+
+- **Random symbol separators.** A separator setting beside Auto, Space,
+  None and one fixed symbol: a symbol chosen at random from the ones the
+  rules allow and the comfort rules permit (pinky stretch, Shift reach).
+  To decide: one separator for the whole password or one per gap, and
+  whether a space is among the choices. The choice comes from
+  `crypto.getRandomValues` and counts toward the bits exactly (log2 of the
+  choices, once per draw). The web form, `tep`'s `--separator` and the
+  config file all take it. Dossier uses Auto until it ships.
+- **No made-up nouns by default, in every mode.** `DEFAULT_REQUIREMENTS`
+  already has `madeUp: 0`, but the mode profiles in `src/lib/modeProfiles.ts`
+  set 1 (Two-finger, One-handed) and 3 (Minimal-quick). Set them to 0, so
+  made-up nouns are never used unless chosen. Re-measure the profiles
+  (`pnpm measure:modes`), as Minimal-quick will come out longer and the
+  README's "13 characters at the defaults" may change. A config with
+  `options: preset` follows the profile, so existing ones change too (see
+  "`options: preset` follows the profile" above).
+- **One sentence mode: one UI and one algorithm.** Merge "Make up a
+  sentence" and "Use my sentence" into one sentence box. Generate fills it
+  with a made-up sentence the user can edit, and passwords are always made
+  from the sentence in the box. Today these are two paths: planning and
+  sampling slots with exact bits (`generate.ts`), and fitting a given
+  sentence (`fromSentence.ts`). To decide: how strength is counted once a
+  made-up sentence is edited. Dossier's choice: an edited sentence is the
+  user's, so it shows the scores (Strength, zxcvbn) rather than exact bits.
+  `tep`'s `--sentence` and the config's `sentence` options follow.
+
 ## Future considerations
 
 Not planned yet; kept here so they are not lost. Roughly smallest first.
