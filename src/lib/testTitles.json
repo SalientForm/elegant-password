@@ -154,6 +154,10 @@
       {
         "kind": "test",
         "title": "Forget this session draws a new sentence and clears the password under test"
+      },
+      {
+        "kind": "test",
+        "title": "framed by a page on another origin, the build shows only a notice and a link to a tab of its own; the dev server stays frameable"
       }
     ]
   },
@@ -2190,6 +2194,31 @@
       {
         "kind": "test",
         "title": "shows an area’s bar while the pointer is over it, and the page’s while it scrolls"
+      }
+    ]
+  },
+  {
+    "file": "src/frameGuard.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the frame guard"
+      },
+      {
+        "kind": "test",
+        "title": "is not framed at the top of its own tab"
+      },
+      {
+        "kind": "test",
+        "title": "is framed when the top window is another, or when reading it throws"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a frame only in the production build"
+      },
+      {
+        "kind": "test",
+        "title": "replaces the root with the notice: why, a link to a new tab, and the address"
       }
     ]
   },
