@@ -533,6 +533,12 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
 /* The slow-work error: the same card, in the error colour, above the unapplied-changes bar when both show. */
 .slow-notice { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); z-index: 21; width: max-content; max-width: min(48rem, calc(100vw - 2rem)); pointer-events: none; }
 body:has(.apply-bar) .slow-notice { bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px)); }
+/* Framed by another page, the built app shows only this (src/frameGuard.ts): a card in the middle of the page, the link in the accent colour. */
+.framed-notice { max-width: 34rem; margin: 12vh auto 2rem; padding: 1.5rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.framed-notice h1 { font-size: 1.4rem; }
+.framed-notice p { margin: 0.75rem 0 0; }
+.framed-notice a { color: var(--accent); font-weight: 600; }
+.framed-notice code { overflow-wrap: anywhere; color: var(--muted); }
 .snackbar.failed { border-color: var(--bad); }
 .snackbar.failed .snackbar-text { color: var(--bad); }
 .snackbar-text { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 0.85rem; overflow-wrap: anywhere; }

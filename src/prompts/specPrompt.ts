@@ -397,6 +397,7 @@ ${algorithmFlow.replace(/^# .*\n/, '').replace(/^## /gm, '### ')}
 ## 16. Security and accessibility
 
 - The built page carries a Content-Security-Policy meta tag (first in head): scripts and styles from the same origin only; no connections, objects, base URI or form actions. The dev server does not (hot reloading needs inline scripts). ${code('referrer: no-referrer')} always.
+- A meta tag cannot carry ${code('frame-ancestors')}, so the built app checks at start-up, from its bundle and before anything renders, whether it is framed (${code('window.top !== window.self')}; an access that throws counts as framed). Framed, it mounts nothing and shows only a notice, a link that opens it in a new tab (${code('target="_blank"')}, ${code('rel="noopener noreferrer"')}) and its address. The dev server stays frameable.
 - Copy uses the clipboard API; a status region announces success (visually hidden) and, when the API is unavailable or rejects, says that the text was selected instead.
 - Downloads revoke their object URL after a delay, never synchronously.
 - Mode and section tabs follow the WAI-ARIA tabs pattern (one tab stop; arrow keys, Home and End move and select; each tab names its panel). Toggle buttons expose ${code('aria-pressed')}; the results region carries ${code('aria-busy')}; status text uses ${code('role="status"')}; every icon button has an accessible name.

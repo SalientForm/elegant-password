@@ -377,14 +377,23 @@ cold scoring.
 Run `pnpm test:e2e` after each iteration: it builds, starts its own servers
 on this project's spare ports, drives a real Chromium through loading,
 drafting and applying changes, the saved list, sentence mode, copy, the
-Fun page download, and fails on any console error. First time only:
+Fun page download and the build refusing a frame, and fails on any console
+error. First time only:
 `pnpm exec playwright install chromium-headless-shell`.
 
 ## Deploy
 
 Every push to `main`, merges included, runs `.github/workflows/pages.yml`:
-unit tests, then a build under `/elegant-password/` (`BASE_PATH`), published
+the checks in `check.yml` (types, unit tests, both builds and the browser
+smoke tests, the same workflow `ci.yml` runs on every branch push and pull
+request), then a build under `/elegant-password/` (`BASE_PATH`), published
 to GitHub Pages at https://salientform.github.io/elegant-password/.
+
+GitHub Pages sends no headers the app can set, so its
+Content-Security-Policy is a meta tag, which cannot stop another site
+framing the page. Instead the built app, put in a frame, mounts nothing
+and shows a notice with a link that opens it in a tab of its own
+(`src/frameGuard.ts`). The dev server stays frameable, for preview panes.
 
 That address is an origin the organisation's other Pages sites share, so
 the app keeps My list and the current batch in memory there (see "Survives
@@ -441,6 +450,7 @@ Web app:
 - `src/state/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`, `mappingStore.ts`: persistence with untrusted-input parsing
 - `src/state/origin.ts`: whether the page is on the app's own origin, where secrets may be stored
 - `src/state/slow.ts`: work over 2 s reported as a failure, which `SlowNotice` shows until dismissed
+- `src/frameGuard.ts`: the built app, framed by another page, shows a notice and a link instead of itself
 - `src/components/`: React UI
 - `src/prompts/specPrompt.ts`, `cliPrompt.ts`: the Fun page's two prompts, the app's and then the command line's
 
@@ -459,6 +469,7 @@ and `@clack/prompts`):
 Build and docs:
 
 - `build/csp.ts`: the Content-Security-Policy added at build time
+- `.github/workflows/`: `check.yml`, the checks, called by `ci.yml` (branches and pull requests) and `pages.yml` (the deploy)
 - `scripts/linkCli.mjs`: `pnpm link:cli` and `unlink:cli`
 - `docs/algorithm-flow.md`: the algorithm flow
 - `docs/decisions.md`: the design decisions, with why, kept current

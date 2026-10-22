@@ -585,3 +585,30 @@ test('Forget this session draws a new sentence and clears the password under tes
   await expect(page.locator('.typing-result')).toHaveCount(0);
   await expect.poll(async () => (await settledPasswords(page))[0]).not.toBe(shown[0]);
 });
+
+test('framed by a page on another origin, the build shows only a notice and a link to a tab of its own; the dev server stays frameable', async ({ page, context, baseURL }, info) => {
+  // The framing page is served by request interception on an origin of its own, as a clickjacking page would be: no server, no port.
+  // Chromium lets a page off the local network frame one on it only when granted local network access, and grants that only to a secure page,
+  // hence https; the deployed app is not on the local network, so the grant stands in for that.
+  const app = `${baseURL}/`;
+  await context.grantPermissions(['local-network-access'], { origin: 'https://framer.test' });
+  await page.route('https://framer.test/**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: `<!doctype html><title>Framer</title><iframe src="${app}" width="1280" height="800"></iframe>` }),
+  );
+  await page.goto('https://framer.test/');
+  const frame = page.frameLocator('iframe');
+  if (info.project.name === 'dev') {
+    await expect(frame.locator('article.card')).toHaveCount(5); // preview panes frame the dev server
+    return;
+  }
+  await expect(frame.getByRole('heading', { name: 'Elegant Passwords opens in its own tab' })).toBeVisible();
+  await expect(frame.locator('header, article.card, nav')).toHaveCount(0); // no app was mounted
+  await expect(frame.locator('code')).toHaveText(app);
+  const link = frame.getByRole('link', { name: 'Open Elegant Passwords in a new tab' });
+  await expect(link).toHaveAttribute('href', app);
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', /noopener/);
+  const [tab] = await Promise.all([context.waitForEvent('page'), link.click()]);
+  await expect(tab).toHaveURL(app);
+  await expect(cards(tab)).toHaveCount(5); // at the top of its own tab, the app runs
+});
