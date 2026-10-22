@@ -2,12 +2,30 @@ import { describe, expect, it } from 'vitest';
 import { commonRank } from './common';
 import { randomInt } from './random';
 import { seeded } from './testRandom';
-import { BITS_PER_ENGLISH_LETTER, collapseBlocks, collapseRuns, isMemorableDigits, KEY_WALK_CHOICES, keyWalks, MEMORABLE_DIGITS_CHOICES, rawBits, strengthBits, strengthParts, SYMBOL_CHOICES } from './strength';
+import {
+  BITS_PER_ENGLISH_LETTER,
+  collapseBlocks,
+  collapseRuns,
+  CONSONANT_CHOICES,
+  isMemorableDigits,
+  isNotEnglish,
+  KEY_WALK_CHOICES,
+  keyWalks,
+  letterBits,
+  MEMORABLE_DIGITS_CHOICES,
+  rawBits,
+  strengthBits,
+  strengthParts,
+  SYMBOL_CHOICES,
+} from './strength';
 
 const L = (n: number) => n * BITS_PER_ENGLISH_LETTER;
 const S = Math.log2(SYMBOL_CHOICES);
 const D = Math.log2(10);
 const W = Math.log2(KEY_WALK_CHOICES);
+const C = Math.log2(CONSONANT_CHOICES);
+/** An English word of n letters with one letter changed: which letter, and what it was. */
+const edited = (n: number) => L(n) + Math.log2(n) + Math.log2(26);
 
 describe('collapseRuns', () => {
   it('cuts every run of one repeated character to that character', () => {
@@ -39,13 +57,15 @@ describe('strengthBits: an attacker who knows English and the usual habits, not 
   it('reads letters as English-like text, digits as digits, each distinct symbol as one pick', () => {
     const parts = strengthParts('63;Rqmote;thiqves;chip;fqrns');
     expect(parts.map((p) => p.text)).toEqual(['63', ';', 'Rqmote', ';', 'thiqves', ';', 'chip', ';', 'fqrns']);
-    expect(parts.map((p) => p.bits)).toEqual([2 * D, S, L(6) + 1, 0, L(7), 0, L(4), 0, L(5)]);
-    expect(strengthBits('63;Rqmote;thiqves;chip;fqrns')).toBeCloseTo(2 * D + S + L(6) + 1 + L(7) + L(4) + L(5), 9);
+    // "fqrns" has no vowel left: an English word with one letter changed (see below).
+    expect(parts.map((p) => p.bits)).toEqual([2 * D, S, L(6) + 1, 0, L(7), 0, L(4), 0, edited(5)]);
+    expect(strengthBits('63;Rqmote;thiqves;chip;fqrns')).toBeCloseTo(2 * D + S + L(6) + 1 + L(7) + L(4) + edited(5), 9);
   });
 
-  it('gives a swapped word the same strength as the word: a swap is not a word\'s business', () => {
+  it('reads a swapped word by its text alone: a swap that leaves a vowel changes nothing', () => {
     expect(strengthBits('remotes')).toBe(strengthBits('rqmotes')); // ("remote" alone is a common password)
-    expect(strengthBits('Sm@rt')).toBeCloseTo(strengthBits('Sm') + strengthBits('rt') + S, 9); // the symbol splits the run and is one pick
+    // The symbol splits the run and is one pick; "Sm" and "rt" beside a vowel's stand-in keep the English reading.
+    expect(strengthBits('Sm@rt')).toBeCloseTo(Math.log2(26) + 1 + S + Math.log2(26), 9);
   });
 
   it('counts a repeated character once, wherever it is', () => {
@@ -68,7 +88,7 @@ describe('strengthBits: an attacker who knows English and the usual habits, not 
     expect(strengthBits('PASSWORD')).toBeCloseTo(L(7) + 1, 9);
     expect(strengthBits('Monkey')).toBeCloseTo(L(6) + 1, 9);
     expect(strengthBits('BlueTiger')).toBeCloseTo(L(4) + 1 + L(5) + 1, 9);
-    expect(strengthBits('CVB')).toBeCloseTo(L(3) + 1, 9);
+    expect(strengthBits('CVB')).toBeCloseTo(W + 1, 9); // no vowel: a walk of three is one pick
   });
 
   it('never drops below one letter\'s pick for a word, and treats another script as letters', () => {
@@ -150,6 +170,64 @@ describe('the habits an attacker tries early', () => {
 
   it('no longer reads the audit\'s repeated patterns as master passwords', () => {
     for (const p of ['Password1!'.repeat(3), 'aA'.repeat(12), 'asdf'.repeat(8), 'asdfasdfasdf']) expect(strengthBits(p), p).toBeLessThan(30);
+  });
+});
+
+describe('a run of letters with no vowel is not English', () => {
+  it('reads it as consonants, each one pick of the consonants', () => {
+    expect(strengthBits('ht')).toBeCloseTo(2 * C, 9);
+    expect(strengthBits('Sr')).toBeCloseTo(2 * C + 1, 9);
+    expect(strengthBits('bvd')).toBeCloseTo(3 * C, 9);
+    expect(strengthBits('x1')).toBeCloseTo(Math.log2(26) + D, 9); // one letter is one letter's pick, vowel or not
+  });
+
+  it('reads a walk of three in it as one pick: English has three-letter steps, this run is not English', () => {
+    expect(isNotEnglish('bvc')).toBe(true);
+    expect(strengthBits('bvc')).toBeCloseTo(W, 9);
+    expect(strengthBits('HJK')).toBeCloseTo(W + 1, 9);
+    expect(strengthBits('hjktr')).toBeCloseTo(Math.min(W + 2 * C, edited(5)), 9);
+    expect(strengthBits('rst')).toBeCloseTo(W, 9);
+    expect(strengthBits('rest')).toBeCloseTo(L(4), 9); // with a vowel, three-letter steps stay English
+  });
+
+  it('is never more than an English word with one letter changed, so a misspelling is not random letters', () => {
+    expect(strengthBits('bvsd')).toBeCloseTo(edited(4), 9); // 4 consonants would be 17.3
+    expect(strengthBits('fqrns')).toBeCloseTo(edited(5), 9); // "ferns", e → q
+    expect(strengthBits('DFHJ')).toBeCloseTo(edited(4) + 1, 9);
+  });
+
+  it('counts y as a vowel and leaves another script alone', () => {
+    for (const word of ['rhythm', 'glyph', 'Lynx']) expect(isNotEnglish(word), word).toBe(false);
+    expect(strengthBits('glyph')).toBeCloseTo(L(5), 9);
+    expect(isNotEnglish('пврл')).toBe(false);
+  });
+
+  it('keeps the English reading beside a character that may be its word\'s swapped-out letter', () => {
+    expect(strengthBits('dr1lls')).toBeCloseTo(2 * Math.log2(26) + D, 9); // "drills", i → 1
+    expect(strengthBits('x;1nk')).toBeCloseTo(Math.log2(26) + S + D + Math.log2(26), 9); // "ink", i → 1, at a word's start
+    expect(strengthBits('c@lm')).toBeCloseTo(Math.log2(26) + S + Math.log2(26), 9); // a → @
+    expect(strengthBits('w!th')).toBeCloseTo(Math.log2(26) + S + Math.log2(26), 9); // i → !
+    // A symbol typed once between letters may be a swap ("knights", h → #); one typed again is a separator.
+    expect(strengthBits('knig#ts')).toBeCloseTo(L(4) + S + Math.log2(26), 9);
+    expect(strengthBits('cvsd#ht#gr')).toBeCloseTo(edited(4) + S + 2 * C + 2 * C, 9);
+    // A space never stands for a letter; a symbol at the end has no letter beyond it.
+    expect(strengthBits('salt ht')).toBeCloseTo(L(4) + S + 2 * C, 9);
+    expect(strengthBits('ht*')).toBeCloseTo(2 * C + S, 9);
+  });
+
+  it('never reads a run below its English reading', () => {
+    const rng = seeded(11);
+    const letters = 'bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZaeiouy';
+    for (let k = 0; k < 3000; k++) {
+      const run = Array.from({ length: 1 + randomInt(12, rng) }, () => letters[randomInt(letters.length, rng)]).join('');
+      expect(letterBits(run), run).toBeGreaterThanOrEqual(letterBits(run, true) - 1e-9);
+    }
+  });
+
+  it('still reads keyboard walks and the trivial passwords low', () => {
+    for (const walk of ['qwertyuiop', 'asdfasdfasdf', 'zxcvbnm', 'mnbvcxz', 'qazwsx', 'Qwertyuiop', 'zxcvbnm123', 'bvc', 'HJK']) {
+      expect(strengthBits(walk), walk).toBeLessThan(20);
+    }
   });
 });
 

@@ -13,9 +13,12 @@
 // one of the most common passwords (common.ts) is the guesses it takes to
 // reach it on that list; a block typed again and again ("Password1!" three
 // times, "aA" twelve) counts once, plus how many times; and a walk along a
-// keyboard row or the alphabet ("asdf", "lkjh", "abcd") is one pick. The
-// app's own figure, for an attacker who knows it exactly, is the bits model
-// in score.ts and the plan; it needs the session and stays there.
+// keyboard row or the alphabet ("asdf", "lkjh", "abcd") is one pick. It
+// knows English words have a vowel: a run of letters with none ("bvsd",
+// "HJK") is consonants, not English text, and reads higher, unless it may
+// be part of a word whose letter was swapped out ("dr1lls"). The app's own
+// figure, for an attacker who knows it exactly, is the bits model in
+// score.ts and the plan; it needs the session and stays there.
 
 import { commonRank } from './common';
 
@@ -34,6 +37,15 @@ export type CharClass = keyof typeof CLASS_SIZES;
 export const KEY_WALK_CHOICES = 1000;
 /** The shortest walk read as one: three adjacent letters are common in English ("rst", "nop"), four almost never. */
 export const MIN_KEY_WALK = 4;
+
+/** The letters an English word all but always has one of ("rhythm" and "fly" count y). */
+export const VOWELS = 'aeiouy';
+/** The letters a run with no vowel is made of: each one pick from this many. */
+export const CONSONANT_CHOICES = 26 - VOWELS.length;
+/** In a run with no vowel, which is not English, a walk this long is already one pick: the reason to wait for four does not apply. */
+export const MIN_CONSONANT_WALK = 3;
+/** Symbols that often stand for a vowel (a → @, i → !, i → |); every digit can too (o → 0, e → 3, "ate" → 8). */
+export const VOWEL_STAND_INS = '@!|';
 
 const MEMORABLE_SETS = new Set(['2468', '8642', '13579', '97531', '1357', '7531']);
 
@@ -86,8 +98,8 @@ const alphabetStep = (a: string, b: string) => {
   return /[a-z]/.test(a) && /[a-z]/.test(b) && Math.abs(d) === 1 ? d : 0;
 };
 
-/** How many letters of a run lie in keyboard or alphabet walks of MIN_KEY_WALK or more, and how many such walks there are. */
-export function keyWalks(run: string): { letters: number; walks: number } {
+/** How many letters of a run lie in keyboard or alphabet walks of `min` letters or more (MIN_KEY_WALK unless given), and how many such walks there are. */
+export function keyWalks(run: string, min = MIN_KEY_WALK): { letters: number; walks: number } {
   const chars = [...run.toLowerCase()];
   let letters = 0;
   let walks = 0;
@@ -101,7 +113,7 @@ export function keyWalks(run: string): { letters: number; walks: number } {
       while (j < chars.length - 1 && step(chars[j]!, chars[j + 1]!) === dir) j++;
       best = Math.max(best, j - i + 1);
     }
-    if (best >= MIN_KEY_WALK) {
+    if (best >= min) {
       letters += best;
       walks++;
       i += best;
@@ -182,30 +194,74 @@ function partsOf(password: string): { text: string; kind: StrengthPart['kind'] }
   return out;
 }
 
+/** A run of letters as English-like text: each keyboard or alphabet walk of MIN_KEY_WALK or more one pick, the other letters at the English rate, never less than one letter's pick. Case is the caller's. */
+function englishBits(run: string): number {
+  const { letters, walks } = keyWalks(run);
+  const rest = [...run].length - letters;
+  const textBits = rest > 0 || walks === 0 ? Math.max(Math.log2(26), rest * BITS_PER_ENGLISH_LETTER) : 0;
+  return textBits + walks * Math.log2(KEY_WALK_CHOICES);
+}
+
+const VOWEL_RE = new RegExp(`[${VOWELS}]`, 'i');
+
+/**
+ * Whether a run of letters is not English: two or more Latin letters with no
+ * vowel ("bvsd", "HJK", "ht"), unless it may be part of a longer word with a
+ * letter swapped out (`inWord`, see strengthParts), as "dr" is in "dr1lls".
+ */
+export const isNotEnglish = (run: string, inWord = false) => !inWord && /^[a-z]{2,}$/i.test(run) && !VOWEL_RE.test(run);
+
+/**
+ * Bits for a run of letters. English-like text as englishBits, one more bit
+ * when it has a capital. A run that is not English (isNotEnglish) is the
+ * fewer of two readings, and never less than the English one: consonants,
+ * each one pick of CONSONANT_CHOICES, with each walk of MIN_CONSONANT_WALK
+ * or more one pick; or an English word with one letter changed, its English
+ * reading plus which letter and what it was.
+ */
+export function letterBits(run: string, inWord = false): number {
+  const english = englishBits(run);
+  let bits = english;
+  if (isNotEnglish(run, inWord)) {
+    const n = run.length;
+    const { letters, walks } = keyWalks(run, MIN_CONSONANT_WALK);
+    const consonants = (n - letters) * Math.log2(CONSONANT_CHOICES) + walks * Math.log2(KEY_WALK_CHOICES);
+    const edited = english + Math.log2(n) + Math.log2(26);
+    bits = Math.max(english, Math.min(consonants, edited));
+  }
+  return bits + (/\p{Lu}/u.test(run) ? 1 : 0);
+}
+
 /**
  * How a Strength figure is made up. A password on the common list is the
  * guesses it takes to reach it there (log2 of its place), nothing else.
- * Otherwise: a run of letters as English-like text (never less than one
- * letter's pick, one more bit when it has a capital), with each keyboard or
- * alphabet walk in it one pick; a run of digits by its digits (a memorable
- * run one pick, a single digit its own); each distinct symbol one pick,
- * however often it appears; and a block typed again and again once, plus
- * the number of times (log2). Repeated characters were already cut to one.
+ * Otherwise: a run of letters by letterBits (English-like text, or a run
+ * with no vowel read as consonants, unless something beside it may be its
+ * word's swapped-out letter); a run of digits by its digits (a
+ * memorable run one pick, a single digit its own); each distinct symbol one
+ * pick, however often it appears; and a block typed again and again once,
+ * plus the number of times (log2). Repeated characters were already cut to
+ * one.
  */
 export function strengthParts(password: string): StrengthPart[] {
   const rank = commonRank(password);
   if (rank !== undefined) return [{ text: password, kind: 'common', bits: Math.log2(rank) }];
   const { text: once, repeats } = collapseBlocks(collapseRuns(password));
   const parts = partsOf(collapseRuns(once));
+  const typed = new Map<string, number>();
+  for (const { text, kind } of parts) if (kind === 'symbol') typed.set(text, (typed.get(text) ?? 0) + 1);
+  // Whether the part at j, beside a run of letters, may be a letter of the run's word swapped out: a digit, a vowel
+  // stand-in, or a symbol (never a space) typed once with a letter on its far side (k). A separator goes between every
+  // two words, so a symbol typed more than once is taken for one.
+  const swappedIn = (j: number, k: number) => {
+    const part = parts[j];
+    if (!part || part.kind === 'letters') return false;
+    if (part.kind === 'digits' || VOWEL_STAND_INS.includes(part.text)) return true;
+    return part.text !== ' ' && typed.get(part.text) === 1 && parts[k]?.kind === 'letters';
+  };
   const seenSymbols = new Set<string>();
-  const read: StrengthPart[] = parts.map(({ text, kind }) => {
-    if (kind === 'letters') {
-      const n = [...text].length;
-      const { letters, walks } = keyWalks(text);
-      const rest = n - letters;
-      const textBits = rest > 0 || walks === 0 ? Math.max(Math.log2(26), rest * BITS_PER_ENGLISH_LETTER) : 0;
-      return { text, kind, bits: textBits + walks * Math.log2(KEY_WALK_CHOICES) + (/\p{Lu}/u.test(text) ? 1 : 0) };
-    }
+  const read: StrengthPart[] = parts.map(({ text, kind }, i) => {
+    if (kind === 'letters') return { text, kind, bits: letterBits(text, swappedIn(i - 1, i - 2) || swappedIn(i + 1, i + 2)) };
     if (kind === 'digits') {
       return { text, kind, bits: text.length === 1 ? Math.log2(CLASS_SIZES.digit) : isMemorableDigits(text) ? Math.log2(MEMORABLE_DIGITS_CHOICES) : text.length * Math.log2(CLASS_SIZES.digit) };
     }

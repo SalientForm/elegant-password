@@ -3718,7 +3718,7 @@
       },
       {
         "kind": "test",
-        "title": "gives a swapped word the same strength as the word: a swap is not a word's business"
+        "title": "reads a swapped word by its text alone: a swap that leaves a vowel changes nothing"
       },
       {
         "kind": "test",
@@ -3766,11 +3766,68 @@
       },
       {
         "kind": "group",
+        "title": "a run of letters with no vowel is not English"
+      },
+      {
+        "kind": "test",
+        "title": "reads it as consonants, each one pick of the consonants"
+      },
+      {
+        "kind": "test",
+        "title": "reads a walk of three in it as one pick: English has three-letter steps, this run is not English"
+      },
+      {
+        "kind": "test",
+        "title": "is never more than an English word with one letter changed, so a misspelling is not random letters"
+      },
+      {
+        "kind": "test",
+        "title": "counts y as a vowel and leaves another script alone"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the English reading beside a character that may be its word's swapped-out letter"
+      },
+      {
+        "kind": "test",
+        "title": "never reads a run below its English reading"
+      },
+      {
+        "kind": "test",
+        "title": "still reads keyboard walks and the trivial passwords low"
+      },
+      {
+        "kind": "group",
         "title": "memorable digit runs"
       },
       {
         "kind": "test",
         "title": "means repeats, consecutive runs and well-known skips, not any pair of digits"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/strengthFloor.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "Strength against the bits"
+      },
+      {
+        "kind": "test",
+        "title": "reads the made-up nouns at least their pick on average, where the English reading fell short"
+      },
+      {
+        "kind": "test",
+        "title": "reads every two-letter form with no vowel above its pick"
+      },
+      {
+        "kind": "test",
+        "title": "is never below the exact figure in a shortest plan, made-up nouns or not"
+      },
+      {
+        "kind": "test",
+        "title": "without made-up nouns, outside shortest plans, is below the card's bits for at most 2 % of cards, by at most 3 bits"
       }
     ]
   },
