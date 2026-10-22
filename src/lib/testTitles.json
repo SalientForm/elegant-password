@@ -4480,5 +4480,26 @@
         "title": "keeps the crack time, the guesses and what made the reading"
       }
     ]
+  },
+  {
+    "file": "src/workflows.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the workflows"
+      },
+      {
+        "kind": "test",
+        "title": "hold the checks once, in a reusable check.yml, in order"
+      },
+      {
+        "kind": "test",
+        "title": "are called by CI and by the deploy, which builds only after the check and grants it only reading"
+      },
+      {
+        "kind": "test",
+        "title": "run the browser suite nowhere but check.yml"
+      }
+    ]
   }
 ]
