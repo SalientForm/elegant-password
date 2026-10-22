@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SENTENCE_OPTIONS } from '../lib/fromSentence';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { profileValues, withProfile } from '../lib/modeProfiles';
+import { MAX_RULES_TEXT_LENGTH } from '../lib/ruleText';
 import { applyPreset, SITE_PRESETS } from '../lib/sitePresets';
 import { CliError, EXIT } from './errors';
 import { emptyLayer, resolve } from './resolve';
@@ -128,6 +129,27 @@ describe('resolve: rules in words', () => {
   it('removes symbols the text rules out', () => {
     const r = resolve(undefined, flagsLayer({}, { rules: 'any symbol except < and >', site: 'nist-passphrase' }), tty);
     expect(r.generation.req.allowedSymbols).not.toMatch(/[<>]/);
+  });
+
+  it('keeps "3 of the following 4" as three named kinds and says which, leaving the fourth as it was', () => {
+    const r = resolve(undefined, flagsLayer({ 'min-symbols': 0 }, { rules: 'Use at least 3 of the following 4: uppercase, lowercase, numbers, symbols' }), tty);
+    expect(r.generation.req).toMatchObject({ minUppercase: 1, minLowercase: 1, minDigits: 1, minSymbols: 0 });
+    expect(r.sources['min-lowercase']).toEqual({ kind: 'rules-text', via: flag('rules') });
+    expect(r.sources['min-symbols']).toEqual(flag('min-symbols'));
+    expect(r.notes).toEqual(['Read the rules text (--rules) as: at least 3 of uppercase, lowercase, digits and symbols (kept as an uppercase letter, a lowercase letter and a digit).']);
+  });
+
+  it("refuses a rules text past the core's cap whole, as a usage error with the core's message", () => {
+    try {
+      resolve(undefined, flagsLayer({}, { rules: `8-20 characters. ${'x'.repeat(MAX_RULES_TEXT_LENGTH)}` }), tty);
+      expect.unreachable();
+    } catch (e) {
+      expect((e as CliError).exitCode).toBe(EXIT.usage);
+      expect((e as CliError).title).toBe('--rules: the rules text is too long to read.');
+      expect((e as CliError).details[0]).toBe(`The rules text is ${MAX_RULES_TEXT_LENGTH + 17} characters; ${MAX_RULES_TEXT_LENGTH} is the most this tool reads. Copy just the password rules.`);
+    }
+    // At the cap it reads.
+    expect(resolve(undefined, flagsLayer({}, { rules: '8-20 characters.'.padEnd(MAX_RULES_TEXT_LENGTH) }), tty).generation.req.maxLength).toBe(20);
   });
 
   it('refuses text with no rules in it, as a usage error that says what rules text looks like', () => {

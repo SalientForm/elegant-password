@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { problemsOf } from '../lib/consistency';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
+import { MAX_RULES_TEXT_LENGTH, rulesTextLengthProblem } from '../lib/ruleText';
 import { layerOf, parseConfig } from './config';
 import { configCommand } from './configCommand';
 import { fieldShape, type SelectShape } from './constraints';
@@ -268,6 +269,15 @@ describe('tep config: pasted rules', () => {
     expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Read as: 8-20 characters; 2 lowercase letters.' });
     expect(io.prompts.said).toContainEqual({ kind: 'warn', message: 'Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.' });
     expect(parseConfig(text!, 'x').model.rules).toMatchObject({ 'min-length': 8, 'max-length': 20, 'min-lowercase': 2 });
+  });
+
+  it('refuses a paste past the core\'s cap whole and asks again; keeps "3 of 4" as three named kinds', async () => {
+    const long = `8-20 characters ${'x'.repeat(MAX_RULES_TEXT_LENGTH)}`;
+    const { io, text } = await wizard([{ select: 'Ten-finger' }, { select: 'Paste' }, { text: long }, { text: '8-20 characters, at least 3 of: uppercase, lowercase, numbers, symbols' }, { select: 'Use the' }, { select: 'Keep' }, { text: 's' }]);
+    const paste = asked(io, 'Paste the site\'s rules (one line)')[0]!;
+    expect(paste.refused!.map((r) => r.reason)).toEqual([rulesTextLengthProblem(long)]);
+    expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Read as: 8-20 characters; at least 3 of uppercase, lowercase, digits and symbols (kept as an uppercase letter, a lowercase letter and a digit).' });
+    expect(parseConfig(text!, 'x').model.rules).toMatchObject({ 'min-length': 8, 'max-length': 20, 'min-uppercase': 1, 'min-lowercase': 1, 'min-digits': 1 });
   });
 
   it('rules that do not fit together: says why, then asks each rule from the text\'s values', async () => {
