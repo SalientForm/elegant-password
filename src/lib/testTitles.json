@@ -1943,6 +1943,35 @@
     ]
   },
   {
+    "file": "src/components/SessionControls.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SessionControls"
+      },
+      {
+        "kind": "test",
+        "title": "says the session is kept through a reload on the app's own origin, and offers no retry"
+      },
+      {
+        "kind": "test",
+        "title": "says the session is in memory only on a shared origin"
+      },
+      {
+        "kind": "test",
+        "title": "says when the session could not be saved, and Try saving again saves it once storage takes writes again"
+      },
+      {
+        "kind": "test",
+        "title": "asks before forgetting: the first click only asks, the second forgets and says so"
+      },
+      {
+        "kind": "test",
+        "title": "drops the question when focus leaves the button, so a later click asks again"
+      }
+    ]
+  },
+  {
     "file": "src/components/SlowNotice.test.tsx",
     "titles": [
       {
