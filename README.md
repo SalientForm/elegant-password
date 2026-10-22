@@ -33,7 +33,11 @@ explanation for each:
   password, are targets for the bits. Difficulty and memorability come
   from the password and its hint, nothing else. A repeated character never
   raises a figure, and neither does a block typed again ("Password1!"
-  three times) or a walk along the keyboard ("asdf").
+  three times) or a walk along the keyboard ("asdf"). Strength knows
+  English words have a vowel: a run of letters with none, such as a key
+  roll (`bvsd`) or a two-letter word (`ht`), reads as consonants, not as
+  English, unless a digit or symbol beside it may be its word's swapped
+  vowel (`dr1lls`).
 - **Rules it cannot keep are named**: pasted site rules show what was
   understood and, separately, what was not kept and why (a minimum length
   above 128, "no digits", "at most 2 symbols"); nothing is quietly weakened.

@@ -3,12 +3,23 @@ import { ATTACK_SCENARIOS, crackEstimates, formatDuration, STRENGTH_PRESETS } fr
 import { LONG_REACH } from '../lib/ease';
 import { PROFILE_LABELS } from '../lib/modeProfiles';
 import { MEMORABILITY, MEMORABILITY_BANDS, STRENGTH_BANDS } from '../lib/score';
-import { largeNumber, numberWord, STRENGTH_WORDS } from '../lib/readings';
+import { andList, largeNumber, numberWord, STRENGTH_WORDS } from '../lib/readings';
 import { BUILT_IN_MAPPINGS } from '../lib/twists';
 import { ZXCVBN_GUESSES_PER_SECOND, ZXCVBN_LABELS, ZXCVBN_LEVELS, ZXCVBN_URL, ZXCVBN_VERSION } from '../lib/zxcvbnReading';
 import { COMMON_PASSWORD_COUNT } from '../lib/common';
 import { COMMON_PASSWORDS_SOURCE } from '../lib/commonPasswords';
-import { BITS_PER_ENGLISH_LETTER, CLASS_SIZES, KEY_WALK_CHOICES, MEMORABLE_DIGITS_CHOICES, MIN_KEY_WALK, SYMBOL_CHOICES } from '../lib/strength';
+import {
+  BITS_PER_ENGLISH_LETTER,
+  CLASS_SIZES,
+  CONSONANT_CHOICES,
+  KEY_WALK_CHOICES,
+  MEMORABLE_DIGITS_CHOICES,
+  MIN_CONSONANT_WALK,
+  MIN_KEY_WALK,
+  SYMBOL_CHOICES,
+  VOWEL_STAND_INS,
+  VOWELS,
+} from '../lib/strength';
 import { RubricTable } from './Difficulty';
 import { ModeMeasuresTable, ModeOptionsTable } from './ModeOptionsTable';
 
@@ -46,8 +57,19 @@ export function ScoringPage() {
           capital after a lower-case letter starts a new run). A run of digits is its digits at {Math.log2(CLASS_SIZES.digit).toFixed(1)} bits each, a
           memorable run like 123 or 2468 one pick of {MEMORABLE_DIGITS_CHOICES}. Each distinct symbol, the space among
           them, is one pick of {SYMBOL_CHOICES}, however often it appears: a separator typed three times is one choice.
-          No word lists, no sentence patterns, no swap table and no hint go in, so a swap never changes a word's
-          strength: <code>Rqmote</code> is six letters whether or not <code>e → q</code> is anyone's mapping.
+          No word lists, no sentence patterns, no swap table and no hint go in, so a swap changes a word's strength
+          only through what the text shows: <code>Rqmote</code> is six letters whether or not <code>e → q</code> is
+          anyone's mapping.
+        </p>
+        <p>
+          English words have a vowel ({andList([...VOWELS])}). A run of two letters or more with none is not English
+          (<code>bvsd</code>, <code>HJK</code>): each letter is one pick of the {CONSONANT_CHOICES} consonants and a
+          walk of {numberWord(MIN_CONSONANT_WALK)} letters or more in it one pick of {KEY_WALK_CHOICES.toLocaleString('en')},
+          but never more than an English word with one letter changed (which letter, and which of {CLASS_SIZES.lower} it
+          was), and never less than it would read as English. A run beside a digit, beside{' '}
+          <code>{[...VOWEL_STAND_INS].join(' ')}</code>, or beside a symbol typed once between letters keeps the English
+          reading: it may be a word whose vowel was swapped out (<code>dr1lls</code>, <code>c@lm</code>). A symbol typed
+          more than once is taken for a separator.
         </p>
         <p>
           The usual habits are the ones attackers try first. A password that is exactly one of the{' '}

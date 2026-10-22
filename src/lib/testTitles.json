@@ -4137,6 +4137,10 @@
       {
         "kind": "test",
         "title": "lists every mapping and rubric criterion from the live constants"
+      },
+      {
+        "kind": "test",
+        "title": "states Strength's reading of a run with no vowel from the core"
       }
     ]
   },
