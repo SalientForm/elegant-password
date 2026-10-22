@@ -174,7 +174,7 @@ figure is shown only in the session.
 | Figure | The attacker knows | From | Where |
 | --- | --- | --- | --- |
 | Raw | nothing | the password (`strength.ts`): characters × log2 of the alphabet the classes present make; a repeated character once | badge |
-| Strength | English and the usual habits, not this tool | the password (`strength.ts`): letters as English-like text at 2.3 bits each, a repeated letter once, one bit for a capital in a run; digits by their digits, a memorable run one pick; each distinct symbol one pick; a block typed again once (+ log2 of the times); a keyboard or alphabet walk of 4+ letters one pick of 1,000; a password exactly on the 10,001 most common passwords (`common.ts`) log2 of its place, and not allowed; no other lists, no table, no hint | badge, sorts "Strength" order |
+| Strength | English and the usual habits, not this tool | the password (`strength.ts`): letters as English-like text at 2.3 bits each, a repeated letter once, one bit for a capital in a run; a run of 2+ letters with no vowel (a e i o u y) as consonants, one pick of 20 each with a walk of 3+ one pick of 1,000, at most an English word with one letter changed, unless beside a digit, `@ ! \|` or a symbol typed once between letters (a swapped-out vowel); digits by their digits, a memorable run one pick; each distinct symbol one pick; a block typed again once (+ log2 of the times); a keyboard or alphabet walk of 4+ letters one pick of 1,000; a password exactly on the 10,001 most common passwords (`common.ts`) log2 of its place, and not allowed; no other lists, no table, no hint | badge, sorts "Strength" order |
 | Difficulty | — | the password and its memory load (hint words + random swaps; `difficulty.ts`), for the chosen typing mode | badge |
 | Memorability | — | the password and its hint (`score.ts`) | badge |
 | Bits | this tool exactly, and the swaps in force in this session | the password, the hint and the session's swap list (`score.ts`, below) | dim beside a card's badges, the bits panel, `tep g` |
@@ -183,6 +183,12 @@ figure is shown only in the session.
 The Strength badge is green from 50 bits, yellow from 40 and red below,
 judged on the figure as shown, and its tip names the band: high, fair or
 low. The presets are targets for the bits and never describe Strength.
+Strength assumes less than the bits, and reads below a card's bits only
+where the bits price a short string as one pick of a list that also holds
+long ones (a made-up noun, a number), count a swap by where it landed
+when it leaves the text as long, or ignore a shortest plan's length
+window; never below the plan's exact figure in a shortest plan (figures
+in `docs/decisions.md`, Scoring).
 
 ```mermaid
 flowchart TD
@@ -252,6 +258,11 @@ persisted; drafts are not.
   enough letters always remain (`twists.test.ts`).
 - Cold scores are pure, serialisable, and agree with what the cards show
   (`score.test.ts`, `generate.test.ts`).
+- Strength is never below the plan's exact figure in a shortest plan, in
+  any mode, made-up nouns or not; without made-up nouns, outside shortest
+  plans, it is below a card's bits for at most 2 % of cards and by at most
+  3 bits; a run with no vowel never reads below its English reading
+  (`strengthFloor.test.ts`, `strength.test.ts`).
 - Deliberate swaps only ever remove an awkward move, keep the first letter,
   never merge two words, are recognised cold at zero bits and never read as
   random swaps, and keep the plan's count equal to a brute-force count over

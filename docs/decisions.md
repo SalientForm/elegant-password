@@ -35,6 +35,49 @@ to revisit.
   steps are common in English (`rst`) and are left alone. A password
   exactly on the 10,001 most common is log2 of its place on the list.
   `src/lib/strength.ts`.
+- **A run of letters with no vowel is not English** (2026-10-22, audit
+  L17). Strength read every run of letters as English at 2.3 bits a
+  letter, so key rolls (`bvsd`, `HJK`) and two-letter words (`ht`, `Sr`)
+  read as words: over the made-up noun list it averaged 13.25 bits against
+  the tool's pick of 13.84, and an attacker who does not know the tool
+  cannot do better on average than one who does. Now a run of two letters
+  or more with none of a, e, i, o, u, y reads as consonants (one pick of
+  20 each; a walk of three or more in it one pick of 1,000, since the
+  reason walks start at four is English), at most an English word with one
+  letter changed (its English reading plus log2 of its length plus log2
+  26, so a misspelling such as `fqrns` is not random letters), and never
+  below its English reading. It keeps the English reading beside a digit,
+  beside `@ ! |`, or beside a symbol typed once with a letter on its far
+  side, where it may be a word whose vowel was swapped out (`dr1lls`,
+  `c@lm`, `knig#ts`); a symbol typed more than once is taken for a
+  separator. Generic, a fact about English: Strength still uses no list,
+  table or setting of this app. Measured on 100 seeded batches per
+  setting: the defaults unchanged (100 % high, 0.2 % of cards change);
+  Two-finger 99.2 % to 99.8 % high, One-handed and Minimal-quick
+  unchanged. Below the card's bits, before and after: ten-finger with two
+  made-up nouns 38.7 % to 16.5 %, one 8.4 % to 3.2 %; two-letter words 3
+  5.0 % to 0.2 %; One-handed and Two-finger with made-up nouns 1 % or
+  less. Walks still read low (`qwertyuiop` 11, `asdfasdfasdf` 11.6,
+  `zxcvbnm` 7.8, `bvc` 10). Declined: a floor at the bits or the tool's
+  lists (the rule above), an English dictionary (Strength has no word
+  lists), and a table of letter pairs English never uses (`TODO.md`).
+  `isNotEnglish`, `letterBits` in `src/lib/strength.ts`;
+  `src/lib/strengthFloor.test.ts`.
+- **Where Strength still reads below a card's bits, and why it may**
+  (2026-10-22, audit L17). Three places, none a Strength undercount: a
+  shortest plan (Minimal-quick, or the Minimal target), whose card's bits
+  ignore the length window, with Strength never below the plan's exact
+  figure plus the card's swap bits in any mode (Minimal-quick with two
+  made-up nouns: 84 % below the card's bits, 0 % below the exact figure);
+  made-up nouns with a vowel (`cviu`, `OIFD`), priced by the tool as one
+  of 14,666 whatever their length, which look like English letters without
+  a dictionary (ten-finger 3.2 % and 16.5 % with one and two, other modes
+  1 % or less); and, at 1.2 % or less within 3 bits, swaps the bits count
+  by where they landed that leave the text as long, and doubled letters
+  read once. An attacker who does not know the tool tries short strings
+  first, so for a short pick from a list that also holds long ones
+  Strength's lower figure is the honest one. Without made-up nouns,
+  outside shortest plans, at most 2 % of cards and 3 bits, held by a test.
 - **The zxcvbn reading is the library's crack time read as one of four
   words** (2026-10-20). An offline attack on a slow hash at 10^4 guesses a
   second: seconds or minutes are very weak, hours to weeks weak, months to

@@ -16,4 +16,10 @@ describe('spec prompt', () => {
     for (const m of BUILT_IN_MAPPINGS) expect(prompt).toContain(`\`${m.from}→${m.to}\``);
     for (const c of RUBRIC) expect(prompt).toContain(`| ${c.name} |`);
   });
+
+  it("states Strength's reading of a run with no vowel from the core", () => {
+    expect(prompt).toContain('a run of two letters or more with no vowel (a, e, i, o, u and y) is not English');
+    expect(prompt).toContain('each letter one pick of 20 and each walk of 3 or more letters in it one pick of 1000');
+    expect(prompt).toContain('beside one of @ ! |');
+  });
 });

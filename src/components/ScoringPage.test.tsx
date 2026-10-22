@@ -18,6 +18,9 @@ describe('the figures the Scoring page names', () => {
     const text = textOf(render(<ScoringPage />).container);
     expect(text).toContain('(lower case 26, upper case 26, digits 10, symbols 33, anything else about 50)');
     expect(text).toContain('its digits at 3.3 bits each');
+    expect(text).toContain('English words have a vowel (a, e, i, o, u and y).');
+    expect(text).toContain('each letter is one pick of the 20 consonants and a walk of three letters or more in it one pick of 1,000');
+    expect(text).toContain('beside @ ! |, or beside a symbol typed once between letters');
     expect(text).toContain(`estimator, ${ZXCVBN_VERSION})`);
     expect(text).toContain('(10,000 guesses a second) reads as one of four words:');
     expect(text).toContain(`run over ${BUILT_IN_MAPPINGS.length + 1} mappings, not ${BUILT_IN_MAPPINGS.length}`);
