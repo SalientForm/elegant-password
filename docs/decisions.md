@@ -360,14 +360,34 @@ twists). It is the lead if the budget is ever missed.
   the engine only through `inputsFor`, `runInputs`, `presentSuggestions`
   and `scoreReadings`, the calls the web makes, and rebuilds no reading;
   and that for each site preset and typing mode the web provider and `tep`
-  build the same inputs from the same settings.
+  build the same inputs from the same settings. It also fails on any
+  import cycle in `src`, type-only imports counted (2026-10-22, audit
+  L12): a cycle of types still ties the modules so neither can be read or
+  moved alone. That is why `Requirements`, `DEFAULT_REQUIREMENTS` and
+  `RequirementCheck` live in `requirements.ts`, which `validation.ts` and
+  `checks.ts` import, rather than in `generate.ts`, which imports both;
+  `generate.ts` re-exports them, so callers keep one import for
+  requirements.
+- **A wording helper has one home** (2026-10-22, audit L12): `plural`,
+  `capitalise` and `lowerFirst` are in `text.ts`, which imports nothing,
+  so the validator, the checks, the CLI and the prompts take them without
+  drawing in the scorer (`readings.ts`, the other candidate, imports it);
+  the comfort levels in order are `COMFORTS` in `grammar.ts`, beside
+  `COMFORT_SHARE`.
 - **A figure, list or label the core defines is interpolated, never
   typed out** (2026-10-21): the web app's hints and the Scoring page read
   the class sizes, bands, key lists, speeds and preset and option labels
   from `src/lib` (`numberWord`, `largeNumber` and `andList` in
   `readings.ts` write them into a sentence), so the text says what the
   code does. Which score or level is which colour is decided only in
-  `readings.ts`; the stylesheet paints the bands.
+  `readings.ts`; the stylesheet paints the bands. A value a front end
+  states is a named constant that the module owning it uses in its own
+  code (2026-10-22, audit L18): the number's `NUMBER_RANGE` (`grammar.ts`),
+  `WORD_LENGTH_RANGE` (`words.ts`, which the made-up nouns are cut to as
+  well), `DRAWS_PER_CARD` and `MAX_SENTENCE_DRAWS` (`generate.ts`; eight
+  sentences in all, the first included) and `MAX_MAPPING_LENGTH`
+  (`twists.ts`, for both sides of a custom swap). The README stays static
+  text and states none of them.
 - **The three largest core modules are split only as a change needs it**
   (accepted 2026-10-22, audit L13): `generate.ts`, `score.ts` and
   `fromSentence.ts` (1,100, 729 and 765 lines on 2026-10-22). Each split
