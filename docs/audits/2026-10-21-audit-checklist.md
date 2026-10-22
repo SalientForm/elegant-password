@@ -61,6 +61,7 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 | L15 | `SessionControls.tsx` is at 50 % line coverage, the only real gap | `src/components/SessionControls.test.tsx` (none) | open | |
 | L16 | Neither Copy button nor the CLI clears the clipboard (an accepted decision in `TODO.md`) | `src/components/clipboard.ts`, `src/cli/clipboard.ts` | accepted | `docs/decisions.md`, "Input and persistence", 2026-10-22; `TODO.md`, "Clear the clipboard after a copy", to revisit |
 | L17 | In Minimal-quick mode Strength reads below the card's bits for 58 % of suggestions (median -0.5 bits, p5 -7.0; 1 % or less in the other modes): reading short made-up nouns and capitals at 2.3 bits a letter gives less than the tool's own pick. Strength assumes less knowledge than the bits, so it should not read lower (found with M3) | `src/lib/strength.ts` | open | |
+| L18 | Values the front ends name have no shared constant (found by the 2026-10-21 hard-coding check): the number's range 2-99 (`grammar.ts`), word lengths 3-8 (`words.ts`), 10 draws per card and 8 redraws (`generate.ts`), 8 letters in a custom swap (`mappingSettings.ts`); the text that states them types them out | `src/lib/`; `src/components/`; `src/prompts/` | open | |
 
 ## Housekeeping
 
@@ -73,6 +74,11 @@ skipped), 97.6 % line coverage, `pnpm audit --prod` clean, at commit
 H1, then M1 to M7 in order, then the Lows, one spec at a time. An item
 whose spec turns out to be a one-line change may be grouped with its
 neighbours; the grouping is recorded here when it happens.
+
+Grouped 2026-10-22, the Lows built in parallel: L17 alone; L1 with L4
+(both the pasted rules); L7 with L9 (build and deploy); L12, L15 and L18
+(cleanup). L6 declined and L11, L13, L14 and L16 accepted by the user the
+same day.
 
 Decided 2026-10-21: the audit's 90-day bet is taken, in two steps. H1
 bounds the engine (its spec replaces the withdrawn worker-timeout spec of
