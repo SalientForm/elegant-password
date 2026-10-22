@@ -380,11 +380,23 @@
       },
       {
         "kind": "group",
+        "title": "the import graph"
+      },
+      {
+        "kind": "test",
+        "title": "has no cycle in src, type-only imports included"
+      },
+      {
+        "kind": "group",
         "title": "this test"
       },
       {
         "kind": "test",
         "title": "reads imports of every shape the code uses"
+      },
+      {
+        "kind": "test",
+        "title": "finds each import cycle as the chain that closes it, counting type-only imports"
       }
     ]
   },

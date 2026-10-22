@@ -7,7 +7,7 @@
 // found by planning, so the engine still reports that after Submit, and
 // never makes a password that breaks a rule instead.
 
-import type { Requirements } from './generate';
+import type { Requirements } from './requirements';
 import { COMFORT_SHARE, type Comfort } from './grammar';
 import { lookupKey } from './keyboard';
 

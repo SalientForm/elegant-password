@@ -4,7 +4,7 @@
 // import for requirements.
 
 import { COMMON_PASSWORD_COUNT, commonPasswordProblem, commonRank } from './common';
-import type { RequirementCheck, Requirements } from './generate';
+import type { RequirementCheck, Requirements } from './requirements';
 import { isSymbol } from './validation';
 
 export const countUpper = (text: string) => text.replace(/[^A-Z]/g, '').length;
