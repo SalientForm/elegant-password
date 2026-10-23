@@ -3,8 +3,9 @@
 ## Asked for by Dossier (2026-10-22)
 
 Dossier v1 will use the core as a package for its password dialog. Its
-password generator is blocked until the first item ships; the other three
-it picks up as they ship. Asked for by the user on 2026-10-22, first item
+password generator is blocked until the first item ships; the other two
+it picks up as they ship (no made-up nouns in any mode was built on
+2026-10-22, `docs/decisions.md`). Asked for by the user on 2026-10-22, first item
 most urgent.
 
 - **The core as an npm package, configured by mode, preset and
@@ -38,14 +39,6 @@ most urgent.
   The choice comes from `crypto.getRandomValues` and counts toward the
   bits exactly (log2 of the choices, once per draw). Space, None and a
   fixed symbol stay as they are.
-- **No made-up nouns by default, in every mode.** `DEFAULT_REQUIREMENTS`
-  already has `madeUp: 0`, but the mode profiles in `src/lib/modeProfiles.ts`
-  set 1 (Two-finger, One-handed) and 3 (Minimal-quick). Set them to 0, so
-  made-up nouns are never used unless chosen. Re-measure the profiles
-  (`pnpm measure:modes`), as Minimal-quick will come out longer and the
-  README's "13 characters at the defaults" may change. A config with
-  `options: preset` follows the profile, so existing ones change too (see
-  "`options: preset` follows the profile" below).
 - **One sentence mode: one UI and one algorithm.** Merge "Make up a
   sentence" and "Use my sentence" into one sentence box. Generate fills it
   with a made-up sentence the user can edit, and passwords are always made
@@ -127,53 +120,79 @@ Follow-ups:
 
 ## tep CLI: decisions to revisit
 
-The CLI spec (`docs/specs/2026-10-20-tep-cli-design.md`) was accepted on
-2026-10-20 with these decisions taken on the recommendation alone, with
-low confidence. Examine each once `tep` is in use, most uncertain first.
+The CLI was designed on 2026-10-20 with these decisions taken on the
+recommendation alone, with low confidence; `docs/decisions.md` ("The
+command line") has the design as built. Examine each once `tep` is in use,
+most uncertain first.
 
 Settled by the user on 2026-10-20, kept here for the record:
 
-- An unreachable strength target is a warning, not a contradiction (§3).
+- An unreachable strength target is a warning, not a contradiction.
 - Blocked review items cannot be edited: change the line that blocks
-  them first (§7.3).
-- Shaping a question may take up to 750 ms (§7.2; first set at 333 ms, raised the same day).
-- The loosest-completion assumption stands; the property test proves it
-  (§7.2).
+  them first.
+- Shaping a question may take up to 750 ms (first set at 333 ms, raised
+  the same day). On 2026-10-21: the suite holds it as work, and `pnpm
+  measure:wizard` names the questions over 750 ms and fails one over 2 s.
+- The loosest-completion assumption stands; the property test proves it.
 
 Still open:
 
-- **`options: preset` follows the profile** (§6). A re-measured mode
+- **`options: preset` follows the profile**. A re-measured mode
   profile changes what an existing config generates, without the file
   changing. Freezing the values at save time is the alternative.
-- **`--mode` replaces a config's own options** (§5.1), as in the web app.
+- **`--mode` replaces a config's own options**, as in the web app.
   The alternative: `--mode` only changes which mode difficulty is scored
   for.
-- **Count 5 at a terminal, 1 when piped** (§5.2). Output that changes with
+- **Count 5 at a terminal, 1 when piped**. Output that changes with
   where it goes can surprise; a fixed default is the alternative.
-- **Hint printed under each password by default** (§5.3). It leaves the
+- **Hint printed under each password by default**. It leaves the
   sentence in the terminal's scrollback beside the password. Showing it
   only with `--explain` is the alternative.
-- **Sentence mode reads stdin or a hidden prompt only** (§5.2), never
-  inline text. Check it is not too awkward to use.
-- **`./tep.yml` only** (§5.1): no parent-directory search, no global
+- **Sentence mode reads stdin or a hidden prompt only**, never inline
+  text. Check it is not too awkward to use.
+- **`./tep.yml` only**: no parent-directory search, no global
   `~/.config/tep/config.yml`.
-- **Unused options warn, not fail** (§5.2): `--avoid-pinky` with
-  two-finger.
-- **No `key=value` arguments** (§5.2). The request's own example was
+- **Unused options warn, not fail**: `--avoid-pinky` with two-finger.
+- **No `key=value` arguments**. The request's own example was
   `mode=ten-finger`.
-- **`quick` and `minimal-quick` both accepted** (§2), instead of one name
+- **`quick` and `minimal-quick` both accepted**, instead of one name
   everywhere.
 - **Arrow-key menus** for the questions and a typed line number on the
-  review screen (§8). Two input styles in one wizard.
-- **No clipboard clearing** after `--copy` (§5.4).
-- **Not on npm; `pnpm link:cli` links a checkout's build** (§8). Publishing would need a
-  scoped name (`tep` is taken).
-- **Commands left out of v1** (§4): `tep score <password>`, `tep list`,
+  review screen. Two input styles in one wizard.
+- **No clipboard clearing** after `--copy`: see "Clear the clipboard after
+  a copy" below.
+- **Not on npm; `pnpm link:cli` links a checkout's build**. Publishing
+  would need a scoped name (`tep` is taken).
+- **Commands left out of v1**: `tep score <password>`, `tep list`,
   `tep config show`, shell completions.
 
 ## Future considerations
 
 Not planned yet; kept here so they are not lost. Roughly smallest first.
+
+### Clear the clipboard after a copy
+
+Accepted for now on 2026-10-22 (audit L16), to revisit. Neither Copy
+button nor `tep --copy` clears the clipboard, so the password stays there
+until something replaces it: clipboard history (Windows' Win+V, KDE's
+Klipper and other managers) keeps it, some sync it to other devices, any
+program can read it, and it can be pasted by mistake later. Password
+managers clear it 10-90 seconds after a copy.
+
+- In the browser, a page can overwrite the clipboard only while it is open
+  and usually focused, so a delayed clear after switching to the sign-up
+  tab often fails silently; it cannot check the clipboard still holds the
+  password without a permission prompt, so a blind clear could wipe
+  something copied since; and it cannot mark the copy to skip clipboard
+  history.
+- `tep` can do it properly: after about 30 s, read the clipboard back and
+  clear it only if it still holds the password (a short-lived background
+  process outlives the command), and mark the copy to skip history where
+  the platform's tool supports it.
+- Neither can remove a copy that clipboard history or sync already holds.
+
+The recommendation when this is revisited: clear in `tep` only, as above,
+and leave the web app as it is, with the reason recorded.
 
 ### What knowing the app is worth
 
@@ -184,6 +203,27 @@ password's strength rests on the tool being unknown: Strength minus the
 bits for the same password, or the two side by side with the difference
 named. It needs the session (the bits do), so it would show beside the bits
 figure, never be saved, and never feed a score.
+
+### Strength below a card's bits
+
+Left open when audit L17 was built (2026-10-22; the figures are in
+`docs/decisions.md`, Scoring). Two ways to narrow what remains, each for
+the user to decide:
+
+- **A card's bits in a shortest plan.** They ignore the length window, so
+  with "shortest" on (Minimal-quick, or the Minimal target) a card can
+  read well above the plan's exact figure, and Strength below the card
+  (84 % of Minimal-quick cards with two made-up nouns) though never below
+  the exact figure. Capping a card's bits at the plan's bits plus its swap
+  bits would make the two agree; it changes the bits, not Strength, and
+  the cards' bits would no longer be `scoreCold` alone.
+- **Letter pairs English never uses.** Made-up nouns with a vowel
+  (`cviu`, `OIFD`) still read as English letters: 16.5 % of ten-finger
+  cards with two made-up nouns read below their bits. A table of the letter
+  pairs English words do not contain, built from an English word list as
+  `commonPasswords.ts` is from SecLists, flags 25 to 48 % of those nouns,
+  but also 0.1 to 0.2 % of English words (`halfway`, `briefcase`,
+  `pyjamas`), which would then read too high.
 
 ### A CLI with no dependencies
 
@@ -214,11 +254,18 @@ with a passphrase (WebCrypto: PBKDF2 or Argon2 to AES-GCM), or a "hints
 only" mode that keeps the sentence and drops the password. Scoring is
 unaffected either way: it already needs only the password and hint.
 
+A custom domain on GitHub Pages still sends no headers. Once the app is on
+a host that does, send `Content-Security-Policy: frame-ancestors 'none'`
+(the rest of the policy may move into the header with it): framing is then
+refused before any script runs, which the meta tag cannot do, and the
+start-up check in `src/frameGuard.ts` can go (audit L7, 2026-10-22;
+`docs/decisions.md`, "Build and deploy").
+
 ### A worker again, once everything works without one
 
 Asked for by the user on 2026-10-21, when the audit's bet was taken: the
 engine is bounded first and the worker removed on that measurement
-(`docs/decisions.md`, "Generation"; checklist H1 and H2). Once the
+(`docs/decisions.md`, "Generation"; audit H1 and H2). Once the
 app runs without one and the real stall on a phone is known, consider
 putting a worker back, and only if there is a reason the measurement
 gives: the worst permitted batch stalls a slow phone for longer than a

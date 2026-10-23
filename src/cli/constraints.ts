@@ -6,6 +6,7 @@
 // left unanswered, and a choice is checked against every other answer.
 // Pure: the wizard asks, this decides.
 
+import { SLOW_MS } from '../lib/budget';
 import { problemsOf, reachableBits, type Problem } from '../lib/consistency';
 import { DEFAULT_TYPING_MODE, TYPING_MODES, type TypingMode } from '../lib/difficulty';
 import { separatorChoices } from '../lib/choices';
@@ -14,15 +15,18 @@ import type { MappingSettings } from '../lib/mappingSettings';
 import { MINIMAL_BITS, modeLabel, profileValues, PROFILE_KEYS, unusedIn } from '../lib/modeProfiles';
 import { ALL_SYMBOLS, RULE_KEYS } from '../lib/sitePresets';
 import { DEFAULT_SORT } from '../lib/sort';
-import { MAX_LENGTH, MAX_TARGET_BITS } from '../lib/validation';
+import { capitalise } from '../lib/text';
+import { MAX_LENGTH, MAX_TARGET_BITS, MIN_LENGTH } from '../lib/validation';
 import { explainProblem } from './messages';
-import { COUNT_AT_TERMINAL, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
+import { COUNT_AT_TERMINAL, COUNT_PIPED, DEFAULT_SORT_HINT, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
 import { MODE_NAMES, SITE_NAMES } from './names';
 import type { Source } from './sources';
 
 
-/** How long working out one question's choices may take, in milliseconds of CPU time (user decision, 2026-10-20). src/cli/walk.test.ts holds it. */
+/** How long working out one question's choices may take, in milliseconds on a typical laptop (user decision, 2026-10-20). src/cli/walk.test.ts asserts it as work; pnpm measure:wizard times it, naming the questions over it. */
 export const QUESTION_BUDGET_MS = 750;
+/** The time past which pnpm measure:wizard fails a question: the core's line for slow work (user decision, 2026-10-21). The budget is the target, this is the failure. */
+export const QUESTION_FAIL_MS = SLOW_MS;
 
 /** What the wizard has been told. Fields absent are not answered yet. */
 export interface Answers {
@@ -49,7 +53,7 @@ export const noAnswers = (): Answers => ({ rules: {}, rulesAnswered: false, opti
 
 /** The value a question not yet answered is checked with: the one that rules out least. */
 export const LOOSEST: Record<string, unknown> = {
-  'min-length': 1,
+  'min-length': MIN_LENGTH,
   'max-length': MAX_LENGTH,
   'min-uppercase': 0,
   'min-lowercase': 0,
@@ -269,7 +273,6 @@ function check<T>(a: Answers, choices: Omit<Choice<T>, 'blocked'>[], apply: (a: 
   });
 }
 
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The typing mode question. With options following the preset, a mode whose preset contradicts the rules is not allowed. */
 export function modeShape(a: Answers, where: Where): SelectShape<TypingMode> {
@@ -352,7 +355,7 @@ export function fieldShape(f: CliField, a: Answers, where: Where, defaults: Reco
   const apply = (x: Answers, v: unknown) => (v === OTHER_BITS ? x : withField(x, f, v));
   const current = f.name in (f.group === 'rules' ? a.rules : f.group === 'options' ? a.options : a.output) ? valueIn(a, f) : undefined;
   const fallback = current ?? (f.name in defaults ? defaults[f.name] : undefined) ?? (f.group === 'options' ? reqOf({ ...a, optionsHow: 'preset' })[f.target.key as keyof Requirements] : f.group === 'rules' ? (a.site ? valueIn(a, f) : reqOf(a, DEFAULT_RULE_FILL)[f.target.key as keyof Requirements]) : valueIn(a, f));
-  const message = capital(f.label);
+  const message = capitalise(f.label);
   const k = f.kind;
 
   if (k.type === 'int' && k.max - k.min > 20) return numberShape(f, a, where, message, fallback as number);
@@ -428,7 +431,7 @@ function numberShape(f: CliField, a: Answers, where: Where, message: string, fal
       min = lo;
     }
   } else if (f.name === 'min-length') {
-    // Allowed minimums run from 1 up to the largest that works.
+    // Allowed minimums run from the shortest a length can be up to the largest that works.
     if (!ok(min)) max = min - 1;
     else {
       let lo = min;
@@ -485,7 +488,7 @@ function symbolsShape(f: CliField, a: Answers, where: Where, message: string, fa
 /** The strength choice that asks for a number of bits instead. */
 export const OTHER_BITS = -1;
 
-/** A number of bits for the strength target: any from 0 to 256 (a target out of reach is a warning, not a contradiction). */
+/** A number of bits for the strength target: any from 0 to MAX_TARGET_BITS (a target out of reach is a warning, not a contradiction). */
 export function bitsShape(initial: number): NumberShape {
   const f = fieldNamed('strength')!;
   return { kind: 'number', own: [f.name], message: 'Strength target, in bits', min: 0, max: MAX_TARGET_BITS, initial, limits: { min: 0, max: MAX_TARGET_BITS }, apply: (x, n) => withField(x, f, n) };
@@ -495,7 +498,7 @@ export function bitsShape(initial: number): NumberShape {
 export function outputHowShape(): SelectShape<boolean> {
   return {
     kind: 'select',
-    message: `Output: ${COUNT_AT_TERMINAL} passwords at a terminal (1 when piped), easiest to type first`,
+    message: `Output: ${COUNT_AT_TERMINAL} passwords at a terminal (${COUNT_PIPED} when piped), ${DEFAULT_SORT_HINT}`,
     choices: [
       { value: false, label: 'Keep these' },
       { value: true, label: 'Change them' },

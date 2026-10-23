@@ -1,4 +1,5 @@
 import snapshot from './devStats.json';
+import { capitalise } from './text';
 
 /** How the app was built, snapshotted by `pnpm stats` (scripts/devStats.mjs). */
 export type DevStats = typeof snapshot;
@@ -46,7 +47,7 @@ export function modelName(id: string): string {
   if (/^\d{8}$/.test(parts[parts.length - 1]!)) parts.pop();
   const version = [];
   while (parts.length > 1 && /^\d+$/.test(parts[parts.length - 1]!)) version.unshift(parts.pop()!);
-  const name = parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+  const name = parts.map(capitalise).join(' ');
   return version.length ? `${name} ${version.join('.')}` : name;
 }
 

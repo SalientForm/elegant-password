@@ -41,7 +41,7 @@ describe('SelectedList', () => {
     const s = first.getByText(`Strength ${Math.round(strengthBits(ENTRIES[0]!.password))}`);
     expect(s.getAttribute('title')).toBeNull(); // the app's instant tip, not the browser's
     fireEvent.mouseEnter(s.parentElement!);
-    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (master password|very strong|strong|everyday|weak)/);
+    expect(screen.getByRole('tooltip').textContent).toMatch(/^Strength \d+ bits, (high|fair|low)/);
     fireEvent.mouseLeave(s.parentElement!);
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     const d = first.getByText(`Difficulty ${score.difficulty.score}`);

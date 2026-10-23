@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageFirstWheel } from './components/columnScroll';
 import { MEDIUM, NARROW, PHONE, useMediaQuery } from './components/useMediaQuery';
 import { ApplyBar } from './components/ApplyBar';
+import { SlowNotice } from './components/SlowNotice';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequirementsForm } from './components/RequirementsForm';
 import { SelectedList } from './components/SelectedList';
@@ -110,6 +111,7 @@ export function App() {
           {page === 'scoring' && <ScoringPage />}
           {page === 'fun' && <FunPage />}
         </Suspense>
+        <SlowNotice />
       </div>
     </ErrorBoundary>
   );
@@ -227,10 +229,13 @@ export function ElegantPasswords({ column, onColumn, active = true }: ColumnsPro
   };
   const blocked = p.problems.length > 0;
   // Practise from a card: the typing test takes the password, and on a narrow screen its column opens.
-  const practiseHere = (s: { password: string; hint: string }) => {
+  const practiseLatest = useRef<(s: { password: string; hint: string }) => void>(() => {});
+  practiseLatest.current = (s) => {
     p.practise(s);
     if (!isOpen('list')) open('list');
   };
+  // Stable, so the cards' memo holds; it reads the current column layout through the ref, written on each render.
+  const practiseHere = useCallback((s: { password: string; hint: string }) => practiseLatest.current(s), []);
   /** A shrunken column is a button in a strip, except on a phone, where the tabs in the bar stand in. */
   const strips = fewer && !phone;
   const columnProps = (id: Column) => ({
@@ -249,8 +254,11 @@ export function ElegantPasswords({ column, onColumn, active = true }: ColumnsPro
       </button>
     </div>
   );
-  const context: CardContext | undefined =
-    outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined;
+  // Kept until the batch or the uppercase rule changes, so the cards' memo holds.
+  const context = useMemo<CardContext | undefined>(
+    () => (outcome?.ok ? { separator: outcome.separator, minUppercase: applied.req.minUppercase, source: outcome.source } : undefined),
+    [outcome, applied.req.minUppercase],
+  );
   // The made-up sentence as the draft holds it: as drawn, or as the user edited it.
   const madeUp = draft.editedSentence ?? p.generated?.words.join(' ') ?? '';
   const madeUpField = useRef<HTMLTextAreaElement>(null);
@@ -260,8 +268,11 @@ export function ElegantPasswords({ column, onColumn, active = true }: ColumnsPro
   const typingMode = p.typingMode;
   const ordered = useMemo(() => (outcome?.ok ? presentSuggestions(outcome.suggestions, typingMode, p.sort) : []), [outcome, typingMode, p.sort]);
   // In sentence mode, swaps whose letters are not in the sentence cannot apply; show them disabled.
-  const sentenceWords = p.mode === 'sentence' ? normalizeSentence(draft.sentence) : [];
-  const relevant = sentenceWords.length ? relevantTo(sentenceWords) : undefined;
+  // Kept until the mode or the sentence changes, so the swaps panel's memo holds.
+  const relevant = useMemo(() => {
+    const sentenceWords = p.mode === 'sentence' ? normalizeSentence(draft.sentence) : [];
+    return sentenceWords.length ? relevantTo(sentenceWords) : undefined;
+  }, [p.mode, draft.sentence]);
   // Keys follow the password so a card keeps its open "Why?" when the order changes; a repeated password gets a suffix.
   const seen = new Map<string, number>();
   const keys = ordered.map((s) => {

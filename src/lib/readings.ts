@@ -3,7 +3,6 @@
 // badges and the CLI's table both print these, so they cannot disagree.
 
 import { typingModeLabel, type Difficulty } from './difficulty';
-import { STRENGTH_PRESETS } from './generate';
 import { MEMORABILITY_BANDS, STRENGTH_BANDS } from './score';
 
 export type Band = 'high' | 'mid' | 'low';
@@ -11,16 +10,22 @@ export type Band = 'high' | 'mid' | 'low';
 /** Colour band for a memorability score: green above 75, yellow above 45, red below. */
 export const memorabilityLevel = (score: number): Band => (score > MEMORABILITY_BANDS.green ? 'high' : score > MEMORABILITY_BANDS.yellow ? 'mid' : 'low');
 
-/** Colour band for strength in bits: green from the "Strong" preset up, yellow from "Everyday", red below. Give it the figure as shown (rounded), so a badge reading 50 is never yellow. */
+/** Colour band for strength in bits: green from 50 bits, yellow from 40, red below. Give it the figure as shown (rounded), so a badge reading 50 is never yellow. */
 export const strengthLevel = (bits: number): Band => (bits >= STRENGTH_BANDS.green ? 'high' : bits >= STRENGTH_BANDS.yellow ? 'mid' : 'low');
 
-/** The preset a strength reaches: "master password", "very strong", "strong", "everyday", or "weak" (below the yellow band; the Minimal preset is not a strength). */
-export const strengthWord = (bits: number) =>
-  [...STRENGTH_PRESETS]
-    .filter((p) => p.bits >= STRENGTH_BANDS.yellow)
-    .reverse()
-    .find((p) => bits >= p.bits)
-    ?.label.toLowerCase() ?? 'weak';
+/** Colour band for a difficulty level: effortless and easy green, moderate yellow, demanding and hard red. */
+export const difficultyBand = (level: Difficulty['level']): Band => (level <= 1 ? 'high' : level === 2 ? 'mid' : 'low');
+
+/** The word for each strength band, the colour said in words. */
+export const STRENGTH_WORDS: Record<Band, string> = { high: 'high', mid: 'fair', low: 'low' };
+
+/**
+ * The word a strength reads: its band's, never a preset's. The presets are
+ * targets for the bits, which assume an attacker who knows this tool;
+ * Strength assumes one who does not, so it reads higher and the presets'
+ * words would overstate it. Give it the figure as shown, as for the colour.
+ */
+export const strengthWord = (bits: number) => STRENGTH_WORDS[strengthLevel(bits)];
 
 export interface Reading {
   /** The badge's word: "Strength", "Raw", "Difficulty", "Memorability". */
@@ -36,10 +41,33 @@ export interface Reading {
 export interface ScoreReadings {
   strength: Reading;
   raw: Reading;
-  /** `band` is null: difficulty is coloured by its level (Difficulty.level), not a band. */
+  /** `band` is the level's (difficultyBand); `level` is kept for the label's five steps. */
   difficulty: Reading & { level: Difficulty['level'] };
   memorability: Reading;
 }
+
+// A figure the core defines reads the same in every front end's text: "six
+// key widths", "100 billion guesses", "a, b and c".
+
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+
+/** A count as it reads in a sentence: a word up to twelve ("three", "six"), figures above ("65"). */
+export const numberWord = (n: number) => NUMBER_WORDS[n] ?? n.toLocaleString('en');
+
+const SCALES: readonly [string, number][] = [
+  ['trillion', 1e12],
+  ['billion', 1e9],
+  ['million', 1e6],
+];
+
+/** A large figure in words: "10", "100,000", "100 billion". */
+export function largeNumber(n: number): string {
+  const scale = SCALES.find(([, size]) => n >= size);
+  return scale ? `${(n / scale[1]).toLocaleString('en')} ${scale[0]}` : n.toLocaleString('en');
+}
+
+/** Items joined as in a sentence: "a", "a and b", "a, b and c". */
+export const andList = (items: readonly string[]) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1)}` : (items[0] ?? ''));
 
 export const READING_LABELS = { strength: 'Strength', raw: 'Raw', difficulty: 'Difficulty', memorability: 'Memorability' } as const;
 
@@ -75,7 +103,7 @@ export function scoreReadings({
     difficulty: {
       label: READING_LABELS.difficulty,
       value: String(difficulty.score),
-      band: null,
+      band: difficultyBand(difficulty.level),
       level: difficulty.level,
       text: `Difficulty ${difficulty.score}, ${difficulty.label.toLowerCase()} (${typingModeLabel(difficulty.mode).toLowerCase()})`,
     },

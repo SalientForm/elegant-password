@@ -13,13 +13,13 @@ their own step.
 | Criterion | Kind | Where it is enforced |
 | --- | --- | --- |
 | Length between min and max | generic (range) | Planning: the length model counts only word sequences whose letters plus separators and closing marks fit. Swaps are limited to a length window. Sentence mode compresses to the target; a sentence under the minimum is padded (section 3) and anything still outside the range is refused. |
-| At least N uppercase letters | generic (class count) | Planning never picks a shape with fewer letters than N; swaps keep at least N letters; rendering capitalises one letter (N = 1) or whole words (N ≥ 2), starting at the first ordinary word (generated) or a random word, wrapping round (sentence); with Shift reach on, the words one hand can capitalise come first and the rest follow, so the rule is met either way. Capital initials and ALL-CAPS made-up nouns count first. A drawn suggestion that fails any check is dropped, never shown. |
+| At least N uppercase letters | generic (class count) | Planning never picks a shape with fewer letters than N; swaps keep at least N letters; rendering capitalises one letter (N = 1) or whole words (N ≥ 2), starting at the first ordinary word (generated) or a random word, wrapping round (sentence); in generated mode the one capital's word is chosen before the swaps, which keep its first character a letter, so the capital is always a word's first character, never after a swapped-in symbol; with Shift reach on, the words one hand can capitalise come first and the rest follow, so the rule is met either way. Capital initials and ALL-CAPS made-up nouns count first. A drawn suggestion that fails any check is dropped, never shown. |
 | At least N digits | generic (class count) | Generated: the number has N digits. Sentence: half the time digit swaps first (`e→3`, `for→4`), then a comfortable number of the missing digits goes in front or at the end, at random, and into the hint there. |
 | At least N symbols | generic (class count) | Symbol separators count; the shortfall is symbol swaps (sentence mode, a random number of them up to three) or a closing symbol drawn at random for each password from the allowed comfortable set (never the separator), repeated. |
 | Only these symbols, spaces or not | generic (alphabet) | Every symbol the tool picks on its own (separator, closing mark, swap output) is filtered by the allowed set; closing marks and swap outputs are never the separator character, since a password never starts or ends with its separator (shapes that would need such marks are skipped; when no shape is left, the request is refused and the separator named). A separator chosen by hand must be allowed: the form will not submit one that is not (section 1a). |
 | Separator | specific | Automatic (the default) → `;` whenever it is allowed, else a space if allowed, else the first allowed and comfortable of `. - , _`, else none; never a problem, whatever the rules. Under the default rules it is `;`, the old default, so default passwords are unchanged. A chosen separator is honoured even if it is a stretch. |
 | Avoid pinky stretches | specific | Symbols more than one key from a pinky's home are removed from the set the tool may pick from (swap outputs, closing marks, automatic separator). If every allowed symbol is a stretch, one is used and a warning says so. |
-| Keep Shift within reach | specific | Shifted symbols more than 4 keys from both Shift keys (`$ % ^ & *`, `(`) are removed from the same set; the opening capital goes to a word whose first letter capitalises in reach (not T G B Y H N U J I) when the sentence has one, else a warning says so. If every allowed symbol is out of reach, one is used and a warning says so. |
+| Keep Shift within reach | specific | Shifted symbols more than 4 keys from both Shift keys (`$ % ^ & * (`) are removed from the same set; the opening capital goes to a word whose first letter capitalises in reach (not T G B Y H N U J I) when the sentence has one, else a warning says so. If every allowed symbol is out of reach, one is used and a warning says so. |
 | Typing comfort | specific | Each word pool (and the number pool) is ranked by typing cost and cut to the easiest 40 / 70 / 100 %. With deliberate swaps on, words are ranked as typed with their swap. |
 | Deliberate swaps (typing ease) | specific | On by default. A whole word with a same-finger jump or a reach of 6+ key widths is typed with one fixed sound-alike misspelling that removes it (`wise` → `wyse`, `ease.ts`). A fixed function of the word: 0 bits. Planning counts words at their typed length with unchanged pool sizes; letters only, so the separator and symbol rules never meet it; sentence mode swaps the words still whole unless that leaves too few letters for the uppercase rule. |
 | Target bits | specific | Among templates that reach the target, the shortest expected length wins; otherwise the strongest, with a warning. |
@@ -53,6 +53,35 @@ throws its first, so no password is ever made from a contradiction.
 | Custom or built-in swap whose output is not allowed | Narrowing the symbols | Not a contradiction: the swap is skipped (struck through, with the reason), with a warning if none is left. |
 | Compress-toward target outside the length range | Sentence options | Not a contradiction: clamped into the range. |
 
+## 1b. Pasted rules: a choice of kinds
+
+The criteria above are per-class minimums, so a site's "at least 3 of the
+following 4: uppercase, lowercase, numbers, symbols" has no field of its
+own. `parseRuleText` (`src/lib/ruleText.ts`) keeps it as minimums: it
+requires that many of the kinds listed, set to 1 (or the kind's own count,
+"2 digits"), and leaves the others as the form had them, so every password
+meets the site's rule. The kinds are chosen from the text alone, so the
+web preview and `tep` agree:
+
+1. letters, when listed: every password has them, so they set nothing;
+2. kinds the text requires anyway, or an earlier choice kept;
+3. then the cheapest to type: a lowercase letter, an uppercase letter, a
+   digit, a symbol.
+
+A kind the text rules out ("no special characters", "letters and numbers
+only") is never chosen. A choice is read from a count of kinds ("3 of",
+"3 out of 4", "any 2 of", "3 character types") with the kinds after it in
+the clause, or on the lines under it (a bulleted or numbered list, ending
+at the first line naming no kind, or at the stated total); with no list
+and a class word, the usual four. Kinds joined by "or" ("a number or a
+symbol", "numbers and/or symbols") are a choice of one. "One of each" is
+all of them, and a count over one kind ("one of !@#$%", "2 of the
+following special characters") is a count of that kind. A choice it
+cannot keep (fewer kinds recognised than asked, too few left after the
+text's own exclusions, an unnamed count other than four) is named in
+`unsupported` and nothing of it is applied. A text past
+`MAX_RULES_TEXT_LENGTH` (2,000 characters) is not read at all.
+
 ## 2. Make up a sentence
 
 ```mermaid
@@ -68,8 +97,9 @@ flowchart TD
   H --> H2[shortest option: cut each template's windows\nto the fewest characters that reach the target]
   H2 --> I[choose plan: meets target → shortest;\nelse strongest + warning]
   I --> J[sample one sentence per batch: variant ∝ count,\ntotal length ∝ count, word lengths ∝ completions,\nword uniform; the hint keeps each word as written]
-  J --> K[per card, swaps: skip number, initials, two-letter, made-up;\nkeep the first letter; stay in the length window;\nkeep enough letters; pick uniformly among outcomes]
-  K --> L[render: capitals (a word in Shift's reach when asked),\nglue, separator, closing marks]
+  J --> J2[choose the capital's word from the words as typed:\nthe first ordinary word, or one in Shift's reach when asked]
+  J2 --> K[per card, swaps: skip number, initials, two-letter, made-up;\nkeep the capital's word starting with a letter; stay in the length window;\nkeep enough letters; pick uniformly among outcomes]
+  K --> L[render: the capital on that word's first letter\n(whole words for 2 or more), glue, separator, closing marks]
   L --> M[cold score from password + hint]
   M --> N[checks: every rule ✓/✗, warnings]
 ```
@@ -94,7 +124,9 @@ deliberate swaps are worked out again from the words as written, then the
 swaps and closing marks are drawn per card as usual. When the kept sentence
 cannot fit (the rules add or drop the number or made-up nouns, its length
 falls outside the range, or no version meets a rule), the error says why and
-the sentence stays.
+the sentence stays. A kept sentence must be one the tool could have drawn (a
+shape it makes, every word on its slot's list); one that is not is refused,
+and on load it is dropped and a new one drawn.
 
 ## 3. Use my sentence
 
@@ -142,11 +174,21 @@ figure is shown only in the session.
 | Figure | The attacker knows | From | Where |
 | --- | --- | --- | --- |
 | Raw | nothing | the password (`strength.ts`): characters × log2 of the alphabet the classes present make; a repeated character once | badge |
-| Strength | English and the usual habits, not this tool | the password (`strength.ts`): letters as English-like text at 2.3 bits each, a repeated letter once, one bit for a capital in a run; digits by their digits, a memorable run one pick; each distinct symbol one pick; a block typed again once (+ log2 of the times); a keyboard or alphabet walk of 4+ letters one pick of 1,000; a password exactly on the 10,001 most common passwords (`common.ts`) log2 of its place, and not allowed; no other lists, no table, no hint | badge, sorts "Strength" order |
+| Strength | English and the usual habits, not this tool | the password (`strength.ts`): letters as English-like text at 2.3 bits each, a repeated letter once, one bit for a capital in a run; a run of 2+ letters with no vowel (a e i o u y) as consonants, one pick of 20 each with a walk of 3+ one pick of 1,000, at most an English word with one letter changed, unless beside a digit, `@ ! \|` or a symbol typed once between letters (a swapped-out vowel); digits by their digits, a memorable run one pick; each distinct symbol one pick; a block typed again once (+ log2 of the times); a keyboard or alphabet walk of 4+ letters one pick of 1,000; a password exactly on the 10,001 most common passwords (`common.ts`) log2 of its place, and not allowed; no other lists, no table, no hint | badge, sorts "Strength" order |
 | Difficulty | — | the password and its memory load (hint words + random swaps; `difficulty.ts`), for the chosen typing mode | badge |
 | Memorability | — | the password and its hint (`score.ts`) | badge |
 | Bits | this tool exactly, and the swaps in force in this session | the password, the hint and the session's swap list (`score.ts`, below) | dim beside a card's badges, the bits panel, `tep g` |
 | zxcvbn | (not a score) the zxcvbn library's second opinion | the password: zxcvbn 4.4.2's crack time at 10^4 guesses/s, read as very weak / weak / good / strong (`zxcvbnReading.ts`, `state/zxcvbnCheck.ts`), worked out in the browser | the fourth badge everywhere; saved with a My list entry |
+
+The Strength badge is green from 50 bits, yellow from 40 and red below,
+judged on the figure as shown, and its tip names the band: high, fair or
+low. The presets are targets for the bits and never describe Strength.
+Strength assumes less than the bits, and reads below a card's bits only
+where the bits price a short string as one pick of a list that also holds
+long ones (a made-up noun, a number), count a swap by where it landed
+when it leaves the text as long, or ignore a shortest plan's length
+window; never below the plan's exact figure in a shortest plan (figures
+in `docs/decisions.md`, Scoring).
 
 ```mermaid
 flowchart TD
@@ -199,17 +241,28 @@ persisted; drafts are not.
 - Every generated password passes every check across random requirement
   combinations (`generate.test.ts`), including uppercase rules with
   initials, two-letter words and letter-removing swaps.
+- Every drawn sentence is one the tool could have drawn, and a stored one
+  that is not is dropped, never built (`generate.test.ts`,
+  `sessionStore.test.ts`).
 - Every contradiction is found, named and blocked; Automatic always
   resolves to a separator the rules allow; presets and pasted rules never
   leave a contradiction the text did not state; stored contradictions load
   repaired (`validation.test.ts`, `sitePresets.test.ts`,
   `ruleText.test.ts`, `settingsStore.test.ts`).
+- A pasted choice of N kinds is kept as exactly N named kinds, never all
+  of them, and every password then meets it (`ruleText.test.ts`, the
+  smoke suite).
 - Any sentence with a letter reduces to 12 characters that pass every rule
   (`reduceTo12.test.ts`).
 - Swap counts are exact and sampling is uniform; a word never vanishes;
   enough letters always remain (`twists.test.ts`).
 - Cold scores are pure, serialisable, and agree with what the cards show
   (`score.test.ts`, `generate.test.ts`).
+- Strength is never below the plan's exact figure in a shortest plan, in
+  any mode, made-up nouns or not; without made-up nouns, outside shortest
+  plans, it is below a card's bits for at most 2 % of cards and by at most
+  3 bits; a run with no vowel never reads below its English reading
+  (`strengthFloor.test.ts`, `strength.test.ts`).
 - Deliberate swaps only ever remove an awkward move, keep the first letter,
   never merge two words, are recognised cold at zero bits and never read as
   random swaps, and keep the plan's count equal to a brute-force count over

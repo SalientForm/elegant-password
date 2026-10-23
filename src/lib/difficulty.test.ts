@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { difficultyIn, LEVELS, levelFor, measure, overallLevel, RUBRIC, RUBRICS, scoreDifficulty, TYPING_MODE_IDS } from './difficulty';
+import { difficultyIn, LEVELS, levelFor, levelRange, MAX_LEVEL, measure, overallLevel, RUBRIC, RUBRICS, scoreDifficulty, TYPING_MODE_IDS } from './difficulty';
 
 describe('difficulty rubric', () => {
   it('has weights summing to 100 and rising cut-points, in every typing mode', () => {
@@ -20,6 +20,14 @@ describe('difficulty rubric', () => {
     expect(levelFor(4, [2, 4, 6, 8])).toBe(2);
     expect(levelFor(99, [2, 4, 6, 8])).toBe(4);
     expect([0, 20, 21, 60, 61, 100].map(overallLevel)).toEqual([0, 0, 1, 2, 3, 4]);
+    // The totals each level is said to cover are the ones it is given for: 0-20 effortless up to 81-100 hard.
+    expect(MAX_LEVEL).toBe(LEVELS.length - 1);
+    for (const level of [0, 1, 2, 3, 4] as const) {
+      const { min, max } = levelRange(level);
+      expect([overallLevel(min), overallLevel(max)], LEVELS[level]).toEqual([level, level]);
+    }
+    expect(levelRange(0).min).toBe(0);
+    expect(levelRange(MAX_LEVEL).max).toBe(100);
   });
 
   it('measures the things it claims to', () => {

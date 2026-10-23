@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { zxcvbnBand, zxcvbnLine } from './zxcvbnReading';
+import { ZXCVBN_BAND, ZXCVBN_LABELS, zxcvbnBand, zxcvbnLine } from './zxcvbnReading';
 
 describe("reading zxcvbn's crack time", () => {
   it('turns crack times into four words', () => {
@@ -16,5 +16,11 @@ describe("reading zxcvbn's crack time", () => {
 
   it('says it in one line', () => {
     expect(zxcvbnLine({ label: 'strong', crackTime: 'centuries' })).toBe('zxcvbn: strong (centuries to crack)');
+  });
+});
+
+describe("zxcvbn's colour bands", () => {
+  it('puts strong and good in green, weak in yellow and very weak in red', () => {
+    expect(ZXCVBN_LABELS.map((l) => ZXCVBN_BAND[l])).toEqual(['low', 'mid', 'high', 'high']);
   });
 });

@@ -98,6 +98,18 @@ describe('scoreCold', () => {
     expect(s.template).toEqual(['adj', 'noun', 'verb', 'num', 'adj', 'noun']);
   });
 
+  it('counts the start of the word with the capital as protected wherever it is', () => {
+    const hint = 'smoky stags stuff 8 scary apples';
+    const s = scoreCold('smoky;stagz;stuff;8;5cary;Appl3s', hint);
+    const bases = s.words.map((w) => w.base);
+    const count = (capitalAt: number) =>
+      twistOutcomes(bases, { count: 3, mappings: BUILT_IN_MAPPINGS, skip: (i) => i === 3, capitalAt, minDelta: -Infinity, maxDelta: Infinity }, 3);
+    expect(s.twistCount).toBe(3);
+    expect(count(5)).not.toBe(count(0));
+    expect(s.twistOptions).toBe(count(5)); // "Apples" took the capital, so its "a" was never swapped; "smoky"'s "s" could have been
+    expect(scoreCold('Smoky;stagz;stuff;8;5cary;appl3s', hint).twistOptions).toBe(count(0));
+  });
+
   it('handles whole words in capitals, made-up nouns and glue', () => {
     const r = generate(req({ minUppercase: 3, madeUp: 1, glue: true, initials: 1, separator: ';', twists: 1, count: 8 }), { rng: seeded(21) });
     for (const s of r.suggestions) {
@@ -240,7 +252,9 @@ describe('memorability', () => {
     const swapped = scoreCold('Sally;e4ts;sw33ts', 'Sally eats sweets').memorability;
     expect(swapped.fidelity).toBe(1); // same lengths, just spelled differently
     expect(swapped.swappedWords).toBe(2);
-    expect(swapped.score).toBe(whole.score - 10);
+    expect(swapped.swapPenalty).toBe(10);
+    expect(whole.swapPenalty).toBe(0);
+    expect(swapped.score).toBe(whole.score - swapped.swapPenalty);
     const shortened = scoreCold('jr;B;5ls;Fpc', 'jupiter brings 5 leds for piece').memorability;
     expect(shortened.sameSize).toBe(1); // only "5" kept its length
     expect(shortened.fidelity).toBeLessThan(0.5);
@@ -297,7 +311,7 @@ describe('deliberate swaps in cold scoring', () => {
   const plain = '13;Wise;kids;openly;pet;twisty;toys';
   const eased = '13;Wyse;kyds;openly;pet;twysty;toys';
   const outcomes = (bases: string[], count: number) =>
-    twistOutcomes(bases, { count, mappings: BUILT_IN_MAPPINGS, skip: (i) => i === 0, protectFirstLetter: true, minDelta: -Infinity, maxDelta: Infinity }, count);
+    twistOutcomes(bases, { count, mappings: BUILT_IN_MAPPINGS, skip: (i) => i === 0, capitalAt: 1, minDelta: -Infinity, maxDelta: Infinity }, count);
 
   it('recognises a deliberate swap from the hint alone and counts it as zero bits', () => {
     const a = scoreCold(plain, hint);

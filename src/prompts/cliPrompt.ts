@@ -9,20 +9,23 @@
 // Only the CLI's pure modules are imported: the Fun page runs in a browser.
 
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
-import { MAX_LENGTH } from '../lib/validation';
+import { MAX_RULES_TEXT_LENGTH } from '../lib/ruleText';
+import { DEFAULT_SITE_PRESET } from '../lib/sitePresets';
+import { capitalise } from '../lib/text';
+import { MAX_LENGTH, MAX_TARGET_BITS } from '../lib/validation';
 import { problemsOf, warningsOf } from '../lib/consistency';
 import testTitles from '../lib/testTitles.json';
 import { clipboardTools } from '../cli/clipboardTools';
 import { emptyModel } from '../cli/configModel';
 import { serializeConfig } from '../cli/configText';
-import { CONFIG_VERSION } from '../cli/configVersion';
+import { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../cli/configVersion';
 import { fieldShape, LOOSEST, noAnswers, QUESTION_BUDGET_MS, type SelectShape } from '../cli/constraints';
-import { EXIT, EXIT_MEANINGS } from '../cli/errors';
-import { describeValue, FIELDS, fieldNamed, keyPath, type CliField } from '../cli/fields';
+import { CliError, EXIT, EXIT_MEANINGS } from '../cli/errors';
+import { COUNT_AT_TERMINAL, COUNT_PIPED, DEFAULT_SORT_HINT, describeValue, FIELDS, fieldNamed, keyPath, SEPARATOR_NAMES, STRENGTH_INPUTS, type CliField } from '../cli/fields';
 import { FORMATS } from '../cli/flagList';
 import { CONFIG_HELP, generateHelp, OVERVIEW } from '../cli/help';
 import { explainWarning, renderExplained } from '../cli/messages';
-import { MODE_NAMES, SITE_NAMES } from '../cli/names';
+import { MODE_NAMES, SITE_NAMES, siteName } from '../cli/names';
 import { PLAIN } from '../cli/output';
 import { contradictionError, renderError, renderNotice } from '../cli/report';
 import { emptyLayer, resolve, type Layer } from '../cli/resolve';
@@ -30,7 +33,6 @@ import type { Source } from '../cli/sources';
 import { answersOf, formatReview, reviewLines } from '../cli/wizard';
 
 const code = (s: string) => `\`${s}\``;
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const block = (s: string, lang = '') => `\`\`\`${lang}\n${s.trimEnd()}\n\`\`\``;
 
 /**
@@ -45,12 +47,12 @@ export const SHARED_CORE: readonly { module: string; names: string[]; for: strin
   { module: 'explain', names: ['typingLines', 'twistLine', 'twistOptionsLine', 'easedIn', 'easedLine'], for: 'the "Why?" sentences, for --explain' },
   { module: 'consistency', names: ['problemsOf', 'warningsOf', 'reachableBits'], for: 'contradictions (rules, then planning) and the unreachable-target warning' },
   { module: 'generate', names: ['planProblem', 'shortfallWarning', 'checkRequirements', 'DEFAULT_REQUIREMENTS', 'STRENGTH_PRESETS'], for: 'what stops planning, early exit; the engine\'s own shortfall warning, to drop as a duplicate' },
-  { module: 'validation', names: ['ruleProblems', 'FIELD_LABELS', 'MAX_LENGTH', 'MAX_COUNT'], for: 'rule contradictions with codes, labels and limits' },
-  { module: 'sitePresets', names: ['SITE_PRESETS', 'RULE_KEYS', 'ALL_SYMBOLS'], for: 'the site presets, named by slugs of their labels' },
+  { module: 'validation', names: ['ruleProblems', 'FIELD_LABELS', 'MIN_LENGTH', 'MAX_LENGTH', 'MIN_COUNT', 'MAX_COUNT'], for: 'rule contradictions with codes, labels and limits' },
+  { module: 'sitePresets', names: ['SITE_PRESETS', 'DEFAULT_SITE_PRESET', 'RULE_KEYS', 'ALL_SYMBOLS'], for: 'the site presets, named by slugs of their labels, and the one that is the defaults' },
   { module: 'modeProfiles', names: ['profileValues', 'unusedIn', 'PROFILE_KEYS', 'PROFILE_LABELS', 'MINIMAL_BITS', 'modeLabel'], for: 'the options each typing mode fills in, and which it has no use for' },
-  { module: 'ruleText', names: ['parseRuleText'], for: 'rules pasted from a sign-up form' },
+  { module: 'ruleText', names: ['parseRuleText', 'mergeParsedRules'], for: 'rules pasted from a sign-up form, merged in as the web form merges them (never settled: tep reports a contradiction instead)' },
   { module: 'mappingSettings', names: ['activeMappings', 'mappingSettingsProblems', 'DEFAULT_MAPPING_SETTINGS'], for: 'which swaps are on, and what is wrong with a list of them' },
-  { module: 'choices', names: ['COMFORT_CHOICES', 'SORT_CHOICES', 'SHRINK_CHOICES', 'LENGTH_TAG_CHOICES', 'separatorChoices'], for: 'every choice list with the words the web form shows' },
+  { module: 'choices', names: ['COMFORT_CHOICES', 'SORT_CHOICES', 'SHRINK_CHOICES', 'LENGTH_TAG_CHOICES', 'SEPARATOR_KINDS', 'separatorChoices'], for: 'every choice list with the words the web form shows' },
   { module: 'fromSentence', names: ['DEFAULT_SENTENCE_OPTIONS', 'SHRINK_FROM_RANGE', 'TARGET_LENGTH_RANGE'], for: 'sentence-mode defaults and ranges' },
   { module: 'difficulty', names: ['TYPING_MODES', 'DEFAULT_TYPING_MODE'], for: 'the typing modes and their hints' },
   { module: 'text', names: ['normalizeSentence'], for: 'whether a sentence has any words' },
@@ -90,12 +92,24 @@ function flagRow(f: CliField): string {
   const takes =
     k.type === 'bool'
       ? `${code(`--${f.name}`)} / ${code(`--no-${f.name}`)}`
-      : `${code(`--${f.name} <${k.type === 'int' ? `${k.min}-${k.max}` : k.type === 'choice' ? k.choices.map((c) => c.value).join('|') : k.type === 'symbols' ? 'symbols' : k.type === 'separator' ? 'auto|space|none|symbol' : k.type === 'strength' ? 'preset|bits' : 'n|none'}>`)}`;
+      : `${code(`--${f.name} <${k.type === 'int' ? `${k.min}-${k.max}` : k.type === 'choice' ? k.choices.map((c) => c.value).join('|') : k.type === 'symbols' ? 'symbols' : k.type === 'separator' ? [...SEPARATOR_NAMES.map((n) => n.name), 'symbol'].join('|') : k.type === 'strength' ? 'preset|bits' : 'n|none'}>`)}`;
   const target = f.target.kind === 'req' ? `${code(`req.${f.target.key}`)}` : f.target.kind === 'sentence' ? `${code(`sentenceOptions.${f.target.key}`)}` : code(f.target.key);
   return `| ${takes}${f.name === 'count' ? ` (${code('-n')})` : ''} | ${code(keyPath(f))} | ${target} | ${f.label} | ${f.description} |`;
 }
 
 /** Flags with a source each, as tep g's parser would give them. */
+/** tep's refusal of a rules text past the core's cap, as `resolve` throws it. */
+const RULES_TOO_LONG = (() => {
+  const layer = emptyLayer();
+  layer.rulesText = { value: 'x'.repeat(MAX_RULES_TEXT_LENGTH + 1), source: { kind: 'flag', flag: '--rules' } };
+  try {
+    resolve(undefined, layer, { tty: true });
+  } catch (e) {
+    return e as CliError;
+  }
+  throw new Error('a rules text past the cap was read');
+})();
+
 function flagged(values: Record<string, unknown>, extra: { site?: string; mode?: (typeof MODE_NAMES)[number]['value'] } = {}): Layer {
   const layer = emptyLayer();
   const flag = (name: string): Source => ({ kind: 'flag', flag: `--${name}` });
@@ -133,12 +147,12 @@ function examples(): string {
 }
 
 function wizardExamples(): string {
-  const answers = answersOf({ ...emptyModel(), mode: 'two-finger', site: 'typical-site' });
+  const answers = answersOf({ ...emptyModel(), mode: 'two-finger', site: siteName(DEFAULT_SITE_PRESET) });
   const review = formatReview(reviewLines(answers)).join('\n');
   const separator = fieldShape(fieldNamed('separator')!, { ...noAnswers(), mode: 'ten-finger', site: 'no-spaces', rulesAnswered: true, optionsHow: 'each' }, { lineOf: () => undefined }) as SelectShape<unknown>;
   const choices = separator.choices.map((c) => `- ${c.label}${c.blocked ? `: not allowed: ${c.blocked}` : ''}`).join('\n');
   return [
-    `The review for Two-finger with the Typical site preset and the mode's options (the sample password under it is random):`,
+    `The review for Two-finger with the ${DEFAULT_SITE_PRESET.label} preset and the mode's options (the sample password under it is random):`,
     block(review),
     'The separator question after the No spaces preset (Ten-finger, options one by one): the space is shown, dimmed, and cannot be picked; its reason is in its label, since a disabled choice cannot be focused to show a hint.',
     choices,
@@ -201,7 +215,7 @@ ${code('tep uninstall')} removes each ${code('tep')} in ${code('$TEP_BIN_DIR')},
 
 ### 4.1 Where settings come from
 
-Lowest to highest, each layer replacing only the fields it states: the core's defaults (${code('DEFAULT_REQUIREMENTS')}, ${code('DEFAULT_SENTENCE_OPTIONS')}, all built-in swaps); the config file (${code('-c <file>')}, else ${code('./tep.yml')} if present; no parent-directory search, no global file); then the flags. Within the file, then within the flags: the site preset, the rules text (${code('--rules')}, flags only, read with ${code('parseRuleText')}: only the fields the text states, symbols it rules out removed; text with no rules is exit ${EXIT.usage}, and so is text stating a rule tep cannot keep (a length past ${MAX_LENGTH}, "no digits", "at most 2 symbols"), each named, "Not kept: exactly 300 characters: this tool makes at most ${MAX_LENGTH}.", rather than made into passwords that break it; what it read is a note on stderr), the rule values, the typing mode's preset (${code('profileValues(mode, rules)')}: its "space if allowed" separator resolves by whether spaces are allowed), then the option values. A ${code('--mode')} on the command line replaces the file's own options, as picking a mode does in the web app. Then the sentence options and the output. The count defaults to 5 when stdout is a terminal and 1 when it is piped. Every field remembers where its value came from. Options set by hand that the mode has no use for (${code('unusedIn')}) are warnings ("${resolve(undefined, flagged({ 'avoid-pinky': true }, { mode: 'two-finger' }), { tty: true }).warnings[0]}"), not errors.
+Lowest to highest, each layer replacing only the fields it states: the core's defaults (${code('DEFAULT_REQUIREMENTS')}, ${code('DEFAULT_SENTENCE_OPTIONS')}, all built-in swaps); the config file (${code('-c <file>')}, else ${code('./tep.yml')} if present; no parent-directory search, no global file); then the flags. Within the file, then within the flags: the site preset, the rules text (${code('--rules')}, flags only, read with ${code('parseRuleText')}: only the fields the text states, symbols it rules out removed; text with no rules is exit ${EXIT.usage}, and so is text stating a rule tep cannot keep (a length past ${MAX_LENGTH}, "no digits", "at most 2 symbols"), each named, "Not kept: exactly 300 characters: this tool makes at most ${MAX_LENGTH}.", rather than made into passwords that break it; a choice of kinds ("at least 3 of the following 4: ...") is kept as that many named kinds, as in the web app; a text past ${MAX_RULES_TEXT_LENGTH} characters (${code('MAX_RULES_TEXT_LENGTH')}) is exit ${EXIT.usage} too, refused whole, never cut: "${RULES_TOO_LONG.title}" then "${RULES_TOO_LONG.details[0]}"; what it read is a note on stderr), the rule values, the typing mode's preset (${code('profileValues(mode, rules)')}: its "space if allowed" separator resolves by whether spaces are allowed), then the option values. A ${code('--mode')} on the command line replaces the file's own options, as picking a mode does in the web app. Then the sentence options and the output. The count defaults to ${COUNT_AT_TERMINAL} when stdout is a terminal and ${COUNT_PIPED} when it is piped. Every field remembers where its value came from. Options set by hand that the mode has no use for (${code('unusedIn')}) are warnings ("${resolve(undefined, flagged({ 'avoid-pinky': true }, { mode: 'two-finger' }), { tty: true }).warnings[0]}"), not errors.
 
 Then ${code('problemsOf')} (only ${code('ruleProblems')} with ${code('--sentence')}, as there is no made-up sentence to plan); any problem is exit ${EXIT.contradiction} with no password made. Then ${code('runInputs(inputsFor(settings))')} and ${code('presentSuggestions(suggestions, typingMode, sort)')}. An engine failure marked unexpected is exit ${EXIT.unexpected}; any other (a sentence that cannot be fitted) is exit ${EXIT.contradiction}.
 
@@ -215,7 +229,7 @@ Every setting is a row of one table (${code('src/cli/fields.ts')}), which the pa
 | --- | --- | --- | --- | --- |
 ${FIELDS.map(flagRow).join('\n')}
 
-Values are parsed by one function for flags and config alike, and refused with what was found and what is expected: whole numbers in range; ${code('true')}/${code('false')} in a file, ${code('--x')}/${code('--no-x')} on the command line; a choice by value, with "Did you mean" for a near miss (edit distance counting a swap of neighbouring letters as one, within a third of the length, or a unique prefix); allowed symbols as keyboard symbols only, each once (a letter, digit, space or off-keyboard character is refused, naming it); a separator as ${code('auto')}, ${code('space')}, ${code('none')} or one keyboard symbol; a strength as a preset name (${code('minimal')}, ${code('everyday')}, ${code('strong')}, ${code('very-strong')}, ${code('master-password')} or ${code('master')}) or bits 0-256; a target length as a number or ${code('none')}. Modes: ${MODE_NAMES.map((m) => code(m.name) + (m.aliases.length ? ` (or ${m.aliases.map(code).join(', ')})` : '')).join(', ')}. Site presets: ${SITE_NAMES.map((s) => code(s.name)).join(', ')} (slugs of the core's labels). Formats: ${FORMATS.map(code).join(', ')}.
+Values are parsed by one function for flags and config alike, and refused with what was found and what is expected: whole numbers in range; ${code('true')}/${code('false')} in a file, ${code('--x')}/${code('--no-x')} on the command line; a choice by value, with "Did you mean" for a near miss (edit distance counting a swap of neighbouring letters as one, within a third of the length, or a unique prefix); allowed symbols as keyboard symbols only, each once (a letter, digit, space or off-keyboard character is refused, naming it); a separator as ${SEPARATOR_NAMES.map((n) => code(n.name)).join(', ')} or one keyboard symbol; a strength as a preset name (${STRENGTH_INPUTS.slice(0, -1).map(code).join(', ')} or ${code(STRENGTH_INPUTS.at(-1)!)}) or bits 0-${MAX_TARGET_BITS}; a target length as a number or ${code('none')}. Modes: ${MODE_NAMES.map((m) => code(m.name) + (m.aliases.length ? ` (or ${m.aliases.map(code).join(', ')})` : '')).join(', ')}. Site presets: ${SITE_NAMES.map((s) => code(s.name)).join(', ')} (slugs of the core's labels). Formats: ${FORMATS.map(code).join(', ')}.
 
 The command line itself can contradict: each of these is exit ${EXIT.usage} with the flag named: an unknown flag (with the likeliest one meant); a missing value; a value for an on/off flag; a value starting with a dash ("If it is the value, join them with "=": --symbols=-_"); an argument such as ${code('mode=ten-finger')} ("Flags start with two dashes: --mode ten-finger"); a flag given twice; ${code('--x')} with ${code('--no-x')}; ${code('-c')} with ${code('--no-config')}; sentence options without ${code('--sentence -')}; ${code('--explain')} with ${code('--format plain')}. ${code('--sentence')} takes only ${code('-')}: the sentence as an argument would land in shell history and ${code('ps')}, so it is refused with that reason; with ${code('-')} it is one line of stdin (none, several, or one with no words is exit ${EXIT.usage}), or a hidden prompt when stdin is a terminal.
 
@@ -239,7 +253,7 @@ YAML, version ${CONFIG_VERSION}, kebab-case keys from the field table: ${code('v
 
 ${block(sample, 'yaml')}
 
-Reading (${code('parseDocument')} with a line counter, the shape checked with a strict zod schema, every value with the flags' parser) reports **every** problem at once as exit ${EXIT.config}: "<file> is not a valid tep config (n problems):", then for each ${code('<file>:<line>: <what>')} and the line quoted. Problems: YAML that does not parse; a key twice; YAML warnings too, since an unquoted ${code('symbols: !@#$')} is a tag and would silently read as no symbols (say so, and how to quote); an unquoted ${code('#')} that YAML reads as a comment; an empty file; a top level that is not a map; no version, a newer one ("written by a newer tep"), a wrong one; unknown keys with "Did you mean" and the keys allowed there; a section that is not a map; an unknown mode or preset; each bad value; each bad swap (numbered as the file numbers them, duplicates naming the first). A missing ${code('-c')} file, a directory, an unreadable file, or one over 64 KB says which. A file that parses but contradicts itself is exit ${EXIT.contradiction}, its values' sources naming their lines. Writing is atomic: a temporary file beside it, flushed, renamed over it; a symlink is followed and the file it points to is what changes; an existing file keeps its mode, a new one is 0644; a failure says why, naming the file as the user wrote it, and changes nothing. Strings that are not plain lowercase names starting with a letter are written in double quotes, so a symbol is never read as YAML and a swap to "0" never reads back as a number (a bare one is refused with how to quote it). The options the typing mode has no use for are not written, so tep g never warns about a file tep config wrote. A config never holds a sentence, a secret or a password.
+Reading (${code('parseDocument')} with a line counter, the shape checked with a strict zod schema, every value with the flags' parser) reports **every** problem at once as exit ${EXIT.config}: "<file> is not a valid tep config (n problems):", then for each ${code('<file>:<line>: <what>')} and the line quoted. Problems: YAML that does not parse; a key twice; YAML warnings too, since an unquoted ${code('symbols: !@#$')} is a tag and would silently read as no symbols (say so, and how to quote); an unquoted ${code('#')} that YAML reads as a comment; an empty file; a top level that is not a map; no version, a newer one ("written by a newer tep"), a wrong one; unknown keys with "Did you mean" and the keys allowed there; a section that is not a map; an unknown mode or preset; each bad value; each bad swap (numbered as the file numbers them, duplicates naming the first). A missing ${code('-c')} file, a directory, an unreadable file, or one over ${MAX_CONFIG_BYTES / 1024} KB says which. A file that parses but contradicts itself is exit ${EXIT.contradiction}, its values' sources naming their lines. Writing is atomic: a temporary file beside it, flushed, renamed over it; a symlink is followed and the file it points to is what changes; an existing file keeps its mode, a new one is 0644; a failure says why, naming the file as the user wrote it, and changes nothing. Strings that are not plain lowercase names starting with a letter are written in double quotes, so a symbol is never read as YAML and a swap to "0" never reads back as a number (a bare one is refused with how to quote it). The options the typing mode has no use for are not written, so tep g never warns about a file tep config wrote. A config never holds a sentence, a secret or a password.
 
 ## 6. tep config [file]
 
@@ -248,9 +262,9 @@ Needs a terminal (otherwise exit ${EXIT.usage}, pointing at the file format, whi
 ### 6.1 Questions, in order
 
 1. **Typing mode**: the core's four modes with their hints, Ten-finger first chosen.
-2. **The site's rules**: each site preset with its note; "Paste the site's rules" (one line, read with ${code('parseRuleText')} over the Typical site's rules, "Read as: ..." said; rules that do not fit together are said and each rule is asked, starting from the text's values where they fit; what the text states that tep cannot keep is said as it is read, "Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.", and text with nothing else is refused; a rule the question cannot take is named as it is dropped, "Dropped the pasted rule for required symbols, 3: ... tep's passwords will not meet it; check what the site accepts", and listed on the review as "Dropped: ..." while the answer differs from what the text asked); or "Set each rule", asked in an order where each limits the next: minimum length, maximum length, allowed symbols, spaces, required uppercase letters, digits, symbols.
+2. **The site's rules**: each site preset with its note; "Paste the site's rules" (one line, read with ${code('parseRuleText')} over the ${DEFAULT_SITE_PRESET.label}'s rules, "Read as: ..." said; rules that do not fit together are said and each rule is asked, starting from the text's values where they fit; what the text states that tep cannot keep is said as it is read, "Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.", and text with nothing else is refused, as is a text past ${MAX_RULES_TEXT_LENGTH} characters, with the core's message, the question asked again; a rule the question cannot take is named as it is dropped, "Dropped the pasted rule for required symbols, 3: ... tep's passwords will not meet it; check what the site accepts", and listed on the review as "Dropped: ..." while the answer differs from what the text asked); or "Set each rule", asked in an order where each limits the next: minimum length, maximum length, allowed symbols, spaces, required uppercase letters, digits, symbols.
 3. **Options**: "Use the <mode> preset" or "Set each option", asked in the core's ${code('PROFILE_KEYS')} order, skipping the mode's unused options (set to the preset's neutral values). Strength offers the presets and "Another number of bits".
-4. **Output**: keep 5 passwords (1 piped), easiest first, or change the count and order (the review's lines "Count" and "Order").
+4. **Output**: keep ${COUNT_AT_TERMINAL} passwords (${COUNT_PIPED} piped), ${DEFAULT_SORT_HINT}, or change the count and order (the review's lines "Count" and "Order").
 
 Then the review (6.3).
 
@@ -260,7 +274,7 @@ A choice is allowed when the answers so far, the choice, and the loosest value o
 
 | Setting | Loosest |
 | --- | --- |
-${Object.entries(LOOSEST).map(([name, v]) => `| ${capital(fieldNamed(name)!.label)} | ${describeValue(fieldNamed(name)!, v)} |`).join('\n')}
+${Object.entries(LOOSEST).map(([name, v]) => `| ${capitalise(fieldNamed(name)!.label)} | ${describeValue(fieldNamed(name)!, v)} |`).join('\n')}
 
 - A choice not allowed is shown, dimmed, and cannot be picked, with the reason naming the answer that rules it out ("(from your answer for spaces)" while asking, "(see line 2)" on the review).
 - A question left with one allowed choice is not asked: the wizard states the value and why.
@@ -268,7 +282,7 @@ ${Object.entries(LOOSEST).map(([name, v]) => `| ${capital(fieldNamed(name)!.labe
 - Allowed symbols are typed, and refused with the reason when they are not keyboard symbols or contradict an answer.
 - A strength the rules cannot reach is not ruled out: it is marked "warning: these rules reach at most n bits with your answers so far and the <mode> preset for the rest, so you would get the strongest they allow", and can be chosen.
 - **A contradiction that gets through is a bug**, checked after every answer: said at once ("<question>: <choice> contradicts your other answers: <reason>. This is a bug in tep: the question should not have offered it. Please report it at <issues>. Pick something else."), the choice then shown as not allowed, and the question asked again. A question with no allowed answer at all is exit ${EXIT.unexpected}, naming each choice and why.
-- Working out a question takes under ${QUESTION_BUDGET_MS} ms of CPU time; checks are remembered by settings, and the core's planning skips sentence shapes that cannot fit the window.
+- Working out a question takes under ${QUESTION_BUDGET_MS} ms on a typical laptop; checks are remembered by settings, and the core's planning skips sentence shapes that cannot fit the window.
 
 ${wizardExamples()}
 
@@ -280,7 +294,7 @@ ${block(CONFIG_HELP)}
 
 ## 7. Tests
 
-A fake terminal (captured streams, a scripted prompter that records every question, its options, disabled choices and their reasons, and refuses to pick a disabled one) runs every command in-process. Covered: every flag and every refusal; every exit code; config discovery and every config problem with its line; layering and sources; every contradiction code and its message; warnings; output formats and colour; the clipboard on each platform; the wizard's paths, constraints, one-choice questions, the bug path (with a shaper that lets a bad choice through), the review, blocked lines, loading, repairing, overwriting, Ctrl+C. Random walks (40 seeded) pick any allowed choice or in-range value at every question, review edits included, and must never meet a contradiction or a question with no allowed answer, must save a file ${code('tep g')} reads with no problem, and must shape every question within the budget (CPU time; 3x on CI). The adapter to ${code('@clack/prompts')} is tested with clack mocked. The bundle is built and run as a process: version, piped output that meets the rules, JSON checked with the core's ${code('checkRequirements')}, stdin sentences, exit codes 2, 3 and 4, and ${code('| head -1')}.
+A fake terminal (captured streams, a scripted prompter that records every question, its options, disabled choices and their reasons, and refuses to pick a disabled one) runs every command in-process. Covered: every flag and every refusal; every exit code; config discovery and every config problem with its line; layering and sources; every contradiction code and its message; warnings; output formats and colour; the clipboard on each platform; the wizard's paths, constraints, one-choice questions, the bug path (with a shaper that lets a bad choice through), the review, blocked lines, loading, repairing, overwriting, Ctrl+C. Random walks (40 seeded) pick any allowed choice or in-range value at every question, review edits included, and must never meet a contradiction or a question with no allowed answer, must save a file ${code('tep g')} reads with no problem, and must keep every question within 400 plannings and 400 length models (${code('pnpm measure:wizard')} times them against the budget). The adapter to ${code('@clack/prompts')} is tested with clack mocked. The bundle is built and run as a process: version, piped output that meets the rules, JSON checked with the core's ${code('checkRequirements')}, stdin sentences, exit codes ${EXIT.usage}, ${EXIT.contradiction} and ${EXIT.config}, and ${code('| head -1')}.
 
 ### Every test, by file
 
@@ -288,7 +302,7 @@ ${cliTests.map((f) => `**${f.file}**\n${f.titles.map((t) => (t.kind === 'group' 
 
 ## 8. Acceptance
 
-- ${code('tep g')} at the defaults prints five passwords at a terminal and one when piped, each meeting every rule of ${code('DEFAULT_REQUIREMENTS')} (max ${DEFAULT_REQUIREMENTS.maxLength}, target ${DEFAULT_REQUIREMENTS.targetBits} bits), scored exactly as the web app scores them.
+- ${code('tep g')} at the defaults prints ${COUNT_AT_TERMINAL} passwords at a terminal and ${COUNT_PIPED} when piped, each meeting every rule of ${code('DEFAULT_REQUIREMENTS')} (max ${DEFAULT_REQUIREMENTS.maxLength}, target ${DEFAULT_REQUIREMENTS.targetBits} bits), scored exactly as the web app scores them.
 - For every site preset and typing mode, the requirements tep resolves equal the web app's after picking that preset and mode.
 - No command ever generates from, or writes, settings that contradict themselves.
 - ${code('pnpm build:cli')} produces one file that runs with only Node 24.

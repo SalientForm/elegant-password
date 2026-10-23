@@ -1,12 +1,11 @@
-import { Fragment, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useZxcvbn } from './useZxcvbn';
 import { typingModeLabel, type Difficulty } from '../lib/difficulty';
 import { describeRemoved } from '../lib/ease';
-import { changedWordsOf, easedOf, twistKind, twistOptionsLine, typingLines } from '../lib/explain';
+import { capitalInitials, changedWordsOf, easedOf, twistKind, twistOptionsLine, typingLines } from '../lib/explain';
 import { roleLabel, type Suggestion } from '../lib/generate';
-import { isMadeUpNoun } from '../lib/grammar';
-import { ZXCVBN_LEVELS, zxcvbnLine, type ZxcvbnLabel } from '../lib/zxcvbnReading';
-import { READING_ORDER, scoreReadings } from '../lib/readings';
+import { ZXCVBN_BAND, ZXCVBN_GUESSES_PER_SECOND, ZXCVBN_LEVELS, ZXCVBN_VERSION, zxcvbnLine } from '../lib/zxcvbnReading';
+import { largeNumber, READING_ORDER, scoreReadings } from '../lib/readings';
 import { MEMORABILITY, scoreCold } from '../lib/score';
 import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
@@ -17,6 +16,7 @@ import { PasswordText } from './PasswordText';
 import { observeResize } from './resize';
 import { TOUCH, useMediaQuery } from './useMediaQuery';
 import type { ZxcvbnState } from './useZxcvbn';
+import type { Mode } from '../lib/engine';
 
 interface BadgeProps {
   /** Strength: for an attacker who knows English and the usual habits, not this tool. */
@@ -30,9 +30,6 @@ interface BadgeProps {
   zxcvbn?: ZxcvbnState;
 }
 
-/** zxcvbn's four words in the app's colours: strong and good green, weak yellow, very weak red. */
-const ZXCVBN_BAND: Record<ZxcvbnLabel, string> = { strong: 'high', good: 'high', weak: 'mid', 'very weak': 'low' };
-
 /** The fourth badge: zxcvbn's word for the password, "zxcvbn strong", or a placeholder while it is worked out. */
 export function ZxcvbnBadge({ state }: { state: ZxcvbnState }) {
   if (state === 'pending' || state === 'failed') {
@@ -43,10 +40,10 @@ export function ZxcvbnBadge({ state }: { state: ZxcvbnState }) {
       </span>
     );
   }
-  const text = `${zxcvbnLine(state)}: a second opinion from the zxcvbn library (4.4.2), its crack time for an offline attack on a slow hash, 10,000 guesses a second (${state.label}: ${ZXCVBN_LEVELS[state.label]}). Worked out here in this browser; not one of this app's scores`;
+  const text = `${zxcvbnLine(state)}: a second opinion from the zxcvbn library (${ZXCVBN_VERSION}), its crack time for an offline attack on a slow hash, ${largeNumber(ZXCVBN_GUESSES_PER_SECOND)} guesses a second (${state.label}: ${ZXCVBN_LEVELS[state.label]}). Worked out here in this browser; not one of this app's scores`;
   return (
     <InstantTip content={text} className="badge-tip">
-      <span className={`badge zxcvbn memo-${ZXCVBN_BAND[state.label]}`} role="img" aria-label={text}>
+      <span className={`badge zxcvbn band-${ZXCVBN_BAND[state.label]}`} role="img" aria-label={text}>
         zxcvbn {state.label}
       </span>
     </InstantTip>
@@ -60,7 +57,7 @@ export function ZxcvbnBadge({ state }: { state: ZxcvbnState }) {
  */
 export function ScoreBadges({ strength, raw, difficulty, memorability, zxcvbn }: BadgeProps) {
   const r = scoreReadings({ strength, raw, difficulty, memorability });
-  const colour = { strength: `memo-${r.strength.band}`, raw: 'memo-none', difficulty: `level-${r.difficulty.level}`, memorability: `memo-${r.memorability.band ?? 'none'}` };
+  // Every badge's colour is its reading's band (src/lib/readings.ts); Raw has none.
   // Each badge opens the app's instant tip with its full reading; no browser tooltip. The badge is an image to a screen reader: its name is the whole reading.
   return (
     <>
@@ -68,7 +65,7 @@ export function ScoreBadges({ strength, raw, difficulty, memorability, zxcvbn }:
         <Fragment key={key}>
           {key === 'memorability' && zxcvbn && <ZxcvbnBadge state={zxcvbn} />}
           <InstantTip content={r[key].text} className="badge-tip">
-            <span className={`badge ${key} ${colour[key]}`} role="img" aria-label={r[key].text}>
+            <span className={`badge ${key} band-${r[key].band ?? 'none'}`} role="img" aria-label={r[key].text}>
               {r[key].label} {r[key].value}
             </span>
           </InstantTip>
@@ -94,7 +91,7 @@ export interface CardContext {
   separator: string;
   minUppercase: number;
   /** 'sentence' when built from the user's own sentence. */
-  source: 'generated' | 'sentence';
+  source: Mode;
 }
 
 interface Props {
@@ -131,7 +128,8 @@ export function needsStack(head: HTMLElement): boolean | undefined {
   return contentWidth(password) + contentWidth(buttons) + gap > row.clientWidth + 1;
 }
 
-export function SuggestionCard({ suggestion, context, index, selected = false, onAdd, onPractise }: Props) {
+// The card renders only when its own props change; the page keeps those props stable, so a keystroke or a busy flip elsewhere passes it by.
+export const SuggestionCard = memo(function SuggestionCard({ suggestion, context, index, selected = false, onAdd, onPractise }: Props) {
   const mine = context.source === 'sentence';
   const touch = useMediaQuery(TOUCH); // a Copy button only where selecting text is hard
   const [open, setOpen] = useState(false); // every "Why?" starts closed
@@ -159,6 +157,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
   const changedWords = changedWordsOf(cold.words);
   // Deliberate swaps are read from the password and hint, like everything else the card says.
   const eased = easedOf(cold.words);
+  const initials = capitalInitials(words);
 
   return (
     <article className="card" aria-label={`Suggestion ${index + 1}`}>
@@ -208,14 +207,14 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
             <div className="chips">
               {words.map((w, i) => (
                 <span
-                  className={`chip ${w.slot}${/^[A-Z]$/.test(w.text) ? ' initial' : w.text !== w.original ? ' twisted' : ''}`}
+                  className={`chip ${w.slot}${initials.includes(w) ? ' initial' : w.text !== w.original ? ' twisted' : ''}`}
                   key={i}
                   title={w.text !== w.original ? `changed from "${w.original}"` : undefined}
                 >
                   <span>{w.text}</span>
                   {(() => {
                     // Your own words need no part-of-speech label; only show what they were when they changed.
-                    const label = w.slot === 'yours' ? '' : roleLabel(w, !mine && w.slot === 'noun' && isMadeUpNoun(w.original));
+                    const label = w.slot === 'yours' ? '' : roleLabel(w);
                     const text = w.text !== w.original ? (label ? `${label}: ${w.original}` : w.original) : label;
                     return text ? <small>{text}</small> : null;
                   })()}
@@ -241,11 +240,10 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
                   {words.some((w) => w.slot === 'end' || w.slot === 'prep') ? ', and where or when' : ''}. Grammar keeps
                   the words in order for you.
                 </p>
-                {words.some((w) => /^[A-Z]$/.test(w.text)) && (
+                {initials.length > 0 && (
                   <p>
                     Capital letters stand for whole words: picture{' '}
-                    {words
-                      .filter((w) => /^[A-Z]$/.test(w.text))
+                    {initials
                       .map((w) => `“${w.original}” for ${w.text}`)
                       .join(', ')}
                     . Any word with that letter works.
@@ -330,7 +328,7 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
               <li>
                 {memo.swappedWords === 0
                   ? 'No random swaps, so no penalty.'
-                  : `${memo.swappedWords} word${memo.swappedWords === 1 ? ' has' : 's have'} random swaps: −${Math.min(MEMORABILITY.maxSwapPenalty, memo.swappedWords * MEMORABILITY.swapPenalty)} points.`}
+                  : `${memo.swappedWords} word${memo.swappedWords === 1 ? ' has' : 's have'} random swaps: −${memo.swapPenalty} points.`}
                 {eased.length > 0 && ` ${eased.length === 1 ? 'The deliberate swap costs' : `The ${eased.length} deliberate swaps cost`} nothing: ${eased.length === 1 ? 'it comes' : 'each comes'} with its word.`}
               </li>
             </ul>
@@ -350,4 +348,4 @@ export function SuggestionCard({ suggestion, context, index, selected = false, o
       )}
     </article>
   );
-}
+});

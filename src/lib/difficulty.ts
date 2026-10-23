@@ -2,7 +2,7 @@
 // head, from 0 (effortless) to 100 (hard).
 //
 // Each criterion measures one thing and lands on a level from 0 to 4 using
-// fixed cut-points. A criterion's points are weight x level / 4, and the
+// fixed cut-points. A criterion's points are weight x level / MAX_LEVEL (4), and the
 // weights add up to 100. Cut-points were calibrated on generated passwords
 // so the default settings land in the easy-to-moderate range.
 //
@@ -13,10 +13,12 @@
 // scores differently in each; a score is a pure function of the password,
 // its memory load and the mode.
 
-import { isFarShift, isPinkyStretch, isRoll, pressFor, transitionCost, type Key } from './keyboard';
+import { isFarShift, isPinkyStretch, isRoll, ONE_HAND_SHIFT_REACH, pressFor, transitionCost, type Key } from './keyboard';
 
 export const LEVELS = ['Effortless', 'Easy', 'Moderate', 'Demanding', 'Hard'] as const;
 export type Level = 0 | 1 | 2 | 3 | 4;
+/** The top level, Hard: a criterion's points are weight x level / MAX_LEVEL. */
+export const MAX_LEVEL = (LEVELS.length - 1) as Level;
 
 export interface Measurements {
   characters: number;
@@ -66,7 +68,7 @@ export const TYPING_MODES: readonly { id: TypingMode; label: string; hint: strin
   {
     id: 'one-handed',
     label: 'One-handed',
-    hint: 'One hand on the keyboard. That hand holds Shift too, so each capital or symbol counts, and one more than 4 keys from either Shift key counts most.',
+    hint: `One hand on the keyboard. That hand holds Shift too, so each capital or symbol counts, and one more than ${ONE_HAND_SHIFT_REACH} keys from either Shift key counts most.`,
   },
   {
     id: 'quick',
@@ -97,7 +99,7 @@ const CRITERIA: Record<keyof Measurements, Omit<Criterion, 'weight' | 'cutPoints
   farShifts: {
     id: 'farShifts',
     name: 'One-hand Shift',
-    measures: 'Capitals and symbols more than 4 keys from both Shift keys, out of reach of the hand holding Shift',
+    measures: `Capitals and symbols more than ${ONE_HAND_SHIFT_REACH} keys from both Shift keys, out of reach of the hand holding Shift`,
     format: fixed(0),
   },
   offLetterKeys: { id: 'offLetterKeys', name: 'Off-letter keys', measures: 'Digits and symbols, which pull the hands off the letters', format: fixed(0) },
@@ -297,8 +299,11 @@ export function levelFor(value: number, cutPoints: Criterion['cutPoints'], highe
 /** Each level spans this many points: 0-20, 21-40, 41-60, 61-80, 81-100. */
 export const LEVEL_WIDTH = 20;
 
+/** The totals a level covers: 0-20 for Effortless, 21-40 for Easy, up to 81-100 for Hard. */
+export const levelRange = (level: Level) => ({ min: level === 0 ? 0 : level * LEVEL_WIDTH + 1, max: (level + 1) * LEVEL_WIDTH });
+
 export function overallLevel(score: number): Level {
-  return Math.min(4, Math.floor(score / (LEVEL_WIDTH + 0.0001))) as Level;
+  return Math.min(MAX_LEVEL, Math.floor(score / (LEVEL_WIDTH + 0.0001))) as Level;
 }
 
 /** Score a password against a mode's rubric. `chunks` is how many pieces there are to remember. */
@@ -307,7 +312,7 @@ export function scoreDifficulty(password: string, chunks: number, mode: TypingMo
   const criteria = RUBRICS[mode].map((criterion) => {
     const value = measurements[criterion.id];
     const level = levelFor(value, criterion.cutPoints, criterion.higherIsEasier);
-    return { id: criterion.id, value, level, points: (criterion.weight * level) / 4 };
+    return { id: criterion.id, value, level, points: (criterion.weight * level) / MAX_LEVEL };
   });
   const score = Math.round(criteria.reduce((sum, c) => sum + c.points, 0));
   const level = overallLevel(score);

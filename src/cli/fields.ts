@@ -4,12 +4,14 @@
 // prompt all read this table, so none of them can disagree with another.
 // Labels, ranges and choice lists come from the shared core (src/lib).
 
-import { COMFORT_CHOICES, LENGTH_TAG_CHOICES, SHRINK_CHOICES, SORT_CHOICES, type Choice } from '../lib/choices';
+import { COMFORT_CHOICES, LENGTH_TAG_CHOICES, SEPARATOR_KINDS, SHRINK_CHOICES, SORT_CHOICES, type Choice } from '../lib/choices';
 import { SHRINK_FROM_RANGE, TARGET_LENGTH_RANGE, type SentenceOptions } from '../lib/fromSentence';
-import { STRENGTH_PRESETS, type Requirements } from '../lib/generate';
+import { SEPARATOR_PREFERENCE, STRENGTH_PRESETS, type Requirements } from '../lib/generate';
 import { lookupKey } from '../lib/keyboard';
 import { PROFILE_LABELS } from '../lib/modeProfiles';
-import { FIELD_LABELS, isSymbol, MAX_COUNT, MAX_DIGITS, MAX_INITIALS, MAX_LENGTH, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_TARGET_BITS, MAX_TWISTS, MAX_LOWERCASE, MAX_UPPERCASE } from '../lib/validation';
+import { DEFAULT_SORT } from '../lib/sort';
+import { lowerFirst } from '../lib/text';
+import { FIELD_LABELS, isSymbol, MIN_COUNT, MIN_LENGTH, MAX_COUNT, MAX_DIGITS, MAX_INITIALS, MAX_LENGTH, MAX_MADE_UP, MAX_SHORTHAND, MAX_SYMBOLS, MAX_TARGET_BITS, MAX_TWISTS, MAX_LOWERCASE, MAX_UPPERCASE } from '../lib/validation';
 import { closest, slugOf } from './names';
 
 /** Where a setting lives in a config file. */
@@ -54,34 +56,47 @@ const int = (min: number, max: number): FieldKind => ({ type: 'int', min, max })
 const bool: FieldKind = { type: 'bool' };
 const req = (key: Exclude<keyof Requirements, 'count'>): FieldTarget => ({ kind: 'req', key });
 const sentence = (key: keyof SentenceOptions): FieldTarget => ({ kind: 'sentence', key });
-const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+const list = (items: readonly string[], last = 'or') => (items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} ${last} ${items.at(-1)}`);
+
+/** The separators that are not one symbol, by the names tep takes: the core's labels as names (auto, space, none). */
+export const SEPARATOR_NAMES: readonly { name: string; value: string }[] = SEPARATOR_KINDS.map((c) => ({ name: slugOf(c.label), value: c.value }));
+const separatorNames = SEPARATOR_NAMES.map((s) => s.name);
+
+/** The shrink style that keeps words whole, also taken by its label's name ("keep"), the web form's word for it. */
+const KEEP = SHRINK_CHOICES.find((c) => c.value === 'none')!;
+const KEEP_NAME = slugOf(KEEP.label);
+
+/** The orders, the default first, each with what it puts first: "difficulty (easiest to type first)". */
+const SORT_ORDERS = [...SORT_CHOICES].sort((a, b) => Number(b.value === DEFAULT_SORT) - Number(a.value === DEFAULT_SORT));
+/** What the default order puts first, as a phrase: "easiest to type first". */
+export const DEFAULT_SORT_HINT = lowerFirst(SORT_CHOICES.find((c) => c.value === DEFAULT_SORT)!.hint);
 
 export const FIELDS: readonly CliField[] = [
   // The site's rules.
-  { name: 'min-length', group: 'rules', target: req('minLength'), label: FIELD_LABELS.minLength, description: 'Shortest password the site accepts', kind: int(1, MAX_LENGTH) },
-  { name: 'max-length', group: 'rules', target: req('maxLength'), label: FIELD_LABELS.maxLength, description: 'Longest password the site accepts', kind: int(1, MAX_LENGTH) },
-  { name: 'min-uppercase', group: 'rules', target: req('minUppercase'), label: 'required uppercase letters', description: 'Uppercase letters the site requires', kind: int(0, MAX_UPPERCASE) },
-  { name: 'min-lowercase', group: 'rules', target: req('minLowercase'), label: 'required lowercase letters', description: 'Lowercase letters the site requires', kind: int(0, MAX_LOWERCASE) },
-  { name: 'min-digits', group: 'rules', target: req('minDigits'), label: 'required digits', description: 'Digits the site requires', kind: int(0, MAX_DIGITS) },
-  { name: 'min-symbols', group: 'rules', target: req('minSymbols'), label: 'required symbols', description: 'Symbols the site requires', kind: int(0, MAX_SYMBOLS) },
+  { name: 'min-length', group: 'rules', target: req('minLength'), label: FIELD_LABELS.minLength, description: 'Shortest password the site accepts', kind: int(MIN_LENGTH, MAX_LENGTH) },
+  { name: 'max-length', group: 'rules', target: req('maxLength'), label: FIELD_LABELS.maxLength, description: 'Longest password the site accepts', kind: int(MIN_LENGTH, MAX_LENGTH) },
+  { name: 'min-uppercase', group: 'rules', target: req('minUppercase'), label: `required ${FIELD_LABELS.minUppercase}`, description: 'Uppercase letters the site requires', kind: int(0, MAX_UPPERCASE) },
+  { name: 'min-lowercase', group: 'rules', target: req('minLowercase'), label: `required ${FIELD_LABELS.minLowercase}`, description: 'Lowercase letters the site requires', kind: int(0, MAX_LOWERCASE) },
+  { name: 'min-digits', group: 'rules', target: req('minDigits'), label: `required ${FIELD_LABELS.minDigits}`, description: 'Digits the site requires', kind: int(0, MAX_DIGITS) },
+  { name: 'min-symbols', group: 'rules', target: req('minSymbols'), label: `required ${FIELD_LABELS.minSymbols}`, description: 'Symbols the site requires', kind: int(0, MAX_SYMBOLS) },
   { name: 'symbols', group: 'rules', target: req('allowedSymbols'), label: FIELD_LABELS.allowedSymbols, description: 'Symbols the site accepts, as one string; empty for none', kind: { type: 'symbols' } },
-  { name: 'spaces', group: 'rules', target: req('allowSpaces'), label: 'spaces', description: 'Whether the site accepts spaces', kind: bool },
+  { name: 'spaces', group: 'rules', target: req('allowSpaces'), label: FIELD_LABELS.allowSpaces, description: 'Whether the site accepts spaces', kind: bool },
   // How the user likes passwords made: what a typing mode fills in.
-  { name: 'strength', group: 'options', target: req('targetBits'), label: lower(PROFILE_LABELS.targetBits), description: `Target strength: ${STRENGTH_PRESETS.map((p) => slugOf(p.label)).join(', ')}, or bits (0-${MAX_TARGET_BITS})`, kind: { type: 'strength' } },
-  { name: 'shortest', group: 'options', target: req('shortest'), label: lower(PROFILE_LABELS.shortest), description: PROFILE_LABELS.shortest, kind: bool },
-  { name: 'comfort', group: 'options', target: req('comfort'), label: lower(PROFILE_LABELS.comfort), description: 'Typing comfort: which share of words to use', kind: { type: 'choice', choices: COMFORT_CHOICES } },
-  { name: 'avoid-pinky', group: 'options', target: req('avoidPinkyStretch'), label: lower(PROFILE_LABELS.avoidPinkyStretch), description: PROFILE_LABELS.avoidPinkyStretch, kind: bool },
+  { name: 'strength', group: 'options', target: req('targetBits'), label: lowerFirst(PROFILE_LABELS.targetBits), description: `Target strength: ${STRENGTH_PRESETS.map((p) => slugOf(p.label)).join(', ')}, or bits (0-${MAX_TARGET_BITS})`, kind: { type: 'strength' } },
+  { name: 'shortest', group: 'options', target: req('shortest'), label: lowerFirst(PROFILE_LABELS.shortest), description: PROFILE_LABELS.shortest, kind: bool },
+  { name: 'comfort', group: 'options', target: req('comfort'), label: lowerFirst(PROFILE_LABELS.comfort), description: 'Typing comfort: which share of words to use', kind: { type: 'choice', choices: COMFORT_CHOICES } },
+  { name: 'avoid-pinky', group: 'options', target: req('avoidPinkyStretch'), label: lowerFirst(PROFILE_LABELS.avoidPinkyStretch), description: PROFILE_LABELS.avoidPinkyStretch, kind: bool },
   { name: 'shift-reach', group: 'options', target: req('shiftReach'), label: PROFILE_LABELS.shiftReach.replace(/^Keep/, 'keep'), description: PROFILE_LABELS.shiftReach, kind: bool },
-  { name: 'ease-swaps', group: 'options', target: req('easeSwaps'), label: lower(PROFILE_LABELS.easeSwaps), description: PROFILE_LABELS.easeSwaps, kind: bool },
-  { name: 'separator', group: 'options', target: req('separator'), label: lower(PROFILE_LABELS.separator), description: 'Between words: auto, space, none, or one allowed symbol', kind: { type: 'separator' } },
-  { name: 'number', group: 'options', target: req('includeNumber'), label: lower(PROFILE_LABELS.includeNumber), description: `${PROFILE_LABELS.includeNumber} even when digits are not required`, kind: bool },
-  { name: 'swaps', group: 'options', target: req('twists'), label: lower(PROFILE_LABELS.twists), description: `${PROFILE_LABELS.twists} per password`, kind: int(0, MAX_TWISTS) },
-  { name: 'initials', group: 'options', target: req('initials'), label: lower(PROFILE_LABELS.initials), description: 'Words typed as one capital letter', kind: int(0, MAX_INITIALS) },
-  { name: 'two-letter', group: 'options', target: req('shorthand'), label: lower(PROFILE_LABELS.shorthand), description: 'Words typed as two letters', kind: int(0, MAX_SHORTHAND) },
-  { name: 'made-up', group: 'options', target: req('madeUp'), label: lower(PROFILE_LABELS.madeUp), description: 'Nouns replaced by made-up key rolls', kind: int(0, MAX_MADE_UP) },
-  { name: 'glue', group: 'options', target: req('glue'), label: lower(PROFILE_LABELS.glue), description: 'Attach numbers and small-word initials to the next word', kind: bool },
+  { name: 'ease-swaps', group: 'options', target: req('easeSwaps'), label: lowerFirst(PROFILE_LABELS.easeSwaps), description: PROFILE_LABELS.easeSwaps, kind: bool },
+  { name: 'separator', group: 'options', target: req('separator'), label: lowerFirst(PROFILE_LABELS.separator), description: `Between words: ${separatorNames.join(', ')}, or one allowed symbol`, kind: { type: 'separator' } },
+  { name: 'number', group: 'options', target: req('includeNumber'), label: lowerFirst(PROFILE_LABELS.includeNumber), description: `${PROFILE_LABELS.includeNumber} even when digits are not required`, kind: bool },
+  { name: 'swaps', group: 'options', target: req('twists'), label: lowerFirst(PROFILE_LABELS.twists), description: `${PROFILE_LABELS.twists} per password`, kind: int(0, MAX_TWISTS) },
+  { name: 'initials', group: 'options', target: req('initials'), label: lowerFirst(PROFILE_LABELS.initials), description: 'Words typed as one capital letter', kind: int(0, MAX_INITIALS) },
+  { name: 'two-letter', group: 'options', target: req('shorthand'), label: lowerFirst(PROFILE_LABELS.shorthand), description: 'Words typed as two letters', kind: int(0, MAX_SHORTHAND) },
+  { name: 'made-up', group: 'options', target: req('madeUp'), label: lowerFirst(PROFILE_LABELS.madeUp), description: 'Nouns replaced by made-up key rolls', kind: int(0, MAX_MADE_UP) },
+  { name: 'glue', group: 'options', target: req('glue'), label: lowerFirst(PROFILE_LABELS.glue), description: 'Attach numbers and small-word initials to the next word', kind: bool },
   // "Use my sentence" (--sentence).
-  { name: 'shrink', group: 'sentence', target: sentence('shrink'), label: 'shrink style', description: 'How long words are shrunk: none (or keep: whole unless the target needs them shorter), vowels, ends', kind: { type: 'choice', choices: SHRINK_CHOICES } },
+  { name: 'shrink', group: 'sentence', target: sentence('shrink'), label: 'shrink style', description: `How long words are shrunk: ${SHRINK_CHOICES.map((c) => (c === KEEP ? `${c.value} (or ${KEEP_NAME}: ${lowerFirst(c.hint).replace(/\.$/, '')})` : c.value)).join(', ')}`, kind: { type: 'choice', choices: SHRINK_CHOICES } },
   { name: 'shrink-from', group: 'sentence', target: sentence('shrinkFrom'), label: 'shrink words from', description: 'Shrink words of this many letters or more', kind: int(SHRINK_FROM_RANGE.min, SHRINK_FROM_RANGE.max) },
   { name: 'target-length', group: 'sentence', target: sentence('targetLength'), label: 'target length', description: 'Compress toward this many characters, or none (or max): toward the maximum length', kind: { type: 'target-length' } },
   { name: 'drop', group: 'sentence', target: sentence('allowDropping'), label: 'dropping words', description: 'Words may be dropped to fit', kind: bool },
@@ -89,8 +104,8 @@ export const FIELDS: readonly CliField[] = [
   { name: 'padding', group: 'sentence', target: sentence('padding'), label: 'padding', description: 'Pad a sentence under the minimum length', kind: bool },
   { name: 'length-tag', group: 'sentence', target: sentence('lengthTag'), label: 'length tag', description: 'The tag that ends padding', kind: { type: 'choice', choices: LENGTH_TAG_CHOICES } },
   // Output.
-  { name: 'count', group: 'output', target: { kind: 'output', key: 'count' }, label: FIELD_LABELS.count, description: `How many passwords (1-${MAX_COUNT}); ${COUNT_AT_TERMINAL} at a terminal, ${COUNT_PIPED} when piped`, kind: int(1, MAX_COUNT) },
-  { name: 'sort', group: 'output', target: { kind: 'output', key: 'sort' }, label: 'order', description: 'Order: difficulty (easiest first), memorability or strength', kind: { type: 'choice', choices: SORT_CHOICES } },
+  { name: 'count', group: 'output', target: { kind: 'output', key: 'count' }, label: FIELD_LABELS.count, description: `How many passwords (${MIN_COUNT}-${MAX_COUNT}); ${COUNT_AT_TERMINAL} at a terminal, ${COUNT_PIPED} when piped`, kind: int(MIN_COUNT, MAX_COUNT) },
+  { name: 'sort', group: 'output', target: { kind: 'output', key: 'sort' }, label: 'order', description: `Order: ${list(SORT_ORDERS.map((c) => `${c.value} (${lowerFirst(c.hint)})`))}`, kind: { type: 'choice', choices: SORT_CHOICES } },
 ];
 
 export const fieldNamed = (name: string) => FIELDS.find((f) => f.name === name);
@@ -104,8 +119,12 @@ export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /** The strength presets by name, with the bits each stands for. */
 export const STRENGTH_NAMES = STRENGTH_PRESETS.map((p) => ({ name: slugOf(p.label), bits: p.bits, label: p.label }));
-/** "master" is short enough to type and cannot be mistaken. */
-const STRENGTH_ALIASES: Record<string, number> = { master: STRENGTH_PRESETS.find((p) => p.label === 'Master password')!.bits };
+/** The strongest preset is also taken by its name's first word ("master"): short enough to type, and it cannot be mistaken. */
+const STRONGEST = STRENGTH_NAMES.reduce((a, b) => (b.bits > a.bits ? b : a));
+const STRONGEST_SHORT = STRONGEST.name.split('-')[0]!;
+const STRENGTH_ALIASES = new Map<string, number>(STRONGEST_SHORT !== STRONGEST.name && !STRENGTH_NAMES.some((s) => s.name === STRONGEST_SHORT) ? [[STRONGEST_SHORT, STRONGEST.bits]] : []);
+/** Every name a strength preset is taken by, the aliases last. */
+export const STRENGTH_INPUTS: readonly string[] = [...STRENGTH_NAMES.map((s) => s.name), ...STRENGTH_ALIASES.keys()];
 
 const describeChar = (c: string) => (c === ' ' ? 'a space' : /[A-Za-z]/.test(c) ? `the letter "${c}"` : /\d/.test(c) ? `the digit "${c}"` : `"${c}"`);
 
@@ -167,7 +186,7 @@ export function parseValue(f: CliField, raw: unknown): Parsed<unknown> {
       const values = k.choices.map((c) => c.value);
       const typed = typeof raw === 'string' ? raw.trim().toLowerCase() : undefined;
       if (typed !== undefined && values.includes(typed)) return { ok: true, value: typed };
-      if (typed !== undefined && f.name === 'shrink' && typed === 'keep') return { ok: true, value: 'none' }; // the app's word for it
+      if (typed !== undefined && f.name === 'shrink' && typed === KEEP_NAME) return { ok: true, value: KEEP.value }; // the app's word for it
       const near = typed !== undefined ? closest(typed, values) : undefined;
       return { ok: false, error: `must be one of ${values.join(', ')}; found ${shown}${near ? `. Did you mean ${near}?` : ''}` };
     }
@@ -183,24 +202,23 @@ export function parseValue(f: CliField, raw: unknown): Parsed<unknown> {
       return { ok: true, value: raw };
     }
     case 'separator': {
-      if (raw === 'auto') return { ok: true, value: 'auto' };
-      if (raw === 'space') return { ok: true, value: ' ' };
-      if (raw === 'none') return { ok: true, value: '' };
+      const named = SEPARATOR_NAMES.find((s) => s.name === raw);
+      if (named) return { ok: true, value: named.value };
       if (typeof raw !== 'string' || [...raw].length !== 1) {
-        const near = typeof raw === 'string' ? closest(raw, ['auto', 'space', 'none']) : undefined;
-        return { ok: false, error: `must be auto, space, none, or one symbol such as ";"; found ${shown}${near ? `. Did you mean ${near}?` : ''}` };
+        const near = typeof raw === 'string' ? closest(raw, separatorNames) : undefined;
+        return { ok: false, error: `must be ${separatorNames.join(', ')}, or one symbol such as "${SEPARATOR_PREFERENCE[0]}"; found ${shown}${near ? `. Did you mean ${near}?` : ''}` };
       }
       const problem = symbolProblem(raw);
-      if (problem) return { ok: false, error: `must be auto, space, none, or one symbol; ${problem}` };
+      if (problem) return { ok: false, error: `must be ${separatorNames.join(', ')}, or one symbol; ${problem}` };
       return { ok: true, value: raw };
     }
     case 'strength': {
       const names = STRENGTH_NAMES.map((s) => s.name);
       if (typeof raw === 'string') {
-        const named = STRENGTH_NAMES.find((s) => s.name === raw)?.bits ?? STRENGTH_ALIASES[raw];
+        const named = STRENGTH_NAMES.find((s) => s.name === raw)?.bits ?? STRENGTH_ALIASES.get(raw);
         if (named !== undefined) return { ok: true, value: named };
         if (!/^\d+(\.\d+)?$/.test(raw.trim())) {
-          const near = closest(raw, [...names, ...Object.keys(STRENGTH_ALIASES)]);
+          const near = closest(raw, STRENGTH_INPUTS);
           return { ok: false, error: `must be ${names.join(', ')}, or a number of bits from 0 to ${MAX_TARGET_BITS}; found ${shown}${near ? `. Did you mean ${near}?` : ''}` };
         }
       }
@@ -223,7 +241,7 @@ export function parseValue(f: CliField, raw: unknown): Parsed<unknown> {
 export function formatValue(f: CliField, value: unknown): string | number | boolean {
   switch (f.kind.type) {
     case 'separator':
-      return value === ' ' ? 'space' : value === '' ? 'none' : String(value);
+      return SEPARATOR_NAMES.find((s) => s.value === value)?.name ?? String(value);
     case 'strength': {
       const preset = STRENGTH_NAMES.find((s) => s.bits === value);
       return preset ? preset.name : (value as number);

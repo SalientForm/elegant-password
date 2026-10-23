@@ -28,13 +28,20 @@ explanation for each:
   (`src/lib/strength.ts`), so a password reads the same on a card, in your
   saved list, and a year later. Bits is this session's figure, counted
   from the password and its hint (`src/lib/score.ts`) and shown beside
-  the badges and in the bits panel; it is never saved. Difficulty and
-  memorability come from the password and its hint, nothing else. A
-  repeated character never raises a figure, and neither does a block typed
-  again ("Password1!" three times) or a walk along the keyboard ("asdf").
+  the badges and in the bits panel; it is never saved. Strength's tip
+  reads high, fair or low by its colour; the presets, Everyday to Master
+  password, are targets for the bits. Difficulty and memorability come
+  from the password and its hint, nothing else. A repeated character never
+  raises a figure, and neither does a block typed again ("Password1!"
+  three times) or a walk along the keyboard ("asdf"). Strength knows
+  English words have a vowel: a run of letters with none, such as a key
+  roll (`bvsd`) or a two-letter word (`ht`), reads as consonants, not as
+  English, unless a digit or symbol beside it may be its word's swapped
+  vowel (`dr1lls`).
 - **Rules it cannot keep are named**: pasted site rules show what was
   understood and, separately, what was not kept and why (a minimum length
-  above 128, "no digits", "at most 2 symbols"); nothing is quietly weakened.
+  above 128, "no digits", "at most 2 symbols", "3 of" a list it cannot
+  read); nothing is quietly weakened.
   A minimum number of lowercase letters is a rule like the other counts.
 - **No common passwords**: a password that is exactly one of the 10,001
   most common passwords (SecLists' `10k-most-common.txt`, in
@@ -59,7 +66,7 @@ explanation for each:
   sentence is kept in this tab only (sessionStorage) so a refresh does not
   lose it, and is never sent anywhere; it is only kept longer if you add a
   password to your list, as that password's hint. A sentence, like a hint,
-  is at most 500 characters.
+  is at most 512 characters.
 - **Submit, then it sticks.** Edits to the rules, swaps or sentence are a
   draft: a snackbar at the foot of the page holds "Discard" and "Submit
   changes" (Ctrl+Enter also submits; Escape discards, or in a text field
@@ -87,6 +94,21 @@ explanation for each:
   what the text did not say, and named ("maximum raised to 40 to fit",
   "separator set to Auto"). Presets and pasted rules are drafts like
   any edit.
+- **"3 of the following 4" is kept as three.** A choice of kinds ("at
+  least 3 of: uppercase, lowercase, numbers, symbols", "a number or a
+  symbol") is kept by requiring that many of the kinds listed, the
+  cheapest to type first (letters, which every password has, then a
+  lowercase letter, an uppercase letter, a digit, a symbol), never a kind
+  the text rules out, and the line says both what was asked and what was
+  kept: "at least 3 of uppercase, lowercase, digits and symbols (kept as
+  an uppercase letter, a lowercase letter and a digit)". It never claims
+  all four. A choice it cannot keep (it recognises fewer kinds than asked)
+  is listed under "Not kept".
+- **The box takes up to 2,000 characters** (`MAX_RULES_TEXT_LENGTH`, the
+  CLI's cap too), several times a sign-up form's rules with their labels.
+  A paste that would pass it is refused whole, with the reason, never cut,
+  so no rule past a cut is dropped unseen. The text is read once per
+  change.
 - **Rules that cannot all hold are caught, never generated.** One pure
   function (`src/lib/validation.ts`) finds every contradiction: a minimum
   above the maximum, more required uppercase letters, digits and symbols
@@ -165,10 +187,10 @@ explanation for each:
   comfort filter is unchanged. "Ease awkward words with deliberate swaps"
   switches it off.
 - **Avoid pinky stretches** (on by default): the tool never picks a symbol
-  more than one key from where a pinky rests (`! - _ = + ) |` ...). A
+  more than one key from where a pinky rests (`` ` ~ ! ) - _ + = ] } \ | ``). A
   separator you choose yourself, like `-`, is still used.
 - **Keep Shift within reach** (off by default; the One-handed mode turns it
-  on): no shifted symbol more than 4 keys from both Shift keys (`$ % ^ & *`)
+  on): no shifted symbol more than 4 keys from both Shift keys (`$ % ^ & * (`)
   is picked, and the opening capital goes on a word whose first letter one
   hand can capitalise while holding Shift (not T G B Y H N U J I).
 - **Shortest that meets the target** (off by default; Minimal-quick turns it
@@ -230,7 +252,7 @@ explanation for each:
   Clear button, a paste or a new list entry replaces it; one that arrived
   without a hint can be given one. Nothing is stored. A pasted password is
   kept exactly, spaces at either end included, with one trailing line
-  break dropped; more than one line, spaces alone or more than 500
+  break dropped; more than one line, spaces alone or more than 128
   characters are refused with the reason. On a soft keyboard that names no
   keys (Android), the typing is read from how the text changes. A keyboard
   button on every card and My list entry makes that password the one
@@ -252,7 +274,8 @@ explanation for each:
   not focused) selects the text instead of silently doing nothing. A render
   error shows a message and a button that forgets the session and reloads,
   never a blank page; a stored session that does not parse is removed on
-  load.
+  load, and a kept sentence the tool could not have drawn is dropped and a
+  new one drawn.
 - **Accessible.** The mode switch is a real tab list (arrow keys, Home,
   End), toggles report their pressed state, and status text is announced.
 - **Difficulty score** (0-100) from a rubric of eleven criteria across the modes, up to ten in one: size,
@@ -270,14 +293,14 @@ explanation for each:
   (strength, comfort and style; never the site's rules) as a draft, like a
   site preset: Submit applies both and draws a new sentence, Discard
   reverts both.
-  Ten-finger is the defaults; Two-finger takes a space separator, a
-  made-up noun, one capital initial and one two-letter word, and has no use
-  for the pinky rule or deliberate swaps (disabled, with the reason);
-  One-handed takes strict comfort, Keep Shift within reach, a space, a
-  made-up noun and a two-letter word; Minimal-quick takes the Minimal
-  target with Shortest that meets the target, strict comfort, a space and
-  made-up nouns throughout, so it makes the shortest password the site's
-  rules allow. Each value was kept only if it measured easier in the mode's
+  Ten-finger is the defaults; Two-finger takes a space separator, one
+  two-letter word and glue, and has no use for the pinky rule or deliberate
+  swaps (disabled, with the reason); One-handed takes strict comfort, Keep
+  Shift within reach, a space, a two-letter word and glue; Minimal-quick
+  takes the Minimal target with Shortest that meets the target, strict
+  comfort and a space, so it makes the shortest password the site's rules
+  allow. No mode uses made-up nouns: they are only ever used when you choose
+  them. Each value was kept only if it measured easier in the mode's
   own rubric than the defaults; the table and the figures are on the Scoring
   page (`pnpm measure:modes` reruns the measurement).
 - **Scroll bars** where the browser's take up room (Windows): no arrows and
@@ -323,7 +346,8 @@ happened, undo it with
 
 - **Settings** come from the defaults, then a config file (`./tep.yml`, or
   `-c`), then flags: a site preset, the site's rules (or their wording with
-  `--rules`), a typing mode, which fills in the options that suit it, and
+  `--rules`, read as the web app reads a paste, up to the same 2,000
+  characters), a typing mode, which fills in the options that suit it, and
   any option by hand. `tep help g` lists every flag.
 - **No contradictions.** Settings that contradict each other make no
   passwords (exit 3), and nothing is quietly fixed. Every message says what
@@ -353,7 +377,7 @@ happened, undo it with
   not be removed, 2 the command line, 3 a contradiction, 4 a config file,
   130 interrupted.
 
-The design is in [docs/specs/2026-10-20-tep-cli-design.md](docs/specs/2026-10-20-tep-cli-design.md).
+The decisions behind it are in [docs/decisions.md](docs/decisions.md), "The command line".
 
 ## How it works
 
@@ -366,6 +390,7 @@ cold scoring.
     pnpm install
     pnpm dev        # http://127.0.0.1:4270
     pnpm test       # unit tests (Vitest)
+    pnpm measure:wizard  # times every tep config question against its 750 ms target; fails one over 2 s
     pnpm test:e2e   # browser smoke tests (Playwright) against the build on 4272 and the dev server on 4273
     pnpm build && pnpm preview   # http://127.0.0.1:4271
     pnpm build:cli  # the command line, dist-cli/tep.mjs; pnpm tep g runs it
@@ -373,14 +398,23 @@ cold scoring.
 Run `pnpm test:e2e` after each iteration: it builds, starts its own servers
 on this project's spare ports, drives a real Chromium through loading,
 drafting and applying changes, the saved list, sentence mode, copy, the
-Fun page download, and fails on any console error. First time only:
+Fun page download and the build refusing a frame, and fails on any console
+error. First time only:
 `pnpm exec playwright install chromium-headless-shell`.
 
 ## Deploy
 
 Every push to `main`, merges included, runs `.github/workflows/pages.yml`:
-unit tests, then a build under `/elegant-password/` (`BASE_PATH`), published
+the checks in `check.yml` (types, unit tests, both builds and the browser
+smoke tests, the same workflow `ci.yml` runs on every branch push and pull
+request), then a build under `/elegant-password/` (`BASE_PATH`), published
 to GitHub Pages at https://salientform.github.io/elegant-password/.
+
+GitHub Pages sends no headers the app can set, so its
+Content-Security-Policy is a meta tag, which cannot stop another site
+framing the page. Instead the built app, put in a frame, mounts nothing
+and shows a notice with a link that opens it in a tab of its own
+(`src/frameGuard.ts`). The dev server stays frameable, for preview panes.
 
 That address is an origin the organisation's other Pages sites share, so
 the app keeps My list and the current batch in memory there (see "Survives
@@ -412,7 +446,8 @@ Shared core, `src/lib/`:
 - `ease.ts`: deliberate swaps for typing ease
 - `grammar.ts`: sentence templates and comfort-filtered pools
 - `lengthModel.ts`: exact counting and uniform sampling under length limits
-- `generate.ts`: requirements, plan selection, explanations
+- `requirements.ts`: the shape of a site's requirements and the defaults
+- `generate.ts`: plan selection, explanations
 - `validation.ts`: every contradiction in a set of requirements, each with a code
 - `consistency.ts`: contradictions including what only planning finds, and the unreachable-target warning
 - `twists.ts`, `mappingSettings.ts`: the 64 mappings, exact twist counting, and which are on
@@ -427,6 +462,7 @@ Shared core, `src/lib/`:
 - `readings.ts`: how the four scores read (badge label, figure, band, sentence)
 - `choices.ts`: the choice lists and their words (comfort, separators, sort orders)
 - `explain.ts`: the card's "Why?" sentences, shared with `tep g --explain`
+- `budget.ts`: how long one piece of work may take before it is a failure (2 s), for both front ends
 - `random.ts`, `text.ts`, `sort.ts`, `typingTest.ts`, `fluff.ts`: randomness, text helpers, the sort orders, the typing test's maths, padding
 - `devStats.ts`, `testRandom.ts`: measurement and seeded randomness for the tests and `pnpm stats`
 
@@ -435,6 +471,8 @@ Web app:
 - `src/state/PasswordsProvider.tsx`: the provider that owns state, persistence and generation
 - `src/state/storage.ts`, `settingsStore.ts`, `sessionStore.ts`, `selectedStore.ts`, `mappingStore.ts`: persistence with untrusted-input parsing
 - `src/state/origin.ts`: whether the page is on the app's own origin, where secrets may be stored
+- `src/state/slow.ts`: work over 2 s reported as a failure, which `SlowNotice` shows until dismissed
+- `src/frameGuard.ts`: the built app, framed by another page, shows a notice and a link instead of itself
 - `src/components/`: React UI
 - `src/prompts/specPrompt.ts`, `cliPrompt.ts`: the Fun page's two prompts, the app's and then the command line's
 
@@ -453,6 +491,7 @@ and `@clack/prompts`):
 Build and docs:
 
 - `build/csp.ts`: the Content-Security-Policy added at build time
+- `.github/workflows/`: `check.yml`, the checks, called by `ci.yml` (branches and pull requests) and `pages.yml` (the deploy)
 - `scripts/linkCli.mjs`: `pnpm link:cli` and `unlink:cli`
 - `docs/algorithm-flow.md`: the algorithm flow
 - `docs/decisions.md`: the design decisions, with why, kept current

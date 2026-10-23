@@ -1,51 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ZXCVBN_URL, zxcvbnLine } from '../lib/zxcvbnReading';
-import { difficultyIn } from '../lib/difficulty';
-import { scoreCold } from '../lib/score';
-import { rawBits, strengthBits } from '../lib/strength';
-import type { SelectedEntry } from '../state/selectedStore';
 import { usePasswords } from '../state/PasswordsProvider';
-import { CopyButton } from './CopyButton';
-import { KeyboardIcon, TrashIcon } from './icons';
-import { PasswordText } from './PasswordText';
-import { ScoreBadges } from './SuggestionCard';
-import { TOUCH, useMediaQuery } from './useMediaQuery';
-
-function Entry({ entry, onRemove }: { entry: SelectedEntry; onRemove: () => void }) {
-  const { typingMode, practise, zxcvbnFailed } = usePasswords();
-  const touch = useMediaQuery(TOUCH);
-  const score = useMemo(() => scoreCold(entry.password, entry.hint), [entry.password, entry.hint]);
-  const difficulty = useMemo(() => difficultyIn(entry.password, score.difficulty, typingMode), [entry.password, score, typingMode]);
-  const code = useRef<HTMLElement>(null);
-  // addedAt is kept in storage but not shown.
-  return (
-    <li className="entry">
-      <div className="entry-main">
-        <PasswordText password={entry.password} className="password entry-password" ref={code} />
-        <p className="entry-hint">
-          <span className="field-label">Hint:</span> {entry.hint || <em>none</em>}
-        </p>
-        {entry.zxcvbn && <p className="entry-hint zxcvbn-line">{zxcvbnLine(entry.zxcvbn)}</p>}
-      </div>
-      <div className="actions">
-        <ScoreBadges
-          strength={strengthBits(entry.password)}
-          raw={rawBits(entry.password)}
-          difficulty={difficulty}
-          zxcvbn={entry.zxcvbn ?? (zxcvbnFailed.has(entry.password) ? 'failed' : 'pending')}
-          memorability={score.memorability.score}
-        />
-        {touch && <CopyButton text={entry.password} fallback={code} icon />}
-        <button type="button" className="icon-button ghost" onClick={() => practise(entry)} aria-label={`Practise ${entry.password}`} title="Practise typing it in the typing test">
-          <KeyboardIcon />
-        </button>
-        <button type="button" className="icon-button ghost" onClick={onRemove} aria-label={`Remove ${entry.password} from my list`} title="Remove from my list">
-          <TrashIcon />
-        </button>
-      </div>
-    </li>
-  );
-}
+import { ListEntry } from './ListEntry';
 
 /** Where My list is, in words, for each way it can be kept. */
 const WHERE = {
@@ -57,7 +13,7 @@ const WHERE = {
 
 /** The user's own short list of chosen passwords with their hints, kept in this browser. */
 export function SelectedList() {
-  const { selected, removeSelected, clearSelected, persistence, retrySaving } = usePasswords();
+  const { selected, removeSelected, clearSelected, persistence, retrySaving, typingMode, practise, zxcvbnFailed } = usePasswords();
   const [confirm, setConfirm] = useState(false);
   // Said once the reading of a password just added is in: what zxcvbn says about it.
   const [announced, setAnnounced] = useState('');
@@ -121,7 +77,7 @@ export function SelectedList() {
       ) : (
         <ul className="selected-list" aria-label="My passwords">
           {selected.map((entry) => (
-            <Entry key={entry.password} entry={entry} onRemove={() => removeSelected(entry.password)} />
+            <ListEntry key={entry.password} entry={entry} onRemove={removeSelected} typingMode={typingMode} practise={practise} failed={zxcvbnFailed.has(entry.password)} />
           ))}
         </ul>
       )}

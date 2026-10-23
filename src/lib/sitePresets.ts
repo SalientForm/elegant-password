@@ -35,9 +35,18 @@ export const rulesOf = (req: RuleFields): RuleFields => ({
 });
 
 const typical = rulesOf(DEFAULT_REQUIREMENTS);
+const lengths = (r: RuleFields) => `${r.minLength}-${r.maxLength}`;
+
+/** The preset whose rules are the defaults, first in the list: what tep's questions and pasted rules start from. */
+export const DEFAULT_SITE_PRESET: SitePreset = {
+  label: 'Typical site',
+  note: `${lengths(typical)}, A + 1 + #`,
+  hint: `The defaults: ${lengths(typical)} characters, an uppercase letter, a digit and a symbol, spaces allowed.`,
+  rules: typical,
+};
 
 export const SITE_PRESETS: readonly SitePreset[] = [
-  { label: 'Typical site', note: '12-32, A + 1 + #', hint: 'The defaults: 12-32 characters, an uppercase letter, a digit and a symbol, spaces allowed.', rules: typical },
+  DEFAULT_SITE_PRESET,
   { label: 'No spaces', note: 'as typical, no spaces', hint: 'The defaults, but the site rejects spaces, as many do.', rules: { ...typical, allowSpaces: false } },
   {
     label: 'No symbols',

@@ -97,6 +97,10 @@
       },
       {
         "kind": "test",
+        "title": "pasted \"3 of the following 4\" rules fill in three named kinds and make passwords that meet them; a paste past the cap is refused"
+      },
+      {
+        "kind": "test",
         "title": "an impossible combination shows its error beside the fields, blocks Submit, Enter and Refresh, and works once corrected"
       },
       {
@@ -154,6 +158,47 @@
       {
         "kind": "test",
         "title": "Forget this session draws a new sentence and clears the password under test"
+      },
+      {
+        "kind": "test",
+        "title": "framed by a page on another origin, the build shows only a notice and a link to a tab of its own; the dev server stays frameable"
+      }
+    ]
+  },
+  {
+    "file": "src/App.renders.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "App: what renders"
+      },
+      {
+        "kind": "test",
+        "title": "a keystroke in the made-up sentence renders no card, strength panel, requirements form, swaps panel or site rules"
+      },
+      {
+        "kind": "test",
+        "title": "starting a batch renders no card; the batch renders its own cards when it lands"
+      },
+      {
+        "kind": "test",
+        "title": "a card still renders when what it shows changes: Add marks it Added, a new typing mode rescores it"
+      },
+      {
+        "kind": "test",
+        "title": "in sentence mode the swaps follow the sentence as it is typed"
+      },
+      {
+        "kind": "test",
+        "title": "a keystroke in the made-up sentence renders no row of My list; a new typing mode renders every row"
+      },
+      {
+        "kind": "group",
+        "title": "App: what renders when the window narrows"
+      },
+      {
+        "kind": "test",
+        "title": "Practise on a card opens the Testing column when only one column fits, after the columns have changed"
       }
     ]
   },
@@ -171,6 +216,10 @@
       {
         "kind": "test",
         "title": "has accessible mode tabs and a status while working"
+      },
+      {
+        "kind": "test",
+        "title": "shows slow work as a floating error on any page until it is dismissed"
       },
       {
         "kind": "group",
@@ -339,11 +388,23 @@
       },
       {
         "kind": "group",
+        "title": "the import graph"
+      },
+      {
+        "kind": "test",
+        "title": "has no cycle in src, type-only imports included"
+      },
+      {
+        "kind": "group",
         "title": "this test"
       },
       {
         "kind": "test",
         "title": "reads imports of every shape the code uses"
+      },
+      {
+        "kind": "test",
+        "title": "finds each import cycle as the chain that closes it, counting type-only imports"
       }
     ]
   },
@@ -498,7 +559,7 @@
       },
       {
         "kind": "test",
-        "title": "bad swaps: not a built-in, a malformed entry, a custom swap the core refuses, a duplicate"
+        "title": "bad swaps: not a built-in, a malformed entry, a custom swap the core refuses, a copy of a built-in, a duplicate"
       },
       {
         "kind": "group",
@@ -897,6 +958,10 @@
       },
       {
         "kind": "test",
+        "title": "rules text past the core's cap, refused whole"
+      },
+      {
+        "kind": "test",
         "title": "refuses rules text it cannot keep, never making a password that breaks it"
       },
       {
@@ -986,6 +1051,23 @@
       {
         "kind": "test",
         "title": "turns anything unexpected into exit 1 and asks for a report"
+      }
+    ]
+  },
+  {
+    "file": "src/cli/help.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "help and examples"
+      },
+      {
+        "kind": "test",
+        "title": "name only typing modes and site presets that exist"
+      },
+      {
+        "kind": "test",
+        "title": "give, with each refused value, an example that parses"
       }
     ]
   },
@@ -1217,6 +1299,14 @@
       },
       {
         "kind": "test",
+        "title": "keeps \"3 of the following 4\" as three named kinds and says which, leaving the fourth as it was"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a rules text past the core's cap whole, as a usage error with the core's message"
+      },
+      {
+        "kind": "test",
         "title": "refuses text with no rules in it, as a usage error that says what rules text looks like"
       },
       {
@@ -1299,7 +1389,7 @@
       },
       {
         "kind": "test",
-        "title": "never meet a contradiction, never reach a dead end, fit the review to the box, and save a file tep g can use"
+        "title": "never meet a contradiction, never reach a dead end, fit the review to the box, save a file tep g can use, and keep each question within its work"
       }
     ]
   },
@@ -1409,6 +1499,10 @@
       {
         "kind": "test",
         "title": "names what it cannot keep, drops it, and refuses text with nothing it can keep"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a paste past the core's cap whole and asks again; keeps \"3 of 4\" as three named kinds"
       },
       {
         "kind": "test",
@@ -1753,6 +1847,10 @@
       },
       {
         "kind": "test",
+        "title": "fills in \"3 of the following 4\" as three named kinds, says which, and leaves the symbol count as it was"
+      },
+      {
+        "kind": "test",
         "title": "fills in at once when text is pasted"
       },
       {
@@ -1769,6 +1867,10 @@
       },
       {
         "kind": "test",
+        "title": "names the core's own keys and figures in its hints: every pinky stretch and far Shift key, in keyboard order, and the bits of a number and a made-up noun"
+      },
+      {
+        "kind": "test",
         "title": "cannot pick Space while spaces are not allowed, and flags a Space picked before they were ruled out"
       },
       {
@@ -1782,6 +1884,23 @@
       {
         "kind": "test",
         "title": "shows a problem at once when the field is left"
+      }
+    ]
+  },
+  {
+    "file": "src/components/ScoringPage.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the figures the Scoring page names"
+      },
+      {
+        "kind": "test",
+        "title": "reads them from the core, so they say what the code does"
+      },
+      {
+        "kind": "test",
+        "title": "names the attackers' speeds under the bits panel"
       }
     ]
   },
@@ -1848,6 +1967,81 @@
       {
         "kind": "test",
         "title": "summarises the random bits across the batch"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SessionControls.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SessionControls"
+      },
+      {
+        "kind": "test",
+        "title": "says the session is kept through a reload on the app's own origin, and offers no retry"
+      },
+      {
+        "kind": "test",
+        "title": "says the session is in memory only on a shared origin"
+      },
+      {
+        "kind": "test",
+        "title": "says when the session could not be saved, and Try saving again saves it once storage takes writes again"
+      },
+      {
+        "kind": "test",
+        "title": "asks before forgetting: the first click only asks, the second forgets and says so"
+      },
+      {
+        "kind": "test",
+        "title": "drops the question when focus leaves the button, so a later click asks again"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SiteRules.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SiteRules"
+      },
+      {
+        "kind": "test",
+        "title": "reads the text once per change: renders, \"Fill in\" and a paste with its preview read nothing more"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a paste that would take the text past the cap, says why, and changes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "counts only what a paste leaves: replacing a selection with text that fits is taken"
+      },
+      {
+        "kind": "test",
+        "title": "holds at most the cap and says when it is full; any other way past it is refused"
+      },
+      {
+        "kind": "test",
+        "title": "reports a reading over 2 s as slow work"
+      }
+    ]
+  },
+  {
+    "file": "src/components/SlowNotice.test.tsx",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "SlowNotice"
+      },
+      {
+        "kind": "test",
+        "title": "shows nothing until work is slow, then names it and how long it took, as an alert"
+      },
+      {
+        "kind": "test",
+        "title": "is dismissed by its button or by Escape inside it, and a newer failure replaces it"
       }
     ]
   },
@@ -1995,6 +2189,10 @@
       },
       {
         "kind": "test",
+        "title": "holds a password of at most 128 characters and a hint of at most 512, and refuses a longer paste"
+      },
+      {
+        "kind": "test",
         "title": "leaves Enter alone while an IME is composing"
       },
       {
@@ -2004,6 +2202,10 @@
       {
         "kind": "test",
         "title": "says a common password is not allowed"
+      },
+      {
+        "kind": "test",
+        "title": "scores Strength, Raw and the common-password check once per password under test, not on every keystroke"
       },
       {
         "kind": "test",
@@ -2086,6 +2288,31 @@
       {
         "kind": "test",
         "title": "shows an area’s bar while the pointer is over it, and the page’s while it scrolls"
+      }
+    ]
+  },
+  {
+    "file": "src/frameGuard.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the frame guard"
+      },
+      {
+        "kind": "test",
+        "title": "is not framed at the top of its own tab"
+      },
+      {
+        "kind": "test",
+        "title": "is framed when the top window is another, or when reading it throws"
+      },
+      {
+        "kind": "test",
+        "title": "refuses a frame only in the production build"
+      },
+      {
+        "kind": "test",
+        "title": "replaces the root with the notice: why, a link to a new tab, and the address"
       }
     ]
   },
@@ -2708,11 +2935,19 @@
       },
       {
         "kind": "test",
+        "title": "the opening capital is a word's first character, with Shift reach on and off"
+      },
+      {
+        "kind": "test",
         "title": "prefers a word whose first letter capitalises in reach, and falls back to any word when none does"
       },
       {
         "kind": "test",
         "title": "drops the mappings whose output needs a far Shift key"
+      },
+      {
+        "kind": "test",
+        "title": "says why a mapping cannot be used, and usableMappings keeps exactly the ones with no reason"
       },
       {
         "kind": "test",
@@ -2880,6 +3115,10 @@
         "title": "says why when it cannot fit, and points at drawing a new one"
       },
       {
+        "kind": "test",
+        "title": "is refused with the way out, not a crash, when the tool could not have drawn it"
+      },
+      {
         "kind": "group",
         "title": "deliberate swaps for typing ease"
       },
@@ -2922,6 +3161,26 @@
       {
         "kind": "test",
         "title": "never reads a real word as a made-up noun, so a kept sentence with \"pods\" still builds"
+      },
+      {
+        "kind": "test",
+        "title": "could have drawn only a known shape with every word on its slot's list"
+      },
+      {
+        "kind": "test",
+        "title": "never draws a sentence it could not have drawn, across seeds and settings"
+      },
+      {
+        "kind": "group",
+        "title": "the planning cache"
+      },
+      {
+        "kind": "test",
+        "title": "plans the same settings twice without building a length model again, even at the widest lengths"
+      },
+      {
+        "kind": "test",
+        "title": "keeps at most MODEL_CACHE_LIMIT length models and drops the one used longest ago"
       }
     ]
   },
@@ -2988,6 +3247,14 @@
       {
         "kind": "test",
         "title": "refuses an impossible range"
+      },
+      {
+        "kind": "test",
+        "title": "groups a pool's words by length once, so every model over the pool shares the groups"
+      },
+      {
+        "kind": "test",
+        "title": "counts and samples the same over a shared pool as over a copy of it"
       }
     ]
   },
@@ -3009,6 +3276,14 @@
       {
         "kind": "test",
         "title": "finds every unusable entry, with where it is"
+      },
+      {
+        "kind": "group",
+        "title": "customMappingProblem"
+      },
+      {
+        "kind": "test",
+        "title": "is the one rule for a custom swap: valid, not a built-in, not listed already"
       }
     ]
   },
@@ -3034,6 +3309,10 @@
       {
         "kind": "test",
         "title": "match until one option is edited away, and the other modes never match"
+      },
+      {
+        "kind": "test",
+        "title": "no mode uses made-up nouns: they are left for the user to choose"
       },
       {
         "kind": "test",
@@ -3136,7 +3415,11 @@
       },
       {
         "kind": "test",
-        "title": "is green from 50 bits, yellow from 40, red below, and names the preset reached"
+        "title": "is green from 50 bits, yellow from 40, red below, and says high, fair or low"
+      },
+      {
+        "kind": "test",
+        "title": "names its band and never a preset, at every figure from 0 to 256"
       },
       {
         "kind": "group",
@@ -3157,6 +3440,30 @@
       {
         "kind": "test",
         "title": "keeps the labels the web badges and the CLI table both print"
+      },
+      {
+        "kind": "group",
+        "title": "difficulty badge colours"
+      },
+      {
+        "kind": "test",
+        "title": "is green for effortless and easy, yellow for moderate, red for demanding and hard, and the reading carries it"
+      },
+      {
+        "kind": "group",
+        "title": "figures in text"
+      },
+      {
+        "kind": "test",
+        "title": "writes a count as a word up to twelve and in figures above"
+      },
+      {
+        "kind": "test",
+        "title": "writes a large figure with its scale word from a million up"
+      },
+      {
+        "kind": "test",
+        "title": "joins a list as a sentence does"
       }
     ]
   },
@@ -3214,7 +3521,15 @@
       },
       {
         "kind": "test",
+        "title": "keeps a choice of N kinds as exactly N, never all of them, and says which"
+      },
+      {
+        "kind": "test",
         "title": "is deterministic: the same text always reads the same"
+      },
+      {
+        "kind": "test",
+        "title": "reads a text up to the length cap, and none of a longer one, saying so"
       },
       {
         "kind": "test",
@@ -3263,6 +3578,18 @@
       {
         "kind": "test",
         "title": "never leaves the rules contradicting themselves, from any starting point, for any text it reads"
+      },
+      {
+        "kind": "group",
+        "title": "mergeParsedRules"
+      },
+      {
+        "kind": "test",
+        "title": "puts in what the text states, takes out the symbols it rules out, and fixes nothing"
+      },
+      {
+        "kind": "test",
+        "title": "is the step applyParsedRules then settles"
       }
     ]
   },
@@ -3292,6 +3619,10 @@
       {
         "kind": "test",
         "title": "finds twisted words, including a symbol at the start, and counts how the swaps could have landed"
+      },
+      {
+        "kind": "test",
+        "title": "counts the start of the word with the capital as protected wherever it is"
       },
       {
         "kind": "test",
@@ -3518,7 +3849,7 @@
       },
       {
         "kind": "test",
-        "title": "gives a swapped word the same strength as the word: a swap is not a word's business"
+        "title": "reads a swapped word by its text alone: a swap that leaves a vowel changes nothing"
       },
       {
         "kind": "test",
@@ -3566,11 +3897,68 @@
       },
       {
         "kind": "group",
+        "title": "a run of letters with no vowel is not English"
+      },
+      {
+        "kind": "test",
+        "title": "reads it as consonants, each one pick of the consonants"
+      },
+      {
+        "kind": "test",
+        "title": "reads a walk of three in it as one pick: English has three-letter steps, this run is not English"
+      },
+      {
+        "kind": "test",
+        "title": "is never more than an English word with one letter changed, so a misspelling is not random letters"
+      },
+      {
+        "kind": "test",
+        "title": "counts y as a vowel and leaves another script alone"
+      },
+      {
+        "kind": "test",
+        "title": "keeps the English reading beside a character that may be its word's swapped-out letter"
+      },
+      {
+        "kind": "test",
+        "title": "never reads a run below its English reading"
+      },
+      {
+        "kind": "test",
+        "title": "still reads keyboard walks and the trivial passwords low"
+      },
+      {
+        "kind": "group",
         "title": "memorable digit runs"
       },
       {
         "kind": "test",
         "title": "means repeats, consecutive runs and well-known skips, not any pair of digits"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/strengthFloor.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "Strength against the bits"
+      },
+      {
+        "kind": "test",
+        "title": "reads the made-up nouns at least their pick on average, where the English reading fell short"
+      },
+      {
+        "kind": "test",
+        "title": "reads every two-letter form with no vowel above its pick"
+      },
+      {
+        "kind": "test",
+        "title": "is never below the exact figure in a shortest plan, made-up nouns or not"
+      },
+      {
+        "kind": "test",
+        "title": "without made-up nouns, outside shortest plans, is below the card's bits for at most 2 % of cards, by at most 3 bits"
       }
     ]
   },
@@ -3590,6 +3978,18 @@
   {
     "file": "src/lib/text.test.ts",
     "titles": [
+      {
+        "kind": "group",
+        "title": "the wording helpers"
+      },
+      {
+        "kind": "test",
+        "title": "pairs a count with the noun that agrees with it, the plural given when it is not an s"
+      },
+      {
+        "kind": "test",
+        "title": "turns only the first character up or down, and leaves an empty text empty"
+      },
       {
         "kind": "group",
         "title": "sentenceLengthProblem"
@@ -3616,6 +4016,10 @@
         "title": "has 64 distinct, valid mappings"
       },
       {
+        "kind": "test",
+        "title": "lists its kinds once each, in the order they are shown, and every built-in mapping is one of them"
+      },
+      {
         "kind": "group",
         "title": "validateMapping"
       },
@@ -3637,7 +4041,7 @@
       },
       {
         "kind": "test",
-        "title": "respects skip, first-letter protection and the length limits"
+        "title": "respects skip, the capital's word and the length limits"
       },
       {
         "kind": "test",
@@ -3818,6 +4222,14 @@
       {
         "kind": "test",
         "title": "says it in one line"
+      },
+      {
+        "kind": "group",
+        "title": "zxcvbn's colour bands"
+      },
+      {
+        "kind": "test",
+        "title": "puts strong and good in green, weak in yellow and very weak in red"
       }
     ]
   },
@@ -3868,6 +4280,10 @@
       {
         "kind": "test",
         "title": "lists every mapping and rubric criterion from the live constants"
+      },
+      {
+        "kind": "test",
+        "title": "states Strength's reading of a run with no vowel from the core"
       }
     ]
   },
@@ -3884,6 +4300,10 @@
       },
       {
         "kind": "test",
+        "title": "reports a batch that takes over 2 s as slow work, and keeps the batch"
+      },
+      {
+        "kind": "test",
         "title": "discards a draft, and \"Refresh\" applies one"
       },
       {
@@ -3893,6 +4313,10 @@
       {
         "kind": "test",
         "title": "keeps the made-up sentence through Refresh, rule changes, an error and a reload; only \"new sentence\" draws another"
+      },
+      {
+        "kind": "test",
+        "title": "draws a new sentence on load when the stored one is not one the tool makes, keeping the user's own sentence"
       },
       {
         "kind": "test",
@@ -4076,6 +4500,10 @@
       },
       {
         "kind": "test",
+        "title": "drops a kept sentence the tool could not have drawn, and keeps the rest of the session"
+      },
+      {
+        "kind": "test",
         "title": "keeps an edit to the made-up sentence only alongside that sentence"
       },
       {
@@ -4166,6 +4594,31 @@
     ]
   },
   {
+    "file": "src/state/slow.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "timed"
+      },
+      {
+        "kind": "test",
+        "title": "reports work over 2 s with what it was and how long it took, and passes the result through"
+      },
+      {
+        "kind": "test",
+        "title": "reports nothing for work of 2 s or less"
+      },
+      {
+        "kind": "test",
+        "title": "reports slow work that throws, and rethrows"
+      },
+      {
+        "kind": "test",
+        "title": "lets a newer report replace the one showing, tells listeners after the current task, and forgets on dismiss"
+      }
+    ]
+  },
+  {
     "file": "src/state/storage.test.ts",
     "titles": [
       {
@@ -4200,6 +4653,27 @@
       {
         "kind": "test",
         "title": "keeps the crack time, the guesses and what made the reading"
+      }
+    ]
+  },
+  {
+    "file": "src/workflows.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the workflows"
+      },
+      {
+        "kind": "test",
+        "title": "hold the checks once, in a reusable check.yml, in order"
+      },
+      {
+        "kind": "test",
+        "title": "are called by CI and by the deploy, which builds only after the check and grants it only reading"
+      },
+      {
+        "kind": "test",
+        "title": "run the browser suite nowhere but check.yml"
       }
     ]
   }

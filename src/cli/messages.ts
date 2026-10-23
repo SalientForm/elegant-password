@@ -8,7 +8,8 @@
 import type { Problem, TargetWarning } from '../lib/consistency';
 import { problemsOf } from '../lib/consistency';
 import { plan, type Requirements } from '../lib/generate';
-import { allowedSymbolSet, MAX_LENGTH } from '../lib/validation';
+import { capitalise, plural } from '../lib/text';
+import { allowedSymbolSet, MAX_LENGTH, MIN_LENGTH } from '../lib/validation';
 import { describeValue, reqField, type CliField } from './fields';
 import { describeSource, howToChange, type Source } from './sources';
 
@@ -26,7 +27,6 @@ export interface Refer {
   source(f: CliField): Source;
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const ok = (req: Requirements) => problemsOf(req).length === 0;
 const valueIn = (req: Requirements, f: CliField) => (f.target.kind === 'req' ? req[f.target.key] : undefined);
 
@@ -45,7 +45,7 @@ export function smallestWorkingMax(req: Requirements): number | undefined {
 
 /** The largest minimum length below the current one at which the requirements work; undefined when none does. */
 export function largestWorkingMin(req: Requirements): number | undefined {
-  let lo = 1;
+  let lo = MIN_LENGTH;
   let hi = req.minLength - 1;
   if (hi < lo || !ok({ ...req, minLength: lo })) return undefined;
   while (lo < hi) {
@@ -101,7 +101,7 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
       return {
         title: `The minimum length (${req.minLength}) is above the maximum length (${req.maxLength}).`,
         values: values('minLength', 'maxLength'),
-        fix: ways.length ? `${(ways.length === 2 ? `${ways[0]}, or ${ways[1]}` : list(ways)).replace(/^./, (c) => c.toUpperCase())}.` : `Widen the length range (${change('minLength')}, ${change('maxLength')}).`,
+        fix: ways.length ? `${capitalise(ways.length === 2 ? `${ways[0]}, or ${ways[1]}` : list(ways))}.` : `Widen the length range (${change('minLength')}, ${change('maxLength')}).`,
       };
     }
     case 'counts-exceed-max': {
@@ -154,7 +154,7 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
       return {
         title: `No made-up sentence fits between ${req.minLength} and ${req.maxLength} characters${withCounts}.`,
         values: values('minLength', 'maxLength', ...counts),
-        fix: `${ways.length ? `${list(ways).replace(/^./, (c) => c.toUpperCase())}. ` : 'Widen the length range. '}Or use your own sentence with --sentence -, which can be shortened further.`,
+        fix: `${ways.length ? `${capitalise(list(ways))}. ` : 'Widen the length range. '}Or use your own sentence with --sentence -, which can be shortened further.`,
       };
     }
     case 'too-few-letters': {
@@ -174,7 +174,7 @@ export function explainProblem(problem: Problem, req: Requirements, refer: Refer
             ? `No made-up sentence between ${req.minLength} and ${req.maxLength} characters has ${plural(req.minUppercase + req.minLowercase, 'letter')} for ${plural(req.minUppercase, 'capital')} and ${plural(req.minLowercase, 'lowercase letter')}.`
             : `No made-up sentence between ${req.minLength} and ${req.maxLength} characters has ${plural(req.minUppercase, 'letter')} to capitalise.`,
         values: values('minUppercase', ...(req.minLowercase > 0 ? (['minLowercase'] as const) : []), 'maxLength', ...shapes),
-        fix: `${list(ways).replace(/^./, (c) => c.toUpperCase())}.`,
+        fix: `${capitalise(list(ways))}.`,
       };
     }
     case 'no-closing': {
@@ -212,8 +212,8 @@ export function explainWarning(w: TargetWarning, req: Requirements, refer: Refer
     fix: reach !== undefined
       ? `A maximum length of ${reach} would reach it (${howToChange(maxLength, maxSource)}), or ${lower}.`
       : sitesRule
-        ? `${lower.replace(/^./, (c) => c.toUpperCase())}; the maximum length of ${req.maxLength} is the site's own rule, so a longer password would be refused.`
-        : `${lower.replace(/^./, (c) => c.toUpperCase())}.`,
+        ? `${capitalise(lower)}; the maximum length of ${req.maxLength} is the site's own rule, so a longer password would be refused.`
+        : `${capitalise(lower)}.`,
   };
 }
 

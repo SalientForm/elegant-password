@@ -14,6 +14,7 @@ import type { ZxcvbnCheck } from './zxcvbnCheck';
 import { memoryStore, type KeyValueStore } from './storage';
 import { BUILT_IN_MAPPINGS, mappingKey } from '../lib/twists';
 import { PasswordsProvider, usePasswords } from './PasswordsProvider';
+import { currentSlow, dismissSlow } from './slow';
 
 afterEach(cleanup);
 
@@ -126,6 +127,20 @@ describe('PasswordsProvider', () => {
     expect(text('dirty')).toBe('false');
   });
 
+  it('reports a batch that takes over 2 s as slow work, and keeps the batch', async () => {
+    let t = 0;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => t);
+    const slowEngine: Engine = (inputs) => {
+      t += 2600;
+      return runInputs(inputs);
+    };
+    mount(slowEngine);
+    await settled();
+    expect(currentSlow()).toEqual({ what: 'Making passwords', ms: 2600 });
+    clock.mockRestore();
+    dismissSlow();
+  });
+
   it('discards a draft, and "Refresh" applies one', async () => {
     const gen = countingEngine();
     mount(gen);
@@ -209,6 +224,25 @@ describe('PasswordsProvider', () => {
     await waitFor(() => expect(text('sentence')).not.toBe(sentence));
     await settled();
     expect(text('hints')).toBe(text('sentence'));
+  });
+
+  it('draws a new sentence on load when the stored one is not one the tool makes, keeping the user\'s own sentence', async () => {
+    const { local, session, unmount } = mount(countingEngine());
+    await settled();
+    unmount();
+    const broken = { slots: ['num', 'noun', 'verb', 'noun'], words: ['85', '', 'cadets', 'otters'] };
+    session.setItem(SESSION_KEY, JSON.stringify({ ...loadSession(session)!, sentence: 'my secret sentence', generated: broken }));
+    const gen = countingEngine();
+    mount(gen, local, session);
+    await waitFor(() => expect(gen.runs).toHaveLength(1)); // the stored batch is on screen until this run lands
+    await settled();
+    expect(gen.runs[0]!.generated).toBeNull();
+    await waitFor(() => expect(text('sentence')).not.toBe(''));
+    expect(text('sentence')).not.toBe(broken.words.join(' '));
+    expect(text('error')).toBe('');
+    const stored = loadSession(session)!;
+    expect(stored.sentence).toBe('my secret sentence');
+    expect(stored.generated?.words.join(' ')).toBe(text('sentence'));
   });
 
   it('persists applied settings, the mode, the applied sentence and the list; drafts are not persisted', async () => {

@@ -16,6 +16,9 @@
 //   ENDINGS      close the sentence         ("tonight")
 //   PREPOSITIONS open a trailing phrase     ("near")
 
+/** How many letters every word on the lists has (words.test.ts holds them to it); made-up nouns are cut to the same. */
+export const WORD_LENGTH_RANGE = { min: 3, max: 8 } as const;
+
 const list = (words: string): readonly string[] => words.trim().split(/\s+/);
 
 export const ADJECTIVES = list(`

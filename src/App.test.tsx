@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
+import { dismissSlow, reportSlow } from './state/slow';
 import { REQUIREMENTS_KEY, TYPING_MODE_KEY } from './state/settingsStore';
 import { MEDIUM, NARROW, PHONE } from './components/useMediaQuery';
 
@@ -45,6 +46,22 @@ describe('App', () => {
     expect(tabs[1]!.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('tabpanel')).toBeTruthy();
     expect(screen.getByLabelText('Your sentence')).toBeTruthy();
+  });
+
+  it('shows slow work as a floating error on any page until it is dismissed', async () => {
+    render(<App />);
+    await act(async () => {
+      reportSlow('Making passwords', 2500);
+      await Promise.resolve();
+    });
+    const notice = screen.getByRole('region', { name: 'Slow work' });
+    expect(within(notice).getByRole('alert').textContent).toMatch(/^Making passwords took 2\.5 s, over the 2\.0 s/);
+    await act(async () => {
+      fireEvent.click(within(notice).getByRole('button', { name: 'Dismiss' }));
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('region', { name: 'Slow work' })).toBeNull();
+    dismissSlow();
   });
 });
 
@@ -92,7 +109,7 @@ describe('App: typing mode', () => {
     fireEvent.click(within(card).getByRole('button', { name: 'One-handed' }));
     fireEvent.click(screen.getByRole('button', { name: 'Submit changes' }));
     await waitFor(() => expect(window.localStorage.getItem(TYPING_MODE_KEY)).toBe('"one-handed"'));
-    expect(JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!)).toMatchObject({ comfort: 'strict', shiftReach: true, separator: ' ', madeUp: 1 });
+    expect(JSON.parse(window.localStorage.getItem(REQUIREMENTS_KEY)!)).toMatchObject({ comfort: 'strict', shiftReach: true, separator: ' ', shorthand: 1, madeUp: 0 });
     await waitFor(() => expect(passwordsShown()).not.toEqual(passwords), { timeout: 10_000 });
     // An option edited away from the mode's can be put back from the card.
     fireEvent.click(screen.getByRole('button', { name: 'Balanced' }));
@@ -349,6 +366,9 @@ describe('App: order and pages', () => {
     // Deliberate swaps come with their words: no memory load, no memorability penalty.
     expect(screen.getByText(/adds nothing to memory load and costs no memorability/)).toBeTruthy();
     expect(screen.getByText(/a deliberate swap costs nothing/)).toBeTruthy();
+    // Strength's tip names its band, never a preset: the presets are targets for the bits.
+    expect(screen.getByText(/its tip says high, fair or low/)).toBeTruthy();
+    expect(screen.queryByText(/green from the Strong preset/)).toBeNull();
     expect(screen.getByRole('link', { name: 'Scoring' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText(/read like a sentence/)).toBeTruthy(); // the one app description, on every page
     // The options each mode fills in, one column per mode, and what they measure.

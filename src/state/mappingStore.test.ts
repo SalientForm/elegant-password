@@ -19,9 +19,12 @@ describe('mapping settings', () => {
   it('drops malformed data instead of failing', () => {
     expect(parseMappingSettings('not json')).toEqual({ disabled: [], custom: [] });
     expect(parseMappingSettings(undefined)).toEqual({ disabled: [], custom: [] });
-    expect(parseMappingSettings({ disabled: ['nope', 'a>@', 3], custom: [{ from: 'A', to: '4' }, { from: 'b', to: '8' }] })).toEqual({
+    // Kept only what the swaps panel would add: not "A>4" (malformed), "b>8" (a built-in) or a second "cat>k@".
+    expect(
+      parseMappingSettings({ disabled: ['nope', 'a>@', 3], custom: [{ from: 'A', to: '4' }, { from: 'b', to: '8' }, { from: 'cat', to: 'k@' }, { from: 'cat', to: 'k@' }] }),
+    ).toEqual({
       disabled: ['a>@'],
-      custom: [{ from: 'b', to: '8' }],
+      custom: [{ from: 'cat', to: 'k@' }],
     });
   });
 

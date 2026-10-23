@@ -3,7 +3,9 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import type { TypingMode } from '../lib/difficulty';
-import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
+import { DEFAULT_REQUIREMENTS, SEPARATOR_PREFERENCE, type Requirements } from '../lib/generate';
+import { MADE_UP_NOUNS, pools } from '../lib/grammar';
+import { FAR_SHIFT_LETTERS, FAR_SHIFT_SYMBOLS, ONE_HAND_SHIFT_REACH, PINKY_STRETCH_SYMBOLS } from '../lib/keyboard';
 import { RequirementsForm } from './RequirementsForm';
 import { SiteRules } from './SiteRules';
 import { SETTLE_MS } from './useShownProblems';
@@ -219,6 +221,16 @@ describe('RequirementsForm', () => {
     expect(req().minLowercase).toBe(1);
   });
 
+  it('fills in "3 of the following 4" as three named kinds, says which, and leaves the symbol count as it was', () => {
+    const noSymbols = { ...DEFAULT_REQUIREMENTS, minUppercase: 0, minDigits: 0, minSymbols: 0 };
+    render(<Harness initial={noSymbols} />);
+    const box = screen.getByRole('textbox', { name: "The site's password rules" });
+    fireEvent.paste(box);
+    fireEvent.change(box, { target: { value: 'Your password must contain at least 3 of the following:\n• Uppercase letters\n• Lowercase letters\n• Numbers\n• Symbols' } });
+    expect(req()).toEqual({ ...noSymbols, minUppercase: 1, minLowercase: 1, minDigits: 1 });
+    expect(pasteStatus().textContent).toBe('Filled in: at least 3 of uppercase, lowercase, digits and symbols (kept as an uppercase letter, a lowercase letter and a digit).');
+  });
+
   it('fills in at once when text is pasted', () => {
     render(<Harness />);
     const box = screen.getByRole('textbox', { name: "The site's password rules" });
@@ -279,6 +291,22 @@ describe('RequirementsForm', () => {
     expect(screen.getByText('None: the words run together.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Auto' }));
     expect(req().separator).toBe('auto');
+  });
+
+  it("names the core's own keys and figures in its hints: every pinky stretch and far Shift key, in keyboard order, and the bits of a number and a made-up noun", () => {
+    render(<Harness />);
+    const codes = [...document.querySelectorAll('.hint code')].map((c) => c.textContent!);
+    const pinky = codes.find((c) => c.includes('!'))!.split(' ');
+    expect([...pinky].sort()).toEqual([...PINKY_STRETCH_SYMBOLS].sort());
+    expect(codes).toContain('$ % ^ & * ('); // FAR_SHIFT_SYMBOLS, left to right on the number row
+    expect(codes.find((c) => c.includes('$'))!.split(' ').sort()).toEqual([...FAR_SHIFT_SYMBOLS].sort());
+    expect(codes).toContain('T G B Y H N U J I');
+    expect(codes.find((c) => c.includes('T G'))!.split(' ').sort()).toEqual([...FAR_SHIFT_LETTERS].sort());
+    expect(screen.getByText(new RegExp(`more than ${ONE_HAND_SHIFT_REACH} keys from both Shift keys`))).toBeTruthy();
+    const numberBits = Math.round(Math.log2(pools(DEFAULT_REQUIREMENTS.comfort).num.length));
+    expect(screen.getByRole('checkbox', { name: new RegExp(`about ${numberBits} bits for two keystrokes`) })).toBeTruthy();
+    expect(screen.getByText(new RegExp(`each is worth\\s+about ${Math.round(Math.log2(MADE_UP_NOUNS.length))} bits`))).toBeTruthy();
+    expect((screen.getByLabelText('Separator symbol') as HTMLInputElement).placeholder).toBe(`or ${SEPARATOR_PREFERENCE[0]}`);
   });
 
   it('cannot pick Space while spaces are not allowed, and flags a Space picked before they were ruled out', () => {

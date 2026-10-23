@@ -1,4 +1,9 @@
-import { crackEstimates, formatDuration, type Plan } from '../lib/generate';
+import { memo } from 'react';
+import { ATTACK_SCENARIOS, crackEstimates, formatDuration, type Plan } from '../lib/generate';
+import { andList, largeNumber } from '../lib/readings';
+
+/** The attackers' speeds as they read: "10, 100,000 and 100 billion". */
+const SPEEDS = andList(ATTACK_SCENARIOS.map((a) => largeNumber(a.guessesPerSecond)));
 
 /**
  * The bits: the exact entropy of the current plan, for an attacker who knows
@@ -7,7 +12,7 @@ import { crackEstimates, formatDuration, type Plan } from '../lib/generate';
  * (Strength, Raw) assume an attacker who does not know the tool, and travel
  * with the password.
  */
-export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) {
+export const StrengthPanel = memo(function StrengthPanel({ plan, target }: { plan: Plan; target: number }) {
   const counted = plan.breakdown.filter((b) => b.poolSize > 1);
 
   return (
@@ -74,7 +79,7 @@ export function StrengthPanel({ plan, target }: { plan: Plan; target: number }) 
           </div>
         ))}
       </dl>
-      <p className="hint">Average time to guess, for an attacker who knows the tool, at 10, 100,000 and 100 billion guesses per second.</p>
+      <p className="hint">Average time to guess, for an attacker who knows the tool, at {SPEEDS} guesses per second.</p>
     </section>
   );
-}
+});

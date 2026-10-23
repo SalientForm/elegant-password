@@ -1,14 +1,18 @@
-// Word-level text helpers shared by sentence mode and the cold scorer.
-// Kept free of other imports so the scorer never depends on the generator.
+// Word-level text helpers shared by sentence mode and the cold scorer, and
+// the small wording helpers every module that writes a sentence uses (a
+// count and its noun, a first letter up or down). Kept free of other
+// imports so the scorer never depends on the generator, and any module,
+// either front end's included, can take a helper without drawing in more.
 
 /**
- * The longest sentence, hint or password under test either front end takes,
- * in characters. Scoring a text is quadratic in places (the alignment, the
- * twist count), so the length is capped rather than left open; at this cap
- * the longest permitted batch answers in about a quarter of a second on a
+ * The longest sentence or hint either front end takes, in characters (the
+ * user's limit, 2026-10-21; a password under test is at most MAX_LENGTH,
+ * 128). Scoring a text is quadratic in places (the alignment, the twist
+ * count), so the length is capped rather than left open; at this cap the
+ * longest permitted batch answers in about a quarter of a second on a
  * desktop (docs/decisions.md, "The engine's budget").
  */
-export const MAX_SENTENCE_LENGTH = 500;
+export const MAX_HINT_LENGTH = 512;
 
 /**
  * Why a sentence is too long, or undefined when it is not: the one check
@@ -17,7 +21,7 @@ export const MAX_SENTENCE_LENGTH = 500;
  * code units, as the web app's fields and the CLI already do.
  */
 export function sentenceLengthProblem(sentence: string): string | undefined {
-  return sentence.length > MAX_SENTENCE_LENGTH ? `The sentence is ${sentence.length} characters; ${MAX_SENTENCE_LENGTH} is the most this tool takes. Use a shorter sentence.` : undefined;
+  return sentence.length > MAX_HINT_LENGTH ? `The sentence is ${sentence.length} characters; ${MAX_HINT_LENGTH} is the most this tool takes. Use a shorter sentence.` : undefined;
 }
 
 /** Small words: these become capital initials and are the first to be dropped. */
@@ -50,3 +54,12 @@ export function trimInterior(word: string): string {
 
 /** Count of letters a-z or A-Z. */
 export const letterCount = (text: string) => text.replace(/[^a-zA-Z]/g, '').length;
+
+/** A count and the noun that agrees with it: "1 digit", "3 digits", "2 fixes" (with `many`). */
+export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** The text with its first character in upper case: the start of a sentence. */
+export const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** The text with its first character in lower case: a sentence carried into another. */
+export const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);

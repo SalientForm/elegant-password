@@ -3,13 +3,18 @@ import { commonPasswordProblem, commonRank } from '../lib/common';
 import { criterionOf, DEFAULT_TYPING_MODE, difficultyIn } from '../lib/difficulty';
 import { difficultyAlone, scoreCold } from '../lib/score';
 import { rawBits, strengthBits } from '../lib/strength';
-import { MAX_SENTENCE_LENGTH } from '../lib/text';
+import { MAX_HINT_LENGTH, plural } from '../lib/text';
+import { MAX_LENGTH } from '../lib/validation';
 import { finishAttempt, nextTarget, pastedTarget, recordChange, recordKey, startRecording, UNNAMED_KEYS, type Attempt, type Recording } from '../lib/typingTest';
 import { usePasswordsOptional } from '../state/PasswordsProvider';
+import { timed } from '../state/slow';
 import { CancelIcon } from './icons';
 import { PasswordText } from './PasswordText';
 import { ScoreBadges } from './SuggestionCard';
 import { useZxcvbn } from './useZxcvbn';
+
+/** What the slow-work notice names when scoring the password under test takes too long. */
+const SCORING = 'Scoring the password under test';
 
 interface Props {
   /** Clock in milliseconds; injectable for tests. */
@@ -115,12 +120,14 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   }, [epoch]);
 
   const hintText = hint?.trim() ? hint.trim() : undefined;
-  const cold = useMemo(() => (target !== undefined && hintText !== undefined ? scoreCold(target, hintText) : undefined), [target, hintText]);
+  const cold = useMemo(() => (target !== undefined && hintText !== undefined ? timed(SCORING, () => scoreCold(target, hintText)) : undefined), [target, hintText]);
   /** The password as displayed: masked unless shown. Too long for the column, it ends in an ellipsis and a click shows the whole of it, like My list. */
   const shownTarget = target === undefined ? undefined : shown ? target : '•'.repeat([...target].length);
   const typingMode = passwords?.typingMode ?? DEFAULT_TYPING_MODE;
-  const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? difficultyAlone(target) : undefined), [cold, target]);
+  const base = useMemo(() => cold?.difficulty ?? (target !== undefined ? timed(SCORING, () => difficultyAlone(target)) : undefined), [cold, target]);
   const difficulty = useMemo(() => (target !== undefined && base ? difficultyIn(target, base, typingMode) : undefined), [target, base, typingMode]);
+  /** The figures from the password alone, worked out once per password under test, not on every keystroke. */
+  const alone = useMemo(() => (target === undefined ? undefined : timed(SCORING, () => ({ strength: strengthBits(target), raw: rawBits(target), rank: commonRank(target) }))), [target]);
   const last = attempts[0];
   const zxcvbn = useZxcvbn(target, passwords?.selected.find((e) => e.password === target)?.zxcvbn);
 
@@ -138,7 +145,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
   /** Pasting selects a password to test, as adding one from the list does; it is not typed into the field. Exactly as pasted, or refused with the reason. */
   const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pasted = pastedTarget(e.clipboardData.getData('text'), MAX_SENTENCE_LENGTH);
+    const pasted = pastedTarget(e.clipboardData.getData('text'), MAX_LENGTH);
     if (!pasted) return;
     if ('problem' in pasted) return setPasteProblem(pasted.problem);
     testThis(pasted.password, hintFor(pasted.password)); // a known password keeps its hint; an unknown one may be given one
@@ -146,7 +153,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
 
   /** A soft keyboard's typing, read from the change of text when its key down named no key. */
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = e.target.value.slice(0, MAX_SENTENCE_LENGTH);
+    const next = e.target.value.slice(0, MAX_LENGTH);
     if (unnamed.current) recordChange(recording.current, value, next, now());
     unnamed.current = false;
     setValue(next);
@@ -203,7 +210,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
         {...MANAGER_OPT_OUT}
         placeholder="type it here, then Enter"
         value={value}
-        maxLength={MAX_SENTENCE_LENGTH}
+        maxLength={MAX_LENGTH}
         onChange={onChange}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
@@ -242,7 +249,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
                 autoCapitalize="off"
                 spellCheck={false}
                 value={hint ?? ''}
-                maxLength={MAX_SENTENCE_LENGTH}
+                maxLength={MAX_HINT_LENGTH}
                 onChange={(e) => setHint(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
@@ -258,13 +265,13 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               <span className="field-label">Hint:</span> {hintText ?? <em>none</em>}
             </p>
           )}
-          {commonRank(target!) !== undefined && (
+          {alone?.rank !== undefined && (
             <p className="error" role="alert">
-              {commonPasswordProblem(commonRank(target!)!)}.
+              {commonPasswordProblem(alone.rank)}.
             </p>
           )}
           <div className="actions">
-            <ScoreBadges strength={strengthBits(target!)} raw={rawBits(target!)} difficulty={difficulty} {...(zxcvbn ? { zxcvbn } : {})} {...(cold ? { memorability: cold.memorability.score } : {})} />
+            <ScoreBadges strength={alone!.strength} raw={alone!.raw} difficulty={difficulty} {...(zxcvbn ? { zxcvbn } : {})} {...(cold ? { memorability: cold.memorability.score } : {})} />
           </div>
           {last && (
             <ul className="typing-stats">
@@ -278,7 +285,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               <li>
                 {last.corrections === 0
                   ? 'No corrections'
-                  : `${last.corrections} correction${last.corrections === 1 ? '' : 's'} (Backspace or Delete)`}
+                  : `${plural(last.corrections, 'correction')} (Backspace or Delete)`}
                 , {Math.round(last.accuracy * 100)}% accuracy over {last.keystrokes} keystrokes
               </li>
             </ul>
@@ -288,7 +295,7 @@ export function TypingTest({ now = () => performance.now(), keep = 5 }: Props) {
               Previous runs:{' '}
               {attempts
                 .slice(1)
-                .map((a) => `${a.seconds.toFixed(1)} s, ${a.corrections} fix${a.corrections === 1 ? '' : 'es'}${a.matched ? '' : ', mismatch'}`)
+                .map((a) => `${a.seconds.toFixed(1)} s, ${plural(a.corrections, 'fix', 'fixes')}${a.matched ? '' : ', mismatch'}`)
                 .join(' · ')}
             </p>
           )}

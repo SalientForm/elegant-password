@@ -6,11 +6,12 @@
 
 import { parseArgs } from 'node:util';
 import type { TypingMode } from '../lib/difficulty';
+import { DEFAULT_SITE_PRESET } from '../lib/sitePresets';
 import { flagNamed } from './args';
 import { punctuated, usageError } from './errors';
 import { FIELDS, fieldNamed, fieldsIn, parseValue } from './fields';
 import { FORMATS, META_FLAGS, SHORT_SETTINGS as SHORT, type Format } from './flagList';
-import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
+import { closest, lookup, MODE_NAMES, SITE_NAMES, siteName } from './names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
 
@@ -49,7 +50,7 @@ function example(name: string): string {
   const f = fieldNamed(name);
   if (!f) {
     const m = META_FLAGS.find((x) => x.name === name);
-    return m?.value ? `--${name} ${m.value === '<file>' ? 'bank.yml' : m.value === '<mode>' ? 'two-finger' : m.value === '<preset>' ? 'typical-site' : m.value === '<format>' ? 'json' : m.value === '-' ? '-' : '"8-20 characters"'}` : `--${name}`;
+    return m?.value ? `--${name} ${m.value === '<file>' ? 'bank.yml' : m.value === '<mode>' ? 'two-finger' : m.value === '<preset>' ? siteName(DEFAULT_SITE_PRESET) : m.value === '<format>' ? 'json' : m.value === '-' ? '-' : '"8-20 characters"'}` : `--${name}`;
   }
   switch (f.kind.type) {
     case 'int':

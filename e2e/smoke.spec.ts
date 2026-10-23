@@ -237,6 +237,36 @@ test('a site preset that rules out the separator still makes passwords: the sepa
   await everyCheckMet(page);
 });
 
+test('pasted "3 of the following 4" rules fill in three named kinds and make passwords that meet them; a paste past the cap is refused', async ({ page, context }) => {
+  await settledPasswords(page);
+  const box = page.getByRole('textbox', { name: "The site's password rules" });
+  const status = page.locator('#paste-rules').getByRole('status');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => navigator.clipboard.writeText('Your password must be 10-24 characters and contain at least 3 of the following:\n• Uppercase letters (A-Z)\n• Lowercase letters (a-z)\n• Numbers (0-9)\n• Symbols'));
+  await box.click();
+  await page.keyboard.press('Control+V');
+  await expect(status).toHaveText('Filled in: 10-24 characters, at least 3 of uppercase, lowercase, digits and symbols (kept as an uppercase letter, a lowercase letter and a digit).');
+  await applyBar(page).getByRole('button', { name: 'Submit changes', exact: true }).click();
+  await expect(applyBar(page)).toHaveCount(0);
+  for (const password of await settledPasswords(page)) {
+    expect(password).toMatch(/[A-Z]/);
+    expect(password).toMatch(/[a-z]/);
+    expect(password).toMatch(/[0-9]/);
+  }
+  await everyCheckMet(page);
+
+  // The box's cap is the core's: a paste that would pass it is refused whole, and the text stays.
+  const cap = Number(await box.getAttribute('maxlength'));
+  expect(cap).toBeGreaterThan(0);
+  const before = await box.inputValue();
+  await page.evaluate((n) => navigator.clipboard.writeText('x'.repeat(n)), cap);
+  await box.click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Control+V');
+  await expect(status).toHaveText(new RegExp(`^Not pasted\\. The rules text is ${before.length + cap} characters; ${cap} is the most this tool reads\\.`));
+  await expect(box).toHaveValue(before);
+});
+
 test('an impossible combination shows its error beside the fields, blocks Submit, Enter and Refresh, and works once corrected', async ({ page }) => {
   const before = await settledPasswords(page);
   const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('elegant-passwords:requirements:v1') ?? '{}'));
@@ -584,4 +614,31 @@ test('Forget this session draws a new sentence and clears the password under tes
   await page.getByRole('button', { name: 'Really forget?', exact: true }).click();
   await expect(page.locator('.typing-result')).toHaveCount(0);
   await expect.poll(async () => (await settledPasswords(page))[0]).not.toBe(shown[0]);
+});
+
+test('framed by a page on another origin, the build shows only a notice and a link to a tab of its own; the dev server stays frameable', async ({ page, context, baseURL }, info) => {
+  // The framing page is served by request interception on an origin of its own, as a clickjacking page would be: no server, no port.
+  // Chromium lets a page off the local network frame one on it only when granted local network access, and grants that only to a secure page,
+  // hence https; the deployed app is not on the local network, so the grant stands in for that.
+  const app = `${baseURL}/`;
+  await context.grantPermissions(['local-network-access'], { origin: 'https://framer.test' });
+  await page.route('https://framer.test/**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: `<!doctype html><title>Framer</title><iframe src="${app}" width="1280" height="800"></iframe>` }),
+  );
+  await page.goto('https://framer.test/');
+  const frame = page.frameLocator('iframe');
+  if (info.project.name === 'dev') {
+    await expect(frame.locator('article.card')).toHaveCount(5); // preview panes frame the dev server
+    return;
+  }
+  await expect(frame.getByRole('heading', { name: 'Elegant Passwords opens in its own tab' })).toBeVisible();
+  await expect(frame.locator('header, article.card, nav')).toHaveCount(0); // no app was mounted
+  await expect(frame.locator('code')).toHaveText(app);
+  const link = frame.getByRole('link', { name: 'Open Elegant Passwords in a new tab' });
+  await expect(link).toHaveAttribute('href', app);
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', /noopener/);
+  const [tab] = await Promise.all([context.waitForEvent('page'), link.click()]);
+  await expect(tab).toHaveURL(app);
+  await expect(cards(tab)).toHaveCount(5); // at the top of its own tab, the app runs
 });

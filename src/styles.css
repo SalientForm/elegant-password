@@ -347,13 +347,11 @@ button.ghost { border-color: transparent; color: var(--muted); }
 /* zxcvbn's reading: the fourth badge, in four words. */
 .badge.zxcvbn { font-weight: 600; }
 .badge.zxcvbn.pending { font-weight: 400; color: var(--muted); border-style: dashed; }
-.level-0, .level-1 { background: var(--accent-soft); color: var(--accent); }
-.level-2 { background: var(--warn-soft); color: var(--warn); }
-.level-3, .level-4 { background: var(--bad-soft); color: var(--bad); }
-.memo-high { background: var(--accent-soft); color: var(--accent); }
-.memo-mid { background: var(--warn-soft); color: var(--warn); }
-.memo-low { background: var(--bad-soft); color: var(--bad); }
-.memo-none { background: var(--key); color: var(--muted); }
+/* The colour bands (src/lib/readings.ts): which score or level is which band is decided there, never here. */
+.band-high { background: var(--accent-soft); color: var(--accent); }
+.band-mid { background: var(--warn-soft); color: var(--warn); }
+.band-low { background: var(--bad-soft); color: var(--bad); }
+.band-none { background: var(--key); color: var(--muted); }
 .pip { font-size: 0.72rem; font-weight: 600; padding: 0.05rem 0.45rem; border-radius: 999px; }
 table.rubric { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .rubric th, .rubric td { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -532,14 +530,25 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
 .apply-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); z-index: 20; width: max-content; max-width: min(48rem, calc(100vw - 2rem)); pointer-events: none; }
 .snackbar { pointer-events: auto; display: flex; align-items: center; gap: 0.5rem 1rem; min-height: 3rem; padding: 0.5rem 0.6rem 0.5rem 1rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 1.25rem 12rem rgb(0 0 0 / 0.55), 0 16px 48px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.25); } /* a wide 12 rem blur lifts it well off whatever it floats over */
 .snackbar.blocked { border-color: var(--bad); }
+/* The slow-work error: the same card, in the error colour, above the unapplied-changes bar when both show. */
+.slow-notice { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); z-index: 21; width: max-content; max-width: min(48rem, calc(100vw - 2rem)); pointer-events: none; }
+body:has(.apply-bar) .slow-notice { bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px)); }
+/* Framed by another page, the built app shows only this (src/frameGuard.ts): a card in the middle of the page, the link in the accent colour. */
+.framed-notice { max-width: 34rem; margin: 12vh auto 2rem; padding: 1.5rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.framed-notice h1 { font-size: 1.4rem; }
+.framed-notice p { margin: 0.75rem 0 0; }
+.framed-notice a { color: var(--accent); font-weight: 600; }
+.framed-notice code { overflow-wrap: anywhere; color: var(--muted); }
+.snackbar.failed { border-color: var(--bad); }
+.snackbar.failed .snackbar-text { color: var(--bad); }
 .snackbar-text { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 0.85rem; overflow-wrap: anywhere; }
 .snackbar.blocked .snackbar-text { color: var(--bad); }
 .snackbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; margin-left: auto; flex: 0 1 auto; min-width: 0; } /* on the narrowest phones the buttons wrap rather than run off the screen */
 .snackbar-actions button { font-size: 0.9rem; padding: 0.5rem 0.9rem; min-height: 0; }
 .snackbar-actions button.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--accent); font-weight: 600; } /* a snackbar's text actions */
 .snackbar.blocked .snackbar-actions button.ghost:first-child { color: var(--bad); } /* Show, in the problem's colour */
-@media (max-width: 600px) { .apply-bar { left: 1rem; right: 1rem; transform: none; width: auto; max-width: none; } .snackbar { flex-wrap: wrap; } .snackbar-actions { max-width: 100%; } }
-@media (max-width: 360px) { .apply-bar { left: 0.5rem; right: 0.5rem; } .snackbar-actions button { padding: 0.5rem 0.6rem; } } /* 320 px: Show, Discard and Submit changes still fit, or wrap */ /* a phone: the text may take a line of its own, the buttons under it at the right */
+@media (max-width: 600px) { .apply-bar, .slow-notice { left: 1rem; right: 1rem; transform: none; width: auto; max-width: none; } .snackbar { flex-wrap: wrap; } .snackbar-actions { max-width: 100%; } }
+@media (max-width: 360px) { .apply-bar, .slow-notice { left: 0.5rem; right: 0.5rem; } .snackbar-actions button { padding: 0.5rem 0.6rem; } } /* 320 px: Show, Discard and Submit changes still fit, or wrap */ /* a phone: the text may take a line of its own, the buttons under it at the right */
 .chip.fluff { background: var(--warn-soft); border: 1px dashed var(--warn); }
 
 /* Test a password, top of the right column */

@@ -85,29 +85,29 @@ export const MINIMAL_BITS = Math.min(...STRENGTH_PRESETS.map((p) => p.bits));
 // Each value below was kept only if it lowered the mode's mean difficulty in
 // its own rubric at the Typical site rules (600 suggestions, seeded; see the
 // measurement in modeProfiles.test.ts) with bits at or above the target and
-// memorability holding up. Findings: a space separator (thumb, no travel)
-// beats ";" for two fingers, one hand and quick typing alike; one made-up
-// noun (a key roll) helps two fingers and one hand, two would help more but
-// leave few real words (and one-handed batches with too little to vary);
-// capital initials help two fingers only beside a made-up noun; strict
-// comfort costs two fingers length (smaller pools, longer sentences for the
-// target) but suits one hand; a minimum of one swap keeps the cards in a
-// batch different.
+// memorability holding up. No mode uses made-up nouns: they are left to the
+// user to choose (decided 2026-10-22, first asked for by Dossier). Findings: a space separator (thumb, no travel)
+// beats ";" for two fingers, one hand and quick typing alike; a two-letter
+// word and glue help two fingers; capital initials helped two fingers only
+// beside a made-up noun, and glue helped Minimal-quick only with them, so
+// both went with the made-up nouns; strict comfort costs two fingers length
+// (smaller pools, longer sentences for the target) but suits one hand; a
+// minimum of one swap keeps the cards in a batch different.
 export const MODE_PROFILES: Record<TypingMode, ModeProfile> = {
   'ten-finger': { values: TEN_FINGER, unused: [] },
   'two-finger': {
-    values: { ...TEN_FINGER, avoidPinkyStretch: false, easeSwaps: false, separator: 'space-if-allowed', twists: 1, initials: 1, shorthand: 1, madeUp: 1, glue: true },
+    values: { ...TEN_FINGER, avoidPinkyStretch: false, easeSwaps: false, separator: 'space-if-allowed', twists: 1, shorthand: 1, glue: true },
     unused: [
       { key: 'avoidPinkyStretch', reason: 'Two index fingers have no pinky to stretch.' },
       { key: 'easeSwaps', reason: 'The awkward moves these swaps remove, same-finger jumps and long reaches, are for ten fingers on the home row.' },
     ],
   },
   'one-handed': {
-    values: { ...TEN_FINGER, comfort: 'strict', shiftReach: true, separator: 'space-if-allowed', twists: 1, shorthand: 1, madeUp: 1, glue: true },
+    values: { ...TEN_FINGER, comfort: 'strict', shiftReach: true, separator: 'space-if-allowed', twists: 1, shorthand: 1, glue: true },
     unused: [],
   },
   quick: {
-    values: { ...TEN_FINGER, targetBits: MINIMAL_BITS, shortest: true, comfort: 'strict', separator: 'space-if-allowed', includeNumber: false, twists: 1, madeUp: 3, glue: true },
+    values: { ...TEN_FINGER, targetBits: MINIMAL_BITS, shortest: true, comfort: 'strict', separator: 'space-if-allowed', includeNumber: false, twists: 1 },
     unused: [],
   },
 };
@@ -181,15 +181,15 @@ export const MODE_MEASURES: {
   defaults: Record<TypingMode, number>;
   byMode: Record<TypingMode, ModeMeasure>;
 } = {
-  asOf: '2026-10-19',
+  asOf: '2026-10-22',
   n: 600,
   rules: 'Typical site',
   defaults: { 'two-finger': 55.3, 'ten-finger': 41.6, 'one-handed': 53.5, quick: 49.8 },
   byMode: {
-    'two-finger': { difficulty: 33, tenFinger: 23.6, bits: 42.1, memorability: 72.1, length: 20.7 },
+    'two-finger': { difficulty: 38.6, tenFinger: 33.2, bits: 41.4, memorability: 73.8, length: 25.4 },
     'ten-finger': { difficulty: 41.6, tenFinger: 41.6, bits: 42.7, memorability: 73.7, length: 28.7 },
-    'one-handed': { difficulty: 36.4, tenFinger: 24.3, bits: 43.1, memorability: 75.5, length: 24.4 },
-    quick: { difficulty: 10.1, tenFinger: 13.9, bits: 20.1, memorability: 95.4, length: 13 },
+    'one-handed': { difficulty: 38, tenFinger: 29.3, bits: 44.9, memorability: 68.9, length: 30.3 },
+    quick: { difficulty: 38.2, tenFinger: 23, bits: 17.4, memorability: 93, length: 16 },
   },
 };
 

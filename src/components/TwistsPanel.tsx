@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
-import { isFarShift, isPinkyStretch } from '../lib/keyboard';
-import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
-import { BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, validateMapping, type Mapping, type MappingKind } from '../lib/twists';
+import { memo, useState } from 'react';
+import { mappingBlock, MAX_TWISTS, type Requirements, resolveSeparator } from '../lib/generate';
+import { PROFILE_LABELS } from '../lib/modeProfiles';
+import { customMappingProblem, DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
+import { BUILT_IN_KINDS, BUILT_IN_MAPPINGS, MAPPING_KIND_LABELS, mappingKey, type Mapping } from '../lib/twists';
 
 interface Props {
   req: Requirements;
@@ -22,36 +22,25 @@ export const relevantTo = (words: readonly string[]) => (m: Pick<Mapping, 'from'
 
 const show = (to: string) => (to === '' ? '–' : to);
 
-/** The separator the requirements resolve to, or undefined while they are invalid or the separator is a space. */
-function separatorInUse(req: Requirements): string | undefined {
+/** The separator the requirements resolve to, or none while they are invalid. */
+function separatorInUse(req: Requirements): string {
   try {
-    const s = resolveSeparator(req);
-    return s.trim() ? s : undefined;
+    return resolveSeparator(req);
   } catch {
-    return undefined;
+    return '';
   }
 }
 
-export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, relevant }: Props) {
+export const TwistsPanel = memo(function TwistsPanel({ req, onReqChange, settings, onSettingsChange, relevant }: Props) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [error, setError] = useState<string>();
 
   const disabled = new Set(settings.disabled);
-  const allowed = new Set(req.allowedSymbols);
   const separator = separatorInUse(req);
 
-  /** Why a mapping cannot be used with the current requirements, if it cannot. */
-  const blocked = (m: Pick<Mapping, 'to'>): string | undefined => {
-    for (const c of m.to) {
-      if (/[a-z0-9]/.test(c)) continue;
-      if (!allowed.has(c)) return `"${c}" is not an allowed symbol`;
-      if (c === separator) return `"${c}" is the separator, which never comes from a swap`;
-      if (req.avoidPinkyStretch && isPinkyStretch(c)) return `"${c}" needs a pinky stretch`;
-      if (req.shiftReach && isFarShift(c)) return `"${c}" needs a Shift key out of one hand's reach`;
-    }
-    return undefined;
-  };
+  /** Why a mapping cannot be used with the current requirements, if it cannot: the core's reason (mappingBlock). */
+  const blocked = (m: Pick<Mapping, 'to'>): string | undefined => mappingBlock(m, req, separator);
 
   const toggle = (key: string) =>
     onSettingsChange({
@@ -62,10 +51,9 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
   const add = (e: React.FormEvent) => {
     e.preventDefault();
     const f = from.trim().toLowerCase();
-    const problem = validateMapping(f, to);
-    const exists = [...BUILT_IN_MAPPINGS, ...settings.custom].some((m) => mappingKey(m) === mappingKey({ from: f, to }));
-    if (problem || exists) {
-      setError(problem ?? 'That mapping already exists.');
+    const problem = customMappingProblem({ from: f, to }, settings.custom);
+    if (problem) {
+      setError(problem.message);
       return;
     }
     onSettingsChange({ ...settings, custom: [...settings.custom, { from: f, to }] });
@@ -74,7 +62,7 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
     setError(undefined);
   };
 
-  const groups = (['symbol', 'digit', 'spelling'] as MappingKind[]).map((kind) => ({
+  const groups = BUILT_IN_KINDS.map((kind) => ({
     kind,
     mappings: BUILT_IN_MAPPINGS.filter((m) => m.kind === kind),
   }));
@@ -91,7 +79,7 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
       </p>
 
       <fieldset>
-        <legend>Minimum swaps</legend>
+        <legend>{PROFILE_LABELS.twists}</legend>
         <div className="segmented four">
           {Array.from({ length: MAX_TWISTS + 1 }, (_, n) => (
             <button
@@ -189,4 +177,4 @@ export function TwistsPanel({ req, onReqChange, settings, onSettingsChange, rele
       </button>
     </section>
   );
-}
+});

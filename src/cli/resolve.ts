@@ -11,9 +11,10 @@ import { DEFAULT_REQUIREMENTS, type Requirements } from '../lib/generate';
 import { DEFAULT_MAPPING_SETTINGS, type MappingSettings } from '../lib/mappingSettings';
 import { modeLabel, profileValues, PROFILE_KEYS, unusedIn } from '../lib/modeProfiles';
 import type { GenerationSettings } from '../lib/pipeline';
-import { parseRuleText } from '../lib/ruleText';
+import { mergeParsedRules, parseRuleText, rulesTextLengthProblem } from '../lib/ruleText';
 import { RULE_KEYS, type SitePreset } from '../lib/sitePresets';
 import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
+import { lowerFirst } from '../lib/text';
 import { usageError } from './errors';
 import { COUNT_AT_TERMINAL, COUNT_PIPED, describeValue, FIELDS, reqField, type CliField } from './fields';
 import { siteName } from './names';
@@ -90,8 +91,17 @@ export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv):
       for (const key of RULE_KEYS) set(reqField(key)!, layer.site.value.rules[key], { kind: 'site', preset: siteName(layer.site.value), via });
     }
     if (layer.rulesText) {
-      const parsed = parseRuleText(layer.rulesText.value);
       const where = describeSource(layer.rulesText.source);
+      // Past the cap nothing of it is read: refused whole, never cut, as the web box refuses the paste.
+      const tooLong = rulesTextLengthProblem(layer.rulesText.value);
+      if (tooLong) {
+        throw usageError(
+          `${where}: the rules text is too long to read.`,
+          tooLong,
+          'Or leave the rules text out and set the rules with --site or --min-length, --max-length, --symbols and the like instead.',
+        );
+      }
+      const parsed = parseRuleText(layer.rulesText.value);
       // A rule the tool cannot keep is refused, never applied cut down: "exactly 300 characters" must not come back as 128.
       if (parsed.unsupported.length) {
         throw usageError(
@@ -108,8 +118,9 @@ export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv):
         );
       }
       const via: Source = { kind: 'rules-text', via: layer.rulesText.source };
-      for (const [key, value] of Object.entries(parsed.rules)) set(reqField(key as keyof Requirements)!, value, via);
-      if (parsed.excludedSymbols) set(reqField('allowedSymbols')!, [...req.allowedSymbols].filter((c) => !parsed.excludedSymbols.includes(c)).join(''), via);
+      // Merged as the web form merges them, but never settled: a contradiction is reported, not fixed.
+      const merged = mergeParsedRules(req, parsed);
+      for (const key of merged.fields) set(reqField(key)!, merged.rules[key], via);
       notes.push(`Read the rules text (${where}) as: ${parsed.understood.join('; ')}.`);
     }
     apply(layer, 'rules');
@@ -133,7 +144,7 @@ export function resolve(file: Layer | undefined, flags: Layer, env: ResolveEnv):
     .filter(({ f }) => isExplicit(sources[f.name]!))
     .map(
       ({ u, f }) =>
-        `${describeSource(sources[f.name]!)} sets ${f.label} to ${describeValue(f, (req as unknown as Record<string, unknown>)[u.key])}, which ${modeLabel(typingMode)} typing has no use for (${u.reason.replace(/\.$/, '').replace(/^./, (c) => c.toLowerCase())}). It still shapes the passwords as set.`,
+        `${describeSource(sources[f.name]!)} sets ${f.label} to ${describeValue(f, (req as unknown as Record<string, unknown>)[u.key])}, which ${modeLabel(typingMode)} typing has no use for (${lowerFirst(u.reason.replace(/\.$/, ''))}). It still shapes the passwords as set.`,
     );
 
   const mappingSettings = flags.mappings?.value ?? file?.mappings?.value ?? DEFAULT_MAPPING_SETTINGS;

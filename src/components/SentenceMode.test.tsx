@@ -6,7 +6,7 @@ import { DEFAULT_SENTENCE_OPTIONS, fromSentence, type SentenceOptions } from '..
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
 import { seeded } from '../lib/testRandom';
 import { GeneratedSentenceField, SentenceInput, SentenceStrength } from './SentenceMode';
-import { MAX_SENTENCE_LENGTH } from '../lib/text';
+import { MAX_HINT_LENGTH } from '../lib/text';
 
 afterEach(cleanup);
 
@@ -64,7 +64,7 @@ describe('SentenceInput', () => {
     expect(onSubmit).not.toHaveBeenCalled();
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(onSubmit).toHaveBeenCalledOnce();
-    expect(field.maxLength).toBe(MAX_SENTENCE_LENGTH);
+    expect(field.maxLength).toBe(MAX_HINT_LENGTH);
   });
 
   it('controls padding and its length tag', () => {

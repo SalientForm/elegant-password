@@ -3,10 +3,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { problemsOf } from '../lib/consistency';
 import { DEFAULT_REQUIREMENTS } from '../lib/generate';
+import { MAX_RULES_TEXT_LENGTH, rulesTextLengthProblem } from '../lib/ruleText';
 import { layerOf, parseConfig } from './config';
 import { configCommand } from './configCommand';
 import { fieldShape, type SelectShape } from './constraints';
 import { EXIT } from './errors';
+import { COUNT_AT_TERMINAL, COUNT_PIPED } from './fields';
 import { main } from './main';
 import { resolve } from './resolve';
 import { fakeIo, flagsLayer, scratch, type Step } from './testing';
@@ -38,7 +40,7 @@ describe('tep config: a new file', () => {
       'How will you type it?',
       'The site\'s rules',
       'Options',
-      'Output: 5 passwords at a terminal (1 when piped), easiest to type first',
+      `Output: ${COUNT_AT_TERMINAL} passwords at a terminal (${COUNT_PIPED} when piped), easiest to type first`,
       'Change a line (1-5), s to save, q to quit without saving',
     ]);
     expect(io.prompts.said[0]).toEqual({ kind: 'info', message: 'Writing tep.yml. Ctrl+C stops at any point without writing anything.' });
@@ -70,8 +72,8 @@ describe('tep config: a new file', () => {
     expect(lines).toEqual([
       '1  Typing mode  Two-finger',
       '2  Site rules   Typical site (12-32, A + 1 + #)',
-      expect.stringMatching(/^3 {2}Options {6}the Two-finger preset: strength target Everyday \(40 bits\), shortest that meets the target off, typing comfort Balanced, keep Shift within reach off, separator a space, include a number on, minimum swaps 1, capital initials 1, two-letter words 1, made-up nouns 1, glue on$/),
-      '4  Count        5 at a terminal, 1 when piped',
+      expect.stringMatching(/^3 {2}Options {6}the Two-finger preset: strength target Everyday \(40 bits\), shortest that meets the target off, typing comfort Balanced, keep Shift within reach off, separator a space, include a number on, minimum swaps 1, capital initials 0, two-letter words 1, made-up nouns 0, glue on$/),
+      `4  Count        ${COUNT_AT_TERMINAL} at a terminal, ${COUNT_PIPED} when piped`,
       '5  Order        Difficulty',
       '',
       expect.stringMatching(/^Sample: .+ {3}Strength \d+ {2}Raw \d+ {2}Difficulty \d+ {2}Memorability \d+$/),
@@ -91,7 +93,9 @@ describe('tep config: a new file', () => {
     expect(passwords - options).toBeGreaterThan(3);
     for (const l of lines.slice(options + 1, passwords)) expect(l).toMatch(/^ {16}\S/);
     const sample = lines.findIndex((l) => l.startsWith('Sample: '));
-    for (const l of lines.slice(sample + 1)) expect(l).toMatch(/^ {8}\S/);
+    const hint = lines.findIndex((l) => l.startsWith('        hint: '));
+    for (const l of lines.slice(sample + 1, hint)) expect(l).toMatch(/^ {8}\S/);
+    for (const l of lines.slice(hint + 1)) expect(l).toMatch(/^ {14}\S/); // a long hint hangs under its text
     // The answers' words are the ones the full-width review shows, in order.
     const full = (await wizard([...quick('One-handed', 'NIST passphrase'), { text: 's' }])).io.prompts.said.find((s) => s.kind === 'note')!.message.split('\n');
     const words = (ls: string[]) => ls.slice(0, ls.findIndex((l) => l.startsWith('Sample: '))).join(' ').split(/\s+/).filter(Boolean);
@@ -265,6 +269,15 @@ describe('tep config: pasted rules', () => {
     expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Read as: 8-20 characters; 2 lowercase letters.' });
     expect(io.prompts.said).toContainEqual({ kind: 'warn', message: 'Dropped, as this tool cannot keep it: no digits: this tool cannot leave digits out.' });
     expect(parseConfig(text!, 'x').model.rules).toMatchObject({ 'min-length': 8, 'max-length': 20, 'min-lowercase': 2 });
+  });
+
+  it('refuses a paste past the core\'s cap whole and asks again; keeps "3 of 4" as three named kinds', async () => {
+    const long = `8-20 characters ${'x'.repeat(MAX_RULES_TEXT_LENGTH)}`;
+    const { io, text } = await wizard([{ select: 'Ten-finger' }, { select: 'Paste' }, { text: long }, { text: '8-20 characters, at least 3 of: uppercase, lowercase, numbers, symbols' }, { select: 'Use the' }, { select: 'Keep' }, { text: 's' }]);
+    const paste = asked(io, 'Paste the site\'s rules (one line)')[0]!;
+    expect(paste.refused!.map((r) => r.reason)).toEqual([rulesTextLengthProblem(long)]);
+    expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Read as: 8-20 characters; at least 3 of uppercase, lowercase, digits and symbols (kept as an uppercase letter, a lowercase letter and a digit).' });
+    expect(parseConfig(text!, 'x').model.rules).toMatchObject({ 'min-length': 8, 'max-length': 20, 'min-uppercase': 1, 'min-lowercase': 1, 'min-digits': 1 });
   });
 
   it('rules that do not fit together: says why, then asks each rule from the text\'s values', async () => {

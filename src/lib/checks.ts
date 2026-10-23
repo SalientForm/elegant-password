@@ -4,7 +4,8 @@
 // import for requirements.
 
 import { COMMON_PASSWORD_COUNT, commonPasswordProblem, commonRank } from './common';
-import type { RequirementCheck, Requirements } from './generate';
+import type { RequirementCheck, Requirements } from './requirements';
+import { plural } from './text';
 import { isSymbol } from './validation';
 
 export const countUpper = (text: string) => text.replace(/[^A-Z]/g, '').length;
@@ -53,7 +54,7 @@ export function checkRequirements(password: string, req: Requirements, ctx?: Che
     checks.push({
       rule: atLeast(req.minLowercase, req.minLowercase === 1 ? 'Lowercase letter' : 'lowercase letter'),
       met: n >= req.minLowercase,
-      how: `${n} lowercase letter${n === 1 ? '' : 's'}: the words not in capitals`,
+      how: `${plural(n, 'lowercase letter')}: the words not in capitals`,
     });
   }
   if (req.minDigits > 0) {

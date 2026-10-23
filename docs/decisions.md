@@ -10,7 +10,9 @@ A spec in `docs/specs/` is a working document (decided 2026-10-21): once it
 is built, every decision in it that remains accurate is recorded here, in
 the README or in the algorithm flow, and the spec, its plan and the audit
 it acted on are deleted. `TODO.md` keeps what is deferred and the decisions
-to revisit.
+to revisit. An id such as H1 or L17 names an item of the 2026-10-21 audit,
+whose checklist was deleted on 2026-10-22 once every item was built,
+accepted or declined; each item's decisions are recorded here.
 
 ## Scoring
 
@@ -35,6 +37,49 @@ to revisit.
   steps are common in English (`rst`) and are left alone. A password
   exactly on the 10,001 most common is log2 of its place on the list.
   `src/lib/strength.ts`.
+- **A run of letters with no vowel is not English** (2026-10-22, audit
+  L17). Strength read every run of letters as English at 2.3 bits a
+  letter, so key rolls (`bvsd`, `HJK`) and two-letter words (`ht`, `Sr`)
+  read as words: over the made-up noun list it averaged 13.25 bits against
+  the tool's pick of 13.84, and an attacker who does not know the tool
+  cannot do better on average than one who does. Now a run of two letters
+  or more with none of a, e, i, o, u, y reads as consonants (one pick of
+  20 each; a walk of three or more in it one pick of 1,000, since the
+  reason walks start at four is English), at most an English word with one
+  letter changed (its English reading plus log2 of its length plus log2
+  26, so a misspelling such as `fqrns` is not random letters), and never
+  below its English reading. It keeps the English reading beside a digit,
+  beside `@ ! |`, or beside a symbol typed once with a letter on its far
+  side, where it may be a word whose vowel was swapped out (`dr1lls`,
+  `c@lm`, `knig#ts`); a symbol typed more than once is taken for a
+  separator. Generic, a fact about English: Strength still uses no list,
+  table or setting of this app. Measured on 100 seeded batches per
+  setting: the defaults unchanged (100 % high, 0.2 % of cards change);
+  Two-finger 99.2 % to 99.8 % high, One-handed and Minimal-quick
+  unchanged. Below the card's bits, before and after: ten-finger with two
+  made-up nouns 38.7 % to 16.5 %, one 8.4 % to 3.2 %; two-letter words 3
+  5.0 % to 0.2 %; One-handed and Two-finger with made-up nouns 1 % or
+  less. Walks still read low (`qwertyuiop` 11, `asdfasdfasdf` 11.6,
+  `zxcvbnm` 7.8, `bvc` 10). Declined: a floor at the bits or the tool's
+  lists (the rule above), an English dictionary (Strength has no word
+  lists), and a table of letter pairs English never uses (`TODO.md`).
+  `isNotEnglish`, `letterBits` in `src/lib/strength.ts`;
+  `src/lib/strengthFloor.test.ts`.
+- **Where Strength still reads below a card's bits, and why it may**
+  (2026-10-22, audit L17). Three places, none a Strength undercount: a
+  shortest plan (Minimal-quick, or the Minimal target), whose card's bits
+  ignore the length window, with Strength never below the plan's exact
+  figure plus the card's swap bits in any mode (Minimal-quick with two
+  made-up nouns: 84 % below the card's bits, 0 % below the exact figure);
+  made-up nouns with a vowel (`cviu`, `OIFD`), priced by the tool as one
+  of 14,666 whatever their length, which look like English letters without
+  a dictionary (ten-finger 3.2 % and 16.5 % with one and two, other modes
+  1 % or less); and, at 1.2 % or less within 3 bits, swaps the bits count
+  by where they landed that leave the text as long, and doubled letters
+  read once. An attacker who does not know the tool tries short strings
+  first, so for a short pick from a list that also holds long ones
+  Strength's lower figure is the honest one. Without made-up nouns,
+  outside shortest plans, at most 2 % of cards and 3 bits, held by a test.
 - **The zxcvbn reading is the library's crack time read as one of four
   words** (2026-10-20). An offline attack on a slow hash at 10^4 guesses a
   second: seconds or minutes are very weak, hours to weeks weak, months to
@@ -42,9 +87,30 @@ to revisit.
   app's scores and sorts nothing. A reading saved with a My list entry is
   worked out again only when the estimator changes (`ZXCVBN_ESTIMATOR` in
   `src/lib/zxcvbnReading.ts`).
+- **zxcvbn stays at 4.4.2** (accepted 2026-10-22, audit L11). It has had
+  no release since 2017, but the badge names that library and its estimate,
+  it runs offline, and it loads only when a reading is first needed (about
+  400 KB gzipped, its own chunk). Moving to another estimator is a change to
+  `src/lib/zxcvbnReading.ts` and `ZXCVBN_ESTIMATOR` (`TODO.md`).
 - **The bits panel's green means "meets your target"; a badge's green means
   50 bits or more** (2026-10-20). The panel says its figure is for an
   attacker who knows the tool and that the badges assume one who does not.
+- **Strength's word names its colour band, never a preset** (2026-10-21,
+  M3). The presets, Everyday to Master password, are targets on the bits'
+  ladder, for an attacker who knows the tool; Strength assumes one who
+  does not and reads above a card's bits, by 14 bits at the median at the
+  defaults, so when the tip named the highest preset reached, 99.8 % of
+  default suggestions were named a preset above the one chosen and 37 % of
+  batches of five showed "master password". The tip says high (50 bits or
+  more), fair (40 to 49) or low, read off the same rounded figure as the
+  colour, so word and colour cannot disagree; the Scoring page states the
+  bands by number and says the presets are targets for the bits. The
+  user's answers (2026-10-21): the words are high, fair and low, the
+  recommendation over no word or the band's numbers; the Scoring page
+  sentence drops the preset names. A badge with no word would leave its
+  band, read by a screen reader, to colour alone; the presets' own words
+  or zxcvbn's would put one word on two badges with two meanings.
+  `STRENGTH_WORDS` and `strengthWord` in `src/lib/readings.ts`.
 - **A deliberate swap costs nothing** (2026-10-15, the user's decision). It
   follows from its word by one fixed rule, so it is not memory load; the
   measurement is in `TODO.md`.
@@ -74,9 +140,8 @@ was bounded:
 - **`collapseBlocks` compares indexes, not slices.** The Z-array of each
   suffix gives every block length's repeat count in one pass: quadratic
   with no allocation, against cubic with a slice and join per step. 133 ms
-  to 1.1 ms for 500 characters, which the typing test pays per keystroke.
-  `src/lib/strength.ts`.
-- **The engine caps the sentence at 500 characters** (`MAX_SENTENCE_LENGTH`,
+  to 1.1 ms for 500 characters. `src/lib/strength.ts`.
+- **The engine caps the sentence at 512 characters** (`MAX_HINT_LENGTH`,
   `src/lib/text.ts`), not only the fields and the CLI, with one message
   both front ends use.
 - **The budget: the worst permitted batch answers in under 300 ms on a
@@ -132,19 +197,138 @@ twists). It is the lead if the budget is ever missed.
   smaller; navigation to the first batch on screen in the built app went
   from 435 ms to 326 ms (median of seven, twice); the 61 smoke tests pass.
 
+### The opening capital (2026-10-21)
+
+- **The capital is a word's first character, never after a swapped-in
+  symbol** (`@Corns`). In generated mode the word that takes it is chosen
+  from the words as typed, before the swaps (`capitalOrder` in
+  `src/lib/generate.ts`: the first ordinary word, or with Shift reach on
+  one whose first letter capitalises in reach), and the swaps keep that
+  word's first character a letter (`capitalAt` in `src/lib/twists.ts`).
+  Chosen after the swaps, as before, the capital followed Shift reach to a
+  word the swaps had not been told to keep: 1.0-1.8 % of passwords with
+  Shift reach on. Sentence mode capitalises before the swaps, which match
+  lowercase letters only.
+- **Only the capital's word is kept**: with the capital elsewhere (Shift
+  reach, a two-letter form first) or not placed at all (a made-up noun in
+  capitals meets the rule), the first word's start may be swapped. The
+  cold scorer keeps the start of the twistable word that carries the
+  capital, wherever it is, so the bits count what generation can make.
+  At the defaults a seeded batch is the same passwords as before.
+
+### Made-up nouns only by choice (2026-10-22)
+
+- **No typing mode uses made-up nouns** (the user's decision, first asked
+  for by Dossier). The default was already none; Two-finger and One-handed
+  set one and Minimal-quick three. They are now used only when chosen, in
+  the web app's Style options, `tep`'s `made-up` option or a config file.
+  `src/lib/modeProfiles.ts`; a test holds every mode at none.
+- **The profiles were re-measured without them** (`pnpm measure:modes`,
+  600 suggestions at the Typical site rules), and the tuning rule kept: a
+  value stays only if it lowers the mode's difficulty in its own rubric.
+  Two-finger loses its capital initial (38.6 without it, 46.8 with it; it
+  helped only beside a made-up noun) and Minimal-quick its glue (38.2
+  against 41.6). In each mode's own rubric: Two-finger 33.0 to 38.6,
+  One-handed 36.4 to 38.0, Minimal-quick 10.1 to 38.2 and 13 to 16
+  characters. Every mode is still easier than the defaults scored in it
+  and meets its target. A config with `options: preset` follows the
+  profile, so an existing one now generates without made-up nouns.
+
+### Slow work (2026-10-21)
+
+- **Any one piece of work on the page's thread over 2 s is a failure**
+  (the user's line; `SLOW_MS` in `src/state/slow.ts`). Timed: a batch
+  (the provider's engine call), a zxcvbn reading (the library call, not
+  its lazy load) and the typing test's scoring of the password under test.
+- **A failure shows a floating error until it is dismissed**: a snackbar
+  in the error colour on every page, above the unapplied-changes bar when
+  both show, naming what was slow and how long it took, with Dismiss
+  (Escape inside it too). A newer failure replaces it. `SlowNotice`.
+- **It shows when the work ends.** Work on the page's thread cannot be
+  stopped part-way; the line makes a stall visible, it does not cut one
+  short. A worker could stop it, at the price `TODO.md` ("A worker
+  again") sets out.
+- **The clock is the web app's.** `src/lib` stays free of one, and the CLI
+  is unchanged: its wizard's 2 s line is `pnpm measure:wizard`. Nothing
+  goes to the console, which the smoke suite fails on.
+
 ### Limits and caches
 
-- A sentence, a hint and the password under test are at most 500
-  characters (UTF-16 units) in the fields, the CLI and the engine: scoring
-  a text is quadratic in places, so the length is capped rather than left
-  open.
-- The scorer keeps 400 cold scores, each mapping list 5,000 spellings, and
-  planning 400 length models (about a megabyte each); a full cache is
-  emptied rather than evicted one entry at a time. `src/lib/score.ts`,
-  `src/lib/twists.ts`, `src/lib/generate.ts`.
+- **A password field holds at most 128 characters, a sentence or hint
+  field 512** (2026-10-21, the user's limits; UTF-16 units). 128 is
+  `MAX_LENGTH`, the longest password the tool makes, and holds the typing
+  test's field, typed or pasted; 512 is `MAX_HINT_LENGTH`, for the typing
+  test's hint, both sentence fields, the CLI and the engine. Scoring a text
+  is quadratic in places, and zxcvbn is not bounded at all (250 random
+  characters 21.8 s, 128 about 1.1 s on a desktop), so the lengths are
+  capped rather than left open.
+- **A pasted rules text is at most 2,000 characters** (2026-10-22, audit
+  L4; `MAX_RULES_TEXT_LENGTH` in `src/lib/ruleText.ts`, UTF-16 units), in
+  the web box (`maxLength`, and the paste) and in `tep` (`--rules`, the
+  wizard's paste). Four times a hint, because a copied sign-up form
+  carries labels, headings and advice round its rules; the longest real
+  rules text in the tests is 240. Not for speed: reading is linear
+  to mildly quadratic, measured on the development desktop at 512 / 2,048
+  / 8,192 / 65,536 characters as 1.0 / 3.2 / 21.7 / 399 ms for the worst
+  shape (one line of class words with no sentence end), and under 3 ms at
+  2,048 for every other shape tried (checklists, symbol soup, random
+  ASCII, random rule words, unclosed brackets, "or" chains), so a phone
+  several times slower is far inside the 2 s line; the cap bounds the work
+  and keeps the box to what a sign-up page shows. **Refused whole, never
+  cut**: a cut paste would fill in the rules from its first part and drop
+  the rest with only a note to say so. The one message is
+  `rulesTextLengthProblem`'s ("The rules text is 5300 characters; 2000 is
+  the most this tool reads. Copy just the password rules."): the web box
+  shows it in the error colour, the text unchanged, until the text
+  changes, and says when typing has filled the box; `tep --rules` is exit
+  2; the wizard's prompt asks again. `parseRuleText` itself reads nothing
+  of a longer text and names it in `unsupported`, so no route reads an
+  unbounded text.
+- **The paste box reads its text once per change** (2026-10-22, audit
+  L4): a `useMemo` on the text, so the renders a fill causes read nothing,
+  and a one-entry memo of the last text read, so a paste's fill and its
+  preview share one reading and "Fill in" on previewed text reads none.
+  The reading is `timed` ("Reading the pasted rules"), so work over 2 s
+  shows the slow-work notice. `src/components/SiteRules.tsx`.
+- The scorer keeps 400 cold scores, each mapping list 5,000 spellings; a
+  full cache is emptied rather than evicted one entry at a time.
+  `src/lib/score.ts`, `src/lib/twists.ts`.
+- **Planning keeps 1,000 length models and drops the one used longest
+  ago** (2026-10-21). A model holds only its counts, about 12 KB, because
+  a pool's words grouped by length are built once per pool
+  (`wordsByLength`, a `WeakMap` on the pool) and shared, read-only, by
+  every model over it; each model used to copy them, 77 to 176 KB a
+  model over a plan. 1,000 holds three plans at the widest lengths (288 shapes), so a
+  Refresh, or a change and back, never rebuilds. Full, it is about 12 MB,
+  where 400 unshared models measured 42 to 81 MB, and the clear-all cap
+  of 400 it replaces never hit for two wide settings used in turn. The
+  key is the comfort level, the digit count, the ease setting and the
+  shape; the length window is not in it. Not taken: no cache (a plan at
+  a maximum of 128 is 24 ms built against 3.6 ms cached on the
+  development desktop, and a phone is several times slower); least
+  recently used at 400 (under two wide plans) or 2,000 (no more hits than
+  1,000); a cap in bytes (models differ by at most 15 times, and the count
+  already bounds the cache near 12 MB). The groups being shared, `sample`
+  must never write to them. `src/lib/lengthModel.ts`,
+  `src/lib/generate.ts`.
+- **The typing test scores the password under test once** (2026-10-21).
+  Strength, Raw and the common-list check are memoised on the password,
+  beside Difficulty and Memorability, so a keystroke costs a render and no
+  scoring: at 500 characters 0.5-1.1 ms in jsdom, was 2.1-2.6 ms (122 ms
+  before H1). Each key's time is read when its handler runs, so work per
+  keystroke above the gap between keys would stretch the times the test
+  reports; asserted as counts in `src/components/TypingTest.test.tsx`,
+  never as a wall clock. `src/components/TypingTest.tsx`.
 
 ## Input and persistence
 
+- **Copy never clears the clipboard** (accepted 2026-10-22, audit L16;
+  to revisit, `TODO.md`), in the web app or `tep --copy`. A password left
+  there can reach clipboard history, sync to other devices or be pasted by
+  mistake. A page can clear it only while open and focused, cannot check
+  the clipboard still holds the password without a permission prompt, so
+  could wipe something copied since, and cannot mark the copy to skip
+  clipboard history; nothing can recall a copy history already keeps.
 - **Every write to the browser's storage reports whether it worked**
   (2026-10-20). Persistence is `saved`, `visit-only` (a shared origin) or
   `failed`; My list and the settings show an alert with Try again when a
@@ -160,6 +344,54 @@ twists). It is the lead if the budget is ever missed.
   every nested field a card reads. On a shared origin, a session or list
   an earlier version stored there is removed on load.
   `src/state/sessionStore.ts`.
+- **A kept sentence is one the tool could have drawn** (2026-10-21): a
+  template's shape, bare or with its number placed; each word as written
+  on its slot's full list, whatever the comfort, so a change of comfort
+  never refuses it; a number from 2 to 9999 without a leading zero;
+  made-up nouns only in the noun slots before the first real noun. An
+  empty word is on no list. A stored one that is not is dropped on its own
+  with its edit, keeping the rest of the session, and a new one drawn,
+  with no notice (the user's decision); it is not repaired, since it is
+  the app's draw, not the user's choice, and a repaired sentence is a
+  different one. The engine refuses one too, with an ordinary
+  requirements message naming the button that draws a new sentence (the
+  user's decision), so an empty word no longer crashes it. The outcome's
+  own copy is checked for shape only, as nothing reads it back after a
+  load. The price: a release that removes a word from the lists, or moves
+  one between them, replaces the kept sentence of a tab open across it.
+  `couldBeDrawn` in `src/lib/generate.ts`; `src/state/sessionStore.ts`.
+- **A pasted choice of kinds is kept as that many named kinds**
+  (2026-10-22, audit L1; the user authorised the recommendation). "At
+  least 3 of the following 4: uppercase, lowercase, numbers, symbols" was
+  read as all four required and said as understood. The rules are
+  per-kind minimums, so the choice is kept by requiring N of the kinds
+  listed: letters first (every password has them), then kinds the text
+  requires anyway or an earlier choice kept, then the cheapest to type, a
+  lowercase letter, an uppercase letter, a digit, a symbol; never a kind
+  the text rules out. Chosen from the text alone, not the form, so the
+  preview and `tep` say the same for the same words; a kind not kept
+  stays as the form had it (a symbol already required stays, and still
+  meets the rule). One line says what was asked and what was kept, "at
+  least 3 of uppercase, lowercase, digits and symbols (kept as an
+  uppercase letter, a lowercase letter and a digit)"; for one of two or
+  more, "a digit or a symbol (kept as a digit)"; a choice met by letters
+  alone sets nothing and says nothing. Not taken: all of them (says what
+  the site did not ask, and costs a symbol, the hardest kind on most
+  keyboards and the one the modes avoid); refusing it as not kept (the
+  tool can keep it, and `tep --rules` would fail on the most common rule
+  on the web); an "N of M" field (the generator, validation, checks, CLI
+  fields, config file and both forms, for a rule minimums already meet).
+  What it cannot keep is named under "Not kept", nothing of it applied:
+  fewer kinds recognised than asked, too few left once the text's own
+  exclusions are out, an unnamed count other than four. Read as a choice:
+  "N of", "N out of M", "any N of", "N or more of", "at least N of the
+  following (M) (categories / character types / ...)", "N character
+  types", with the kinds after it or in the list under it, the usual four
+  when a class word names none; kinds joined by "or" or "and/or"; "A-Z",
+  "a-z", "0-9" as kinds. Not a choice: "one of each" (all), a count over
+  one kind ("one of !@#$%"; "2 of the following special characters" is
+  two symbols), "1 of your last 5 passwords". `src/lib/ruleText.ts`;
+  `docs/algorithm-flow.md`, section 1b.
 - **Enter during IME composition never submits or runs**: both sentence
   fields, the typing test and its hint field.
 - **Secrets only on the app's own origin** (2026-10-20, the user's
@@ -167,6 +399,46 @@ twists). It is the lead if the budget is ever missed.
   Until the app has a domain, My list and the current batch stay in memory
   on the shared Pages origin; the dev server's Tailscale address counts as
   the app's own (`.env.development`).
+
+## Rendering
+
+- **One context, and memo boundaries on the page** (2026-10-21). The
+  provider keeps one memoised value, and every action in it is stable.
+  The page component reads nearly all of it, so splitting it by how often
+  each part changes would not stop the page rendering. Its heavy children
+  instead render only when their own props change: the cards, the
+  strength panel, the requirements form, the swaps panel and the site
+  rules, none of which reads the context. The page keeps their props
+  stable: the cards' context is memoised on the batch and the uppercase
+  rule, Practise is one callback that reads the current column layout
+  through a ref, and the swaps' sentence test is memoised on the mode and
+  the sentence. My list's rows (`ListEntry`) take what they show as props
+  instead of reading the context, and My list passes `removeSelected`
+  itself, not a closure per row. A store with selectors, a context for
+  busy alone and the React Compiler were rejected: the page selects
+  nearly everything, and five explicit wrappers get the same gain.
+  `src/App.tsx`, `src/components/SelectedList.tsx`,
+  `src/components/ListEntry.tsx`.
+- **The boundaries are held by counts, never a clock.**
+  `src/App.renders.test.tsx` wraps each memo component's inner function
+  with a counter; a component that is not a memo fails with its name, and
+  a prop made fresh on each render (an inline object or closure) fails on
+  the count. Dropping a boundary on purpose means deleting its test on
+  purpose.
+- **Busy still flips twice per batch.** The first flip paints "Working…"
+  (see "Where generation runs") and renders the page component and the
+  small consumers, no card, panel or row.
+- **What still renders on every change:** `TypingTest`, `TypingMode`,
+  `ApplyBar`, `SessionControls` and My list itself read the context, at
+  under 0.15 ms each in jsdom (My list 0.1-0.4 ms), and the field a
+  keystroke edits.
+- **Measured when built:** in the production build in Chromium, a
+  keystroke in the made-up sentence with 20 in My list went from 4.6,
+  20.0 and 30.8 ms of work to 2.8, 12.1 and 17.6 ms at 1×, 4× and 6×
+  CPU, and with My list empty from 3.9, 14.2 and 21.9 ms to 2.5, 9.8 and
+  14.8 ms. Paired with the old build on a busier run when built, the 6×
+  figure with 20 in My list went from 32.8-35.8 ms to 18.2-22.2 ms. The
+  rows had cost about 0.2 ms each in jsdom on every change.
 
 ## Wording and presentation
 
@@ -180,29 +452,271 @@ twists). It is the lead if the budget is ever missed.
 - **Raw is the quieter badge** (muted, thin border), so it does not compete
   with the three scores.
 
+## One core, two front ends
+
+- **The web app and `tep` make and score passwords through the same code**
+  (2026-10-20, the user's decision), so a change to an algorithm reaches
+  both or neither. `src/lib` holds every algorithm, rule, preset, label and
+  reading in plain TypeScript; `src/state` and `src/components` are the web
+  app, `src/cli` is `tep`, `src/prompts` the Fun page's prompts.
+  `src/boundaries.test.ts` holds three rules: what each directory may
+  import (`src/lib` names no browser or Node global, the CLI imports no
+  React or web state, the web never imports the CLI); that the CLI reaches
+  the engine only through `inputsFor`, `runInputs`, `presentSuggestions`
+  and `scoreReadings`, the calls the web makes, and rebuilds no reading;
+  and that for each site preset and typing mode the web provider and `tep`
+  build the same inputs from the same settings. It also fails on any
+  import cycle in `src`, type-only imports counted (2026-10-22, audit
+  L12): a cycle of types still ties the modules so neither can be read or
+  moved alone. That is why `Requirements`, `DEFAULT_REQUIREMENTS` and
+  `RequirementCheck` live in `requirements.ts`, which `validation.ts` and
+  `checks.ts` import, rather than in `generate.ts`, which imports both;
+  `generate.ts` re-exports them, so callers keep one import for
+  requirements.
+- **A wording helper has one home** (2026-10-22, audit L12): `plural`,
+  `capitalise` and `lowerFirst` are in `text.ts`, which imports nothing,
+  so the validator, the checks, the CLI and the prompts take them without
+  drawing in the scorer (`readings.ts`, the other candidate, imports it);
+  the comfort levels in order are `COMFORTS` in `grammar.ts`, beside
+  `COMFORT_SHARE`.
+- **A figure, list or label the core defines is interpolated, never
+  typed out** (2026-10-21): the web app's hints and the Scoring page read
+  the class sizes, bands, key lists, speeds and preset and option labels
+  from `src/lib` (`numberWord`, `largeNumber` and `andList` in
+  `readings.ts` write them into a sentence), so the text says what the
+  code does. Which score or level is which colour is decided only in
+  `readings.ts`; the stylesheet paints the bands. A value a front end
+  states is a named constant that the module owning it uses in its own
+  code (2026-10-22, audit L18): the number's `NUMBER_RANGE` (`grammar.ts`),
+  `WORD_LENGTH_RANGE` (`words.ts`, which the made-up nouns are cut to as
+  well), `DRAWS_PER_CARD` and `MAX_SENTENCE_DRAWS` (`generate.ts`; eight
+  sentences in all, the first included) and `MAX_MAPPING_LENGTH`
+  (`twists.ts`, for both sides of a custom swap). The README stays static
+  text and states none of them.
+- **The three largest core modules are split only as a change needs it**
+  (accepted 2026-10-22, audit L13): `generate.ts`, `score.ts` and
+  `fromSentence.ts` (1,100, 729 and 765 lines on 2026-10-22). Each split
+  takes out one responsibility, as `checks.ts` did (`TODO.md`).
+- **The CLI modules the Fun page's prompt draws on stay free of Node
+  APIs** (the field table, names, messages, constraints, the config writer,
+  help), so the browser can run them; the boundaries test follows the
+  browser's imports to hold that.
+- **The Fun page has two rebuild prompts**, the app's and then the CLI's,
+  which builds on the app's shared core by name instead of redefining it
+  (2026-10-20, the user's decision). A test checks the CLI prompt's file
+  list against `src/cli/`.
+- **The Fun page renders its prompts' markdown with no sanitiser**
+  (2026-10-22, the user's decision, audit L6): the markdown is built from
+  the app's own constants, never from input, and the CSP blocks scripts.
+- **The CLI modules the prompts read ride in the Fun page's chunk**
+  (accepted 2026-10-22, audit L14). The page is loaded only when opened
+  (about 98 KB gzipped with `marked`), never with the first page, and the
+  boundaries test keeps those modules free of Node.
+
 ## The command line
 
-The CLI's design is in `docs/specs/2026-10-20-tep-cli-design.md` until
-that spec is folded in (the checklist's D1); `TODO.md` lists its decisions
-to revisit. Settled since:
+What `tep` does is in the README's "Command line"; `TODO.md` lists the
+decisions taken on the recommendation alone, to revisit once it is in use.
 
-- **JSON warnings stay strings**, their lines joined by newlines; a
-  structured shape would change the documented interface.
-- **YAML anchors and aliases are config errors** (exit 4, with file and
-  line), as is anything the YAML reader cannot turn into plain values.
-- **A config file written by `tep config` leaves out the options the typing
-  mode has no use for**, so `tep g` never warns about its own file.
-- **Esc during the wizard's first questions stops like Ctrl+C.** There is
-  no earlier question to return to; going back one would need the first
+- **Two words for two kinds of mode.** `--mode` is the typing mode
+  (`TypingMode`); `--sentence` is the engine's sentence mode. Preset slugs
+  are derived from the labels in `src/lib`, never a second list, and a test
+  fails if two collide. `quick` is the typing mode's id; `minimal-quick`,
+  from its label, is accepted too.
+- **`tep` never generates from, saves or carries forward settings that
+  contradict each other, and never fixes them quietly** (2026-10-20). The
+  web form's automatic fixes (`settleRules`: a maximum raised to fit, the
+  separator set to Automatic) are not applied. `problemsOf` in
+  `src/lib/consistency.ts` runs `ruleProblems`, then the early-exit
+  `planProblem`, and returns every problem with the fields involved; in
+  sentence mode `fromSentence` stands in for planning, as the sentence is
+  known only at run time. A mode profile's "space if allowed" separator is
+  the profile's own rule, not a fix, and is kept.
+- **A strength target the rules cannot reach is a warning, not a
+  contradiction** (2026-10-20, the user's decision): `tep g` makes the
+  strongest passwords the rules allow and says on stderr how many bits they
+  reach; the wizard marks the target and lets it be chosen. `warningsOf`
+  returns it.
+- **Settings are layered, each layer replacing only the fields it states**:
+  the defaults, then the config file (its site preset, its `rules`, the
+  mode's profile, its own `options`), then flags in the same order. The
+  file is `-c <file>` or `./tep.yml`, with no parent-directory search and
+  no global config. `--mode` over a file's own options replaces them with
+  the mode's profile, as picking a mode does in the web app.
+  `src/cli/resolve.ts` records where each value came from, and every
+  message names it (`--max-length 10 (flag)` against `min-length 12
+  (tep.yml:5)`).
+- **Flags take `--x v` or `--x=v`, never a bare `x=v`**, which would be
+  ambiguous beside a file name. Options a typing mode has no use for are
+  accepted with a warning naming the reason, not refused.
+- **A sentence is never an argument**: `--sentence -` reads one line from
+  stdin, or prompts with echo off at a terminal, as an argument would land
+  in shell history and `ps`.
+- **At a terminal, the table prints each password's hint under it**, and a
+  dim first line names the config file the settings came from.
+- **Piped output is the passwords alone**, one per line and one by default
+  (five at a terminal), so `tep g | pbcopy` works; the config note goes to
+  stderr. `--explain` with no `--format` prints the table, as plain output
+  cannot carry the why.
+- **The JSON is a documented interface with stable names**: `strength` and
+  `raw` are the scores, `bits` the session's figure (2026-10-20); warnings
+  stay strings, their lines joined by newlines, since a structured shape
+  would change the interface.
+- **No clipboard tool is an error, never a silent no-op**, as in the web
+  app. `--copy` tries `pbcopy`, `wl-copy`, `xclip` and `xsel` by platform
+  and session, and does not clear the clipboard afterwards.
+- **The exit codes are one list**, in `src/cli/errors.ts`, which the help
+  line is built from: 0 done, 1 a bug or a failed tool, 2 usage, 3 a
+  contradiction or a sentence that cannot fit, 4 a config file, 130
+  interrupted.
+
+### Config files
+
+- **`options: preset` stores only the typing mode**, so a re-measured
+  profile reaches an existing config; "Set each option" in the wizard
+  writes every option, fixed. A file written by `tep config` leaves out the
+  options its typing mode has no use for, so `tep g` never warns about its
+  own file.
+- **Checked with a zod schema after `yaml`'s parser**: unknown keys, wrong
+  types and out-of-range numbers are errors with the file, line and key
+  (exit 4), and "did you mean" for near misses. YAML anchors and aliases
+  are errors too, as is anything that does not read as plain values.
+  `version` is required, and a newer one than the CLI knows says to
+  upgrade. A file that parses but contradicts itself is exit 3, naming its
+  keys and lines.
+- **A config holds no secret, no sentence and no password**, and is written
+  0644, atomically (a temp file in the same directory, then a rename).
+  Mappings and sentence options may be set by hand; the wizard does not ask
+  about them and keeps them as they were.
+
+### The wizard
+
+- **Interactive only**: with stdin not a terminal, `tep config` exits 2 and
+  points at the file format. Ctrl+C writes nothing.
+- **No answer can contradict another.** A choice is allowed when the
+  answers so far, the choice, and the loosest value of every question not
+  yet answered pass `problemsOf`. The loosest values are fixed in
+  `src/cli/constraints.ts` (the widest length window, every symbol, spaces,
+  nothing required, the Minimal target, relaxed comfort, no initials,
+  two-letter words or made-up nouns, Automatic separator); a property test
+  walks the wizard at random and proves they always leave a way to finish
+  (confirmed by the user, 2026-10-20). A choice not allowed is shown dimmed
+  with the answer that rules it out; a question left with one choice is
+  stated, not asked; a number's range is shown, found by binary search
+  where a field is monotonic (a test proves which are) and by checking
+  every value elsewhere.
+- **A contradiction that gets through is a bug, and says so**: after each
+  answer the wizard checks again, and a problem is shown at once in red,
+  the answer dropped and the question asked again without it. The wizard
+  never moves on, reviews or saves while one stands.
+- **Shaping a question may take up to 750 ms on a typical laptop**
+  (2026-10-20, the user's decision, first set at 333 ms). Each choice is
+  checked with `planProblem`, shapes that cannot fit the length window are
+  skipped before their length models are built, and results are
+  remembered; the slowest question measured 151 ms of wall time on a
+  desktop (Ryzen 9 3900X, WSL2, Node 24; seed 3, "Strength target", 148
+  length models), 2026-10-21.
+- **The budget is held as work in the suite, and timed by hand**
+  (2026-10-21). The random walk in `src/cli/walk.test.ts` counts, from one
+  answer to the next question, the plannings the CLI asks for
+  (`problemsOf`) and the length models built, through two `vi.mock`
+  factories in the test, and fails a question over 400 of either: about
+  twice the worst measured (183 plannings, 181 models) and well inside the
+  planning cache's 1,000, so one question never pushes out the models the
+  next relies on. It also asserts the worst question did at least one of each,
+  so the counters cannot stop counting unseen. No time is asserted in the
+  suite or CI: the CPU time it used to assert measured the run, not the
+  wizard, and a coverage run of the whole suite reached 81 to 94 % of the
+  budget for a question that takes about 150 ms alone. `pnpm
+  measure:wizard` runs the same walks on fresh caches and takes each
+  question's wall time: 750 ms (`QUESTION_BUDGET_MS`) is the target,
+  printed beside each time, and the questions over it are named; a
+  question over 2 s (`QUESTION_FAIL_MS`) fails it (the user's decision,
+  2026-10-21). It is run by hand on an idle machine before merging a
+  change to `src/cli/constraints.ts`, `src/lib/consistency.ts` or the
+  planning in `src/lib/generate.ts` and `src/lib/grammar.ts`, never in
+  CI. The price: a change that makes each planning or each length model
+  slower at the same counts passes the suite and is found only by `pnpm
+  measure:wizard`; and the ceilings catch a change in kind (planning in
+  full, which built 1,142 models in one question), not a creep of 20 %.
+- **The review numbers every answer** (one line per option when set one by
+  one); a typed number changes that line, `s` saves after one more check,
+  `q` leaves. On the review a line is shaped by every other answer, and a
+  choice another line rules out names it; a blocked choice cannot be taken
+  (2026-10-20, the user's decision), so the user changes the line that
+  blocks it first. Changing the mode while options follow the preset
+  updates them; with options set one by one, the new mode's preset is
+  offered only when it fits the rules.
+- **Esc means back** (2026-10-20, the user's decision): from a line to the
+  review unchanged, and out of the review without saving. The prompter
+  listens for the key itself, as the prompt library reports Esc and Ctrl+C
+  alike. During the first questions Esc stops like Ctrl+C: there is no
+  earlier question to return to, and going back one would need the first
   pass restructured as a list of steps with a history.
+- **A pasted rule the wizard cannot keep is never dropped in silence**
+  (2026-10-20, the user's decision): it is named as it is dropped and
+  listed on the review for as long as the answer differs from the text. A
+  loaded file's value that cannot be kept is treated the same way, and a
+  loaded file that contradicts itself opens with the conflict named and the
+  later question asked again.
 - **Help lists the modes in the core's order.**
+
+### Build
+
+- **One ESM file, bundled by tsdown**, with its dependencies (`yaml`,
+  `zod`, `@clack/prompts`) inlined, so `dist-cli/tep.mjs` needs only Node
+  24. The dependencies stay inside `src/cli/` so they can be replaced
+  (`TODO.md`, "A CLI with no dependencies").
+- **Not on npm**: the package stays private and the name `tep` is taken.
+  `pnpm link:cli` builds and links `~/.local/bin/tep` instead of `pnpm
+  link`, which from pnpm 10 on adds a directory to the project's
+  dependencies.
+- **Randomness is `crypto.getRandomValues`**, as in the browser. No
+  `--seed` flag, no network, no telemetry, no update check.
 
 ## Build and deploy
 
-- **A deploy runs the same checks as CI, the browser suite included**
-  (`pages.yml`'s `check` job, before `build`).
+- **The checks live once, in `check.yml`** (2026-10-22, audit L9): a
+  reusable workflow (`on: workflow_call`) that `ci.yml` calls on every
+  branch push and pull request and `pages.yml` calls before `build`
+  (`needs: check`), so a deploy runs the same checks as CI, the browser
+  suite included. Its job holds only `contents: read`, and `pages.yml`'s
+  calling job grants no more, though that workflow grants `pages: write`
+  and `id-token: write` for the deploy. The callers own the triggers and
+  the concurrency; in the checks list the job reads `check / check`. A
+  workflow cannot run locally, so `src/workflows.test.ts` holds that shape.
 - **The Content-Security-Policy is a meta tag** added to the built page
-  only, since the dev server needs inline scripts. It cannot carry
-  `frame-ancestors`, which needs a header the app's host does not send yet.
+  only, since the dev server needs inline scripts. GitHub Pages sends no
+  headers the app can set, a custom domain included.
+- **The built app refuses to run in a frame** (2026-10-22, audit L7). A
+  meta-tag policy cannot carry `frame-ancestors` (browsers ignore it
+  there, and `X-Frame-Options` too), so any page could frame the app and
+  lay its own over it. At start-up, before React, `src/frameGuard.ts`
+  checks `window.top !== window.self` (an access that throws counts as
+  framed); framed, nothing is mounted and the root holds a notice, a link
+  that opens the app in a new tab and the address to type. The link is
+  `target="_blank"` with `rel="noopener noreferrer"`, not `_top`: a
+  sandboxed frame may not navigate the page above it, and a new tab shows
+  the app's real address. Only in the production build, as the CSP is:
+  preview panes frame the dev server (`pnpm preview` serves the build, so
+  it refuses frames). The check is in the bundle because the CSP forbids
+  inline scripts. The notice is plain DOM, not static markup in
+  `index.html` (a script would be needed to show or hide it either way)
+  nor React (a root for one paragraph and a link); it uses no
+  `innerHTML` and no inline style (its look is `.framed-notice` in
+  `styles.css`). The proper fix is the header
+  `Content-Security-Policy: frame-ancestors 'none'` on a host that sends
+  one (`TODO.md`, "Protect the saved list").
 - **The smoke suites are the check that the built app works under the
   CSP**, on this project's own ports: 4272 the build, 4273 the dev server.
+  The framing test needs no port: its framing page is served by request
+  interception on `https://framer.test`, granted local network access,
+  which Chromium requires before a page off the local network frames one
+  on it.
+- **The unit suite runs in Node's default heap** (2026-10-21). It passes
+  at 256 MB, and at 128 MB, a file at a time; the 4 GB flag of 2026-10-16
+  was for a planning cache with no cap and came out when the cap, `mayFit`
+  and the shared word groups had made it unneeded. No heap ceiling is set
+  instead: it would also fail on growth in jsdom or Vitest, with an error
+  that names no cause, and the planning cache's bound is asserted by
+  count in its tests.

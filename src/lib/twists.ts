@@ -26,6 +26,9 @@ export const MAPPING_KIND_LABELS: Record<MappingKind, string> = {
   custom: 'Your mappings',
 };
 
+/** The built-in kinds in the order they are listed: symbol swaps, number swaps, misspellings. */
+export const BUILT_IN_KINDS = ['symbol', 'digit', 'spelling'] as const satisfies readonly MappingKind[];
+
 const pairs = (kind: MappingKind, spec: string): Mapping[] =>
   spec
     .trim()
@@ -49,6 +52,10 @@ export const BUILT_IN_MAPPINGS: readonly Mapping[] = [
 
 export const mappingKey = (m: Pick<Mapping, 'from' | 'to'>) => `${m.from}>${m.to}`;
 
+/** The most characters either side of a custom swap may have: Replace is 1 to this many lowercase letters, With at most this many characters. */
+export const MAX_MAPPING_LENGTH = 8;
+const CUSTOM_FROM = new RegExp(`^[a-z]{1,${MAX_MAPPING_LENGTH}}$`);
+
 /**
  * Reason a custom mapping is unusable, or undefined if it is fine. The
  * output may only use lowercase letters, digits and keyboard symbols: a
@@ -56,8 +63,8 @@ export const mappingKey = (m: Pick<Mapping, 'from' | 'to'>) => `${m.from}>${m.to
  * typing model never allows, and it would be silently skipped anyway.
  */
 export function validateMapping(from: string, to: string): string | undefined {
-  if (!/^[a-z]{1,8}$/.test(from)) return 'Replace: 1-8 lowercase letters.';
-  if (to.length > 8) return 'With: at most 8 characters.';
+  if (!CUSTOM_FROM.test(from)) return `Replace: 1-${MAX_MAPPING_LENGTH} lowercase letters.`;
+  if (to.length > MAX_MAPPING_LENGTH) return `With: at most ${MAX_MAPPING_LENGTH} characters.`;
   if (to === from) return 'Replace and With are the same.';
   for (const c of to) {
     if (c === ' ') return 'With: spaces are not allowed.';
@@ -88,8 +95,8 @@ export interface TwistOptions {
   mappings: readonly Mapping[];
   /** Word positions that must not be twisted (e.g. the leading number). */
   skip: (wordIndex: number) => boolean;
-  /** Keep the first character a letter so sentence-case capitalisation still works. */
-  protectFirstLetter: boolean;
+  /** The word that takes the opening capital: its first character stays a letter, so the capital can go there. */
+  capitalAt?: number;
   /** Allowed change in total length, so the result still fits the length limits. */
   minDelta: number;
   maxDelta: number;
@@ -216,10 +223,9 @@ interface Table {
 }
 
 function buildTable(words: readonly string[], opts: TwistOptions): Table {
-  const firstWord = words.findIndex((_, i) => !opts.skip(i));
   const plain = (word: string): Variant => ({ text: word, twists: 0, delta: 0, letters: 0, used: [] });
   const variants = words.map((word, i) =>
-    opts.skip(i) ? [plain(word)] : cachedVariants(word, opts.mappings, opts.count, opts.protectFirstLetter && i === firstWord),
+    opts.skip(i) ? [plain(word)] : cachedVariants(word, opts.mappings, opts.count, i === opts.capitalAt),
   );
   const baseLetters = words.reduce((n, w, i) => (opts.skip(i) ? n : n + letterCount(w)), 0);
 

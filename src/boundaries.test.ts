@@ -1,8 +1,8 @@
 // The web app and the CLI share one core (src/lib) and must not drift
-// apart. These tests hold the layout of docs/plans/2026-10-20-tep-cli-plan.md
-// §0 in place: what each directory may import, and that both front ends
-// reach the engine through the same shared calls instead of their own
-// copies.
+// apart. These tests hold the layout of docs/decisions.md ("One core, two
+// front ends") in place: what each directory may import, and that both
+// front ends reach the engine through the same shared calls instead of
+// their own copies.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -201,6 +201,37 @@ describe('the browser bundle', () => {
   });
 });
 
+/** The source files a file imports, type-only imports included: a type cycle still ties the modules together. */
+const importedBy = (file: string) => importsOf(file).flatMap((i) => resolveImport(file, i.from) ?? []);
+
+/** Each import cycle among these files, as the chain that closes it ("a.ts -> b.ts -> a.ts"). */
+function cyclesAmong(files: readonly string[], edges: (file: string) => string[] = importedBy): string[] {
+  const within = new Set(files);
+  const done = new Set<string>();
+  const path: string[] = [];
+  const out: string[] = [];
+  const visit = (file: string) => {
+    const at = path.indexOf(file);
+    if (at >= 0) return void out.push([...path.slice(at), file].join(' -> '));
+    if (done.has(file)) return;
+    path.push(file);
+    for (const next of edges(file)) if (within.has(next)) visit(next);
+    path.pop();
+    done.add(file);
+  };
+  files.forEach(visit);
+  return out;
+}
+
+describe('the import graph', () => {
+  // A cycle, even of types only, ties modules together so neither can be read or moved alone (audit L12: generate.ts, validation.ts and checks.ts).
+  it('has no cycle in src, type-only imports included', () => {
+    const files = filesUnder('src').filter((f) => !isTest(f));
+    expect(files).toContain('src/lib/generate.ts');
+    expect(cyclesAmong(files)).toEqual([]);
+  });
+});
+
 describe('this test', () => {
   it('reads imports of every shape the code uses', () => {
     const sample = importsOf('src/state/PasswordsProvider.tsx');
@@ -210,5 +241,14 @@ describe('this test', () => {
     expect(sample.find((i) => i.from === '../lib/generate')?.typeOnly).toBe(true);
     expect(resolveImport('src/App.tsx', './lib/pipeline')).toBe('src/lib/pipeline.ts');
     expect(resolveImport('src/App.tsx', 'react')).toBeUndefined();
+  });
+
+  it('finds each import cycle as the chain that closes it, counting type-only imports', () => {
+    const graph: Record<string, string[]> = { 'a.ts': ['b.ts'], 'b.ts': ['c.ts', 'd.ts'], 'c.ts': ['a.ts'], 'd.ts': [] };
+    expect(cyclesAmong(Object.keys(graph), (f) => graph[f]!)).toEqual(['a.ts -> b.ts -> c.ts -> a.ts']);
+    expect(cyclesAmong(['a.ts', 'b.ts', 'd.ts'], (f) => graph[f]!)).toEqual([]); // only among the files given
+    // A type-only import is an edge: validation.ts takes only types from requirements.ts, as it once did from generate.ts (audit L12).
+    expect(importsOf('src/lib/validation.ts').find((i) => i.from === './requirements')?.typeOnly).toBe(true);
+    expect(importedBy('src/lib/validation.ts')).toContain('src/lib/requirements.ts');
   });
 });

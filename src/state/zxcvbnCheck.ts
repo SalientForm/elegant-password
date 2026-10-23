@@ -3,12 +3,13 @@
 // only when the first password needs a reading.
 
 import { ZXCVBN_ESTIMATOR, zxcvbnBand, type ZxcvbnReading } from '../lib/zxcvbnReading';
+import { timed } from './slow';
 
 export type ZxcvbnCheck = (password: string) => Promise<ZxcvbnReading>;
 
 export const checkWithZxcvbn: ZxcvbnCheck = async (password) => {
   const { default: zxcvbn } = await import('zxcvbn');
-  const result = zxcvbn(password);
+  const result = timed("zxcvbn's reading", () => zxcvbn(password)); // the library call alone, not its lazy load
   const crackTime = String(result.crack_times_display.offline_slow_hashing_1e4_per_second);
   return {
     ...zxcvbnBand(crackTime, password),

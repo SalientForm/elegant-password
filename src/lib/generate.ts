@@ -5,6 +5,7 @@ import type { Difficulty } from './difficulty';
 import {
   initialPositions,
   initialsOf,
+  isListWord,
   isMadeUpNoun,
   MADE_UP_NOUNS,
   madeUpPositions,
@@ -21,16 +22,20 @@ import {
   type Slot,
   type Template,
 } from './grammar';
-import { isFarShift, isPinkyStretch, type TypingProfile } from './keyboard';
+import { FAR_SHIFT_LETTERS, isFarShift, isPinkyStretch, type TypingProfile } from './keyboard';
 import { LengthModel } from './lengthModel';
 import { cryptoRandom, randomInt, weightedIndex, type RandomSource } from './random';
 import { scoreCold } from './score';
 import { rawBits, strengthBits } from './strength';
 import { easedText, plainOf } from './ease';
-import { letterCount } from './text';
+import { letterCount, plural } from './text';
 import { checkRequirements, countUpper } from './checks';
+import type { RequirementCheck, Requirements } from './requirements';
 import { applyTwists, BUILT_IN_MAPPINGS, type AppliedTwist, type Mapping } from './twists';
-import { allowedSymbolSet, isSymbol, MAX_TWISTS, RequirementsError, separatorProblem, validate } from './validation';
+import { allowedSymbolSet, isSymbol, MAX_DIGITS, MAX_TWISTS, RequirementsError, separatorProblem, validate } from './validation';
+
+// The requirements' shape and defaults live in requirements.ts; re-exported so callers keep one import for requirements.
+export { DEFAULT_REQUIREMENTS, type RequirementCheck, type Requirements, type Separator } from './requirements';
 
 // The checks every password must pass, and crack-time estimates, live in checks.ts; re-exported so callers keep one import.
 export { ATTACK_SCENARIOS, checkRequirements, countLower, countUpper, crackEstimates, formatDuration, type CheckContext, type CrackEstimate } from './checks';
@@ -53,104 +58,6 @@ export {
   validate,
   type RuleProblem,
 } from './validation';
-
-/**
- * What goes between words: 'auto' (Automatic: see resolveSeparator), ''
- * (nothing), or one character: a space, or any symbol the site allows.
- */
-export type Separator = string;
-
-export interface Requirements {
-  minLength: number;
-  maxLength: number;
-  /** At least this many uppercase letters, digits and symbols (0 = not required). */
-  minUppercase: number;
-  /**
-   * At least this many lowercase letters (0 = not required). Words are
-   * lower case, so this only bites when capitals take most of the letters:
-   * more than one capital puts whole words in capitals, and a password left
-   * with too few lowercase letters is never shown.
-   */
-  minLowercase: number;
-  minDigits: number;
-  minSymbols: number;
-  /** Symbols the site accepts. Separators and end marks are drawn from these. */
-  allowedSymbols: string;
-  allowSpaces: boolean;
-  separator: Separator;
-  /** Lead with a number even when digits are not required (cheap extra strength). */
-  includeNumber: boolean;
-  /** Minimum entropy in bits, assuming the attacker knows exactly how this tool works. */
-  targetBits: number;
-  /**
-   * The shortest sentence that still meets the target: each shape's length
-   * window is cut from the top to the fewest characters at which its count
-   * reaches 2^targetBits (at a target the first length already reaches, one
-   * length). Off, the whole range counts and the strongest short plan wins.
-   */
-  shortest: boolean;
-  comfort: Comfort;
-  /** Minimum swaps (symbol swaps or misspellings) per password, 0-3, applied whenever the letters allow. */
-  twists: number;
-  /** Words typed as a single capital letter ("brings" -> "B"), 0-3. */
-  initials: number;
-  /** Words typed as two letters, first and last consonant ("gently" -> "gy"), 0-3. */
-  shorthand: number;
-  /** Nouns replaced by made-up words of at most two key rolls ("ertdfg"), 0-3. */
-  madeUp: number;
-  /** Attach numbers and small-word initials to the next word ("5ls", "Fp33z"). */
-  glue: boolean;
-  /**
-   * Never pick a symbol the pinky must stretch more than one key to reach
-   * ("! - _ = + ) | ~" ...) for twists, closing marks or the automatic
-   * separator. A separator the user picks explicitly is still honoured.
-   */
-  avoidPinkyStretch: boolean;
-  /**
-   * Keep every Shift stroke within one hand's reach: never pick a shifted
-   * symbol more than four keys from both Shift keys ("$ % ^ & *") for
-   * twists, closing marks or the automatic separator, and put the opening
-   * capital on a word whose first letter is in reach (not T G B Y H N U J I)
-   * when the sentence has one.
-   */
-  shiftReach: boolean;
-  /**
-   * Deliberate swaps for typing ease: a word with a same-finger jump or a
-   * long reach is typed with one fixed misspelling that removes it ("wise"
-   * -> "wyse"; see ease.ts). A fixed rule that comes with the word, so it
-   * adds no bits and nothing to remember. On by default: measured at the
-   * defaults it makes passwords a little easier to type and costs nothing
-   * on strength or memorability (TODO.md has the figures).
-   */
-  easeSwaps: boolean;
-  count: number;
-}
-
-
-export const DEFAULT_REQUIREMENTS: Requirements = {
-  minLength: 12,
-  maxLength: 32,
-  minUppercase: 1,
-  minLowercase: 0,
-  minDigits: 1,
-  minSymbols: 1,
-  allowedSymbols: '!@#$%^&*-_.,?;',
-  allowSpaces: true,
-  separator: 'auto',
-  includeNumber: true,
-  targetBits: 40,
-  shortest: false,
-  comfort: 'balanced',
-  twists: 2,
-  initials: 0,
-  shorthand: 0,
-  madeUp: 0,
-  glue: false,
-  avoidPinkyStretch: true,
-  shiftReach: false,
-  easeSwaps: true,
-  count: 5,
-};
 
 export interface StrengthPreset {
   label: string;
@@ -205,15 +112,9 @@ export type WordRole = Slot | 'yours' | 'fluff';
 
 export const ROLE_LABELS: Record<WordRole, string> = { ...SLOT_LABELS, yours: 'your word', fluff: 'padding' };
 
-/** Label for a word chip: made-up nouns get their own label. */
-export function roleLabel(word: { text: string; original: string; slot: WordRole }, madeUp: boolean): string {
-  return madeUp ? 'made-up noun' : ROLE_LABELS[word.slot];
-}
-
-export interface RequirementCheck {
-  rule: string;
-  met: boolean;
-  how: string;
+/** Label for a word chip: a made-up noun in a noun slot gets its own label; your own words and padding never do. */
+export function roleLabel(word: { original: string; slot: WordRole }): string {
+  return word.slot === 'noun' && isMadeUpNoun(word.original) ? 'made-up noun' : ROLE_LABELS[word.slot];
 }
 
 /**
@@ -355,8 +256,17 @@ function endSymbolFor(separators: number, separator: string, req: Requirements, 
 }
 
 const modelCache = new Map<string, LengthModel>();
-/** Length models are about a megabyte each; the cache is emptied once it holds this many, like the scorer's caches. */
-const MODEL_CACHE_LIMIT = 400;
+/**
+ * Length models hold only their counts (the word groups are shared per
+ * pool), about 12 KB; the one used longest ago is dropped when the cache is
+ * full. 1,000 holds three plans at the widest lengths.
+ */
+export const MODEL_CACHE_LIMIT = 1000;
+
+/** How many length models planning holds, for the tests. */
+export function cachedModelCount(): number {
+  return modelCache.size;
+}
 
 // The length model counts words as typed: with deliberate swaps on, a whole
 // word's pool holds its swapped spellings, so a swap that shortens a word
@@ -366,11 +276,14 @@ const MODEL_CACHE_LIMIT = 400;
 function modelFor(shape: Shape, comfort: Comfort, minDigits: number, eased: boolean): LengthModel {
   const key = `${comfort}:${minDigits}:${eased ? 1 : 0}:${shape.slots.join(' ')}:${shape.initials.join(',')}:${shape.shorthand.join(',')}:${shape.madeUp.join(',')}`;
   let model = modelCache.get(key);
-  if (!model) {
-    model = new LengthModel(shape.slots.map((_, i) => slotPool(shape, i, comfort, minDigits, eased)));
-    if (modelCache.size >= MODEL_CACHE_LIMIT) modelCache.clear();
+  if (model) {
+    modelCache.delete(key); // to the end of the Map: the most recently used
     modelCache.set(key, model);
+    return model;
   }
+  model = new LengthModel(shape.slots.map((_, i) => slotPool(shape, i, comfort, minDigits, eased)));
+  if (modelCache.size >= MODEL_CACHE_LIMIT) modelCache.delete(modelCache.keys().next().value!);
+  modelCache.set(key, model);
   return model;
 }
 
@@ -732,15 +645,33 @@ function better(a: Plan, b: Plan): boolean {
 const nearCapital = (word: string) => !isFarShift((word.match(/[a-z]/)?.[0] ?? 'a').toUpperCase());
 
 /**
+ * The order words take the capitals in. With a random source it starts from
+ * a random word (and wraps round), so a batch does not all capitalise the
+ * same word; without one it is the first eligible word. With `nearShift`,
+ * words whose first letter capitalises within one hand's reach of a Shift key
+ * come first, so the capital lands on one of them whenever the sentence has
+ * one; the rest follow, so the uppercase rule is met even when the words in
+ * reach have too few letters for it. Neither choice is counted as bits.
+ */
+export function capitalOrder(
+  words: readonly string[],
+  /** Words whose case is part of what was chosen (made-up nouns); never recased. */
+  fixedCase: (i: number) => boolean = () => false,
+  rng?: RandomSource,
+  nearShift = false,
+): number[] {
+  const any = words.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
+  const near = nearShift ? any.filter((j) => nearCapital(words[j]!)) : [];
+  const preferred = near.length ? near : any;
+  const start = rng && preferred.length ? randomInt(preferred.length, rng) : 0;
+  return [...preferred.slice(start), ...preferred.slice(0, start), ...any.filter((j) => !preferred.includes(j))];
+}
+
+/**
  * One capital goes on the first letter of a word, like a sentence. More than
  * one puts whole words in capitals ("SLEEPY-otters ..."), so Shift is held
- * once instead of the case flipping back and forth. With a random source the
- * word is chosen at random (and whole-word capitals start from a random word
- * and wrap round), so a batch does not all capitalise the same word; without
- * one it is the first eligible word. With `nearShift`, words whose first
- * letter capitalises within one hand's reach of a Shift key come first, so
- * the capital lands on one of them whenever the sentence has one. Neither
- * choice is counted as bits.
+ * once instead of the case flipping back and forth. The words are taken in
+ * `capitalOrder`.
  */
 export function applyUppercase(
   words: readonly string[],
@@ -754,14 +685,8 @@ export function applyUppercase(
   // Capital initials and ALL-CAPS made-up nouns already count toward the rule.
   const existing = countUpper(out.join(''));
   if (existing >= minUppercase) return out;
-  const any = out.flatMap((w, j) => (!fixedCase(j) && /[a-z]/.test(w) ? [j] : []));
-  // With Shift reach on, the words one hand can capitalise come first, from a random one of them; the rest follow, so
-  // the uppercase rule is met even when the words in reach have too few letters for it.
-  const near = nearShift ? any.filter((j) => nearCapital(out[j]!)) : [];
-  const preferred = near.length ? near : any;
-  if (preferred.length === 0) return out;
-  const start = rng ? randomInt(preferred.length, rng) : 0;
-  const order = [...preferred.slice(start), ...preferred.slice(0, start), ...any.filter((j) => !preferred.includes(j))];
+  const order = capitalOrder(out, fixedCase, rng, nearShift);
+  if (order.length === 0) return out;
   if (minUppercase === 1) {
     const i = order[0]!;
     out[i] = out[i]!.replace(/[a-z]/, (c) => c.toUpperCase());
@@ -777,8 +702,22 @@ export function applyUppercase(
   return out;
 }
 
-function render(words: string[], variant: Variant, plan: Plan, rng?: RandomSource, endSymbol = variant.endSymbol, nearShift = false): string {
-  const cased = applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i), rng, nearShift);
+/**
+ * The word that takes the opening capital, chosen from the words as typed,
+ * before any swap: only when the rule needs one capital and the words have
+ * none. Swaps keep its first character a letter, so the capital is always a
+ * word's first character, never after a swapped-in symbol ("@Corns").
+ */
+function capitalWord(words: readonly string[], minUppercase: number, fixedCase: (i: number) => boolean, nearShift: boolean): number | undefined {
+  if (minUppercase !== 1 || countUpper(words.join('')) > 0) return undefined;
+  return capitalOrder(words, fixedCase, undefined, nearShift)[0];
+}
+
+function render(words: string[], variant: Variant, plan: Plan, endSymbol = variant.endSymbol, capitalAt?: number): string {
+  const cased =
+    capitalAt === undefined
+      ? applyUppercase(words, plan.minUppercase, (i) => variant.shape.madeUp.includes(i))
+      : words.map((w, j) => (j === capitalAt ? w.replace(/[a-z]/, (c) => c.toUpperCase()) : w));
   return trimSeparators(joinTokens(cased, variant.shape.glue, plan.separator) + endSymbol, plan.separator);
 }
 
@@ -800,29 +739,67 @@ export interface MakeUpOptions extends GenerateOptions {
  * short.
  */
 export function usableMappings(mappings: readonly Mapping[], req: Requirements, separator = ''): Mapping[] {
-  const allowed = new Set(comfortableSymbols(req));
-  if (separator) allowed.delete(separator);
-  return mappings.filter((m) => [...m.to].every((c) => /[a-z0-9]/.test(c) || allowed.has(c)));
+  return mappings.filter((m) => !mappingBlock(m, req, separator));
+}
+
+/** Why a mapping cannot be used under these rules and this separator, or undefined when it can: the reason the swaps panel shows. */
+export function mappingBlock(m: Pick<Mapping, 'to'>, req: Requirements, separator = ''): string | undefined {
+  const allowed = allowedSymbolSet(req);
+  for (const c of m.to) {
+    if (/[a-z0-9]/.test(c)) continue;
+    if (!allowed.includes(c)) return `"${c}" is not an allowed symbol`;
+    if (c === separator) return `"${c}" is the separator, which never comes from a swap`;
+    if (req.avoidPinkyStretch && isPinkyStretch(c)) return `"${c}" needs a pinky stretch`;
+    if (req.shiftReach && isFarShift(c)) return `"${c}" needs a Shift key out of one hand's reach`;
+  }
+  return undefined;
 }
 
 const same = <T>(a: readonly T[], b: readonly T[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+let drawnShapes: ReadonlySet<string> | undefined;
+
+/**
+ * Whether some settings draw this sentence: a template's shape, bare or with
+ * its number placed; each word as written on its slot's full list, whatever
+ * the comfort; a number in NUMBER_RANGE, or of up to MAX_DIGITS digits, without
+ * a leading zero; made-up nouns only in the noun slots before the first real
+ * noun. An empty word is on no list. It lives here rather than in grammar.ts
+ * because it needs MAX_DIGITS, and takes the two arrays rather than a
+ * GeneratedSentence, so grammar.ts never imports validation.ts.
+ */
+export function couldBeDrawn(slots: readonly Slot[], words: readonly string[]): boolean {
+  drawnShapes ??= new Set(templates().flatMap((t) => [t, ...numberPlacements(t)].map((shape) => shape.slots.join(' '))));
+  if (words.length !== slots.length || !drawnShapes.has(slots.join(' '))) return false;
+  let realNoun = false;
+  return slots.every((slot, i) => {
+    const word = words[i]!;
+    if (slot === 'num') return /^[1-9]\d*$/.test(word) && word.length <= MAX_DIGITS && Number(word) >= 2;
+    if (slot === 'noun' && !realNoun && isMadeUpNoun(word)) return true;
+    if (slot === 'noun') realNoun = true;
+    return isListWord(slot, word);
+  });
+}
 
 /**
  * The plan, variant and typed words for a kept sentence under these rules.
  * Initials, two-letter words and deliberate swaps are worked out again from
  * the words as written, so they follow the rules; the words themselves never
- * change. A RequirementsError says why when the sentence cannot fit.
+ * change. The sentence must be one this tool could have drawn. A
+ * RequirementsError says why when the sentence cannot fit.
  */
 function keptSentence(sentence: GeneratedSentence, req: Requirements): { candidate: Candidate; variant: Variant; typed: string[] } {
   plan(req); // rules no sentence can meet get the general message, not one about this sentence
   const ctx = planContext(req);
   const doesNotFit = (why: string) =>
     new RequirementsError(`The sentence does not fit these rules: ${why}. Draw a new sentence with the button beside it, or change the rules back.`);
+  if (!couldBeDrawn(sentence.slots, sentence.words)) {
+    throw new RequirementsError('The kept sentence is not one this tool makes: its shape, or a word in it, is not from the tool\'s lists. Draw a new sentence with the button beside it.');
+  }
   const hasNumber = sentence.slots.includes('num');
   if (hasNumber && !ctx.withNumber) throw doesNotFit('it has a number, and these rules leave numbers out');
   if (!hasNumber && ctx.withNumber) throw doesNotFit('these rules need a number, and it has none');
-  const template = templates().find((t) => same(t.slots, sentence.slots.filter((slot) => slot !== 'num')));
-  if (!template || sentence.words.length !== sentence.slots.length) throw doesNotFit('its shape is not one this tool makes');
+  const template = templates().find((t) => same(t.slots, sentence.slots.filter((slot) => slot !== 'num')))!;
   const t = candidateFor(template, req, ctx);
   const variant = t.candidate?.variants.find((v) => same(v.shape.slots, sentence.slots));
   if (!t.candidate || !variant) {
@@ -832,7 +809,7 @@ function keptSentence(sentence: GeneratedSentence, req: Requirements): { candida
   const { shape } = variant;
   const madeUp = sentence.words.flatMap((w, j) => (shape.slots[j] === 'noun' && isMadeUpNoun(w) ? [j] : []));
   if (!same(madeUp, shape.madeUp)) {
-    throw doesNotFit(`it has ${madeUp.length} made-up noun${madeUp.length === 1 ? '' : 's'}, and these rules ask for ${shape.madeUp.length}`);
+    throw doesNotFit(`it has ${plural(madeUp.length, 'made-up noun')}, and these rules ask for ${shape.madeUp.length}`);
   }
   const typed = sentence.words.map((w, j) => {
     if (shape.initials.includes(j)) return w[0]!.toUpperCase();
@@ -849,8 +826,14 @@ function keptSentence(sentence: GeneratedSentence, req: Requirements): { candida
 /** No version of one sentence meets a rule (a lowercase minimum its capitals leave no room for): a newly drawn sentence is drawn again. */
 class UnmetRule extends RequirementsError {}
 
-/** Draws a new sentence at most this many times when every version of the one drawn misses a rule. */
-const REDRAWS = 8;
+/**
+ * The most sentences one batch draws, the first included, while every
+ * version of each one drawn misses a rule: then the last one's error stands.
+ */
+export const MAX_SENTENCE_DRAWS = 8;
+
+/** A batch draws a closing symbol and swaps at most this many times per card asked for (count × this in all); one that keeps repeating a password stops there, with fewer cards. */
+export const DRAWS_PER_CARD = 10;
 
 export function generate(req: Requirements, options: MakeUpOptions = {}): GenerateResult {
   if (options.sentence) return generateOnce(req, options);
@@ -858,7 +841,7 @@ export function generate(req: Requirements, options: MakeUpOptions = {}): Genera
     try {
       return generateOnce(req, options);
     } catch (e) {
-      if (!(e instanceof UnmetRule) || i >= REDRAWS) throw e;
+      if (!(e instanceof UnmetRule) || i >= MAX_SENTENCE_DRAWS) throw e;
     }
   }
 }
@@ -897,8 +880,9 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
   if (drawn && req.shortest && length > chosen.maxLength) {
     warnings.push(`The kept sentence makes ${length} characters, longer than the ${chosen.maxLength} the shortest plan needs. Draw a new sentence for a shorter one.`);
   }
-  if (req.shiftReach && req.minUppercase === 1 && countUpper(typed.join('')) === 0 && !typed.some((w, j) => !shape.madeUp.includes(j) && /[a-z]/.test(w) && nearCapital(w))) {
-    warnings.push('No word in this sentence starts with a letter one hand can capitalise while holding Shift (T G B Y H N U J I are out of reach).');
+  const capitalAt = capitalWord(typed, chosen.minUppercase, (j) => shape.madeUp.includes(j), req.shiftReach);
+  if (req.shiftReach && capitalAt !== undefined && !nearCapital(typed[capitalAt]!)) {
+    warnings.push(`No word in this sentence starts with a letter one hand can capitalise while holding Shift (${FAR_SHIFT_LETTERS.join(' ')} are out of reach).`);
   }
   // Twists never touch the number, initials, made-up nouns or two-letter
   // words, so what the card says about those stays true.
@@ -935,7 +919,7 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
   const suggestions: Suggestion[] = [];
   const seen = new Set<string>();
   let unmet: string | undefined;
-  for (let tries = 0; suggestions.length < req.count && tries < req.count * 10; tries++) {
+  for (let tries = 0; suggestions.length < req.count && tries < req.count * DRAWS_PER_CARD; tries++) {
     const endSymbol = variant.endSymbol ? closings[randomInt(closings.length, rng)]!.repeat(variant.endSymbol.length) : '';
     // Random swaps land on the words as typed, deliberate swaps included, and are counted from there.
     const twisted = applyTwists(
@@ -945,8 +929,8 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
         count: Math.min(MAX_TWISTS, req.twists + (req.twists > 0 ? randomInt(2, rng) : 0)),
         mappings: twistMappings,
         skip: fixed,
-        // The opening capital goes on the first ordinary word (twists skip made-up nouns and initials).
-        protectFirstLetter: chosen.minUppercase === 1 && shape.initials.length === 0,
+        // The word that takes the opening capital keeps a letter first.
+        capitalAt,
         minDelta: req.minLength - length,
         // The shortest plan never lets a swap lengthen the password ("f" to "ph").
         maxDelta: req.shortest ? 0 : req.maxLength - length,
@@ -954,8 +938,8 @@ function generateOnce(req: Requirements, options: MakeUpOptions): GenerateResult
       },
       rng,
     );
-    // The opening capital stays on the first word, a sentence-like start, unless Shift reach moves it to a word in reach.
-    const password = render(twisted.words, variant, chosen, undefined, endSymbol, req.shiftReach);
+    // The opening capital goes on the word chosen before the swaps: the first word, a sentence-like start, unless Shift reach moves it to a word in reach.
+    const password = render(twisted.words, variant, chosen, endSymbol, capitalAt);
     if (seen.has(password)) continue;
     seen.add(password);
     const score = scoreCold(password, hint, mappings);

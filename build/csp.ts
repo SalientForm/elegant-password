@@ -2,6 +2,8 @@
 // network, so the policy says so: scripts and styles only from the same
 // origin, no connections, no frames, no plugins. Added only to the
 // production build: the dev server needs inline scripts for hot reloading.
+// GitHub Pages sends no headers the app can set, so this is a meta tag, and a
+// meta tag cannot carry frame-ancestors: src/frameGuard.ts refuses a frame instead.
 
 import type { HtmlTagDescriptor, Plugin } from 'vite';
 

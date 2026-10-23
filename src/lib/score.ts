@@ -48,6 +48,7 @@
 
 import { scoreDifficulty, type Difficulty } from './difficulty';
 import {
+  COMFORTS,
   initialsOf,
   isMadeUpNoun,
   MADE_UP_NOUNS,
@@ -102,6 +103,8 @@ export interface Memorability {
   sameSize: number;
   /** Hint words with a random swap; deliberate swaps are not counted. */
   swappedWords: number;
+  /** Points taken off for the random swaps (at most MEMORABILITY.maxSwapPenalty). */
+  swapPenalty: number;
 }
 
 export const MEMORABILITY = { fidelityWeight: 0.6, brevityWeight: 0.4, shortAt: 16, longAt: 48, swapPenalty: 5, maxSwapPenalty: 20 } as const;
@@ -120,7 +123,7 @@ export function memorabilityOf(password: string, words: readonly ScoredWord[]): 
   const swappedWords = words.filter((w) => w.twists > 0).length;
   const penalty = Math.min(MEMORABILITY.maxSwapPenalty, swappedWords * MEMORABILITY.swapPenalty);
   const score = Math.max(0, Math.round(100 * (MEMORABILITY.fidelityWeight * fidelity + MEMORABILITY.brevityWeight * brevity) - penalty));
-  return { score, fidelity, brevity, sameSize: credits.filter((c) => c >= 1).length, swappedWords };
+  return { score, fidelity, brevity, sameSize: credits.filter((c) => c >= 1).length, swappedWords, swapPenalty: penalty };
 }
 
 export interface ColdScore {
@@ -157,7 +160,6 @@ export interface ColdScore {
 export const MAX_TWISTS_PER_WORD = 3;
 /** Fewer for long words: enumerating spellings grows combinatorially with length (a 34-letter word with three swaps took seconds). */
 export const twistsToTry = (length: number) => (length <= 10 ? MAX_TWISTS_PER_WORD : length <= 16 ? 2 : 1);
-const COMFORTS: readonly Comfort[] = ['strict', 'balanced', 'relaxed'];
 const POOL_SLOTS: readonly Exclude<Slot, 'num' | 'and'>[] = ['adj', 'noun', 'verb', 'adv', 'end', 'prep'];
 
 /** Base forms a hint word can take in a password, longest first, each with its kind. */
@@ -419,7 +421,7 @@ function measureMatch(words: readonly string[], scored: readonly ScoredWord[], s
   return { template: slots, comfort, sizes, bits };
 }
 
-/** Badge colour bands: strength in bits (green from the "Strong" preset, yellow from "Everyday") and memorability out of 100. */
+/** Badge colour bands: strength in bits (green from 50, yellow from 40, red below) and memorability out of 100. */
 export const STRENGTH_BANDS = { green: 50, yellow: 40 } as const;
 export const MEMORABILITY_BANDS = { green: 75, yellow: 45 } as const;
 
@@ -496,13 +498,13 @@ export function scoreCold(password: string, hint: string, mappings: readonly Map
   if (twistCount > 0) {
     const bases = scored.map((s) => s.base);
     const twistable = (s: ScoredWord) => s.form === 'word' || s.form === 'eased' || s.form === 'short';
-    const first = scored.find(twistable);
-    const protectFirstLetter = !!first && /^[A-Z][a-z]/.test(first.text);
+    // The word with the opening capital kept its first letter through the swaps, wherever it is.
+    const capitalAt = scored.findIndex((s) => twistable(s) && /^[A-Z][a-z]/.test(s.text));
     twistOptions = twistOutcomes(bases, {
       count: twistCount,
       mappings,
       skip: (i) => !twistable(scored[i]!),
-      protectFirstLetter,
+      capitalAt,
       minDelta: -Infinity,
       maxDelta: Infinity,
     }, twistCount);

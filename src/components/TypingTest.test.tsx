@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { commonRank } from '../lib/common';
 import { difficultyAlone, scoreCold } from '../lib/score';
-import { strengthBits } from '../lib/strength';
+import { rawBits, strengthBits } from '../lib/strength';
 import { SELECTED_KEY } from '../state/selectedStore';
 import { memoryStore } from '../state/storage';
 import { PasswordsProvider, usePasswords } from '../state/PasswordsProvider';
 import { MANAGER_OPT_OUT, TypingTest } from './TypingTest';
+
+// The figures from the password alone are spied on, calling through, so a test below can count them.
+vi.mock('../lib/strength', { spy: true });
+vi.mock('../lib/common', { spy: true });
 
 afterEach(cleanup);
 
@@ -128,6 +133,17 @@ describe('TypingTest', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('holds a password of at most 128 characters and a hint of at most 512, and refuses a longer paste', () => {
+    render(<TypingTest />);
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
+    expect(input.maxLength).toBe(128);
+    fireEvent.paste(input, { clipboardData: { getData: () => 'k'.repeat(129) } });
+    expect(screen.getByRole('alert').textContent).toBe('Not set: the pasted text is longer than 128 characters.');
+    fireEvent.paste(input, { clipboardData: { getData: () => 'k'.repeat(128) } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect((screen.getByLabelText('Hint for the password under test') as HTMLInputElement).maxLength).toBe(512);
+  });
+
   it('leaves Enter alone while an IME is composing', () => {
     render(<TypingTest />);
     const input = screen.getByLabelText('Typing test') as HTMLInputElement;
@@ -156,6 +172,24 @@ describe('TypingTest', () => {
     const input = screen.getByLabelText('Typing test') as HTMLInputElement;
     fireEvent.paste(input, { clipboardData: { getData: () => 'dragon' } });
     expect(screen.getByRole('alert').textContent).toMatch(/Not allowed: number \d+ of the 10,001 most common passwords/);
+  });
+
+  it('scores Strength, Raw and the common-password check once per password under test, not on every keystroke', () => {
+    const clock = { t: 0 };
+    render(<TypingTest now={() => clock.t} />);
+    const input = screen.getByLabelText('Typing test') as HTMLInputElement;
+    fireEvent.paste(input, { clipboardData: { getData: () => 'beige @Corns befriend beds?' } });
+    for (const spy of [strengthBits, rawBits, commonRank]) vi.mocked(spy).mockClear();
+    typeInto(input, 'beige @Co', clock);
+    enter(input, clock); // a mismatch, so the password under test stays
+    expect(screen.getByRole('status').textContent).toMatch(/Did not match/);
+    expect(strengthBits).not.toHaveBeenCalled();
+    expect(rawBits).not.toHaveBeenCalled();
+    expect(commonRank).not.toHaveBeenCalled();
+    // A new password under test is scored afresh.
+    fireEvent.paste(input, { clipboardData: { getData: () => 'dragon' } });
+    expect(strengthBits).toHaveBeenCalledWith('dragon');
+    expect(screen.getByRole('alert').textContent).toMatch(/Not allowed/);
   });
 
   it('can hide the text as it is typed, and gives password managers nothing to latch on to', () => {

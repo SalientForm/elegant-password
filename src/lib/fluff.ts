@@ -17,6 +17,7 @@
 
 import type { RandomSource } from './random';
 import { randomInt } from './random';
+import { plural } from './text';
 
 export type LengthTag = 'total' | 'factor' | 'none';
 
@@ -65,9 +66,10 @@ const SEQUENCES: Record<number, readonly string[]> = {
   5: ['12345', '54321', '13579'],
 };
 
-const MAX_REPEATS = 3;
+export const MAX_REPEATS = 3;
 const MAX_SEQUENCE = 5;
-const MIN_WORD = 3;
+/** Words shorter than this are short words, for the padding's choice. */
+export const MIN_WORD = 3;
 const MAX_WORD = 8;
 
 export const digitsOf = (n: number) => String(n).length;
@@ -105,9 +107,9 @@ function fill(R: number, short: number, inputs: FluffInputs, repeatsUsed: number
     if (w.length >= MIN_WORD && w.length <= MAX_WORD) byLength.set(w.length, [...(byLength.get(w.length) ?? []), w]);
   }
   while (left > 0) {
-    // A whole word, only when more than 3 characters short, and only if one fits exactly.
+    // A whole word, only when more than MIN_WORD characters short, and only if one fits exactly.
     const wordLen = Math.min(MAX_WORD, left - sep);
-    if (short > 3 && wordLen >= MIN_WORD) {
+    if (short > MIN_WORD && wordLen >= MIN_WORD) {
       // Prefer a word that uses the whole remainder; otherwise the longest that leaves room for something else.
       const candidates = [wordLen, ...Array.from({ length: wordLen - MIN_WORD }, (_, i) => wordLen - 1 - i)].filter((n) => byLength.has(n));
       const n = candidates.find((len) => len === wordLen || left - (len + sep) === 0 || left - (len + sep) >= 1);
@@ -198,7 +200,7 @@ export function describeFluff(plan: FluffPlan, min: number): string {
       case 'word':
         return `the word “${p.text}”`;
       case 'repeat':
-        return `“${p.char}” repeated ${p.text.length} more time${p.text.length === 1 ? '' : 's'}`;
+        return `“${p.char}” repeated ${plural(p.text.length, 'more time')}`;
       case 'sequence':
         return `the digits ${p.text}`;
       case 'marks':

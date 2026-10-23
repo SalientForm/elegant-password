@@ -1,34 +1,66 @@
 // Random walks through tep config (spec §9): whatever allowed choice or
 // in-range value is picked at every question, review edits included, the
 // wizard never meets a contradiction, never reaches a question with no
-// allowed answer, saves a file tep g can use, and shapes every question
-// within the time budget.
+// allowed answer, saves a file tep g can use, and keeps every question within
+// the work it may cost. pnpm measure:wizard times the same walks against the
+// budget.
 
-import { } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { problemsOf } from '../lib/consistency';
 import { randomInt, type RandomSource } from '../lib/random';
 import { seeded } from '../lib/testRandom';
 import { layerOf, loadConfig } from './config';
 import { configCommand } from './configCommand';
-import { QUESTION_BUDGET_MS } from './constraints';
+import { QUESTION_BUDGET_MS, QUESTION_FAIL_MS } from './constraints';
 import { EXIT } from './errors';
 import type { Prompter, SelectOption } from './io';
 import { resolve } from './resolve';
 import { fakeIo, flagsLayer, scratch } from './testing';
 
+/** The work done since the last answer: plannings the CLI asked for, length models built. */
+const work = vi.hoisted(() => ({ plannings: 0, models: 0 }));
+
+vi.mock('../lib/consistency', async (importOriginal) => {
+  const m = await importOriginal<typeof import('../lib/consistency')>();
+  return {
+    ...m,
+    problemsOf: (...args: Parameters<typeof m.problemsOf>) => {
+      work.plannings++;
+      return m.problemsOf(...args);
+    },
+  };
+});
+
+vi.mock('../lib/lengthModel', async (importOriginal) => {
+  const m = await importOriginal<typeof import('../lib/lengthModel')>();
+  class CountedLengthModel extends m.LengthModel {
+    constructor(...args: ConstructorParameters<typeof m.LengthModel>) {
+      super(...args);
+      work.models++;
+    }
+  }
+  return { ...m, LengthModel: CountedLengthModel };
+});
+
 /**
- * The budget for shaping one question (user decision, 2026-10-20); CI
- * machines are slower. Measured as this process's CPU time, not wall time:
- * Vitest runs test files in parallel processes, and time spent waiting for
- * a core is the scheduler's, not the wizard's.
+ * The budget expressed as work: what one question may cost, from one answer
+ * to the next question. About twice the worst measured (183 plannings, 181
+ * length models, 2026-10-21), and well inside the planning cache's limit
+ * (MODEL_CACHE_LIMIT in src/lib/generate.ts), so one question never pushes
+ * out the models the next relies on. Counts, not a clock, so a coverage run
+ * or a busy machine cannot fail it; pnpm measure:wizard takes the time.
  */
-const BUDGET_MS = QUESTION_BUDGET_MS * (process.env.CI ? 3 : 1);
-const cpuMs = () => {
-  const u = process.cpuUsage();
-  return (u.user + u.system) / 1000;
-};
+const MAX_PLANNINGS_PER_QUESTION = 400;
+const MAX_MODELS_PER_QUESTION = 400;
+
+interface Gap {
+  message: string;
+  plannings: number;
+  models: number;
+  /** Wall time, in milliseconds. */
+  ms: number;
+}
 
 const RULE_TEXTS = [
   'Must be 8-20 characters and include at least one number and one of !@#$%',
@@ -42,12 +74,12 @@ const SYMBOL_POOL = '!@#$%^&*-_.,?;:+=';
 class RandomPrompter implements Prompter {
   readonly errors: string[] = [];
   readonly deadEnds: string[] = [];
-  readonly gaps: { message: string; ms: number }[] = [];
+  readonly gaps: Gap[] = [];
   /** Review lines wider than the box: the review wraps its own lines, so none should be. */
   readonly overflows: string[] = [];
   /** A box from a phone-narrow terminal to a wide one. */
   readonly noteWidth: number;
-  private last = cpuMs();
+  private last = performance.now();
   private edits = 0;
 
   constructor(
@@ -55,6 +87,8 @@ class RandomPrompter implements Prompter {
     private readonly maxEdits: number,
   ) {
     this.noteWidth = 24 + randomInt(100, rng);
+    work.plannings = 0;
+    work.models = 0;
   }
 
   private pick<T>(items: readonly T[]): T {
@@ -62,10 +96,12 @@ class RandomPrompter implements Prompter {
   }
 
   private time(message: string) {
-    this.gaps.push({ message, ms: cpuMs() - this.last });
+    this.gaps.push({ message, plannings: work.plannings, models: work.models, ms: performance.now() - this.last });
   }
   private done<T>(v: T): T {
-    this.last = cpuMs();
+    work.plannings = 0;
+    work.models = 0;
+    this.last = performance.now();
     return v;
   }
 
@@ -116,25 +152,55 @@ class RandomPrompter implements Prompter {
   }
 }
 
+/** The 40 seeded walks, with their correctness assertions; every question's work and wall time. */
+async function walkAll(): Promise<Gap[]> {
+  const gaps: Gap[] = [];
+  for (let seed = 1; seed <= 40; seed++) {
+    const cwd = scratch('tep-walk-');
+    const io = fakeIo({ stdinTTY: true, cwd });
+    const prompter = new RandomPrompter(seeded(seed), seed % 7);
+    io.prompter = () => prompter;
+    const code = await configCommand([], io);
+    expect(prompter.errors, `seed ${seed}`).toEqual([]);
+    expect(prompter.deadEnds, `seed ${seed}`).toEqual([]);
+    expect(prompter.overflows, `seed ${seed}: review lines wider than ${prompter.noteWidth}`).toEqual([]);
+    expect(code, `seed ${seed}: ${io.err()}`).toBe(EXIT.ok);
+    // Saved, or quit by a "no" to overwriting (only when a file exists, so never here): either way, a saved file is consistent.
+    const loaded = loadConfig(join(cwd, 'tep.yml'), 'tep.yml');
+    const r = resolve(layerOf(loaded), flagsLayer({}), { tty: true });
+    expect(problemsOf(r.generation.req), `seed ${seed}`).toEqual([]);
+    gaps.push(...prompter.gaps.map((g) => ({ ...g, message: `seed ${seed}: ${g.message}` })));
+  }
+  return gaps;
+}
+
+const most = (gaps: Gap[], key: 'plannings' | 'models') => Math.max(...gaps.map((g) => g[key]));
+
 describe('random walks through tep config', () => {
-  it('never meet a contradiction, never reach a dead end, fit the review to the box, and save a file tep g can use', async () => {
-    const slow: { message: string; ms: number }[] = [];
-    for (let seed = 1; seed <= 40; seed++) {
-      const cwd = scratch('tep-walk-');
-      const io = fakeIo({ stdinTTY: true, cwd });
-      const prompter = new RandomPrompter(seeded(seed), seed % 7);
-      io.prompter = () => prompter;
-      const code = await configCommand([], io);
-      expect(prompter.errors, `seed ${seed}`).toEqual([]);
-      expect(prompter.deadEnds, `seed ${seed}`).toEqual([]);
-      expect(prompter.overflows, `seed ${seed}: review lines wider than ${prompter.noteWidth}`).toEqual([]);
-      expect(code, `seed ${seed}: ${io.err()}`).toBe(EXIT.ok);
-      // Saved, or quit by a "no" to overwriting (only when a file exists, so never here): either way, a saved file is consistent.
-      const loaded = loadConfig(join(cwd, 'tep.yml'), 'tep.yml');
-      const r = resolve(layerOf(loaded), flagsLayer({}), { tty: true });
-      expect(problemsOf(r.generation.req), `seed ${seed}`).toEqual([]);
-      slow.push(...prompter.gaps.filter((g) => g.ms > BUDGET_MS));
-    }
-    expect(slow, `questions over the ${BUDGET_MS} ms budget`).toEqual([]);
+  it('never meet a contradiction, never reach a dead end, fit the review to the box, save a file tep g can use, and keep each question within its work', async () => {
+    const gaps = await walkAll();
+    expect(gaps.filter((g) => g.plannings > MAX_PLANNINGS_PER_QUESTION), `questions over ${MAX_PLANNINGS_PER_QUESTION} plannings`).toEqual([]);
+    expect(gaps.filter((g) => g.models > MAX_MODELS_PER_QUESTION), `questions over ${MAX_MODELS_PER_QUESTION} length models`).toEqual([]);
+    // The counters count: planning still goes through problemsOf, models through LengthModel.
+    expect(most(gaps, 'plannings')).toBeGreaterThan(0);
+    expect(most(gaps, 'models')).toBeGreaterThan(0);
+  }, 300_000);
+
+  it.skipIf(!process.env.MEASURE_WIZARD)('times every question against the budget (pnpm measure:wizard)', async () => {
+    const gaps = await walkAll();
+    const slowest = [...gaps].sort((a, b) => b.ms - a.ms);
+    const row = (g: Gap) => `${g.ms.toFixed(0).padStart(6)} ms (target ${QUESTION_BUDGET_MS})  ${String(g.plannings).padStart(4)} plannings  ${String(g.models).padStart(4)} models  ${g.message}`;
+    const over = slowest.filter((g) => g.ms > QUESTION_BUDGET_MS);
+    console.log(
+      [
+        `${gaps.length} questions in 40 walks, wall time; the target is ${QUESTION_BUDGET_MS} ms a question, a failure over ${QUESTION_FAIL_MS} ms`,
+        `most work in one question: ${most(gaps, 'plannings')} plannings, ${most(gaps, 'models')} length models`,
+        'the five slowest:',
+        ...slowest.slice(0, 5).map(row),
+        over.length ? `over the ${QUESTION_BUDGET_MS} ms target (not a failure below ${QUESTION_FAIL_MS} ms):` : `none over the ${QUESTION_BUDGET_MS} ms target`,
+        ...over.map(row),
+      ].join('\n'),
+    );
+    expect(slowest.filter((g) => g.ms > QUESTION_FAIL_MS).map(row), `questions over ${QUESTION_FAIL_MS} ms`).toEqual([]);
   }, 300_000);
 });
