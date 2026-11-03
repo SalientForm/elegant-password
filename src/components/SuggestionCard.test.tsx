@@ -232,18 +232,23 @@ describe('after the rows tests', () => {
 });
 
 describe('tab stops on a card', () => {
-  it('makes a password that fits no stop at all, and each badge a focusable anchor', () => {
+  it('makes a password that fits no stop at all, and the badges and bits figure one stop', async () => {
     const { s, context } = first({});
     show(s, context);
     const password = screen.getByText(s.password);
     expect(password.getAttribute('tabindex')).toBeNull(); // it fits, so it is plain text, not a stop
     expect(password.parentElement!.className).toBe('card-row'); // no tip anchor around it
     expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull(); // copying is the selection's job where the pointer is fine
-    for (const badge of ['Strength', 'Raw', 'Difficulty', 'Memorability']) {
-      const anchor = screen.getByLabelText(new RegExp(`^${badge} `)).parentElement!;
-      expect(anchor.className).toContain('pw-tip-anchor');
-      expect(anchor.getAttribute('tabindex')).toBe('0');
-    }
+    const group = screen.getByRole('group', { name: 'Scores' });
+    await waitFor(() => expect(group.querySelector('.badge.zxcvbn:not(.pending)')).not.toBeNull(), { timeout: 5000 }); // the zxcvbn badge joins the row once worked out
+    const anchors = [...group.querySelectorAll<HTMLElement>('.pw-tip-anchor')];
+    expect(anchors.map((a) => a.textContent!.split(' ')[0])).toEqual(['Strength', 'Raw', 'Difficulty', 'zxcvbn', 'Memorability', s.bits.toFixed(1)]);
+    expect(anchors.map((a) => a.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1', '-1', '-1']);
+    anchors[0]!.focus();
+    fireEvent.keyDown(anchors[0]!, { key: 'End' });
+    expect(document.activeElement).toBe(anchors[5]); // the bits figure is in the same row
+    expect(screen.getByRole('tooltip').textContent).toMatch(/bits for an attacker who knows this tool/);
+    expect(anchors.map((a) => a.getAttribute('tabindex'))).toEqual(['-1', '-1', '-1', '-1', '-1', '0']);
   });
 });
 

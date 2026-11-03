@@ -11,7 +11,7 @@ import { CopyButton } from './CopyButton';
 import { DifficultyTable } from './Difficulty';
 import { CheckIcon, ChevronUpIcon, InfoIcon, KeyboardIcon, PlusIcon } from './icons';
 import { KeyboardMap } from './KeyboardMap';
-import { InstantTip } from './InstantTip';
+import { InstantTip, TipGroup } from './InstantTip';
 import { PasswordText } from './PasswordText';
 import { observeResize } from './resize';
 import { TOUCH, useMediaQuery } from './useMediaQuery';
@@ -28,6 +28,8 @@ interface BadgeProps {
   memorability?: number;
   /** What the zxcvbn library says; undefined leaves its badge out. */
   zxcvbn?: ZxcvbnState;
+  /** This session's bits, shown last on a card; undefined leaves the figure out. */
+  bits?: number;
 }
 
 /** The fourth badge: zxcvbn's word for the password, "zxcvbn strong", or a placeholder while it is worked out. */
@@ -53,14 +55,15 @@ export function ZxcvbnBadge({ state }: { state: ZxcvbnState }) {
 /**
  * The score badges, "Strength 63", "Raw 184", "Difficulty 44", zxcvbn's
  * word ("zxcvbn strong") fourth when given, and "Memorability 71", with
- * the full reading in each tooltip (src/lib/readings.ts).
+ * the full reading in each tooltip (src/lib/readings.ts), then the bits
+ * figure when given. The row is one tab stop; the arrow keys move along it.
  */
-export function ScoreBadges({ strength, raw, difficulty, memorability, zxcvbn }: BadgeProps) {
+export function ScoreBadges({ strength, raw, difficulty, memorability, zxcvbn, bits }: BadgeProps) {
   const r = scoreReadings({ strength, raw, difficulty, memorability });
   // Every badge's colour is its reading's band (src/lib/readings.ts); Raw has none.
   // Each badge opens the app's instant tip with its full reading; no browser tooltip. The badge is an image to a screen reader: its name is the whole reading.
   return (
-    <>
+    <TipGroup label="Scores">
       {READING_ORDER.map((key) => (
         <Fragment key={key}>
           {key === 'memorability' && zxcvbn && <ZxcvbnBadge state={zxcvbn} />}
@@ -71,7 +74,8 @@ export function ScoreBadges({ strength, raw, difficulty, memorability, zxcvbn }:
           </InstantTip>
         </Fragment>
       ))}
-    </>
+      {bits !== undefined && <BitsFigure bits={bits} />}
+    </TipGroup>
   );
 }
 
@@ -191,8 +195,7 @@ export const SuggestionCard = memo(function SuggestionCard({ suggestion, context
         </div>
         <div className="card-row">
           <div className="actions">
-            <ScoreBadges strength={suggestion.strength} raw={suggestion.raw} difficulty={difficulty} zxcvbn={zxcvbn} memorability={suggestion.memorability} />
-            <BitsFigure bits={suggestion.bits} />
+            <ScoreBadges strength={suggestion.strength} raw={suggestion.raw} difficulty={difficulty} zxcvbn={zxcvbn} memorability={suggestion.memorability} bits={suggestion.bits} />
           </div>
         </div>
       </div>

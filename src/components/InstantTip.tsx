@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TipProps {
@@ -11,6 +11,9 @@ interface TipProps {
   focusable?: boolean;
   children: React.ReactNode;
 }
+
+/** True inside a TipGroup: the group, not each tip, decides which anchor is the tab stop. */
+const InGroup = createContext(false);
 
 const EDGE = 8; // px kept clear of the viewport edges
 const GAP = 4; // px between the anchor and the tip
@@ -30,6 +33,7 @@ export function InstantTip({ content, when = () => true, className, focusable = 
   const tip = useRef<HTMLSpanElement>(null);
   const closing = useRef<number>(undefined);
   const id = useId();
+  const grouped = useContext(InGroup);
 
   const show = () => {
     window.clearTimeout(closing.current);
@@ -68,7 +72,7 @@ export function InstantTip({ content, when = () => true, className, focusable = 
     <span
       ref={anchor}
       className={`pw-tip-anchor${className ? ` ${className}` : ''}`}
-      tabIndex={focusable ? 0 : -1}
+      tabIndex={grouped ? undefined : focusable ? 0 : -1}
       aria-describedby={open ? id : undefined}
       onMouseEnter={show}
       onMouseLeave={leaveSoon}
@@ -99,6 +103,58 @@ export function InstantTip({ content, when = () => true, className, focusable = 
           </span>,
           document.body,
         )}
+    </span>
+  );
+}
+
+interface GroupProps {
+  /** Accessible name for the group. */
+  label: string;
+  children: React.ReactNode;
+}
+
+const MOVES: Record<string, number | 'first' | 'last'> = { ArrowRight: 1, ArrowLeft: -1, Home: 'first', End: 'last' };
+
+/**
+ * A row of tips that is one tab stop, like the mode tabs: Tab lands on one
+ * anchor (the last one focused, else the first), the arrow keys move to the
+ * next or previous, wrapping, and Home and End to the ends; each opens its
+ * tip on focus as before. It lays out as if absent (display: contents), so
+ * its anchors stay items of the row around it.
+ */
+export function TipGroup({ label, children }: GroupProps) {
+  const group = useRef<HTMLSpanElement>(null);
+  const anchors = () => [...(group.current?.querySelectorAll<HTMLElement>('.pw-tip-anchor') ?? [])];
+  const makeStop = (stop: HTMLElement | undefined) => {
+    for (const a of anchors()) a.tabIndex = a === stop ? 0 : -1;
+  };
+
+  // After every render exactly one anchor is the stop: the one that was, while it is still here, else the first.
+  useLayoutEffect(() => {
+    const all = anchors();
+    makeStop(all.find((a) => a.tabIndex === 0) ?? all[0]);
+  });
+
+  return (
+    <span
+      ref={group}
+      role="group"
+      aria-label={label}
+      className="tip-group"
+      onFocus={(e) => {
+        if (anchors().includes(e.target as HTMLElement)) makeStop(e.target as HTMLElement); // a click or an arrow: Tab comes back here
+      }}
+      onKeyDown={(e) => {
+        const step = MOVES[e.key];
+        const all = anchors();
+        const i = all.indexOf(e.target as HTMLElement);
+        if (step === undefined || i < 0) return;
+        e.preventDefault();
+        const j = step === 'first' ? 0 : step === 'last' ? all.length - 1 : (i + step + all.length) % all.length;
+        all[j]!.focus();
+      }}
+    >
+      <InGroup.Provider value={true}>{children}</InGroup.Provider>
     </span>
   );
 }

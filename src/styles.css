@@ -502,7 +502,8 @@ textarea.generated-sentence { display: block; font-family: inherit; color: var(-
 .entry { min-width: 0; }
 /* The full-password tip: immediate, selectable, and stays while hovered. */
 .pw-tip-anchor { position: relative; display: block; min-width: 0; }
-.pw-tip-anchor:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 6px; } /* a badge anchor is a tab stop: its tip is how a keyboard user reads it */
+.pw-tip-anchor:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 6px; } /* a focused badge shows its tip: that is how a keyboard user reads it */
+.tip-group { display: contents; } /* a row of badges is one tab stop, but its badges stay items of the row around it */
 .pw-tip:not(:has(> code)) { white-space: normal; word-break: normal; min-width: 14rem; font-family: inherit; font-size: 0.85rem; }
 /* Rendered at the document level with fixed positioning: nothing clips it, and it is kept inside the viewport. */
 .pw-tip { position: fixed; z-index: 60; padding: 0.5rem 0.65rem; background: var(--panel); color: var(--ink); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.2); max-width: min(60ch, calc(100vw - 16px)); white-space: pre-wrap; word-break: break-all; user-select: text; cursor: text; font-size: 0.95rem; pointer-events: auto; }

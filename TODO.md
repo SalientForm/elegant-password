@@ -321,8 +321,6 @@ The rest of the audit was done on 2026-10-20; its decisions are in
   typing from how the text changes, but difficulty is still scored for
   physical keyboards, so phone results are not yet claimed to be
   reliable. Test on real Android and iOS keyboards first.
-- Fewer focusable score tips per card (five today), deferred in both
-  audits.
 - Keep splitting the large modules (`generate.ts`, `score.ts`,
   `fromSentence.ts`) a responsibility at a time; `checks.ts` was the first.
 - To move to a newer zxcvbn (or another crack-time scenario), update
