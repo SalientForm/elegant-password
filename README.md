@@ -277,7 +277,8 @@ explanation for each:
   load, and a kept sentence the tool could not have drawn is dropped and a
   new one drawn.
 - **Accessible.** The mode switch is a real tab list (arrow keys, Home,
-  End), toggles report their pressed state, and status text is announced.
+  End), each row of score badges is one tab stop the same keys move
+  along, toggles report their pressed state, and status text is announced.
 - **Difficulty score** (0-100) from a rubric of eleven criteria across the modes, up to ten in one: size,
   typing speed, reach, row jumps, same-finger pairs, Shift and case,
   off-letter keys, pinky stretches and memory load. The full rubric is in

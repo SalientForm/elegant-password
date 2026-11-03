@@ -598,6 +598,24 @@ test('badge tips are never clipped by a card and stay inside the viewport', asyn
   expect(box.height).toBeGreaterThan(10);
 });
 
+test("a card's badges and bits figure are one tab stop the arrow keys move along", async ({ page }) => {
+  await settledPasswords(page);
+  const [first, second] = [cards(page).nth(0), cards(page).nth(1)];
+  const focused = () => page.evaluate(() => document.activeElement?.textContent ?? '');
+  await first.getByRole('button', { name: 'Add', exact: true }).focus();
+  await page.keyboard.press('Tab');
+  expect(await focused()).toMatch(/^Strength \d+$/);
+  await expect(page.getByRole('tooltip')).toHaveText(/^Strength \d+ bits/);
+  await page.keyboard.press('ArrowRight');
+  expect(await focused()).toMatch(/^Raw \d+$/);
+  await page.keyboard.press('End');
+  expect(await focused()).toMatch(/bits if the tool is known$/);
+  await page.keyboard.press('Tab'); // out of the row in one press: the next card's first button
+  await expect(second.getByRole('button', { name: 'Why?', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab'); // back to the last one focused
+  expect(await focused()).toMatch(/bits if the tool is known$/);
+});
+
 test('Practise on a card makes it the password under test without adding it', async ({ page }) => {
   const shown = await settledPasswords(page);
   await cards(page).nth(1).getByRole('button', { name: 'Practise', exact: true }).click();

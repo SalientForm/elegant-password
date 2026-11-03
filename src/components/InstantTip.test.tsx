@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { InstantTip } from './InstantTip';
+import { InstantTip, TipGroup } from './InstantTip';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
@@ -57,5 +57,60 @@ describe('InstantTip', () => {
     fireEvent.mouseEnter(anchor);
     fireEvent.focus(anchor);
     expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+});
+
+const tree = (labels: string[]) => (
+  <>
+    <button type="button">Before</button>
+    <TipGroup label="Scores">
+      {labels.map((l) => (
+        <InstantTip key={l} content={`${l}, in full`}>
+          <span>{l}</span>
+        </InstantTip>
+      ))}
+    </TipGroup>
+    <button type="button">After</button>
+  </>
+);
+const row = (labels: string[]) => render(tree(labels));
+const stops = () => [...document.querySelectorAll('.pw-tip-anchor')].map((a) => a.getAttribute('tabindex'));
+const anchorOf = (label: string) => screen.getByText(label).parentElement!;
+
+describe('TipGroup', () => {
+  it('is one tab stop, the first anchor, named as a group', () => {
+    row(['Strength', 'Raw', 'Difficulty']);
+    expect(screen.getByRole('group', { name: 'Scores' })).toBeTruthy();
+    expect(stops()).toEqual(['0', '-1', '-1']);
+  });
+
+  it('moves with the arrow keys, wraps, jumps with Home and End, and opens each tip on the way', () => {
+    row(['Strength', 'Raw', 'Difficulty']);
+    anchorOf('Strength').focus();
+    fireEvent.keyDown(anchorOf('Strength'), { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(anchorOf('Raw'));
+    expect(screen.getByRole('tooltip').textContent).toBe('Raw, in full');
+    expect(stops()).toEqual(['-1', '0', '-1']); // Tab comes back to the last one focused
+    fireEvent.keyDown(anchorOf('Raw'), { key: 'End' });
+    expect(document.activeElement).toBe(anchorOf('Difficulty'));
+    fireEvent.keyDown(anchorOf('Difficulty'), { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(anchorOf('Strength'));
+    fireEvent.keyDown(anchorOf('Strength'), { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(anchorOf('Difficulty'));
+    fireEvent.keyDown(anchorOf('Difficulty'), { key: 'Home' });
+    expect(document.activeElement).toBe(anchorOf('Strength'));
+    expect(screen.getAllByRole('tooltip').map((t) => t.textContent)).toEqual(['Strength, in full']);
+  });
+
+  it('leaves other keys alone and keeps one stop when an anchor joins or leaves', () => {
+    const { rerender } = row(['Strength', 'Raw']);
+    const down = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+    anchorOf('Strength').dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(false); // the page still scrolls
+    anchorOf('Raw').focus();
+    rerender(tree(['Strength', 'zxcvbn', 'Raw']));
+    expect(stops()).toEqual(['-1', '-1', '0']); // the newcomer is reachable by arrow, not a second stop
+    rerender(tree(['Strength', 'zxcvbn']));
+    expect(stops()).toEqual(['0', '-1']); // the stop left, so the first takes over
   });
 });

@@ -451,6 +451,18 @@ twists). It is the lead if the budget is ever missed.
   a pointer to a password manager.
 - **Raw is the quieter badge** (muted, thin border), so it does not compete
   with the three scores.
+- **A row of badges is one tab stop** (2026-11-03, the user's choice,
+  deferred in both 2026-10 audits). A card had six stops (five badges and
+  the bits figure), so Tab crossed about thirty on its way through a
+  batch. The row now follows the pattern of the mode tabs: Tab lands on
+  one badge (the last one focused, else the first), the arrow keys move
+  along the row and wrap, Home and End go to the ends, and each badge
+  opens its tip on focus as before; on a card the bits figure is the
+  row's last item. A screen reader lost nothing either way: each badge's
+  name is its whole reading. One stop that opens a single tip listing
+  every reading was rejected (a long tip, unlike the hover's); so was
+  leaving it. `TipGroup` in `src/components/InstantTip.tsx`, used by
+  `ScoreBadges` on the cards, My list and the typing test.
 
 ## One core, two front ends
 
