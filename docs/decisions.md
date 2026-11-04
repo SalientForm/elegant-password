@@ -91,7 +91,8 @@ accepted or declined; each item's decisions are recorded here.
   no release since 2017, but the badge names that library and its estimate,
   it runs offline, and it loads only when a reading is first needed (about
   400 KB gzipped, its own chunk). Moving to another estimator is a change to
-  `src/lib/zxcvbnReading.ts` and `ZXCVBN_ESTIMATOR` (`TODO.md`).
+  `src/lib/zxcvbnReading.ts` and a bump of `ZXCVBN_ESTIMATOR`, so the
+  readings saved in My list are worked out again once.
 - **The bits panel's green means "meets your target"; a badge's green means
   50 bits or more** (2026-10-20). The panel says its figure is for an
   attacker who knows the tool and that the badges assume one who does not.
@@ -113,7 +114,7 @@ accepted or declined; each item's decisions are recorded here.
   `STRENGTH_WORDS` and `strengthWord` in `src/lib/readings.ts`.
 - **A deliberate swap costs nothing** (2026-10-15, the user's decision). It
   follows from its word by one fixed rule, so it is not memory load; the
-  measurement is in `TODO.md`.
+  measurement is under Generation, "Deliberate swaps, on by default".
 
 ## Generation
 
@@ -251,6 +252,65 @@ twists). It is the lead if the budget is ever missed.
 - **The clock is the web app's.** `src/lib` stays free of one, and the CLI
   is unchanged: its wizard's 2 s line is `pnpm measure:wizard`. Nothing
   goes to the console, which the smoke suite fails on.
+
+### Deliberate swaps, on by default (2026-10-15)
+
+Built in `src/lib/ease.ts` (rule and table), wired through planning,
+sampling, sentence mode, cold scoring, the card's "Why?" and the "Ease
+awkward words with deliberate swaps" setting. 180 of the 2,242 list words
+have a deliberate swap; 1,351 have an awkward move by the keyboard model.
+About 30% of suggestions get at least one.
+
+Deliberate swaps were first measured with each one charged like a random one (one
+more item of memory load, 5 memorability points): the gain was mostly
+eaten by the charge, so the setting started off. On 2026-10-15 the user
+decided a deliberate swap is not memory load: it follows from its word by
+one fixed rule. The scorer still recognises it from the hint (scores stay
+a pure function of password and hint) but no longer charges it, and a
+swapped word counts as kept whole ("cool" typed "cul").
+
+Re-measured with the same method, old and new scorer on the same
+passwords: 600 suggestions per setting at the defaults (balanced comfort,
+2 swaps), confirmed on 6,000 (± one standard error); 2,000 for the
+before/after pairs (each password with its untwisted deliberate swaps
+undone).
+
+| Defaults, 6,000 suggestions | swaps off | on, old scoring | on, new scoring |
+| --- | --- | --- | --- |
+| Mean difficulty | 41.62 ± 0.08 | 41.57 | 41.34 ± 0.08 |
+| Typing alone (memory load left out) | 39.65 | 39.36 | 39.36 |
+| Memorability | 73.60 ± 0.05 | 72.53 | 73.57 ± 0.05 |
+| Same-finger pairs per 10 keys | 0.668 | 0.613 | 0.613 |
+| Easy / Moderate / Demanding | 2,790 / 3,205 / 5 | 2,814 / 3,180 / 6 | 2,895 / 3,099 / 6 |
+
+- 600 suggestions, the task's sample: difficulty 41.66 off, 41.36 on
+  before, 41.13 on now; memorability 73.67 off, 72.54 on before, 73.72 on
+  now; same-finger 0.70 -> 0.63. With no random swaps (6,000): 34.15 off,
+  34.08 on before, 33.74 on now.
+- Pairs (passwords that have a deliberate swap): 1.7 points easier on
+  typing alone; net of memory load 0.9 before, 1.7 now (0.4 before, 1.6
+  now with no random swaps). Memorability fell 5.6 points before and
+  rises 0.4 now (shorter). About half get easier on the rounded score,
+  half stay level at a cut-point, 2-4% land a point harder (a roll or row
+  jump crosses a cut-point).
+- Strict and relaxed agree: on vs off is 0.43 easier at strict and 0.42
+  at relaxed, memorability unchanged.
+- Decision: on by default. Difficulty is lower at every comfort level
+  (about 2.5 standard errors at the defaults), memorability and bits are
+  unchanged, and same-finger pairs drop 8%. The gain is small, since only
+  a third of passwords get a swap. Settings saved before the option
+  existed take the new default; ones saved with it keep their value.
+- Comfort filter: unchanged at balanced. The ranking is typing cost alone,
+  which the scoring change does not touch: ranked as typed, only 35 of the
+  662 words the balanced share drops come back (and 35 others make room).
+  Relaxed costs 3.3 difficulty points over balanced with swaps on (44.66
+  vs 41.34) and swaps win back 0.4 of them; strict is harder still at the
+  defaults (42.15: longer sentences reach 40 bits).
+- The 169 words of the 2026-10-15 review: 107 were already back, and
+  "blazing", "bleak" and "seize" are restored. The other 59 stay out:
+  re-checked, none falls inside the balanced share as typed. Only two
+  have a swap at all ("naive" -> "nayve", "vials" -> "vyals"), and both
+  stay in the hardest 30%.
 
 ### Limits and caches
 

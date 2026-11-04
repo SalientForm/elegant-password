@@ -72,7 +72,7 @@ export interface Requirements {
    * -> "wyse"; see ease.ts). A fixed rule that comes with the word, so it
    * adds no bits and nothing to remember. On by default: measured at the
    * defaults it makes passwords a little easier to type and costs nothing
-   * on strength or memorability (TODO.md has the figures).
+   * on strength or memorability (docs/decisions.md has the figures).
    */
   easeSwaps: boolean;
   count: number;

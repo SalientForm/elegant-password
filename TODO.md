@@ -10,7 +10,8 @@ most urgent.
 
 - **The core as an npm package, configured by mode, preset and
   overrides.** Publish `src/lib` as a library with a documented, stable
-  API (a scoped name, as `tep` is taken). Today a caller has to build a
+  API, as `@salientform/elegant-passwords` (2026-11-03, the user's
+  choice; `tep` is taken). Today a caller has to build a
   complete `GenerationSettings` (every field of `Requirements`, the
   sentence options and the mapping settings); the layering that turns a
   typing mode, a site preset and a few values into those settings lives in
@@ -35,9 +36,10 @@ most urgent.
   comfortable of `. - , _`, else none. Make Auto choose at random among
   the symbols the rules allow and the comfort rules permit (pinky stretch,
   Shift reach), falling back to a space and then none when no symbol is
-  allowed. To decide: one separator for the whole password or one per gap.
-  The choice comes from `crypto.getRandomValues` and counts toward the
-  bits exactly (log2 of the choices, once per draw). Space, None and a
+  allowed. One separator for the whole password, drawn once (2026-11-03,
+  the user's decision): one per gap would add memory load the scorer
+  charges for. The choice comes from `crypto.getRandomValues` and counts
+  toward the bits exactly (log2 of the choices, once per password). Space, None and a
   fixed symbol stay as they are.
 - **One sentence mode: one UI and one algorithm.** Merge "Make up a
   sentence" and "Use my sentence" into one sentence box. Generate fills it
@@ -45,78 +47,12 @@ most urgent.
   from the sentence in the box. Today these are two paths: planning and
   sampling slots with exact bits (`generate.ts`), and fitting a given
   sentence (`fromSentence.ts`), with an edited made-up sentence already
-  built as the user's own (`editedSentence`). To decide: how strength is
-  counted once a made-up sentence is edited. Dossier's choice: an edited
-  sentence is the user's, so it shows the scores (Strength, zxcvbn) rather
-  than exact bits. `tep`'s `--sentence` and the config's `sentence`
-  options follow.
-
-## Deliberate swaps for typing ease: done, on by default
-
-Built in `src/lib/ease.ts` (rule and table), wired through planning,
-sampling, sentence mode, cold scoring, the card's "Why?" and the "Ease
-awkward words with deliberate swaps" setting. 180 of the 2,242 list words
-have a deliberate swap; 1,351 have an awkward move by the keyboard model.
-About 30% of suggestions get at least one.
-
-First measured with each deliberate swap charged like a random one (one
-more item of memory load, 5 memorability points): the gain was mostly
-eaten by the charge, so the setting started off. On 2026-10-15 the user
-decided a deliberate swap is not memory load: it follows from its word by
-one fixed rule. The scorer still recognises it from the hint (scores stay
-a pure function of password and hint) but no longer charges it, and a
-swapped word counts as kept whole ("cool" typed "cul").
-
-Re-measured with the same scratch method, old and new scorer on the same
-passwords: 600 suggestions per setting at the defaults (balanced comfort,
-2 swaps), confirmed on 6,000 (± one standard error); 2,000 for the
-before/after pairs (each password with its untwisted deliberate swaps
-undone).
-
-| Defaults, 6,000 suggestions | swaps off | on, old scoring | on, new scoring |
-| --- | --- | --- | --- |
-| Mean difficulty | 41.62 ± 0.08 | 41.57 | 41.34 ± 0.08 |
-| Typing alone (memory load left out) | 39.65 | 39.36 | 39.36 |
-| Memorability | 73.60 ± 0.05 | 72.53 | 73.57 ± 0.05 |
-| Same-finger pairs per 10 keys | 0.668 | 0.613 | 0.613 |
-| Easy / Moderate / Demanding | 2,790 / 3,205 / 5 | 2,814 / 3,180 / 6 | 2,895 / 3,099 / 6 |
-
-- 600 suggestions, the task's sample: difficulty 41.66 off, 41.36 on
-  before, 41.13 on now; memorability 73.67 off, 72.54 on before, 73.72 on
-  now; same-finger 0.70 -> 0.63. With no random swaps (6,000): 34.15 off,
-  34.08 on before, 33.74 on now.
-- Pairs (passwords that have a deliberate swap): 1.7 points easier on
-  typing alone; net of memory load 0.9 before, 1.7 now (0.4 before, 1.6
-  now with no random swaps). Memorability fell 5.6 points before and
-  rises 0.4 now (shorter). About half get easier on the rounded score,
-  half stay level at a cut-point, 2-4% land a point harder (a roll or row
-  jump crosses a cut-point).
-- Strict and relaxed agree: on vs off is 0.43 easier at strict and 0.42
-  at relaxed, memorability unchanged.
-- Decision: on by default. Difficulty is lower at every comfort level
-  (about 2.5 standard errors at the defaults), memorability and bits are
-  unchanged, and same-finger pairs drop 8%. The gain is small, since only
-  a third of passwords get a swap. Settings saved before the option
-  existed take the new default; ones saved with it keep their value.
-- Comfort filter: unchanged at balanced. The ranking is typing cost alone,
-  which the scoring change does not touch: ranked as typed, only 35 of the
-  662 words the balanced share drops come back (and 35 others make room).
-  Relaxed costs 3.3 difficulty points over balanced with swaps on (44.66
-  vs 41.34) and swaps win back 0.4 of them; strict is harder still at the
-  defaults (42.15: longer sentences reach 40 bits).
-- The 169 words of the 2026-10-15 review: 107 were already back, and
-  "blazing", "bleak" and "seize" are restored. The other 59 stay out:
-  re-checked, none falls inside the balanced share as typed. Only two
-  have a swap at all ("naive" -> "nayve", "vials" -> "vyals"), and both
-  stay in the hardest 30%.
-
-Follow-ups:
-
-- Reach more words. Most awkward moves left are cross-hand reaches the
-  model charges heavily (`l-e`, `a-p`, `s-o`) and same-finger pairs no
-  sound-alike spelling removes (`e-d`, `u-n`, `b-r`). A larger table that
-  stays readable, or a model that rewards alternating hands, would be
-  needed before relaxing the comfort filter.
+  built as the user's own (`editedSentence`). An edited sentence is the
+  user's, so it shows the scores (Strength, zxcvbn) rather than exact bits
+  (2026-11-03, the user's decision, as Dossier chose). `tep`'s
+  `--sentence` and the config's `sentence` options follow; the config's
+  shape for them is settled in the package's spec, so the format does not
+  change again once the package ships.
 
 ## tep CLI: decisions to revisit
 
@@ -124,18 +60,6 @@ The CLI was designed on 2026-10-20 with these decisions taken on the
 recommendation alone, with low confidence; `docs/decisions.md` ("The
 command line") has the design as built. Examine each once `tep` is in use,
 most uncertain first.
-
-Settled by the user on 2026-10-20, kept here for the record:
-
-- An unreachable strength target is a warning, not a contradiction.
-- Blocked review items cannot be edited: change the line that blocks
-  them first.
-- Shaping a question may take up to 750 ms (first set at 333 ms, raised
-  the same day). On 2026-10-21: the suite holds it as work, and `pnpm
-  measure:wizard` names the questions over 750 ms and fails one over 2 s.
-- The loosest-completion assumption stands; the property test proves it.
-
-Still open:
 
 - **`options: preset` follows the profile**. A re-measured mode
   profile changes what an existing config generates, without the file
@@ -161,8 +85,10 @@ Still open:
   review screen. Two input styles in one wizard.
 - **No clipboard clearing** after `--copy`: see "Clear the clipboard after
   a copy" below.
-- **Not on npm; `pnpm link:cli` links a checkout's build**. Publishing
-  would need a scoped name (`tep` is taken).
+- **`tep` is not on npm; `pnpm link:cli` links a checkout's build**. The
+  core goes to npm first, as `@salientform/elegant-passwords` (Dossier's
+  first item above); shipping `tep` as that package's bin is a separate
+  choice, for once the package is out.
 - **Commands left out of v1**: `tep score <password>`, `tep list`,
   `tep config show`, shell completions.
 
@@ -225,6 +151,16 @@ the user to decide:
   but also 0.1 to 0.2 % of English words (`halfway`, `briefcase`,
   `pyjamas`), which would then read too high.
 
+### Deliberate swaps for more words
+
+180 of the 2,242 list words have a deliberate swap (`src/lib/ease.ts`;
+the measurement is in `docs/decisions.md`, Generation). Most awkward moves
+left are cross-hand reaches the model charges heavily (`l-e`, `a-p`,
+`s-o`) and same-finger pairs no sound-alike spelling removes (`e-d`,
+`u-n`, `b-r`). A larger table that stays readable, or a model that
+rewards alternating hands, would be needed before relaxing the comfort
+filter.
+
 ### A CLI with no dependencies
 
 `tep` v1 uses `yaml`, `zod` and `@clack/prompts`, all inlined into the
@@ -241,7 +177,11 @@ The typing model assumes QWERTY on a physical keyboard. Add Dvorak, Colemak,
 AZERTY and QWERTZ. More distinctive is a phone keyboard model: there the cost
 is not reach but switching layers (letters, numbers, symbols, Shift), so a
 "typed mostly on a phone" setting would favour passwords that stay on the
-letter layer and group digits and symbols together.
+letter layer and group digits and symbols together. The typing test already
+reads a soft keyboard's typing from how the text changes, but difficulty is
+still scored for physical keyboards, so phone results are not claimed to be
+reliable; test on real Android and iOS keyboards before building a model
+(left open by the 2026-10-20 audit).
 
 ### Protect the saved list
 
@@ -317,13 +257,8 @@ since this is the password people actually forget.
 The rest of the audit was done on 2026-10-20; its decisions are in
 `docs/decisions.md`.
 
-- A phone typing model. The typing test now reads a soft keyboard's
-  typing from how the text changes, but difficulty is still scored for
-  physical keyboards, so phone results are not yet claimed to be
-  reliable. Test on real Android and iOS keyboards first.
 - Keep splitting the large modules (`generate.ts`, `score.ts`,
-  `fromSentence.ts`) a responsibility at a time; `checks.ts` was the first.
-- To move to a newer zxcvbn (or another crack-time scenario), update
-  `src/lib/zxcvbnReading.ts` and bump `ZXCVBN_ESTIMATOR`, so saved
-  readings are worked out again once.
+  `fromSentence.ts`, `ruleText.ts`) a responsibility at a time; `checks.ts`
+  was the first. One sentence mode (above) merges the paths of
+  `generate.ts` and `fromSentence.ts`, so split those two as part of it.
 
