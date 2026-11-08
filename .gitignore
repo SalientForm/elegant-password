@@ -6,6 +6,8 @@ test-results
 playwright-report
 blob-report
 
-# Scratch worktrees made by review agents
-.claude/
+# Scratch worktrees made by review agents, and each person's local agent settings.
+# .claude/ itself stays tracked: Workspace Wayfinder commits its skill links there.
+.claude/worktrees/
+.claude/settings.local.json
 dist-cli
