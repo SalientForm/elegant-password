@@ -26,7 +26,12 @@
     "stats": "node scripts/devStats.mjs",
     "measure:modes": "MEASURE_MODES=1 vitest run src/lib/modeProfiles.test.ts --reporter=verbose --silent=false",
     "measure:wizard": "MEASURE_WIZARD=1 vitest run src/cli/walk.test.ts -t 'times every question' --reporter=verbose --silent=false",
-    "common:passwords": "node scripts/commonPasswords.mjs"
+    "common:passwords": "node scripts/commonPasswords.mjs",
+    "skills:install": "node node_modules/@nexstratus/workspace-wayfinder/check/install-skills.mjs",
+    "workspace:dev": "vite --config workspace/vite.config.ts",
+    "workspace:build": "vite build --config workspace/vite.config.ts",
+    "workspace:preview": "vite preview --config workspace/vite.config.ts",
+    "workspace:check": "node .agents/skills/assess-audit/scripts/check-audit-registries.mjs && node .agents/skills/assess-workspace/scripts/check-about.mjs"
   },
   "dependencies": {
     "@clack/prompts": "^1.8.1",
@@ -38,7 +43,11 @@
     "zxcvbn": "4.4.2"
   },
   "devDependencies": {
+    "@nexstratus/workspace-wayfinder": "file:/home/ktamlyn/.local/share/workspace-wayfinder/m12-11-c/nexstratus-workspace-wayfinder-0.0.1.tgz",
     "@playwright/test": "^1.64.1",
+    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-router": "^1.170.46",
+    "@tanstack/router-core": "^1.171.39",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
@@ -56,5 +65,8 @@
   },
   "bin": {
     "tep": "dist-cli/tep.mjs"
+  },
+  "wayfinder": {
+    "config": "workspace/src/workspace.config.mts"
   }
 }
