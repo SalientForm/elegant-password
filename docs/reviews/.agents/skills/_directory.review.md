@@ -1,7 +1,7 @@
 ---
 path: .agents/skills/
 kind: config
-lastModified: 2026-11-10
+lastModified: 2026-11-11
 verdict: current
 ---
 

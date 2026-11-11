@@ -1,5 +1,5 @@
 ---
-reviewedAt: 2026-11-10
+reviewedAt: 2026-11-11
 kinds:
   - id: documentation
     label: Documentation

@@ -34,9 +34,18 @@ were added with them. 4270-4273 are the product's (dev, preview, the two Playwri
 Installed in `.agents/skills` (the default), with a relative symlink per skill in `.claude/skills` (the default
 `skillLinks`), both committed; `.gitignore` ignores only `.claude/worktrees/` and `.claude/settings.local.json`.
 
+## The kit
+
+Since 2026-11-11 the kit is the release tarball `vendor/nexstratus-workspace-wayfinder-0.1.0.tgz`, committed, and the
+root dev dependency `file:vendor/nexstratus-workspace-wayfinder-0.1.0.tgz`; there is no registry.
+`pnpm-workspace.yaml` (settings only) excludes it from pnpm's release-age check, which a fresh install (CI) would
+otherwise fail on. To upgrade: the new release's tarball into `vendor/`, `pnpm add -D file:vendor/<tarball>`, the old
+one removed, `pnpm skills:install`, `pnpm workspace:check`.
+
+The kit's optional peer `typescript` (5.x, for the Features area's test inventory) is not met by this repository's
+TypeScript 7, so `pnpm peers check` lists it; Features is left out, so nothing uses it.
+
 ## CI
 
-The check script is not run in CI: until the kit is published, CI cannot install it (the kit is a `file:` tarball path
-in `package.json` and the lockfile, so `pnpm install --frozen-lockfile` fails there, and the branch is not pushed).
-When the kit is published, replace the path with its version and ask the user again whether `check.yml` should run
-`pnpm workspace:check`.
+The frozen install works in CI now that the kit is committed. The check script is not run there yet: ask the user
+whether `check.yml` should run `pnpm workspace:check`.
