@@ -4,7 +4,7 @@
  * workspace.tsx, router.tsx and the About manifest; register featureSources(), testInventory() and, with coverage,
  * featureCoverage() in vite.config.ts.
  */
-import { createFeaturesArea } from '@nexstratus/workspace-wayfinder';
+import { createFeaturesArea } from '@salientform/workspace-wayfinder';
 import sourceScan from 'virtual:workspace-feature-sources';
 import testInventory from 'virtual:workspace-test-inventory';
 import coverageReport from 'virtual:workspace-feature-coverage';

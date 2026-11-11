@@ -15,6 +15,6 @@
  *
  * Usage (from the repository root): node .agents/skills/assess-workspace/scripts/check-about.mjs
  */
-import { runCheck } from '@nexstratus/workspace-wayfinder/check/run.mjs';
+import { runCheck } from '@salientform/workspace-wayfinder/check/run.mjs';
 
 await runCheck('about');

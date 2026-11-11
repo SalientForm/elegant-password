@@ -1,4 +1,4 @@
-import { createWorkspaceRouter, createWorkspaceRoutes } from '@nexstratus/workspace-wayfinder';
+import { createWorkspaceRouter, createWorkspaceRoutes } from '@salientform/workspace-wayfinder';
 import type { QueryClient } from '@tanstack/react-query';
 import { queryClient } from './query-client';
 import { ABOUT_AREA, AUDIT_AREA, README_AREA, workspace } from './workspace';

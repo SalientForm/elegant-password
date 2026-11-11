@@ -3,7 +3,7 @@
  * `file` and script path is a full string literal, and every ABOUT_SKILLS entry is written `{ name: '…', scripts: […] }`:
  * the About check reads both with a regex.
  */
-import type { AboutManifest, AboutSkill } from '@nexstratus/workspace-wayfinder';
+import type { AboutManifest, AboutSkill } from '@salientform/workspace-wayfinder';
 // The Audit area, from its own module (no import cycle), for each registry's live count and owning date.
 import { AUDIT_AREA } from './audit';
 

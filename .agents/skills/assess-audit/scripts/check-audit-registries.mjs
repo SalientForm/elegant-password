@@ -8,6 +8,6 @@
  *
  * Usage (from the repository root): node .agents/skills/assess-audit/scripts/check-audit-registries.mjs
  */
-import { runCheck } from '@nexstratus/workspace-wayfinder/check/run.mjs';
+import { runCheck } from '@salientform/workspace-wayfinder/check/run.mjs';
 
 await runCheck('audit');

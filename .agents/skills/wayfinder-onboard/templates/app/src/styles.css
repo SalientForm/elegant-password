@@ -2,8 +2,8 @@
    imports Tailwind and the kit's tailwind.css, so its own build compiles the kit's classes with the app's theme. An app
    without Tailwind imports the kit's compiled styles.css and nothing else. */
 @import 'tailwindcss'; /* [[with: tailwind]] */
-@import '@nexstratus/workspace-wayfinder/tailwind.css'; /* [[with: tailwind]] */
+@import '@salientform/workspace-wayfinder/tailwind.css'; /* [[with: tailwind]] */
 @source '.'; /* [[with: tailwind]] */
-@import '@nexstratus/workspace-wayfinder/styles.css'; /* [[without: tailwind]] */
+@import '@salientform/workspace-wayfinder/styles.css'; /* [[without: tailwind]] */
 
 /* Optional: map the kit's --ws-* tokens (the kit's tailwind.css lists them) to the product's theme here. */

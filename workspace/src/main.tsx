@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import * as ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { WorkspaceShell } from '@nexstratus/workspace-wayfinder';
+import { WorkspaceShell } from '@salientform/workspace-wayfinder';
 import { router } from './router';
 import { queryClient } from './query-client';
 import { workspace } from './workspace';

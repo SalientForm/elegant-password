@@ -2,7 +2,7 @@
  * The Engineering Workspace of __PRODUCT__: the browser half of its Workspace Wayfinder config. One area definition per
  * entry in workspace.config.mts `areas`, in the same order.
  */
-import { createAboutArea, createReadmeArea, createWorkspace } from '@nexstratus/workspace-wayfinder';
+import { createAboutArea, createReadmeArea, createWorkspace } from '@salientform/workspace-wayfinder';
 import settings from './workspace.config.mts';
 import { ABOUT_MANIFEST } from './about-manifest';
 import { AUDIT_AREA } from './audit';

@@ -36,16 +36,18 @@ Installed in `.agents/skills` (the default), with a relative symlink per skill i
 
 ## The kit
 
-Since 2026-11-11 the kit is the release tarball `vendor/nexstratus-workspace-wayfinder-0.1.0.tgz`, committed, and the
-root dev dependency `file:vendor/nexstratus-workspace-wayfinder-0.1.0.tgz`; there is no registry.
-`pnpm-workspace.yaml` (settings only) excludes it from pnpm's release-age check, which a fresh install (CI) would
-otherwise fail on. To upgrade: the new release's tarball into `vendor/`, `pnpm add -D file:vendor/<tarball>`, the old
-one removed, `pnpm skills:install`, `pnpm workspace:check`.
+Since 2026-11-11 the kit is `@salientform/workspace-wayfinder` (SalientForm's own repository, `workspace-wayfinder`;
+proprietary), installed from the release tarball `vendor/salientform-workspace-wayfinder-0.1.0.tgz`, committed, as the
+root dev dependency `file:vendor/salientform-workspace-wayfinder-0.1.0.tgz`; there is no registry. Before its first
+release it was `@nexstratus/workspace-wayfinder`. `pnpm-workspace.yaml` (settings only) excludes it from pnpm's
+release-age check, which a fresh install (CI) would otherwise fail on. To upgrade: the new release's tarball into
+`vendor/`, `pnpm add -D file:vendor/<tarball>`, the old one removed, `pnpm skills:install`, `pnpm workspace:check`.
 
 The kit's optional peer `typescript` (5.x, for the Features area's test inventory) is not met by this repository's
-TypeScript 7, so `pnpm peers check` lists it; Features is left out, so nothing uses it.
+TypeScript 7, so an install warns and `pnpm peers check` lists it. Accepted as it is by the user on 2026-11-11:
+Features is left out, so nothing uses it.
 
 ## CI
 
-The frozen install works in CI now that the kit is committed. The check script is not run there yet: ask the user
-whether `check.yml` should run `pnpm workspace:check`.
+`check.yml`, which `ci.yml` and `pages.yml` call, runs `pnpm workspace:check` after the unit tests (the user's
+decision, 2026-11-11); the frozen install works there because the kit is committed.

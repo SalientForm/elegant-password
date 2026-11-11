@@ -1,9 +1,9 @@
 /**
  * The Engineering Workspace of Elegant Passwords: the data half of its Workspace Wayfinder config. Plain values only: Vite, the
  * browser and plain node (the check scripts, through the root package.json `wayfinder.config`) all load it. Every
- * setting is documented in the kit's declarations, node_modules/@nexstratus/workspace-wayfinder/dist/settings.d.ts.
+ * setting is documented in the kit's declarations, node_modules/@salientform/workspace-wayfinder/dist/settings.d.ts.
  */
-import type { WorkspaceSettings } from '@nexstratus/workspace-wayfinder';
+import type { WorkspaceSettings } from '@salientform/workspace-wayfinder';
 
 export default {
   title: 'Elegant Passwords Workspace',

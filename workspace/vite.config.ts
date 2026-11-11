@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
-import { wayfinder } from '@nexstratus/workspace-wayfinder/vite';
+import { wayfinder } from '@salientform/workspace-wayfinder/vite';
 import settings from './src/workspace.config.mts';
 
 // The repository root: every path in workspace.config.mts is relative to it. import.meta.dirname, not __dirname, which
@@ -22,7 +22,7 @@ export default defineConfig({
     wayfinder({ settings, repoRoot: REPO_ROOT }),
     // The plugins the configured areas need, each called with { settings, repoRoot: REPO_ROOT }: featureSources(),
     // testInventory() and (with coverage) featureCoverage() for Features. Their
-    // modules are declared by @nexstratus/workspace-wayfinder/env (tsconfig.json's types).
+    // modules are declared by @salientform/workspace-wayfinder/env (tsconfig.json's types).
   ],
   build: { outDir: './dist', emptyOutDir: true },
 });

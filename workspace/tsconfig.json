@@ -10,7 +10,7 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "node", "@nexstratus/workspace-wayfinder/env"]
+    "types": ["vite/client", "node", "@salientform/workspace-wayfinder/env"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts", "vite.config.ts"]
 }
