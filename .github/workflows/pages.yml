@@ -1,5 +1,6 @@
 # Builds the app and publishes dist/ to GitHub Pages on every push to main. The same checks as ci.yml
-# (check.yml: types, unit tests, both builds and the browser smoke tests) gate the deploy: the build job needs them.
+# (check.yml: types, unit tests, the workspace's registries, both builds and the browser smoke tests) gate the
+# deploy: the build job needs them.
 name: Deploy to GitHub Pages
 
 on:

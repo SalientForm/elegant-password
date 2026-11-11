@@ -1,7 +1,7 @@
 ---
 path: docs/decisions.md
 kind: documentation
-lastModified: 2026-11-03
+lastModified: 2026-11-11
 verdict: current
 ---
 

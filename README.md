@@ -409,8 +409,8 @@ error. First time only:
 ## Deploy
 
 Every push to `main`, merges included, runs `.github/workflows/pages.yml`:
-the checks in `check.yml` (types, unit tests, both builds and the browser
-smoke tests, the same workflow `ci.yml` runs on every branch push and pull
+the checks in `check.yml` (types, unit tests, the workspace's registries,
+both builds and the browser smoke tests, the same workflow `ci.yml` runs on every branch push and pull
 request), then a build under `/elegant-password/` (`BASE_PATH`), published
 to GitHub Pages at https://salientform.github.io/elegant-password/.
 
