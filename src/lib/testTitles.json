@@ -1169,43 +1169,6 @@
     ]
   },
   {
-    "file": "src/cli/names.test.ts",
-    "titles": [
-      {
-        "kind": "group",
-        "title": "names"
-      },
-      {
-        "kind": "test",
-        "title": "derives the site preset names from their labels, as the spec lists them"
-      },
-      {
-        "kind": "test",
-        "title": "names the typing modes by id, with Minimal-quick also accepted for quick"
-      },
-      {
-        "kind": "test",
-        "title": "never gives two things one name"
-      },
-      {
-        "kind": "test",
-        "title": "slugs labels to lowercase words joined by hyphens"
-      },
-      {
-        "kind": "test",
-        "title": "looks up names and aliases, case and spaces aside"
-      },
-      {
-        "kind": "test",
-        "title": "refuses an unknown name with every name there is and the likeliest one meant"
-      },
-      {
-        "kind": "test",
-        "title": "finds the closest candidate within a third of its length, or by a unique prefix"
-      }
-    ]
-  },
-  {
     "file": "src/cli/prompter.test.ts",
     "titles": [
       {
@@ -2370,6 +2333,43 @@
       {
         "kind": "test",
         "title": "lists only the comfortable fallbacks for Auto"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/config/names.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "names"
+      },
+      {
+        "kind": "test",
+        "title": "derives the site preset names from their labels, as the spec lists them"
+      },
+      {
+        "kind": "test",
+        "title": "names the typing modes by id, with Minimal-quick also accepted for quick"
+      },
+      {
+        "kind": "test",
+        "title": "never gives two things one name"
+      },
+      {
+        "kind": "test",
+        "title": "slugs labels to lowercase words joined by hyphens"
+      },
+      {
+        "kind": "test",
+        "title": "looks up names and aliases, case and spaces aside"
+      },
+      {
+        "kind": "test",
+        "title": "refuses an unknown name with every name there is and the likeliest one meant"
+      },
+      {
+        "kind": "test",
+        "title": "finds the closest candidate within a third of its length, or by a unique prefix"
       }
     ]
   },

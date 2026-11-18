@@ -5,7 +5,7 @@
 
 import { parseArgs } from 'node:util';
 import { usageError } from './errors';
-import { closest } from './names';
+import { closest } from '../lib/config/names';
 
 export type ArgOptions = NonNullable<Parameters<typeof parseArgs>[0]>['options'];
 

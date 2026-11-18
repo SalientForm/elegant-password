@@ -18,14 +18,14 @@ import testTitles from '../lib/testTitles.json';
 import { clipboardTools } from '../cli/clipboardTools';
 import { emptyModel } from '../cli/configModel';
 import { serializeConfig } from '../cli/configText';
-import { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../cli/configVersion';
+import { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../lib/config/version';
 import { fieldShape, LOOSEST, noAnswers, QUESTION_BUDGET_MS, type SelectShape } from '../cli/constraints';
 import { CliError, EXIT, EXIT_MEANINGS } from '../cli/errors';
 import { COUNT_AT_TERMINAL, COUNT_PIPED, DEFAULT_SORT_HINT, describeValue, FIELDS, fieldNamed, keyPath, SEPARATOR_NAMES, STRENGTH_INPUTS, type CliField } from '../cli/fields';
 import { FORMATS } from '../cli/flagList';
 import { CONFIG_HELP, generateHelp, OVERVIEW } from '../cli/help';
 import { explainWarning, renderExplained } from '../cli/messages';
-import { MODE_NAMES, SITE_NAMES, siteName } from '../cli/names';
+import { MODE_NAMES, SITE_NAMES, siteName } from '../lib/config/names';
 import { PLAIN } from '../cli/output';
 import { contradictionError, renderError, renderNotice } from '../cli/report';
 import { emptyLayer, resolve, type Layer } from '../cli/resolve';
@@ -51,6 +51,11 @@ export const SHARED_CORE: readonly { module: string; names: string[]; for: strin
   { module: 'sitePresets', names: ['SITE_PRESETS', 'DEFAULT_SITE_PRESET', 'RULE_KEYS', 'ALL_SYMBOLS'], for: 'the site presets, named by slugs of their labels, and the one that is the defaults' },
   { module: 'modeProfiles', names: ['profileValues', 'unusedIn', 'PROFILE_KEYS', 'PROFILE_LABELS', 'MINIMAL_BITS', 'modeLabel'], for: 'the options each typing mode fills in, and which it has no use for' },
   { module: 'ruleText', names: ['parseRuleText', 'mergeParsedRules'], for: 'rules pasted from a sign-up form, merged in as the web form merges them (never settled: tep reports a contradiction instead)' },
+  { module: 'config/names', names: ['MODE_NAMES', 'SITE_NAMES', 'lookup', 'closest', 'slugOf'], for: 'mode, site preset and strength names derived from the core\'s labels; "did you mean"' },
+  { module: 'config/fields', names: ['FIELDS', 'parseValue', 'formatValue', 'describeValue', 'keyPath'], for: 'every configuration setting\'s key, label, accepted values, parsing and wording' },
+  { module: 'config/model', names: ['emptyModel'], for: 'a configuration\'s contents in the engine\'s terms' },
+  { module: 'config/text', names: ['configToText', 'sectionLines'], for: 'writing a configuration as YAML text, the comments in the front end\'s words' },
+  { module: 'config/version', names: ['CONFIG_VERSION', 'MAX_CONFIG_BYTES'], for: 'the format\'s version and the size past which text is not read' },
   { module: 'mappingSettings', names: ['activeMappings', 'mappingSettingsProblems', 'DEFAULT_MAPPING_SETTINGS'], for: 'which swaps are on, and what is wrong with a list of them' },
   { module: 'choices', names: ['COMFORT_CHOICES', 'SORT_CHOICES', 'SHRINK_CHOICES', 'LENGTH_TAG_CHOICES', 'SEPARATOR_KINDS', 'separatorChoices'], for: 'every choice list with the words the web form shows' },
   { module: 'fromSentence', names: ['DEFAULT_SENTENCE_OPTIONS', 'SHRINK_FROM_RANGE', 'TARGET_LENGTH_RANGE'], for: 'sentence-mode defaults and ranges' },
@@ -65,15 +70,14 @@ export const CLI_FILES: readonly [string, string][] = [
   ['args.ts', 'one parser for the small commands\' flags, Node\'s errors reworded in tep\'s terms'],
   ['errors.ts', 'the exit codes, what each means, and the one error type every command throws'],
   ['io.ts', 'everything outside: streams, stdin, environment, clock, prompts, clipboard (a fake in tests)'],
-  ['names.ts', 'mode, site preset and strength names derived from the core\'s labels; "did you mean"'],
-  ['fields.ts', 'the field table: every setting\'s flag, config key, label, accepted values, parsing and wording'],
+  ['fields.ts', 'the field table: the core\'s configuration settings plus tep\'s output settings (count, sort)'],
   ['flagList.ts', 'the flags that are not settings'],
   ['flags.ts', 'tep g\'s parser (node:util parseArgs with tokens), every refusal in tep\'s words'],
   ['sources.ts', 'where each value came from, and how to change it, in the terms the user used'],
   ['resolve.ts', 'the layering: defaults, config file, flags; a source per field; nothing fixed'],
   ['messages.ts', 'each contradiction and warning worded for the CLI, with fixes the engine finds'],
   ['report.ts', 'how errors, warnings and notes read on stderr'],
-  ['configVersion.ts, configModel.ts, configText.ts, config.ts', 'the config file: version, model, writer (pure), reader with line numbers and atomic write'],
+  ['configModel.ts, configText.ts, config.ts', 'the config file: the core\'s model and writer with tep\'s output section and wording, reader with line numbers and atomic write'],
   ['output.ts', 'table, plain and JSON output, --explain, colour'],
   ['clipboardTools.ts, clipboard.ts', '--copy: which tool, and running it'],
   ['generate.ts', 'tep g'],

@@ -2,10 +2,10 @@
 // lists exactly the flags tep takes.
 
 import { EXIT_MEANINGS } from './errors';
-import { CONFIG_VERSION } from './configVersion';
+import { CONFIG_VERSION } from '../lib/config/version';
 import { FIELDS, fieldsIn, SEPARATOR_NAMES, type CliField, type FieldGroup } from './fields';
 import { META_FLAGS, SHORT_SETTINGS } from './flagList';
-import { MODE_NAMES } from './names';
+import { MODE_NAMES } from '../lib/config/names';
 
 const pad = (s: string, width: number) => (s.length >= width ? `${s}  ` : s.padEnd(width));
 

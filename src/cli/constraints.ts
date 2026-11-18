@@ -19,7 +19,7 @@ import { capitalise } from '../lib/text';
 import { MAX_LENGTH, MAX_TARGET_BITS, MIN_LENGTH } from '../lib/validation';
 import { explainProblem } from './messages';
 import { COUNT_AT_TERMINAL, COUNT_PIPED, DEFAULT_SORT_HINT, describeValue, fieldNamed, fieldsIn, parseValue, reqField, STRENGTH_NAMES, type CliField } from './fields';
-import { MODE_NAMES, SITE_NAMES } from './names';
+import { MODE_NAMES, SITE_NAMES } from '../lib/config/names';
 import type { Source } from './sources';
 
 

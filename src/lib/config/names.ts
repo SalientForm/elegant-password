@@ -2,8 +2,8 @@
 // presets: derived from the labels in the shared core, never a second list
 // kept by hand, so a preset added to the app is a name tep knows.
 
-import { TYPING_MODES, type TypingMode } from '../lib/difficulty';
-import { SITE_PRESETS, type SitePreset } from '../lib/sitePresets';
+import { TYPING_MODES, type TypingMode } from '../difficulty';
+import { SITE_PRESETS, type SitePreset } from '../sitePresets';
 
 /** A label as a name to type: "Short max (16)" -> "short-max-16", "8-20, few symbols" -> "8-20-few-symbols". */
 export const slugOf = (label: string) =>

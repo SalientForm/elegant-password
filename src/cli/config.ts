@@ -10,12 +10,12 @@ import { z } from 'zod';
 import { mappingSettingsProblems, type MappingSettings } from '../lib/mappingSettings';
 import { CliError, configError } from './errors';
 import { fieldsIn, keyPath, parseValue, shownValue, type FieldGroup } from './fields';
-import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
+import { closest, lookup, MODE_NAMES, SITE_NAMES } from '../lib/config/names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
 
-export { CONFIG_VERSION, MAX_CONFIG_BYTES } from './configVersion';
-import { CONFIG_VERSION, MAX_CONFIG_BYTES } from './configVersion';
+export { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../lib/config/version';
+import { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../lib/config/version';
 export const DEFAULT_CONFIG_FILE = 'tep.yml';
 
 const TOP_KEYS = ['version', 'mode', 'site', 'rules', 'options', 'sentence', 'swaps', 'output'] as const;

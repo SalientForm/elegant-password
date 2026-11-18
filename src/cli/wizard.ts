@@ -42,7 +42,7 @@ import { CliError, EXIT, ISSUES } from './errors';
 import { COUNT_PIPED, describeValue, fieldNamed, fieldsIn, reqField, type CliField } from './fields';
 import { Cancelled, type Prompter } from './io';
 import { explainProblem, explainWarning } from './messages';
-import { SITE_NAMES, siteName } from './names';
+import { SITE_NAMES, siteName } from '../lib/config/names';
 import { badges, PLAIN } from './output';
 import { wrapHanging } from './wrap';
 

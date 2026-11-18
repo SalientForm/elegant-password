@@ -11,7 +11,7 @@ import { flagNamed } from './args';
 import { punctuated, usageError } from './errors';
 import { FIELDS, fieldNamed, fieldsIn, parseValue } from './fields';
 import { FORMATS, META_FLAGS, SHORT_SETTINGS as SHORT, type Format } from './flagList';
-import { closest, lookup, MODE_NAMES, SITE_NAMES, siteName } from './names';
+import { closest, lookup, MODE_NAMES, SITE_NAMES, siteName } from '../lib/config/names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
 

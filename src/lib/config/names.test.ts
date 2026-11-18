@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SITE_PRESETS } from '../lib/sitePresets';
+import { SITE_PRESETS } from '../sitePresets';
 import { closest, distance, lookup, MODE_NAMES, modeName, SITE_NAMES, siteName, slugOf } from './names';
 
 describe('names', () => {

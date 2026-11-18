@@ -3,7 +3,7 @@
 // prompt can list them without the parser.
 
 import { MAX_RULES_TEXT_LENGTH } from '../lib/ruleText';
-import { MODE_NAMES, SITE_NAMES } from './names';
+import { MODE_NAMES, SITE_NAMES } from '../lib/config/names';
 
 /** Short forms of the settings' flags: -n for --count. */
 export const SHORT_SETTINGS: Record<string, string> = { count: 'n' };
