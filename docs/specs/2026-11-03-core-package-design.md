@@ -1,3 +1,12 @@
+---
+state: under-review
+summary: >
+  The core as an npm package, @salientform/elegant-passwords, configured by typing mode, site preset and overrides,
+  with tep's config (version 2, app-mode and typing-mode) as the one configuration format for the web app, the CLI
+  and the package. Decisions 1 to 4 taken on 2026-11-18; publishing is still open.
+evidence: Branch feature/core-package (2026-11-18), P1 and P2 of the plan built.
+---
+
 # The core as a package: `@salientform/elegant-passwords`
 
 Status: **draft for the user's review**, 2026-11-03; decisions 1 to 3 of

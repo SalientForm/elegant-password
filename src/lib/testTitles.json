@@ -352,7 +352,7 @@
       },
       {
         "kind": "test",
-        "title": "imports only from src/lib"
+        "title": "imports only from src/lib, and yaml and zod in src/lib/config only"
       },
       {
         "kind": "test",
@@ -2337,6 +2337,75 @@
     ]
   },
   {
+    "file": "src/lib/config/check.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "checkConfig: a configuration as plain data"
+      },
+      {
+        "kind": "test",
+        "title": "reads every section into the engine's terms"
+      },
+      {
+        "kind": "test",
+        "title": "takes options: preset, no options, and empty sections as stating nothing"
+      },
+      {
+        "kind": "test",
+        "title": "an empty configuration, with a code and no front end named"
+      },
+      {
+        "kind": "test",
+        "title": "a configuration that is not a map"
+      },
+      {
+        "kind": "test",
+        "title": "no version, a newer one with a code, a wrong one"
+      },
+      {
+        "kind": "test",
+        "title": "unknown keys at the key itself, with the likeliest one meant and the ones there are"
+      },
+      {
+        "kind": "test",
+        "title": "a section of the wrong type, saying what was found"
+      },
+      {
+        "kind": "test",
+        "title": "an unknown mode or site preset, or one of the wrong type"
+      },
+      {
+        "kind": "test",
+        "title": "values out of range or of the wrong kind, each at its key path, naming its setting"
+      },
+      {
+        "kind": "test",
+        "title": "options as a map: each value checked, in the field table's order, the preset left behind"
+      },
+      {
+        "kind": "test",
+        "title": "bad swaps, each at its entry, numbered from one, duplicates naming the first"
+      },
+      {
+        "kind": "test",
+        "title": "every problem at once, across sections"
+      },
+      {
+        "kind": "test",
+        "title": "a front end's own section, checked as the core's are and listed after them"
+      },
+      {
+        "kind": "group",
+        "title": "valueAt"
+      },
+      {
+        "kind": "test",
+        "title": "finds a value by its key path, or nothing"
+      }
+    ]
+  },
+  {
     "file": "src/lib/config/names.test.ts",
     "titles": [
       {
@@ -2370,6 +2439,59 @@
       {
         "kind": "test",
         "title": "finds the closest candidate within a third of its length, or by a unique prefix"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/config/yaml.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "configFromYaml: a configuration as YAML text"
+      },
+      {
+        "kind": "test",
+        "title": "reads every section, with the line each key is set on: a value's own, a section's key"
+      },
+      {
+        "kind": "test",
+        "title": "gives each problem its key path and line, in line order"
+      },
+      {
+        "kind": "test",
+        "title": "puts an unknown section on its key's line, a swap on its entry's, and no version on the first"
+      },
+      {
+        "kind": "test",
+        "title": "empty text, or only a comment, has a code"
+      },
+      {
+        "kind": "test",
+        "title": "a newer version has a code and the version, worded for no front end"
+      },
+      {
+        "kind": "test",
+        "title": "a top level that is not a map, on its own line"
+      },
+      {
+        "kind": "test",
+        "title": "refuses anchors and aliases with a code, the name and the quoting hint, a tag with how to quote it"
+      },
+      {
+        "kind": "test",
+        "title": "a key twice, and YAML that does not parse"
+      },
+      {
+        "kind": "test",
+        "title": "says a symbol list or separator read as nothing may be an unquoted \"#\""
+      },
+      {
+        "kind": "test",
+        "title": "refuses text far too big to be a configuration, without parsing it"
+      },
+      {
+        "kind": "test",
+        "title": "checks a front end's own section too, with its lines"
       }
     ]
   },

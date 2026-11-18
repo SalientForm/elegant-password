@@ -1,16 +1,15 @@
-// tep's config file: YAML, version 1 (spec §6). Read with every problem
+// tep's config file: YAML, version 1 (spec §6). Read by the core
+// (src/lib/config/yaml.ts) with tep's output section, every problem
 // reported at once, each with its line, the line itself, what was found and
-// what is expected; written back with comments, atomically, so a file is
-// never left half-written.
+// what is expected, in tep's words; written back with comments, atomically,
+// so a file is never left half-written.
 
 import { closeSync, fsyncSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { isAlias, isMap, isPair, isScalar, isSeq, LineCounter, parseDocument, visit, type Document, type Node } from 'yaml';
-import { z } from 'zod';
-import { mappingSettingsProblems, type MappingSettings } from '../lib/mappingSettings';
+import { configFromYaml, type YamlProblem } from '../lib/config/yaml';
 import { CliError, configError } from './errors';
-import { fieldsIn, keyPath, parseValue, shownValue, type FieldGroup } from './fields';
-import { closest, lookup, MODE_NAMES, SITE_NAMES } from '../lib/config/names';
+import { fieldsIn, keyPath, type FieldGroup } from './fields';
+import { SITE_NAMES } from '../lib/config/names';
 import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
 
@@ -18,10 +17,8 @@ export { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../lib/config/version';
 import { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../lib/config/version';
 export const DEFAULT_CONFIG_FILE = 'tep.yml';
 
-const TOP_KEYS = ['version', 'mode', 'site', 'rules', 'options', 'sentence', 'swaps', 'output'] as const;
-
 export { emptyModel, type ConfigModel } from './configModel';
-import { emptyModel, type ConfigModel } from './configModel';
+import type { ConfigModel } from './configModel';
 
 export interface LoadedConfig {
   model: ConfigModel;
@@ -36,228 +33,30 @@ interface Issue {
   message: string;
 }
 
-/** The characters YAML gives a meaning to at the start of a plain value. */
-const YAML_SPECIAL = /[!&*#{}[\],:|>'"%@`?-]/;
-/** How to quote a value, with an example for the key at hand. */
-const quoteHint = (key = 'symbols') => `Symbols such as ! & * # { } [ ] , : have a meaning in YAML; put a value that has them in double quotes, as in ${/separator$/.test(key) ? `${key}: ";"` : /symbols$/.test(key) ? `${key}: "!@#$%"` : `${key}: "..."`}.`;
-/** The key a line of the file sets, for an example in a hint. */
-const keyOnLine = (line: string | undefined) => line?.match(/^\s*([a-z-]+)\s*:/)?.[1];
-
 /** Read and check a config file's text. Throws a config error (exit 4) listing every problem. */
 export function parseConfig(text: string, file: string): LoadedConfig {
-  const counter = new LineCounter();
-  const doc = parseDocument(text, { lineCounter: counter, uniqueKeys: true, prettyErrors: false });
-  const lineAt = (offset: number | undefined) => (offset === undefined ? 1 : counter.linePos(offset).line);
-  const lines = text.split(/\r?\n/);
-  const issues: Issue[] = [];
-  const add = (line: number, message: string) => issues.push({ line, message });
-
-  for (const e of [...doc.errors, ...doc.warnings]) {
-    const line = lineAt(e.pos[0]);
-    const what =
-      e.code === 'DUPLICATE_KEY'
-        ? 'a key appears twice in the same section; keep one'
-        : e.code === 'TAG_RESOLVE_FAILED'
-          ? `${e.message.split('\n')[0]}: a value starting with "!" is read as a YAML tag, not as text. ${quoteHint(keyOnLine(lines[line - 1]))}`
-          : `${e.message.split('\n')[0]}${YAML_SPECIAL.test(lines[line - 1]?.split(':').slice(1).join(':') ?? '') ? `. ${quoteHint(keyOnLine(lines[line - 1]))}` : ''}`;
-    add(line, what);
+  const read = configFromYaml(text, { output: fieldsIn('output') });
+  if (read.ok) return { model: read.config, lines: read.lines, file };
+  for (const p of read.problems) {
+    if (p.code === 'empty') throw configError(`${file} is empty.`, `A tep config starts with "version: ${CONFIG_VERSION}". Run tep config to write one, or delete ${file}.`);
+    if (p.code === 'too-big') throw tooBig(file, p.bytes);
   }
-  // Anchors (&name) and aliases (*name) only repeat a value elsewhere in the file, which a tep config never needs; an
-  // alias to nothing, or one that loops back on itself, would otherwise fail deep inside the YAML reader.
-  if (doc.contents) visit(doc, (_key, node) => {
-    // A map's range starts at its first key, a line below its anchor: the anchor is found on the line that has it.
-    const anchor = isScalar(node) || isMap(node) || isSeq(node) ? node.anchor : undefined;
-    const anchorLine = anchor ? lines.findIndex((l) => l.includes(`&${anchor}`)) + 1 : 0;
-    const line = anchorLine || lineAt((node as Node).range?.[0]);
-    // A value starting with "*" or "&" (a symbol list, a separator) is read as one, so the quoting hint comes too.
-    const hint = ` ${quoteHint(keyOnLine(lines[line - 1]))}`;
-    if (isAlias(node)) add(line, `"*${node.source}" is a YAML alias, and aliases are not supported in a tep config. Write the value itself.${hint}`);
-    else if (anchor) {
-      add(line, `"&${anchor}" is a YAML anchor, and anchors are not supported in a tep config. Take it out.${isScalar(node) ? hint : ''}`);
-    }
-  });
-  if (issues.length) throw invalid(file, issues, lines);
-
-  const model = emptyModel();
-  const where: Record<string, number> = {};
-  const root = doc.contents;
-  if (root === null || (isScalar(root) && (root.value === null || root.value === ''))) {
-    throw configError(`${file} is empty.`, `A tep config starts with "version: ${CONFIG_VERSION}". Run tep config to write one, or delete ${file}.`);
-  }
-  if (!isMap(root)) {
-    throw invalid(file, [{ line: lineAt(root.range?.[0]), message: `the file must be a map of keys (version: ${CONFIG_VERSION}, mode: ..., rules: ...), not ${kindOf(root)}` }], lines);
-  }
-
-  const keyLine = (path: (string | number)[]) => lineAt(nodeAt(doc, path, true)?.range?.[0]);
-  const valueLine = (path: (string | number)[]) => lineAt(nodeAt(doc, path, false)?.range?.[0] ?? nodeAt(doc, path, true)?.range?.[0]);
-  let data: Record<string, unknown>;
-  try {
-    data = doc.toJS({ maxAliasCount: 0 }) as Record<string, unknown>;
-  } catch (e) {
-    // Aliases are refused above; anything else the reader cannot turn into values is still the file's problem, not tep's.
-    throw invalid(file, [{ line: 1, message: `the file cannot be read as values: ${e instanceof Error ? e.message.split('\n')[0] : String(e)}` }], lines);
-  }
-
-  // The shape, with zod: which keys may be where, and which must be maps.
-  const group = (g: FieldGroup) => z.strictObject(Object.fromEntries(fieldsIn(g).map((f) => [f.name, z.unknown().optional()]))).nullable();
-  const shape = z.strictObject({
-    version: z.unknown().optional(),
-    mode: z.unknown().optional(),
-    site: z.unknown().optional(),
-    rules: group('rules').optional(),
-    options: z.unknown().optional(),
-    sentence: group('sentence').optional(),
-    swaps: z.strictObject({ off: z.array(z.unknown()).nullable().optional(), custom: z.array(z.unknown()).nullable().optional() }).nullable().optional(),
-    output: group('output').optional(),
-  });
-  const checked = shape.safeParse(data);
-  if (!checked.success) {
-    for (const issue of checked.error.issues) {
-      const path = issue.path as (string | number)[];
-      if (issue.code === 'unrecognized_keys') {
-        const section = path.length ? path.join('.') : 'the top level';
-        const allowed = path.length === 0 ? [...TOP_KEYS] : path[0] === 'swaps' ? ['off', 'custom'] : fieldsIn(path[0] as FieldGroup).map((f) => f.name);
-        for (const key of issue.keys) {
-          const near = closest(key, allowed);
-          add(keyLine([...path, key]), `unknown key "${key}" in ${section}.${near ? ` Did you mean ${near}?` : ''} The keys there are: ${allowed.join(', ')}.`);
-        }
-      } else if (issue.code === 'invalid_type') {
-        const name = path.join('.');
-        const expected = issue.expected === 'object' ? 'a map of keys' : issue.expected === 'array' ? 'a list' : issue.expected;
-        add(valueLine(path), `${name} must be ${expected}; found ${describeFound(nodeAt(doc, path, false))}.`);
-      } else {
-        add(valueLine(path), `${path.join('.') || 'the file'}: ${issue.message}`);
-      }
-    }
-    throw invalid(file, issues, lines);
-  }
-
-  // version: required, and one this tep reads.
-  const version = data.version;
-  if (version === undefined) add(1, `the file has no version. Add "version: ${CONFIG_VERSION}" as its first line.`);
-  else if (typeof version === 'number' && Number.isInteger(version) && version > CONFIG_VERSION) {
-    add(valueLine(['version']), `version ${version} was written by a newer tep; this one reads version ${CONFIG_VERSION}. Upgrade tep, or run tep config to write a version ${CONFIG_VERSION} file.`);
-  } else if (version !== CONFIG_VERSION) add(valueLine(['version']), `version must be ${CONFIG_VERSION}; found ${describeFound(nodeAt(doc, ['version'], false))}.`);
-
-  if (data.mode !== undefined && data.mode !== null) {
-    const r = typeof data.mode === 'string' ? lookup('typing mode', MODE_NAMES, data.mode) : { ok: false as const, error: `the typing mode must be one of ${MODE_NAMES.map((m) => m.name).join(', ')}` };
-    if (r.ok) {
-      model.mode = r.value;
-      where.mode = valueLine(['mode']);
-    } else add(valueLine(['mode']), `mode: ${r.error}`);
-  }
-  if (data.site !== undefined && data.site !== null) {
-    const r = typeof data.site === 'string' ? lookup('site preset', SITE_NAMES, data.site) : { ok: false as const, error: `the site preset must be one of ${SITE_NAMES.map((s) => s.name).join(', ')}` };
-    if (r.ok) {
-      model.site = r.name;
-      where.site = valueLine(['site']);
-    } else add(valueLine(['site']), `site: ${r.error}`);
-  }
-
-  const readGroup = (g: FieldGroup, into: Record<string, unknown>) => {
-    const section = data[g] as Record<string, unknown> | null | undefined;
-    if (!section) return;
-    for (const f of fieldsIn(g)) {
-      if (!(f.name in section)) continue;
-      const raw = section[f.name];
-      const r = parseValue(f, raw);
-      const line = valueLine([g, f.name]);
-      if (r.ok) {
-        into[f.name] = r.value;
-        where[keyPath(f)] = line;
-      } else add(line, `${keyPath(f)} ${r.error}${raw === null && (f.kind.type === 'symbols' || f.kind.type === 'separator') ? `. A "#" after a space starts a comment in YAML, so the value was read as nothing. ${quoteHint(keyPath(f))}` : ''}.`);
-    }
-  };
-  readGroup('rules', model.rules);
-  readGroup('sentence', model.sentence);
-  readGroup('output', model.output);
-
-  // options: "preset", or a map of option values.
-  const options = data.options;
-  if (options === undefined || options === null || options === 'preset') {
-    model.options = 'preset';
-    if (options === 'preset') where.options = valueLine(['options']);
-  } else if (typeof options === 'object' && !Array.isArray(options)) {
-    const allowed = fieldsIn('options').map((f) => f.name);
-    for (const key of Object.keys(options)) {
-      if (!allowed.includes(key)) {
-        const near = closest(key, allowed);
-        add(keyLine(['options', key]), `unknown key "${key}" in options.${near ? ` Did you mean ${near}?` : ''} The keys there are: ${allowed.join(', ')}.`);
-      }
-    }
-    model.options = {};
-    readGroup('options', model.options);
-  } else {
-    add(valueLine(['options']), `options must be "preset" (the typing mode's own options) or a map of option values; found ${describeFound(nodeAt(doc, ['options'], false))}.`);
-  }
-
-  // swaps: built-in swaps switched off, and the user's own.
-  const swaps = data.swaps as { off?: unknown[] | null; custom?: unknown[] | null } | null | undefined;
-  if (swaps) {
-    const settings: MappingSettings = { disabled: [], custom: [] };
-    // Where each kept entry is in the file, since malformed ones are left out of the settings.
-    const at = { disabled: [] as number[], custom: [] as number[] };
-    (swaps.off ?? []).forEach((key, i) => {
-      if (typeof key === 'string') {
-        settings.disabled.push(key);
-        at.disabled.push(i);
-      }
-      else add(valueLine(['swaps', 'off', i]), `swaps.off entry ${i + 1} must be a built-in swap written "from>to", such as "a>@"; found ${describeFound(nodeAt(doc, ['swaps', 'off', i], false))}.`);
-    });
-    (swaps.custom ?? []).forEach((entry, i) => {
-      const e = entry as Record<string, unknown> | null;
-      const keys = e && typeof e === 'object' ? Object.keys(e) : [];
-      if (!e || typeof e !== 'object' || Array.isArray(e) || keys.some((k) => k !== 'from' && k !== 'to')) {
-        add(valueLine(['swaps', 'custom', i]), `swaps.custom entry ${i + 1} must be a map with "from" and "to", such as { from: ph, to: f }; found ${describeFound(nodeAt(doc, ['swaps', 'custom', i], false))}.`);
-      } else if (typeof e.from !== 'string' || typeof e.to !== 'string') {
-        // A swap to a digit written bare reads as a number: say so, with the quoting that fixes it.
-        const [k, v] = typeof e.from !== 'string' ? ['from', e.from] : ['to', e.to];
-        add(valueLine(['swaps', 'custom', i, k]), `swaps.custom entry ${i + 1}: "${k}" must be text; found ${v === undefined ? 'nothing' : JSON.stringify(v)}. Put it in double quotes, as in ${k}: "${v ?? ''}".`);
-      } else {
-        settings.custom.push({ from: e.from, to: e.to });
-        at.custom.push(i);
-      }
-    });
-    for (const p of mappingSettingsProblems(settings)) {
-      const [list, kept] = p.path;
-      const i = at[list][kept]!;
-      const name = list === 'disabled' ? 'off' : 'custom';
-      const also = p.duplicateOf === undefined ? '' : ` (also entry ${at.custom[p.duplicateOf]! + 1})`;
-      add(valueLine(['swaps', name, i]), `swaps.${name} entry ${i + 1}: ${p.message.replace(/\.$/, '')}${also}.`);
-    }
-    model.swaps = settings;
-    where.swaps = keyLine(['swaps']);
-  }
-
-  if (issues.length) throw invalid(file, issues, lines);
-  return { model, lines: where, file };
+  throw invalid(file, read.problems.map((p) => ({ line: p.line, message: worded(p) })), text.split(/\r?\n/));
 }
 
-/** The node at a path: the key's node when `key`, else the value's. */
-function nodeAt(doc: Document, path: (string | number)[], key: boolean): Node | undefined {
-  let node: unknown = doc.contents;
-  for (let i = 0; i < path.length; i++) {
-    const step = path[i]!;
-    if (isMap(node)) {
-      const pair = node.items.find((p) => isPair(p) && isScalar(p.key) && p.key.value === step);
-      if (!pair) return undefined;
-      if (i === path.length - 1 && key) return pair.key as Node;
-      node = pair.value;
-    } else if (isSeq(node) && typeof step === 'number') {
-      node = node.items[step];
-    } else return undefined;
+/** A problem in tep's words: the core words the ones that would name tep for no front end, and gives a code instead. */
+function worded(p: YamlProblem): string {
+  switch (p.code) {
+    case 'newer-version':
+      return `version ${p.version} was written by a newer tep; this one reads version ${CONFIG_VERSION}. Upgrade tep, or run tep config to write a version ${CONFIG_VERSION} file.`;
+    case 'anchor':
+      return `"&${p.name}" is a YAML anchor, and anchors are not supported in a tep config. Take it out.${p.hint ? ` ${p.hint}` : ''}`;
+    case 'alias':
+      return `"*${p.name}" is a YAML alias, and aliases are not supported in a tep config. Write the value itself.${p.hint ? ` ${p.hint}` : ''}`;
+    default:
+      return p.message;
   }
-  return (node ?? undefined) as Node | undefined;
 }
-
-function kindOf(node: unknown): string {
-  if (isSeq(node)) return 'a list';
-  if (isMap(node)) return 'a map';
-  if (isScalar(node)) return node.value === null ? 'nothing' : typeof node.value === 'string' ? `the text ${shownValue(node.value)}` : shownValue(node.value);
-  return 'something else';
-}
-
-const describeFound = (node: Node | undefined) => (node === undefined ? 'nothing' : kindOf(node));
 
 /** Every problem in a file, one per line, with the line quoted. */
 function invalid(file: string, issues: Issue[], lines: string[]) {
@@ -267,6 +66,10 @@ function invalid(file: string, issues: Issue[], lines: string[]) {
     ...sorted.flatMap((i) => [`${file}:${i.line}: ${i.message}`, `    ${String(i.line).padStart(3)} | ${lines[i.line - 1] ?? ''}`]),
   );
 }
+
+/** A file far too big to be a config, by its size in bytes. */
+const tooBig = (display: string, bytes: number) =>
+  configError(`${display} is ${Math.round(bytes / 1024)} KB, too big to be a tep config (they are a few hundred bytes).`, 'Check that this is the file you meant.');
 
 /** The layer a config file adds to the flags, with each value's source: the file and line. */
 export function layerOf(loaded: LoadedConfig): Layer {
@@ -297,9 +100,7 @@ export function readConfigFile(path: string, display = path): string {
     if (e instanceof CliError) throw e;
     throw fsError(e, display);
   }
-  if (size > MAX_CONFIG_BYTES) {
-    throw configError(`${display} is ${Math.round(size / 1024)} KB, too big to be a tep config (they are a few hundred bytes).`, 'Check that this is the file you meant.');
-  }
+  if (size > MAX_CONFIG_BYTES) throw tooBig(display, size);
   try {
     return readFileSync(path, 'utf8');
   } catch (e) {
