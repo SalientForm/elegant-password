@@ -757,6 +757,8 @@ decisions taken on the recommendation alone, to revisit once it is in use.
   and `id-token: write` for the deploy. The callers own the triggers and
   the concurrency; in the checks list the job reads `check / check`. A
   workflow cannot run locally, so `src/workflows.test.ts` holds that shape.
+  Since 2026-11-11 the checks include `pnpm workspace:check` (Workspace
+  Wayfinder's registries), which its committed tarball lets CI install.
 - **The Content-Security-Policy is a meta tag** added to the built page
   only, since the dev server needs inline scripts. GitHub Pages sends no
   headers the app can set, a custom domain included.

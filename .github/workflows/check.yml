@@ -1,5 +1,6 @@
-# The checks, once: types, the unit tests, both builds and the browser smoke tests. Called by ci.yml on every
-# branch push and pull request, and by pages.yml before a deploy. Callers own the triggers and the concurrency.
+# The checks, once: types, the unit tests, the workspace's registries (pnpm workspace:check), both builds and the
+# browser smoke tests. Called by ci.yml on every branch push and pull request, and by pages.yml before a deploy.
+# Callers own the triggers and the concurrency.
 name: Check
 
 on:
@@ -21,6 +22,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm workspace:check # Workspace Wayfinder's registries against the repository (reads git's file list)
       - run: pnpm build:cli
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e # builds the app itself and serves it on this project's ports

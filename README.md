@@ -395,6 +395,9 @@ cold scoring.
     pnpm test:e2e   # browser smoke tests (Playwright) against the build on 4272 and the dev server on 4273
     pnpm build && pnpm preview   # http://127.0.0.1:4271
     pnpm build:cli  # the command line, dist-cli/tep.mjs; pnpm tep g runs it
+    pnpm workspace:dev      # the engineering workspace (Workspace Wayfinder): http://127.0.0.1:4274
+    pnpm workspace:build && pnpm workspace:preview   # http://127.0.0.1:4275
+    pnpm workspace:check    # the workspace's checks: every markdown file reviewed, the skills as installed
 
 Run `pnpm test:e2e` after each iteration: it builds, starts its own servers
 on this project's spare ports, drives a real Chromium through loading,
@@ -406,8 +409,8 @@ error. First time only:
 ## Deploy
 
 Every push to `main`, merges included, runs `.github/workflows/pages.yml`:
-the checks in `check.yml` (types, unit tests, both builds and the browser
-smoke tests, the same workflow `ci.yml` runs on every branch push and pull
+the checks in `check.yml` (types, unit tests, the workspace's registries,
+both builds and the browser smoke tests, the same workflow `ci.yml` runs on every branch push and pull
 request), then a build under `/elegant-password/` (`BASE_PATH`), published
 to GitHub Pages at https://salientform.github.io/elegant-password/.
 
@@ -496,3 +499,6 @@ Build and docs:
 - `scripts/linkCli.mjs`: `pnpm link:cli` and `unlink:cli`
 - `docs/algorithm-flow.md`: the algorithm flow
 - `docs/decisions.md`: the design decisions, with why, kept current
+- `workspace/`: the engineering workspace (Workspace Wayfinder), a development tool with its own Vite config, outside the app's build and dependencies
+- `docs/reviews/`: a review of every markdown file, which the workspace's Audit area reads
+- `.agents/skills/`: the workspace's skills, installed by `pnpm skills:install` and linked from `.claude/skills/`

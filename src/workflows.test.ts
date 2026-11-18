@@ -25,6 +25,7 @@ describe('the workflows', () => {
       'pnpm install --frozen-lockfile',
       'pnpm typecheck',
       'pnpm test',
+      'pnpm workspace:check',
       'pnpm build:cli',
       'pnpm exec playwright install --with-deps chromium',
       'pnpm test:e2e',

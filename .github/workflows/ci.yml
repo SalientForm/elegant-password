@@ -1,5 +1,6 @@
-# Checks every push to a branch and every pull request: types, the unit tests, both builds and the browser
-# smoke tests, all in check.yml. Pushes to main run the same checks from pages.yml, before anything is deployed.
+# Checks every push to a branch and every pull request: types, the unit tests, the workspace's registries
+# (pnpm workspace:check), both builds and the browser smoke tests, all in check.yml. Pushes to main run the same
+# checks from pages.yml, before anything is deployed.
 name: CI
 
 on:
