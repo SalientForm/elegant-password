@@ -8,7 +8,7 @@ import { ALL_FLAGS } from './flags';
 import { generateCommand } from './generate';
 import { CONFIG_HELP, generateHelp, OVERVIEW, UNINSTALL_HELP } from './help';
 import { Cancelled, type Io } from './io';
-import { closest } from './names';
+import { closest } from '../lib/config/names';
 import { COLOR, PLAIN, useColor } from './output';
 import { renderError } from './report';
 import { uninstallCommand } from './uninstall';

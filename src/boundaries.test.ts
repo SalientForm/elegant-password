@@ -69,7 +69,7 @@ describe('src/lib, the shared core', () => {
   it('imports only from src/lib', () => {
     const outside = LIB.filter((f) => !isTest(f)).flatMap((f) =>
       importsOf(f)
-        .filter((i) => !i.from.startsWith('./'))
+        .filter((i) => !i.from.startsWith('.') || !join(f, '..', i.from).startsWith('src/lib/'))
         .map((i) => `${f} imports ${i.from}`),
     );
     expect(outside).toEqual([]);

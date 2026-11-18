@@ -3,7 +3,7 @@ import { CliError } from './errors';
 import { FIELDS, fieldsIn } from './fields';
 import { parseGenerateArgs } from './flags';
 import { CONFIG_HELP, generateHelp, OVERVIEW } from './help';
-import { lookup, MODE_NAMES, SITE_NAMES } from './names';
+import { lookup, MODE_NAMES, SITE_NAMES } from '../lib/config/names';
 
 describe('help and examples', () => {
   it('name only typing modes and site presets that exist', () => {

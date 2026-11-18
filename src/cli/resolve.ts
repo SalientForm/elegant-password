@@ -17,7 +17,7 @@ import { DEFAULT_SORT, type SortOrder } from '../lib/sort';
 import { lowerFirst } from '../lib/text';
 import { usageError } from './errors';
 import { COUNT_AT_TERMINAL, COUNT_PIPED, describeValue, FIELDS, reqField, type CliField } from './fields';
-import { siteName } from './names';
+import { siteName } from '../lib/config/names';
 import { describeSource, isExplicit, type Source } from './sources';
 
 export interface Sourced<T> {

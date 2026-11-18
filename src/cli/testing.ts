@@ -10,7 +10,7 @@ import type { TypingMode } from '../lib/difficulty';
 import type { ClipboardRunner } from './clipboard';
 import { Cancelled, type Io, type Prompter, type SelectOption } from './io';
 import { emptyLayer, type Layer } from './resolve';
-import { SITE_NAMES } from './names';
+import { SITE_NAMES } from '../lib/config/names';
 import type { Source } from './sources';
 
 const scratchDirs: string[] = [];

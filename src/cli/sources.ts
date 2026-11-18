@@ -5,7 +5,7 @@
 
 import type { TypingMode } from '../lib/difficulty';
 import { keyPath, type CliField } from './fields';
-import { modeName } from './names';
+import { modeName } from '../lib/config/names';
 
 export type Source =
   | { kind: 'default' }

@@ -6,7 +6,7 @@ import { buildCliPrompt, CLI_FILES, SHARED_CORE } from './cliPrompt';
 import { buildSpecPrompt } from './specPrompt';
 
 // The core's modules, not its tests: importing a test file would run its tests here.
-const modules = import.meta.glob(['../lib/*.ts', '!../lib/*.test.ts'], { eager: true }) as Record<string, Record<string, unknown>>;
+const modules = import.meta.glob(['../lib/**/*.ts', '!../lib/**/*.test.ts'], { eager: true }) as Record<string, Record<string, unknown>>;
 
 describe('the CLI prompt', () => {
   const prompt = buildCliPrompt();
