@@ -23,9 +23,10 @@ most urgent.
   quietly.
   The config format `tep` writes becomes the one way Elegant Passwords
   manages its configuration, in the web app and the CLI alike, provided by
-  the package: the model (`version`, `mode`, `site`, `rules`, `options`,
-  `sentence`, `swaps`), its zod schema and version, the mode and preset
-  names, and reading and writing it as YAML text. File access and the
+  the package: the model (`version`, `app-mode`, `typing-mode`, `site`,
+  `rules`, `options`, `sentence`, `swaps`; version 2, which still reads
+  version 1's `mode` as `typing-mode`), its zod schema and version, the
+  mode and preset names, and reading and writing it as YAML text. File access and the
   line-numbered error messages stay in `src/cli`, and the `output` section
   (count, format, copy, explain) stays CLI-only. The web app saves the last
   configuration in localStorage in this format, in place of its own shape,
@@ -53,6 +54,58 @@ most urgent.
   `--sentence` and the config's `sentence` options follow; the config's
   shape for them is settled in the package's spec, so the format does not
   change again once the package ships.
+
+## Asked for by the user (2026-11-18)
+
+- **Two modes: Sentences and Keyboard patterns.** Plan for two modes at
+  the top of the app: Sentences, which is everything the app makes today,
+  and Keyboard patterns, passwords made from patterns on the keyboard.
+  The typing modes (Ten-finger, One-handed, Two-finger, Quick) serve both:
+  each still says how the password will be typed, and Difficulty is still
+  scored for it. Call the two of them modes, never super modes. To settle
+  before building:
+  - what a keyboard-pattern password is and how it is remembered (a shape
+    on the keys, a starting key, shifts and repeats), and how its bits are
+    counted exactly, as a drawn sentence's are;
+  - how it reads on the badges: Strength charges a keyboard walk as one
+    pick of 1,000 (`qwertyuiop` reads 11 bits) and zxcvbn finds spatial
+    patterns, so a pattern password reads weak to both unless the pattern
+    is drawn from enough choices; its hint describes the pattern;
+  - the names are settled (2026-11-18, the user's decision): Sentences
+    and Keyboard patterns are the app mode (`app-mode` in the config),
+    and what is called the mode today is the typing mode (`typing-mode`).
+    The package's config format takes both names before it ships
+    (`docs/specs/2026-11-03-core-package-design.md`, §4.1), so building
+    Keyboard patterns adds a value to `app-mode`, not a key.
+- **zxcvbn-ts merged into our code, and research into a scoring algorithm
+  of our own.** Bring zxcvbn-ts's code (the maintained TypeScript rewrite
+  of zxcvbn: `@zxcvbn-ts/core` with its common and English language
+  packages) into this repository, under `src/lib`, so it is part of the
+  core and of the package. It is not a dependency: neither the app nor the
+  package lists or installs it, and the `zxcvbn` 4.4.2 dependency goes.
+  Keep its MIT licence notice with the copied files and in the package.
+  The fourth badge runs on the merged code, reversing "zxcvbn stays at
+  4.4.2" (`docs/decisions.md`, Scoring; audit L11): a bump of
+  `ZXCVBN_ESTIMATOR`, so My list's saved readings are worked out again
+  once. It still runs offline and loads on first use; measure its chunk
+  against today's 400 KB. The library is the reference at first: a test
+  holds the merged code's readings equal to the library's on a fixed set
+  of passwords, and Strength is measured against it for parity. Then
+  survey the other estimators (zxcvbn's ports
+  and forks, nbvcxz, KeePassXC's, PCFG and Markov guessers, neural
+  estimators such as Melicher et al.'s) for what each models that
+  Strength does not, and bring the elements worth having into Elegant
+  Passwords' own Strength algorithm. Each addition keeps Strength's rules:
+  from the password alone, the same reading every time, no knowledge of
+  this app, a hint never raising it, and no dictionary of English words
+  (the common-password list is its only list), so an element that needs
+  a dictionary is the user's decision.
+
+- **Register the `salientform` organisation on npm.** The user's step:
+  sign in on npmjs.com, Add Organization, `salientform`, the free plan.
+  It reserves the `@salientform` scope for `@salientform/elegant-passwords`
+  (free on 2026-11-03) and later packages. Publishing itself stays a
+  separate decision (`docs/specs/2026-11-03-core-package-design.md`, §10).
 
 ## tep CLI: decisions to revisit
 

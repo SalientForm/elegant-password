@@ -1,6 +1,7 @@
 # The core as a package: `@salientform/elegant-passwords`
 
-Status: **draft for the user's review**, 2026-11-03. Acts on the first item
+Status: **draft for the user's review**, 2026-11-03; decisions 1 to 3 of
+§10 taken on 2026-11-18 with the modes' names, publishing still open. Acts on the first item
 of `TODO.md`, "Asked for by Dossier", and settles the config's shape for
 the third (one sentence mode) so the format does not change once the
 package ships. Dossier's side is its `docs/TODO.md` #19, "Password
@@ -50,8 +51,12 @@ What Dossier's dialog needs (its #19), each of which the API in §5 covers:
 - An edited made-up sentence is the user's: it shows the scores, not exact
   bits (2026-11-03). This is how the engine already treats one
   (`GenerateInputs.edited`).
-- The config format is `tep`'s, version 1 (`docs/decisions.md`, "Config
-  files"). The `output` section stays the CLI's.
+- The config format is `tep`'s (`docs/decisions.md`, "Config files"),
+  moved to version 2 for the modes' names (§4.1). The `output` section
+  stays the CLI's.
+- Sentences and Keyboard patterns are the **app mode**; what was called
+  the mode is the **typing mode** (2026-11-18, the user's decision). The
+  typing modes serve both app modes (`TODO.md`, 2026-11-18).
 
 ## 3. Where it lives
 
@@ -93,8 +98,9 @@ A configuration is the object `tep.yml` describes, in the file's own
 vocabulary: kebab-case keys and named values.
 
 ```yaml
-version: 1
-mode: ten-finger            # a typing mode's name
+version: 2
+app-mode: sentences         # keyboard-patterns once it is built
+typing-mode: ten-finger     # a typing mode's name
 site: typical-site          # a site preset's name
 rules:                      # over the site preset
   max-length: 20
@@ -111,7 +117,17 @@ the same object. The package reads either; it writes YAML text with
 comments, as `tep config` does, and JSON as a plain object.
 
 Every key but `version` may be left out, and each left out takes the
-package's default, as a key left out of `tep.yml` does today.
+package's default, as a key left out of `tep.yml` does today. `app-mode`
+defaults to `sentences`, the only value until Keyboard patterns is built;
+adding that value does not change the version.
+
+Version 2 renames version 1's `mode` to `typing-mode` and adds
+`app-mode`. The package reads version 1 files, their `mode` as
+`typing-mode` and their app mode as `sentences`, and always writes
+version 2; `tep config` saving over a version 1 file writes version 2.
+Everywhere else follows the names: the web app's "Mode" heading becomes
+"Typing mode", and `tep`'s `--mode` becomes `--typing-mode` (`--mode`
+fails, naming the new flag).
 
 ### 4.2 The sentence (TODO's third item)
 
@@ -129,12 +145,13 @@ So merging the two modes changes the web app's screen and the engine's
 paths, not the format.
 
 If the merged algorithm later needs a new option, it is added as an
-optional key, and version 1 files still read. A key removed or renamed
-moves the format to version 2, and the package keeps reading version 1.
+optional key, and version 2 files still read. A key removed or renamed
+moves the format to version 3, and the package keeps reading the earlier
+versions.
 
 ### 4.3 What the format adds for the package
 
-Nothing. Version 1 already states everything a caller can set. The
+Only the renaming in §4.1: version 2 states everything a caller can set. The
 package's schema is the CLI's less `output`; the CLI's is the package's
 plus `output`.
 
@@ -145,20 +162,22 @@ data, safe to store and to send between threads.
 
 ### 5.1 Choices, to build a form
 
-- `TYPING_MODES`: each mode's name (`ten-finger`), label and description.
+- `APP_MODES`: each app mode's name (`sentences`), label and description.
+- `TYPING_MODES`: each typing mode's name (`ten-finger`), label and
+  description.
 - `SITE_PRESETS`: each preset's name, label, note and rule values.
 - `STRENGTH_PRESETS`: each preset's name, label, bits and hint.
 - `FIELDS`: every `rules`, `options` and `sentence` key, with its label,
   description, kind and range, and its default (`symbols` defaults to the
   core's default allowed set).
-- `DEFAULT_CONFIG`: `{ version: 1 }`, and `CONFIG_VERSION`.
+- `DEFAULT_CONFIG`: `{ version: 2 }`, and `CONFIG_VERSION`.
 
 ### 5.2 Reading and resolving a configuration
 
 ```ts
 resolveConfig(config: unknown): Resolved
 type Resolved =
-  | { ok: true; settings: Settings; warnings: Message[]; notes: string[] }
+  | { ok: true; settings: Settings; warnings: Message[]; notes: string[]; changed: string[] }
   | { ok: false; problems: Problem[] };
 ```
 
@@ -170,6 +189,9 @@ type Resolved =
   comes back at once. Nothing is fixed to fit.
 - A warning (an unreachable strength target, an option the typing mode has
   no use for) does not stop `ok`.
+- `changed` lists the `options` keys whose values differ from the typing
+  mode's profile, so every front end marks a changed mode the same way
+  (§6). It is not a warning: each front end decides how to show it.
 - `Settings` is opaque to the caller: pass it to `generate`.
 
 ```ts
@@ -227,8 +249,12 @@ item reads the same in a year.
 
 `@salientform/elegant-passwords/zxcvbn` exports
 `zxcvbnReading(password): Promise<ZxcvbnReading>`: the badge's word and
-crack time, with the library loaded on first use (about 400 KB gzipped),
-so a caller that never shows the badge never loads it.
+crack time, with the estimator loaded on first use (about 400 KB
+gzipped), so a caller that never shows the badge never loads it. The
+estimator becomes zxcvbn-ts's code merged into `src/lib` (`TODO.md`,
+2026-11-18), so the package lists no zxcvbn dependency. If the package
+ships before the merge, this entry wraps `zxcvbn` 4.4.2 as a dependency
+until then; its API does not change.
 
 ## 6. The web app
 
@@ -240,6 +266,18 @@ so a caller that never shows the badge never loads it.
 - It writes options as values, never `preset`, so its passwords do not
   change when a mode's profile is re-measured, as today. It writes `rules`
   in full and no `site`, as it does not remember which preset filled them.
+- **A mode changed by hand stays selected, marked as changed**
+  (2026-11-18, the user's decision). Picking a typing mode fills in its
+  options, which the user may then change freely, even against the mode.
+  Once one differs, the mode stays picked (Difficulty is still scored for
+  it) but shows as changed, for example "Ten-finger (changed)", and each
+  option that differs warns beside it with the mode's own value
+  ("Ten-finger sets this to Moderate") and a way to put it back. This
+  replaces today's single line, "The options differ from this mode's",
+  and its button. The configuration needs no new key: a mode whose
+  options differ from its profile is the changed state (`changed`, §5.2),
+  so a saved configuration reopens marked the same way, and one whose
+  mode is re-measured later reopens marked changed, which is true.
 - Which sentence mode is open, the order, the session and My list keep
   their own keys. The open mode goes when one sentence mode is built.
 - My list saves, with each password it adds from a card, the configuration
@@ -251,15 +289,18 @@ so a caller that never shows the badge never loads it.
 
 Imports the config model, names, fields, schema, layering and writer from
 `src/lib/config/`, and adds its `output` section and count rules.
-Everything it prints is unchanged. `tep` stays out of npm (`TODO.md`, "tep
+Everything it prints is unchanged except the renaming (§4.1): `--mode`
+becomes `--typing-mode`, and help, messages and the wizard say "typing
+mode". `tep` stays out of npm (`TODO.md`, "tep
 CLI: decisions to revisit").
 
 ## 8. Building and publishing
 
 - `packages/core/package.json`: the name, `"type": "module"`, `exports`
   for `.` and `./zxcvbn`, `files: ["dist"]`, `sideEffects: false`,
-  MIT, and dependencies `zod`, `yaml` and `zxcvbn`, pinned as the app pins
-  them.
+  MIT, and dependencies `zod` and `yaml`, pinned as the app pins them
+  (and `zxcvbn` only until the merge, §5.5). The merged zxcvbn-ts code
+  carries its MIT notice.
 - `pnpm build:package` builds it; `pnpm pack:package` makes the tarball.
 - A test builds the package, imports the built files in Node, resolves a
   configuration, generates and scores; another checks that the type
@@ -267,10 +308,10 @@ CLI: decisions to revisit").
 - Versions: `0.1.0` first. `1.0.0` once Dossier's dialog runs on it, then
   semver, where a change to anything §5 names is a major version. The
   config format's version is separate and moves only as §4.2 says.
-- Publishing is the user's step: create the npm organisation `salientform`,
-  `npm login`, then `npm publish --access public` from `packages/core`.
-  Until then Dossier can depend on the packed tarball or on
-  `file:../elegant-passwords/packages/core`.
+- Publishing is still to be discussed (§10, 5). Until it is settled
+  Dossier can depend on the packed tarball or on
+  `file:../elegant-passwords/packages/core`, so the build does not wait
+  for it.
 
 ## 9. Out of scope
 
@@ -281,15 +322,22 @@ CLI: decisions to revisit").
   (`docs/decisions.md`, "Where generation runs"); Dossier may run it in
   one of its own.
 
-## 10. For the user to decide
+## 10. Decisions
+
+Taken on 2026-11-18:
 
 1. **The API speaks the config file's vocabulary** (`max-length`,
    `ten-finger`, `strength: strong`), not the engine's (`maxLength`,
-   `targetBits: 50`). One vocabulary for the file, the JSON and the code;
-   the engine's names stay internal and free to change. Recommended.
-2. **The web app saves options as values**, never `preset` (§6), keeping
-   today's behaviour. The alternative follows a re-measured profile, as
-   `options: preset` does in `tep`. Recommended: values.
-3. **`0.1.0` first, `1.0.0` once Dossier runs on it.** Recommended.
-4. **Publishing**: you create the npm organisation and publish, or log
-   in and give the go-ahead for me to run `npm publish`.
+   `targetBits: 50`). The engine's names stay internal and free to change.
+2. **The web app saves options as values**, never `preset` (§6). A mode
+   whose options were changed is marked as changed (§6).
+3. **`0.1.0` first, `1.0.0` once Dossier runs on it.**
+
+4. **The modes' names**: `app-mode` (Sentences, Keyboard patterns) and
+   `typing-mode` (today's mode), as config version 2 (§4.1).
+
+Still open:
+
+5. **Publishing**: the user registers the npm organisation `salientform`
+   (`TODO.md`); whether and when to publish is to be discussed. Until
+   then Dossier uses the tarball or a `file:` path (§8).
