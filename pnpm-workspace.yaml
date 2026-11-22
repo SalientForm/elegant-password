@@ -1,5 +1,2 @@
-# pnpm's settings for this single-package repository.
-# Workspace Wayfinder is a release tarball committed under vendor/ (file:vendor/…), in no registry: pnpm's
-# release-age check of a fresh install (CI) would ask the registry about it and fail on the 404.
-minimumReleaseAgeExclude:
-  - '@salientform/workspace-wayfinder'
+# pnpm's settings for this single-package repository. The file also marks this folder as pnpm's root, so a
+# worktree under .worktrees/ never resolves to the checkout it sits in.
