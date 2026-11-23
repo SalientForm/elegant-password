@@ -1,6 +1,6 @@
 // tep g's command line: every setting in the field table is a flag
 // (--max-length 20, --spaces / --no-spaces), plus the flags that are not
-// settings (-c, --mode, --site, --format...). Each refusal says which flag,
+// settings (-c, --typing-mode, --site, --format...). Each refusal says which flag,
 // what was wrong with it, and what it takes; Node's own parser errors are
 // reworded in those terms.
 
@@ -78,6 +78,8 @@ function reword(e: unknown, args: string[]): never {
   switch (err.code) {
     case 'ERR_PARSE_ARGS_UNKNOWN_OPTION': {
       const flag = named ?? '?';
+      // Config version 2 renamed the typing mode: the old flag names the new one rather than a near miss.
+      if (flag === '--mode') throw usageError('--mode is now --typing-mode.', `For example: ${example('typing-mode')}`);
       const near = closest(flag, ALL_FLAGS);
       throw usageError(`unknown flag ${flag}.${near ? ` Did you mean ${near}?` : ''}`, 'Run "tep help g" for every flag.');
     }
@@ -111,7 +113,7 @@ function reword(e: unknown, args: string[]): never {
       const kv = arg.match(/^([a-z-]+)=(.*)$/);
       throw usageError(
         `"${arg}" is not a flag: tep g takes only flags.`,
-        kv ? `Flags start with two dashes: --${kv[1]} ${kv[2]}` : 'Run "tep help g" for every flag.',
+        kv ? `Flags start with two dashes: --${kv[1] === 'mode' ? 'typing-mode' : kv[1]} ${kv[2]}` : 'Run "tep help g" for every flag.',
       );
     }
     default:
@@ -171,10 +173,11 @@ export function parseGenerateArgs(argv: string[]): GenerateFlags {
     layer.values[f.name] = { value: r.value, source: flagSource(f.name) };
   }
 
-  if (typeof values.mode === 'string') {
-    const r = lookup('typing mode', MODE_NAMES, values.mode);
-    if (!r.ok) throw usageError(`--mode ${r.error}`, `For example: ${example('mode')}`);
-    layer.mode = { value: r.value as TypingMode, source: flagSource('mode') };
+  const typingMode = values['typing-mode'];
+  if (typeof typingMode === 'string') {
+    const r = lookup('typing mode', MODE_NAMES, typingMode);
+    if (!r.ok) throw usageError(`--typing-mode ${r.error}`, `For example: ${example('typing-mode')}`);
+    layer.mode = { value: r.value as TypingMode, source: flagSource('typing-mode') };
   }
   if (typeof values.site === 'string') {
     const r = lookup('site preset', SITE_NAMES, values.site);

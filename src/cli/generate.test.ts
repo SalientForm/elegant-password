@@ -56,7 +56,7 @@ describe('tep g: output', () => {
   });
 
   it('--format json: the documented fields, difficulty for the typing mode, warnings included', async () => {
-    const { code, io } = await run(['g', '-n', '2', '--mode', 'two-finger', '--format', 'json']);
+    const { code, io } = await run(['g', '-n', '2', '--typing-mode', 'two-finger', '--format', 'json']);
     expect(code).toBe(0);
     const data = JSON.parse(io.out());
     expect(Object.keys(data)).toEqual(['mode', 'typingMode', 'separator', 'sort', 'config', 'warnings', 'suggestions']);
@@ -100,8 +100,8 @@ describe('tep g: warnings and notes on stderr', () => {
     expect(JSON.parse(io.out()).warnings.some((w: string) => /out of reach/.test(w))).toBe(true);
   });
 
-  it('an option set by hand that the mode has no use for', async () => {
-    const { code, io } = await run(['g', '--mode', 'two-finger', '--avoid-pinky']);
+  it('an option set by hand that the typing mode has no use for', async () => {
+    const { code, io } = await run(['g', '--typing-mode', 'two-finger', '--avoid-pinky']);
     expect(code).toBe(0);
     expect(io.err()).toContain('tep g: warning: --avoid-pinky sets avoid pinky stretches to on, which Two-finger typing has no use for');
   });
@@ -183,15 +183,21 @@ describe('tep g: the command line (exit 2)', () => {
   it('a flag whose value is another flag', () => usage(['--max-length', '--spaces'], 'the value after --max-length, "--spaces", starts with a dash, so it reads as another flag.', 'If it is the value, join them with "=": --max-length=--spaces'));
   it('a value for an on/off flag', () => usage(['--spaces=yes'], '--spaces takes no value.', 'It is on or off: write --spaces for on, --no-spaces for off.'));
   it('a value starting with a dash, with how to give it', () => usage(['--symbols', '-_'], 'the value after --symbols, "-_", starts with a dash, so it reads as another flag.', 'If it is the value, join them with "=": --symbols=-_'));
-  it('key=value written as an argument, with the flag meant', () => usage(['mode=ten-finger'], '"mode=ten-finger" is not a flag: tep g takes only flags.', 'Flags start with two dashes: --mode ten-finger'));
+  it('key=value written as an argument, with the flag meant', () => usage(['typing-mode=ten-finger'], '"typing-mode=ten-finger" is not a flag: tep g takes only flags.', 'Flags start with two dashes: --typing-mode ten-finger'));
+  it('mode=ten-finger written as an argument, with version 2\'s flag', () => usage(['mode=ten-finger'], '"mode=ten-finger" is not a flag: tep g takes only flags.', 'Flags start with two dashes: --typing-mode ten-finger'));
+  it('--mode, renamed --typing-mode, names the new flag', async () => {
+    await usage(['--mode', 'two-finger'], '--mode is now --typing-mode.', 'For example: --typing-mode two-finger');
+    await usage(['--mode=two-finger'], '--mode is now --typing-mode.');
+    await usage(['--mode'], '--mode is now --typing-mode.');
+  });
   it('a flag given twice', () => usage(['--max-length', '12', '--max-length=20'], '--max-length is given 2 times (--max-length 12, --max-length 20).'));
   it('on and off both', () => usage(['--spaces', '--no-spaces'], '--spaces and --no-spaces are both given; they contradict each other.'));
   it('-c and --no-config', () => usage(['-c', 'x.yml', '--no-config'], '-c and --no-config contradict each other: one names a config file, the other says to read none.'));
   it('a value out of range', () => usage(['--max-length', '0'], '--max-length must be from 1 to 128; found 0.', 'For example: --max-length 12'));
   it('a value of the wrong kind', () => usage(['--comfort', 'loose'], '--comfort must be one of strict, balanced, relaxed; found "loose".'));
   it('a symbol that is not one', () => usage(['--symbols', '!a'], /^tep g: error: --symbols cannot include the letter "a"/));
-  it('an unknown mode, preset or format', async () => {
-    await usage(['--mode', 'two'], /^tep g: error: --mode "two" is not a typing mode\. The typing modes are: /, /^For example: --mode two-finger$/);
+  it('an unknown typing mode, preset or format', async () => {
+    await usage(['--typing-mode', 'two'], /^tep g: error: --typing-mode "two" is not a typing mode\. The typing modes are: /, /^For example: --typing-mode two-finger$/);
     await usage(['--site', 'banks'], /^tep g: error: --site "banks" is not a site preset\./, /^For example: --site typical-site$/);
     await usage(['--format', 'yaml'], '--format must be one of table, plain, json; found "yaml".', /^For example: --format json$/);
     expect((await run(['g', '-n', '1', '--format', 'JSON'])).io.out()).toMatch(/^\{/); // a choice is matched regardless of case
@@ -204,7 +210,7 @@ describe('tep g: the command line (exit 2)', () => {
   it('a flag with a short form that is missing its value names the long form, and -n -5 gets a working suggestion', async () => {
     await usage(['--format'], '--format needs a value, as in --format json.');
     await usage(['-c'], '--config needs a value, as in --config bank.yml.');
-    await usage(['-m'], '--mode needs a value, as in --mode two-finger.');
+    await usage(['-m'], '--typing-mode needs a value, as in --typing-mode two-finger.');
     await usage(['-n', '-5'], 'the value after -n (--count), "-5", starts with a dash, so it reads as another flag.', /^If it is the value, join them with "=": --count=-5$/);
     expect((await run(['g', '--count=-5'])).io.err()).toMatch(/^tep g: error: --count must be from 1 to \d+; found -5\./); // and that suggestion parses
     await usage(['--strength', 'strng'], '--strength must be minimal, everyday, strong, very-strong, master-password, or a number of bits from 0 to 256; found "strng". Did you mean strong?'); // one question mark, no full stop after it

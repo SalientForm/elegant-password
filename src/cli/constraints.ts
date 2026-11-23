@@ -6,6 +6,7 @@
 // left unanswered, and a choice is checked against every other answer.
 // Pure: the wizard asks, this decides.
 
+import type { AppMode } from '../lib/appModes';
 import { SLOW_MS } from '../lib/budget';
 import { problemsOf, reachableBits, type Problem } from '../lib/consistency';
 import { DEFAULT_TYPING_MODE, TYPING_MODES, type TypingMode } from '../lib/difficulty';
@@ -30,6 +31,8 @@ export const QUESTION_FAIL_MS = SLOW_MS;
 
 /** What the wizard has been told. Fields absent are not answered yet. */
 export interface Answers {
+  /** Carried over from a loaded file: the wizard does not ask it while there is only one. */
+  appMode?: AppMode;
   mode?: TypingMode;
   /** The site preset the rules come from, by name. */
   site?: string;

@@ -48,7 +48,7 @@ output:
   it('reads every section into the engine\'s terms, with the line each key is on', () => {
     const { model, lines } = parseConfig(text, 'tep.yml');
     expect(model).toEqual({
-      mode: 'two-finger',
+      typingMode: 'two-finger',
       site: 'short-max-16',
       rules: { 'max-length': 14, symbols: '!@#' },
       options: { swaps: 3, separator: ' ' },
@@ -70,6 +70,14 @@ output:
     expect(r.count).toBe(2);
   });
 
+  it('reads version 2 the same, the typing mode\'s source naming its key as the file has it', () => {
+    const v2 = text.replace('version: 1\nmode: two-finger\n', 'version: 2\napp-mode: sentences\ntyping-mode: two-finger\n');
+    const { model, lines } = parseConfig(v2, 'bank.yml');
+    expect(model).toEqual({ ...parseConfig(text, 'bank.yml').model, appMode: 'sentences' });
+    expect(lines).toMatchObject({ 'app-mode': 3, 'typing-mode': 4, site: 5 });
+    expect(layerOf({ model, lines, file: 'bank.yml' }).mode).toEqual({ value: 'two-finger', source: { kind: 'file', file: 'bank.yml', line: 4, key: 'typing-mode' } });
+  });
+
   it('takes options: preset, or no options at all, as the mode\'s preset', () => {
     expect(parseConfig('version: 1\noptions: preset\n', 'x').model.options).toBe('preset');
     expect(parseConfig('version: 1\n', 'x').model).toEqual(emptyModel());
@@ -77,7 +85,7 @@ output:
 
   it('accepts a mode by its alias and empty sections', () => {
     const { model } = parseConfig('version: 1\nmode: minimal-quick\nrules:\nsentence:\n', 'x');
-    expect(model.mode).toBe('quick');
+    expect(model.typingMode).toBe('quick');
     expect(model.rules).toEqual({});
   });
 });
@@ -128,13 +136,13 @@ describe('parseConfig: every way a file can be wrong, each with its line', () =>
   });
 
   it('a file that is not a map', () => {
-    expect(messages('- 1\n- 2\n')).toEqual(['tep.yml:1: the file must be a map of keys (version: 1, mode: ..., rules: ...), not a list']);
+    expect(messages('- 1\n- 2\n')).toEqual(['tep.yml:1: the file must be a map of keys (version: 2, typing-mode: ..., rules: ...), not a list']);
   });
 
   it('no version, a newer version, a wrong version', () => {
-    expect(messages('mode: quick\n')).toEqual(['tep.yml:1: the file has no version. Add "version: 1" as its first line.']);
-    expect(messages('version: 2\n')).toEqual(['tep.yml:1: version 2 was written by a newer tep; this one reads version 1. Upgrade tep, or run tep config to write a version 1 file.']);
-    expect(messages('version: one\n')).toEqual(['tep.yml:1: version must be 1; found the text "one".']);
+    expect(messages('typing-mode: quick\n')).toEqual(['tep.yml:1: the file has no version. Add "version: 2" as its first line.']);
+    expect(messages('version: 3\n')).toEqual(['tep.yml:1: version 3 was written by a newer tep; this one reads versions 1 and 2. Upgrade tep, or run tep config to write a version 2 file.']);
+    expect(messages('version: one\n')).toEqual(['tep.yml:1: version must be 1 or 2; found the text "one".']);
   });
 
   it('unknown keys, at the top and in a section, with the likeliest one meant and the ones there are', () => {
@@ -209,9 +217,10 @@ swaps:
 describe('serializeConfig', () => {
   const today = '2026-10-20';
   const models: ConfigModel[] = [
-    { ...emptyModel(), mode: 'two-finger', site: 'typical-site' },
+    { ...emptyModel(), typingMode: 'two-finger', site: 'typical-site' },
     {
-      mode: 'quick',
+      appMode: 'sentences',
+      typingMode: 'quick',
       rules: { 'min-length': 10, 'max-length': 20, 'min-uppercase': 1, 'min-digits': 1, 'min-symbols': 1, symbols: '!#&*,:', spaces: false },
       options: { strength: 45, shortest: true, comfort: 'strict', separator: '#', swaps: 1 },
       sentence: { 'target-length': null, shrink: 'vowels' },
@@ -225,17 +234,18 @@ describe('serializeConfig', () => {
     for (const model of models) {
       const text = serializeConfig(model, today);
       const back = parseConfig(text, 'x').model;
-      expect(back, text).toEqual({ ...model, mode: model.mode ?? 'ten-finger', swaps: model.swaps });
+      expect(back, text).toEqual({ ...model, appMode: 'sentences', typingMode: model.typingMode ?? 'ten-finger', swaps: model.swaps });
     }
   });
 
-  it('writes the header, the mode with the choices, the preset\'s note and quoted symbols', () => {
+  it('writes the header, version 2, the modes with their choices, the preset\'s note and quoted symbols', () => {
     const text = serializeConfig(models[0]!, today);
-    expect(text.split('\n').slice(0, 6)).toEqual([
+    expect(text.split('\n').slice(0, 7)).toEqual([
       '# tep config, written by `tep config` on 2026-10-20.',
       '# Run `tep g` in this directory, or `tep g -c <this file>`. Edit it by hand or run `tep config` again.',
-      'version: 1',
-      'mode: two-finger            # two-finger | ten-finger | one-handed | quick',
+      'version: 2',
+      'app-mode: sentences         # sentences',
+      'typing-mode: two-finger     # two-finger | ten-finger | one-handed | quick',
       '',
       'site: typical-site          # 12-32, A + 1 + #',
     ]);
@@ -261,7 +271,7 @@ describe('files on disk', () => {
   it('loads a file', () => {
     const path = join(dir, 'ok.yml');
     writeFileSync(path, 'version: 1\nmode: quick\n');
-    expect(loadConfig(path, 'ok.yml').model.mode).toBe('quick');
+    expect(loadConfig(path, 'ok.yml').model.typingMode).toBe('quick');
   });
 
   it('a missing file says so and how to make it', () => {

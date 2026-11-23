@@ -4,7 +4,7 @@ summary: >
   Eight steps building the core package: the config model into src/lib/config, reading it in the core, config
   version 2, the package's API, building and packing, the web app's one configuration, the changed typing mode, and
   the documentation.
-evidence: Branch feature/core-package (2026-11-18), P1 and P2 built.
+evidence: Branch feature/core-package (2026-11-22), P1 to P3 built.
 spec: docs/specs/2026-11-03-core-package-design.md
 ---
 

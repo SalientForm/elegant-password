@@ -4,6 +4,7 @@
 // answer can contradict another; if one ever gets through, that is a bug,
 // said at once, and the question is asked again without it.
 
+import { DEFAULT_APP_MODE } from '../lib/appModes';
 import { warningsOf } from '../lib/consistency';
 import { DEFAULT_TYPING_MODE } from '../lib/difficulty';
 import { runInputs } from '../lib/engine';
@@ -144,7 +145,8 @@ export function modelOf(a: Answers): ConfigModel {
   const mode = a.mode ?? DEFAULT_TYPING_MODE;
   const unused = new Set(unusedIn(mode).map((u) => reqField(u.key)!.name));
   return {
-    mode,
+    appMode: a.appMode ?? DEFAULT_APP_MODE,
+    typingMode: mode,
     ...(a.site ? { site: a.site } : {}),
     rules: a.site ? { ...a.rules } : rulesOf(a),
     options: a.optionsHow === 'each' ? Object.fromEntries(fieldsIn('options').filter((f) => !unused.has(f.name)).map((f) => [f.name, reqOf(a)[f.target.key as keyof Requirements]])) : 'preset',
@@ -157,7 +159,8 @@ export function modelOf(a: Answers): ConfigModel {
 /** The answers a loaded config stands for. Rules a file leaves out are the defaults, as tep g reads them. */
 export function answersOf(model: ConfigModel): Answers {
   const a: Answers = {
-    mode: model.mode ?? DEFAULT_TYPING_MODE,
+    mode: model.typingMode ?? DEFAULT_TYPING_MODE,
+    ...(model.appMode ? { appMode: model.appMode } : {}),
     rules: {},
     rulesAnswered: true,
     options: {},
