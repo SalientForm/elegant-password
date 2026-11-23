@@ -491,6 +491,10 @@
       },
       {
         "kind": "test",
+        "title": "reads version 2 the same, the typing mode's source naming its key as the file has it"
+      },
+      {
+        "kind": "test",
         "title": "takes options: preset, or no options at all, as the mode's preset"
       },
       {
@@ -575,7 +579,7 @@
       },
       {
         "kind": "test",
-        "title": "writes the header, the mode with the choices, the preset's note and quoted symbols"
+        "title": "writes the header, version 2, the modes with their choices, the preset's note and quoted symbols"
       },
       {
         "kind": "test",
@@ -846,7 +850,7 @@
       },
       {
         "kind": "test",
-        "title": "an option set by hand that the mode has no use for"
+        "title": "an option set by hand that the typing mode has no use for"
       },
       {
         "kind": "test",
@@ -910,6 +914,14 @@
       },
       {
         "kind": "test",
+        "title": "mode=ten-finger written as an argument, with version 2's flag"
+      },
+      {
+        "kind": "test",
+        "title": "--mode, renamed --typing-mode, names the new flag"
+      },
+      {
+        "kind": "test",
         "title": "a flag given twice"
       },
       {
@@ -934,7 +946,7 @@
       },
       {
         "kind": "test",
-        "title": "an unknown mode, preset or format"
+        "title": "an unknown typing mode, preset or format"
       },
       {
         "kind": "test",
@@ -1067,7 +1079,7 @@
       },
       {
         "kind": "test",
-        "title": "name only typing modes and site presets that exist"
+        "title": "name only app modes, typing modes and site presets that exist"
       },
       {
         "kind": "test",
@@ -1514,6 +1526,10 @@
       {
         "kind": "test",
         "title": "opens on the review with its answers, and asks before overwriting"
+      },
+      {
+        "kind": "test",
+        "title": "saves a version 1 file it opened as version 2, the same settings under the new names"
       },
       {
         "kind": "test",
@@ -2349,6 +2365,14 @@
       },
       {
         "kind": "test",
+        "title": "reads version 1, its mode as the typing mode and its app mode left unstated, as version 2 reads the same"
+      },
+      {
+        "kind": "test",
+        "title": "names a key of the other version as such, not as an unknown key"
+      },
+      {
+        "kind": "test",
         "title": "takes options: preset, no options, and empty sections as stating nothing"
       },
       {
@@ -2452,6 +2476,10 @@
       {
         "kind": "test",
         "title": "reads every section, with the line each key is set on: a value's own, a section's key"
+      },
+      {
+        "kind": "test",
+        "title": "puts a key of the other version on its own line"
       },
       {
         "kind": "test",

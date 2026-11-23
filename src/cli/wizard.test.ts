@@ -45,7 +45,7 @@ describe('tep config: a new file', () => {
     ]);
     expect(io.prompts.said[0]).toEqual({ kind: 'info', message: 'Writing tep.yml. Ctrl+C stops at any point without writing anything.' });
     expect(io.prompts.said.at(-1)).toEqual({ kind: 'info', message: 'Saved tep.yml. Make passwords with: tep g' });
-    expect(parseConfig(text!, 'tep.yml').model).toEqual({ mode: 'two-finger', site: 'typical-site', rules: {}, options: 'preset', sentence: {}, output: {} });
+    expect(parseConfig(text!, 'tep.yml').model).toEqual({ appMode: 'sentences', typingMode: 'two-finger', site: 'typical-site', rules: {}, options: 'preset', sentence: {}, output: {} });
     expect(text).toContain('# tep config, written by `tep config` on 2026-10-20.');
   });
 
@@ -214,7 +214,7 @@ describe('tep config: Esc means back', () => {
     const { code, io, text } = await wizard([...quick(), { text: '1' }, { escape: true }, { text: 's' }]);
     expect(code).toBe(EXIT.ok);
     expect(io.prompts.said).toContainEqual({ kind: 'info', message: 'Back to the review; line 1 is unchanged.' });
-    expect(text).toContain('mode: two-finger'); // the mode question was left with Esc: the answer stands
+    expect(text).toContain('\ntyping-mode: two-finger'); // the mode question was left with Esc: the answer stands
     const stopped = await wizard([...quick(), { text: '1' }, { cancel: true }]);
     expect(stopped.code).toBe(EXIT.interrupted);
     expect(stopped.text).toBeUndefined();
@@ -233,7 +233,7 @@ describe('tep config: Esc means back', () => {
 
 describe('tep config: what it writes', () => {
   it('leaves out the options the typing mode has no use for, so tep g never warns about its own file', async () => {
-    const answers = { ...answersOf({ mode: 'two-finger', site: 'typical-site', rules: {}, options: 'preset', sentence: {}, output: {} }), optionsHow: 'each' as const, options: {} };
+    const answers = { ...answersOf({ typingMode: 'two-finger', site: 'typical-site', rules: {}, options: 'preset', sentence: {}, output: {} }), optionsHow: 'each' as const, options: {} };
     const model = modelOf(answers);
     expect(Object.keys(model.options)).not.toContain('avoid-pinky'); // two index fingers have no pinky to stretch
     expect(Object.keys(model.options)).toContain('comfort');
@@ -312,7 +312,7 @@ describe('tep config: a contradiction that gets through is a bug, said at once',
 describe('tep config: the review', () => {
   it('changes a line, shaped by every other line, then returns to the review', async () => {
     const { text } = await wizard([...quick(), { text: '1' }, { select: 'One-handed' }, { text: 's' }]);
-    expect(parseConfig(text!, 'x').model.mode).toBe('one-handed');
+    expect(parseConfig(text!, 'x').model.typingMode).toBe('one-handed');
   });
 
   it('names the line that rules a choice out', async () => {
@@ -345,9 +345,9 @@ describe('tep config: the review', () => {
   it('changing the mode keeps options set one by one unless asked, and offers the new preset only if it fits', async () => {
     const steps: Step[] = [{ select: 'Ten-finger' }, { select: 'Typical site' }, { select: 'Set each option' }, ...['Everyday', 'Off', 'Balanced', 'On', 'Off', 'On', 'Auto', 'On', '2', '0', '0', '0', 'Off'].map((s) => ({ select: s })), { select: 'Keep' }];
     const kept = await wizard([...steps, { text: '1' }, { select: 'Two-finger' }, { confirm: false }, { text: 's' }]);
-    expect(parseConfig(kept.text!, 'x').model).toMatchObject({ mode: 'two-finger', options: expect.objectContaining({ swaps: 2 }) });
+    expect(parseConfig(kept.text!, 'x').model).toMatchObject({ typingMode: 'two-finger', options: expect.objectContaining({ swaps: 2 }) });
     const taken = await wizard([...steps, { text: '1' }, { select: 'Two-finger' }, { confirm: true }, { text: 's' }]);
-    expect(parseConfig(taken.text!, 'x').model).toMatchObject({ mode: 'two-finger', options: 'preset' });
+    expect(parseConfig(taken.text!, 'x').model).toMatchObject({ typingMode: 'two-finger', options: 'preset' });
   });
 
   it('switching options from the preset to one by one starts from the preset\'s values', async () => {
@@ -366,7 +366,16 @@ describe('tep config: an existing file', () => {
     expect(code).toBe(0);
     expect(io.prompts.said[0]!.message).toBe('Editing tep.yml: every answer is below, ready to change.');
     expect(asked(io, /^Overwrite tep\.yml\? Comments added to it by hand are not kept\.$/)).toHaveLength(1);
-    expect(parseConfig(text!, 'x').model).toMatchObject({ mode: 'quick', site: 'no-spaces' });
+    expect(parseConfig(text!, 'x').model).toMatchObject({ typingMode: 'quick', site: 'no-spaces' });
+  });
+
+  it('saves a version 1 file it opened as version 2, the same settings under the new names', async () => {
+    const cwd = dir();
+    writeFileSync(join(cwd, 'tep.yml'), 'version: 1\nmode: quick\nsite: no-spaces\n');
+    const { text } = await wizard([{ text: 's' }, { confirm: true }], { cwd });
+    expect(text).toMatch(/^version: 2\napp-mode: sentences +# .*\ntyping-mode: quick +# /m);
+    expect(text).not.toMatch(/^mode:/m);
+    expect(parseConfig(text!, 'x').model).toMatchObject({ appMode: 'sentences', typingMode: 'quick', site: 'no-spaces' });
   });
 
   it('no to overwriting goes back to the review', async () => {

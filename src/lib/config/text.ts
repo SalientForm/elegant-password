@@ -4,12 +4,13 @@
 // words the comments its own way (tep names its commands) and may add
 // sections of its own after the options (tep's output).
 
+import { DEFAULT_APP_MODE } from '../appModes';
 import { DEFAULT_TYPING_MODE } from '../difficulty';
 import { modeLabel } from '../modeProfiles';
 import { SITE_PRESETS } from '../sitePresets';
 import { fieldsIn, formatValue, type ConfigField } from './fields';
 import type { ConfigModel } from './model';
-import { MODE_NAMES, modeName, SITE_NAMES } from './names';
+import { APP_MODE_NAMES, appModeName, MODE_NAMES, modeName, SITE_NAMES } from './names';
 import { CONFIG_VERSION } from './version';
 
 /** How a front end words the comments, and what it adds. */
@@ -42,8 +43,12 @@ const pad = (s: string, width = 28) => (s.length >= width ? `${s} ` : s.padEnd(w
 /** The configuration's text: header, then each section with a comment saying what it is. Sections the model does not state are left out. */
 export function configToText(model: ConfigModel, wording: TextWording = DEFAULT_WORDING): string {
   const out: string[] = [...wording.header.map((line) => `# ${line}`), `version: ${CONFIG_VERSION}`];
-  const mode = model.mode ?? DEFAULT_TYPING_MODE;
-  out.push(`${pad(`mode: ${scalar(modeName(mode))}`)}# ${MODE_NAMES.map((m) => m.name).join(' | ')}`, '');
+  const mode = model.typingMode ?? DEFAULT_TYPING_MODE;
+  out.push(
+    `${pad(`app-mode: ${scalar(appModeName(model.appMode ?? DEFAULT_APP_MODE))}`)}# ${APP_MODE_NAMES.map((m) => m.name).join(' | ')}`,
+    `${pad(`typing-mode: ${scalar(modeName(mode))}`)}# ${MODE_NAMES.map((m) => m.name).join(' | ')}`,
+    '',
+  );
 
   if (model.site) {
     const preset = SITE_PRESETS.find((p) => SITE_NAMES.find((s) => s.value === p)!.name === model.site)!;

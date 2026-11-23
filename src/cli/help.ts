@@ -5,7 +5,10 @@ import { EXIT_MEANINGS } from './errors';
 import { CONFIG_VERSION } from '../lib/config/version';
 import { FIELDS, fieldsIn, SEPARATOR_NAMES, type CliField, type FieldGroup } from './fields';
 import { META_FLAGS, SHORT_SETTINGS } from './flagList';
-import { MODE_NAMES } from '../lib/config/names';
+import { APP_MODE_NAMES, MODE_NAMES } from '../lib/config/names';
+
+/** "a, b or c"; one name alone, as it is. */
+const orList = (names: readonly string[]) => names.join(', ').replace(/, ([^,]*)$/, ' or $1');
 
 const pad = (s: string, width: number) => (s.length >= width ? `${s}  ` : s.padEnd(width));
 
@@ -19,7 +22,7 @@ function fieldFlag(f: CliField): string {
 
 const GROUP_TITLES: Record<FieldGroup, string> = {
   rules: 'The site\'s rules (config: rules.<name>)',
-  options: 'How passwords are made; --mode fills these in (config: options.<name>)',
+  options: 'How passwords are made; --typing-mode fills these in (config: options.<name>)',
   sentence: 'Your own sentence, with --sentence - (config: sentence.<name>)',
   output: 'Output (config: output.<name>)',
 };
@@ -35,7 +38,7 @@ Usage:
 
 Examples:
   tep g                                   with ./tep.yml if there is one, else the defaults
-  tep g --site short-max-16 --mode two-finger
+  tep g --site short-max-16 --typing-mode two-finger
   tep g -c bank.yml -n 3
   tep g --rules "8-20 characters, at least one number" --format json
   tep g --sentence - < sentence.txt
@@ -73,13 +76,16 @@ picked, with the reason. Needs a terminal.
 The file, which can also be written by hand (YAML; every key is optional
 except version; the keys are tep g's flags without their dashes):
   version: ${CONFIG_VERSION}
-  mode: two-finger          # ${MODE_NAMES.map((m) => m.name).join(', ').replace(/, ([^,]*)$/, ' or $1')}
+  app-mode: sentences       # ${orList(APP_MODE_NAMES.map((m) => m.name))}
+  typing-mode: two-finger   # ${orList(MODE_NAMES.map((m) => m.name))}
   site: typical-site        # a site preset, or rules: with min-length, max-length, ...
   rules:
     symbols: "!@#$%"        # symbols are quoted, as YAML gives many a meaning
-  options: preset           # the mode's own options, or a map: strength, comfort, ...
+  options: preset           # the typing mode's own options, or a map: strength, comfort, ...
   output:
     count: 3
+A version 1 file, which names the typing mode "mode", still reads; tep
+config writes version ${CONFIG_VERSION}.
 `;
 
 export const UNINSTALL_HELP = `Usage: tep uninstall [--yes | -y]

@@ -9,8 +9,8 @@ import { z } from 'zod';
 import { mappingSettingsProblems, type MappingSettings } from '../mappingSettings';
 import { fieldsIn, parseValue, shownValue, type FieldGroup, type FieldOf } from './fields';
 import { emptyModel, type ConfigModel } from './model';
-import { closest, lookup, MODE_NAMES, SITE_NAMES } from './names';
-import { CONFIG_VERSION } from './version';
+import { APP_MODE_NAMES, closest, lookup, MODE_NAMES, SITE_NAMES, type Named } from './names';
+import { CONFIG_VERSION, READ_VERSIONS, VERSIONS_READ } from './version';
 
 /** Where a problem is: ["rules", "max-length"], ["swaps", "custom", 1, "to"]; [] for the configuration as a whole. */
 export type KeyPath = readonly (string | number)[];
@@ -59,16 +59,36 @@ export function checkConfig<G extends string = never>(input: unknown, extra?: Ex
     return failed();
   }
   if (typeof input !== 'object' || Array.isArray(input)) {
-    add([], `the file must be a map of keys (version: ${CONFIG_VERSION}, mode: ..., rules: ...), not ${described(input)}`);
+    add([], `the file must be a map of keys (version: ${CONFIG_VERSION}, typing-mode: ..., rules: ...), not ${described(input)}`);
     return failed();
   }
   const data = input as Record<string, unknown>;
+  const version = data.version;
+
+  // The keys are those of the version the configuration states; with none, or one this release does not read, this
+  // release's. A key of the other version is named as such, not as an unknown key.
+  const v1 = version === 1;
+  const modeKeys = v1 ? ['mode'] : ['app-mode', 'typing-mode'];
+  const otherVersion: Record<string, string> = v1
+    ? {
+        'app-mode': `"app-mode" is a version 2 key, and this configuration is version 1. Write "version: 2" to use it.`,
+        'typing-mode': `"typing-mode" is a version 2 key, and this configuration is version 1, where the typing mode is "mode". Write "version: 2" to use it.`,
+      }
+    : { mode: `"mode" is version 1's name for the typing mode; version ${CONFIG_VERSION} calls it typing-mode.` };
+  const shaped = { ...data };
+  // Said after the version, which decides them, or before the shape's problems when those stop the check.
+  const renamed: CheckProblem[] = [];
+  for (const [key, message] of Object.entries(otherVersion)) {
+    if (!(key in data)) continue;
+    renamed.push({ path: [key], key: true, message });
+    delete shaped[key];
+  }
 
   // The shape, with zod: which keys may be where, and which must be maps.
   const section = (fields: readonly FieldOf[]) => z.strictObject(Object.fromEntries(fields.map((f) => [f.name, z.unknown().optional()]))).nullable();
   const shape = z.strictObject({
     version: z.unknown().optional(),
-    mode: z.unknown().optional(),
+    ...Object.fromEntries(modeKeys.map((key) => [key, z.unknown().optional()])),
     site: z.unknown().optional(),
     rules: section(fieldsIn('rules')).optional(),
     options: z.unknown().optional(),
@@ -77,8 +97,9 @@ export function checkConfig<G extends string = never>(input: unknown, extra?: Ex
     ...Object.fromEntries(Object.entries(extras).map(([name, fields]) => [name, section(fields).optional()])),
   });
   const topKeys = [...Object.keys(shape.shape)];
-  const checked = shape.safeParse(data);
+  const checked = shape.safeParse(shaped);
   if (!checked.success) {
+    problems.push(...renamed);
     for (const issue of checked.error.issues) {
       const path = issue.path as (string | number)[];
       if (issue.code === 'unrecognized_keys') {
@@ -98,22 +119,28 @@ export function checkConfig<G extends string = never>(input: unknown, extra?: Ex
   const model = { ...emptyModel(), ...Object.fromEntries(Object.keys(extras).map((name) => [name, {}])) } as CheckedModel<G>;
 
   // version: required, and one this release reads.
-  const version = data.version;
   if (version === undefined) add(['version'], `the file has no version. Add "version: ${CONFIG_VERSION}" as its first line.`);
   else if (typeof version === 'number' && Number.isInteger(version) && version > CONFIG_VERSION) {
-    add(['version'], `version ${version} was written by a newer release; this one reads version ${CONFIG_VERSION}.`, { code: 'newer-version', version });
-  } else if (version !== CONFIG_VERSION) add(['version'], `version must be ${CONFIG_VERSION}; found ${described(version)}.`);
+    add(['version'], `version ${version} was written by a newer release; this one reads ${VERSIONS_READ}.`, { code: 'newer-version', version });
+  } else if (!READ_VERSIONS.includes(version as number)) add(['version'], `version must be ${READ_VERSIONS.join(' or ')}; found ${described(version)}.`);
+  problems.push(...renamed);
 
-  if (data.mode !== undefined && data.mode !== null) {
-    const r = typeof data.mode === 'string' ? lookup('typing mode', MODE_NAMES, data.mode) : { ok: false as const, error: `the typing mode must be one of ${MODE_NAMES.map((m) => m.name).join(', ')}` };
-    if (r.ok) model.mode = r.value;
-    else add(['mode'], `mode: ${r.error}`);
-  }
-  if (data.site !== undefined && data.site !== null) {
-    const r = typeof data.site === 'string' ? lookup('site preset', SITE_NAMES, data.site) : { ok: false as const, error: `the site preset must be one of ${SITE_NAMES.map((s) => s.name).join(', ')}` };
-    if (r.ok) model.site = r.name;
-    else add(['site'], `site: ${r.error}`);
-  }
+  /** A named value (a mode, a site preset) at a top-level key: its entry, or a problem there. */
+  const named = <T>(key: string, what: string, names: readonly Named<T>[]) => {
+    const value = data[key];
+    if (value === undefined || value === null) return undefined;
+    const r = typeof value === 'string' ? lookup(what, names, value) : { ok: false as const, error: `the ${what} must be one of ${names.map((n) => n.name).join(', ')}` };
+    if (r.ok) return r;
+    add([key], `${key}: ${r.error}`);
+    return undefined;
+  };
+  // Version 1's mode is version 2's typing-mode, and its app mode is the only one there was: left unstated.
+  const typingMode = named(v1 ? 'mode' : 'typing-mode', 'typing mode', MODE_NAMES);
+  if (typingMode) model.typingMode = typingMode.value;
+  const appMode = v1 ? undefined : named('app-mode', 'app mode', APP_MODE_NAMES);
+  if (appMode) model.appMode = appMode.value;
+  const site = named('site', 'site preset', SITE_NAMES);
+  if (site) model.site = site.name;
 
   const readSection = (name: string, into: Record<string, unknown>) => {
     const values = data[name] as Record<string, unknown> | null | undefined;

@@ -1,7 +1,8 @@
-// The names tep accepts for typing modes, site presets and strength
-// presets: derived from the labels in the shared core, never a second list
+// The names a configuration takes for app modes, typing modes, site presets
+// and strength presets: derived from the labels in the shared core, never a second list
 // kept by hand, so a preset added to the app is a name tep knows.
 
+import { APP_MODES, type AppMode } from '../appModes';
 import { TYPING_MODES, type TypingMode } from '../difficulty';
 import { SITE_PRESETS, type SitePreset } from '../sitePresets';
 
@@ -52,6 +53,9 @@ export interface Named<T> {
   value: T;
 }
 
+/** The app modes by id. */
+export const APP_MODE_NAMES: readonly Named<AppMode>[] = APP_MODES.map((m) => ({ name: m.id, aliases: [], label: m.label, value: m.id }));
+
 /** The typing modes: their ids, and their labels where those differ ("minimal-quick" for quick). */
 export const MODE_NAMES: readonly Named<TypingMode>[] = TYPING_MODES.map((m) => ({
   name: m.id,
@@ -74,11 +78,13 @@ export function lookup<T>(what: string, names: readonly Named<T>[], input: strin
   const near = closest(typed, all);
   return {
     ok: false,
-    error: `"${input}" is not a ${what}. The ${what}s are: ${names.map((n) => (n.aliases.length ? `${n.name} (or ${n.aliases.join(', ')})` : n.name)).join(', ')}.${near ? ` Did you mean ${near}?` : ''}`,
+    error: `"${input}" is not ${/^[aeiou]/.test(what) ? 'an' : 'a'} ${what}. The ${what}s are: ${names.map((n) => (n.aliases.length ? `${n.name} (or ${n.aliases.join(', ')})` : n.name)).join(', ')}.${near ? ` Did you mean ${near}?` : ''}`,
   };
 }
 
-/** A mode's name as tep writes it. */
+/** An app mode's name as a configuration writes it. */
+export const appModeName = (mode: AppMode) => APP_MODE_NAMES.find((m) => m.value === mode)!.name;
+/** A typing mode's name as a configuration writes it. */
 export const modeName = (mode: TypingMode) => MODE_NAMES.find((m) => m.value === mode)!.name;
 /** A site preset's name as tep writes it. */
 export const siteName = (preset: SitePreset) => SITE_NAMES.find((s) => s.value === preset)!.name;

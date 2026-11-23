@@ -15,7 +15,7 @@ export const FORMATS: readonly Format[] = ['table', 'plain', 'json'];
 export const META_FLAGS = [
   { name: 'config', short: 'c', value: '<file>', description: 'Read settings from this config file instead of ./tep.yml' },
   { name: 'no-config', value: '', description: 'Read no config file, not even ./tep.yml' },
-  { name: 'mode', short: 'm', value: '<mode>', description: `Typing mode: ${MODE_NAMES.map((m) => m.name).join(', ')}; fills in the options that suit it` },
+  { name: 'typing-mode', short: 'm', value: '<mode>', description: `Typing mode: ${MODE_NAMES.map((m) => m.name).join(', ')}; fills in the options that suit it` },
   { name: 'site', short: 's', value: '<preset>', description: `Site rules preset: ${SITE_NAMES.map((s) => s.name).join(', ')}` },
   { name: 'rules', value: '<text>', description: `The site's rules as written on its sign-up form ("8-20 characters, one number"), at most ${MAX_RULES_TEXT_LENGTH} characters` },
   { name: 'sentence', value: '-', description: 'Use your own sentence, read from stdin (or typed, hidden, at a terminal)' },

@@ -1,4 +1,4 @@
-// tep's config file: YAML, version 1 (spec §6). Read by the core
+// tep's config file: YAML, version 2, version 1 still read (spec §6). Read by the core
 // (src/lib/config/yaml.ts) with tep's output section, every problem
 // reported at once, each with its line, the line itself, what was found and
 // what is expected, in tep's words; written back with comments, atomically,
@@ -14,7 +14,7 @@ import { emptyLayer, type Layer } from './resolve';
 import type { Source } from './sources';
 
 export { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../lib/config/version';
-import { CONFIG_VERSION, MAX_CONFIG_BYTES } from '../lib/config/version';
+import { CONFIG_VERSION, MAX_CONFIG_BYTES, VERSIONS_READ } from '../lib/config/version';
 export const DEFAULT_CONFIG_FILE = 'tep.yml';
 
 export { emptyModel, type ConfigModel } from './configModel';
@@ -48,7 +48,7 @@ export function parseConfig(text: string, file: string): LoadedConfig {
 function worded(p: YamlProblem): string {
   switch (p.code) {
     case 'newer-version':
-      return `version ${p.version} was written by a newer tep; this one reads version ${CONFIG_VERSION}. Upgrade tep, or run tep config to write a version ${CONFIG_VERSION} file.`;
+      return `version ${p.version} was written by a newer tep; this one reads ${VERSIONS_READ}. Upgrade tep, or run tep config to write a version ${CONFIG_VERSION} file.`;
     case 'anchor':
       return `"&${p.name}" is a YAML anchor, and anchors are not supported in a tep config. Take it out.${p.hint ? ` ${p.hint}` : ''}`;
     case 'alias':
@@ -76,7 +76,9 @@ export function layerOf(loaded: LoadedConfig): Layer {
   const { model, lines, file } = loaded;
   const layer = emptyLayer();
   const at = (key: string, line: number | undefined): Source => ({ kind: 'file', file, line: line ?? 1, key });
-  if (model.mode) layer.mode = { value: model.mode, source: at('mode', lines.mode) };
+  // A version 1 file names the typing mode "mode": a message names the key as the file has it.
+  const modeKey = 'mode' in lines ? 'mode' : 'typing-mode';
+  if (model.typingMode) layer.mode = { value: model.typingMode, source: at(modeKey, lines[modeKey]) };
   if (model.site) layer.site = { value: SITE_NAMES.find((s) => s.name === model.site)!.value, source: at('site', lines.site) };
   const put = (g: FieldGroup, values: Record<string, unknown>) => {
     for (const f of fieldsIn(g)) if (f.name in values) layer.values[f.name] = { value: values[f.name], source: at(keyPath(f), lines[keyPath(f)]) };

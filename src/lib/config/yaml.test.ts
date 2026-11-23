@@ -13,8 +13,8 @@ function problems(text: string): YamlProblem[] {
 
 describe('configFromYaml: a configuration as YAML text', () => {
   const text = `# a comment
-version: 1
-mode: two-finger
+version: 2
+typing-mode: two-finger
 site: short-max-16
 rules:
   max-length: 14
@@ -30,14 +30,20 @@ swaps:
   it('reads every section, with the line each key is set on: a value\'s own, a section\'s key', () => {
     const r = configFromYaml(text);
     expect(r.ok && r.config).toEqual({
-      mode: 'two-finger',
+      typingMode: 'two-finger',
       site: 'short-max-16',
       rules: { 'max-length': 14, symbols: '!@#' },
       options: { swaps: 3 },
       sentence: { shrink: 'ends' },
       swaps: { disabled: ['a>@'], custom: [] },
     });
-    expect(r.ok && r.lines).toMatchObject({ version: 2, mode: 3, site: 4, rules: 5, 'rules.max-length': 6, 'rules.symbols': 7, 'options.swaps': 9, 'sentence.shrink': 11, swaps: 12 });
+    expect(r.ok && r.lines).toMatchObject({ version: 2, 'typing-mode': 3, site: 4, rules: 5, 'rules.max-length': 6, 'rules.symbols': 7, 'options.swaps': 9, 'sentence.shrink': 11, swaps: 12 });
+  });
+
+  it('puts a key of the other version on its own line', () => {
+    expect(problems('version: 2\nsite: no-spaces\nmode: quick\n')).toEqual([
+      { path: 'mode', line: 3, message: '"mode" is version 1\'s name for the typing mode; version 2 calls it typing-mode.' },
+    ]);
   });
 
   it('gives each problem its key path and line, in line order', () => {
@@ -58,15 +64,15 @@ swaps:
   });
 
   it('empty text, or only a comment, has a code', () => {
-    for (const t of ['', '# only a comment\n', '""\n']) expect(problems(t)).toEqual([{ line: 1, message: 'the configuration is empty. It starts with "version: 1".', code: 'empty' }]);
+    for (const t of ['', '# only a comment\n', '""\n']) expect(problems(t)).toEqual([{ line: 1, message: 'the configuration is empty. It starts with "version: 2".', code: 'empty' }]);
   });
 
   it('a newer version has a code and the version, worded for no front end', () => {
-    expect(problems('version: 2\n')).toEqual([{ path: 'version', line: 1, message: 'version 2 was written by a newer release; this one reads version 1.', code: 'newer-version', version: 2 }]);
+    expect(problems('version: 3\n')).toEqual([{ path: 'version', line: 1, message: 'version 3 was written by a newer release; this one reads versions 1 and 2.', code: 'newer-version', version: 3 }]);
   });
 
   it('a top level that is not a map, on its own line', () => {
-    expect(problems('# a list\n- 1\n')).toEqual([{ line: 2, message: 'the file must be a map of keys (version: 1, mode: ..., rules: ...), not a list' }]);
+    expect(problems('# a list\n- 1\n')).toEqual([{ line: 2, message: 'the file must be a map of keys (version: 2, typing-mode: ..., rules: ...), not a list' }]);
   });
 
   it('refuses anchors and aliases with a code, the name and the quoting hint, a tag with how to quote it', () => {

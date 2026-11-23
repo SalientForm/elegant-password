@@ -325,7 +325,7 @@ then it builds `dist-cli/tep.mjs` (one file, needs only Node 24) and links
 `~/.local/bin/tep` to it. Then:
 
     tep g                        # ./tep.yml if there is one, else the defaults
-    tep g --site short-max-16 --mode two-finger -n 3
+    tep g --site short-max-16 --typing-mode two-finger -n 3
     tep g --rules "8-20 characters, at least one number" --format json
     tep g --sentence - < sentence.txt
     tep config bank.yml          # a few questions, then tep g -c bank.yml
