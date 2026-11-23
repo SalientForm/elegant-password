@@ -59,8 +59,8 @@ const COLUMNS: { id: Column; label: string }[] = [
 const columnId = (id: Column) => panelId('section', id);
 
 const MODE_TABS: { id: Mode; label: string }[] = [
-  { id: 'generated', label: 'Make up a sentence' },
-  { id: 'sentence', label: 'Use my sentence' },
+  { id: 'generated', label: 'Generated Sentence' },
+  { id: 'sentence', label: 'Custom Sentence' },
 ];
 
 export function App() {
@@ -343,7 +343,7 @@ export function ElegantPasswords({ column, onColumn, active = true }: ColumnsPro
                 The sentence behind every suggestion below, drawn at random from the word lists. It stays the same until you
                 draw a new one with the button beside it or apply a new Mode; changing the rules or refreshing the suggestions keeps it.
                 You can edit it and submit the change (Enter submits): an edited sentence is no longer a random draw, so it is built and
-                scored like your own sentence, with the options under “Use my sentence”. Clear it and submit to go back to the drawn one.
+                scored like your own sentence, with the options under “Custom Sentence”. Clear it and submit to go back to the drawn one.
               </p>
             </details>
           </div>

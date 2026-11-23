@@ -91,14 +91,14 @@ export const SORT_CHOICES: readonly Choice<SortOrder>[] = [
   { value: 'strength', label: 'Strength', hint: 'Strongest first' },
 ];
 
-/** How "Use my sentence" shrinks long words. */
+/** How "Custom Sentence" shrinks long words. */
 export const SHRINK_CHOICES: readonly Choice<ShrinkStyle>[] = [
   { value: 'none', label: 'Keep', hint: 'Words stay whole unless the target length needs them shorter.' },
   { value: 'vowels', label: 'Drop vowels', hint: 'sweets → swts, jupiter → jptr' },
   { value: 'ends', label: 'First + last', hint: 'Two letters, first and last consonant: jupiter → jr, piece → pc' },
 ];
 
-/** The tag that ends padding in "Use my sentence". */
+/** The tag that ends padding in "Custom Sentence". */
 export const LENGTH_TAG_CHOICES: readonly Choice<LengthTag>[] = [
   { value: 'total', label: '%total: the whole length (%50 = 50 characters in all)', hint: 'The tag says the whole length.' },
   { value: 'factor', label: '@factor: a number that divides the length before it (@3)', hint: 'The tag gives a number that divides the length before it.' },

@@ -42,8 +42,8 @@ most urgent.
   charges for. The choice comes from `crypto.getRandomValues` and counts
   toward the bits exactly (log2 of the choices, once per password). Space, None and a
   fixed symbol stay as they are.
-- **One sentence mode: one UI and one algorithm.** Merge "Make up a
-  sentence" and "Use my sentence" into one sentence box. Generate fills it
+- **One sentence mode: one UI and one algorithm.** Merge "Generated
+  Sentence" and "Custom Sentence" into one sentence box. Generate fills it
   with a made-up sentence the user can edit, and passwords are always made
   from the sentence in the box. Today these are two paths: planning and
   sampling slots with exact bits (`generate.ts`), and fitting a given

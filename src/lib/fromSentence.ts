@@ -1,4 +1,4 @@
-// "Use my sentence": turn a sentence the user typed into a password that
+// "Custom Sentence": turn a sentence the user typed into a password that
 // fits the requirements, e.g. "jupiter brings 5 leds for piece" aimed at 12
 // characters -> "jr;B;5ls;Fpc".
 //

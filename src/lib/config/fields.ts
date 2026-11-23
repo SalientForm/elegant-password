@@ -85,7 +85,7 @@ export const FIELDS: readonly ConfigField[] = [
   { name: 'two-letter', group: 'options', target: req('shorthand'), label: lowerFirst(PROFILE_LABELS.shorthand), description: 'Words typed as two letters', kind: int(0, MAX_SHORTHAND) },
   { name: 'made-up', group: 'options', target: req('madeUp'), label: lowerFirst(PROFILE_LABELS.madeUp), description: 'Nouns replaced by made-up key rolls', kind: int(0, MAX_MADE_UP) },
   { name: 'glue', group: 'options', target: req('glue'), label: lowerFirst(PROFILE_LABELS.glue), description: 'Attach numbers and small-word initials to the next word', kind: bool },
-  // "Use my sentence" (--sentence).
+  // "Custom Sentence" (--sentence).
   { name: 'shrink', group: 'sentence', target: sentence('shrink'), label: 'shrink style', description: `How long words are shrunk: ${SHRINK_CHOICES.map((c) => (c === KEEP ? `${c.value} (or ${KEEP_NAME}: ${lowerFirst(c.hint).replace(/\.$/, '')})` : c.value)).join(', ')}`, kind: { type: 'choice', choices: SHRINK_CHOICES } },
   { name: 'shrink-from', group: 'sentence', target: sentence('shrinkFrom'), label: 'shrink words from', description: 'Shrink words of this many letters or more', kind: int(SHRINK_FROM_RANGE.min, SHRINK_FROM_RANGE.max) },
   { name: 'target-length', group: 'sentence', target: sentence('targetLength'), label: 'target length', description: 'Compress toward this many characters, or none (or max): toward the maximum length', kind: { type: 'target-length' } },

@@ -48,7 +48,7 @@ throws its first, so no password is ever made from a contradiction.
 | Symbols required, no keyboard symbol allowed | Emptying the symbols field, or filling it with letters or symbols off the keyboard | Shown under Site allows, the count marked; Submit blocked. Pasted rules bring back the default symbols (or drop the count the text did not set). |
 | Chosen separator not allowed, spaces chosen with spaces ruled out, a letter or digit, two characters, off the keyboard | Changing the allowed symbols or Spaces after choosing; typing it | Shown under the separator; Submit blocked. A preset or pasted rules set it to Automatic and say so; Space cannot be picked while spaces are not allowed. Stored: back to Automatic. |
 | Symbols that are only reachable through the separator, too many to fit | Allowing only the separator's symbol and requiring many | Found by planning: shapes short of separators are skipped; when none is left the engine names the separator. |
-| No made-up sentence fits the length range; too few letters for the uppercase rule | A narrow range (generated mode needs about 13-15 characters) | Found by planning: an error in place of the suggestions after Submit, pointing at the length range or at Use my sentence. |
+| No made-up sentence fits the length range; too few letters for the uppercase rule | A narrow range (generated mode needs about 13-15 characters) | Found by planning: an error in place of the suggestions after Submit, pointing at the length range or at Custom Sentence. |
 | Length tag symbol not allowed | Rules without `% $ #` (or `@` for the factor tag) | Not a contradiction: padding goes untagged, and the form says so. |
 | Custom or built-in swap whose output is not allowed | Narrowing the symbols | Not a contradiction: the swap is skipped (struck through, with the reason), with a warning if none is left. |
 | Compress-toward target outside the length range | Sentence options | Not a contradiction: clamped into the range. |
@@ -82,7 +82,7 @@ text's own exclusions, an unnamed count other than four) is named in
 `unsupported` and nothing of it is applied. A text past
 `MAX_RULES_TEXT_LENGTH` (2,000 characters) is not read at all.
 
-## 2. Make up a sentence
+## 2. Generated Sentence
 
 ```mermaid
 flowchart TD
@@ -128,7 +128,7 @@ the sentence stays. A kept sentence must be one the tool could have drawn (a
 shape it makes, every word on its slot's list); one that is not is refused,
 and on load it is dropped and a new one drawn.
 
-## 3. Use my sentence
+## 3. Custom Sentence
 
 ```mermaid
 flowchart TD

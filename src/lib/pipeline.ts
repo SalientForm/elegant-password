@@ -14,7 +14,7 @@ import type { Mapping } from './twists';
 
 /** Everything that decides which passwords are made. */
 export interface GenerationSettings {
-  /** Make up a sentence, or use the user's own. */
+  /** Generated Sentence, or use the user's own. */
   mode: Mode;
   req: Requirements;
   /** The user's own sentence (sentence mode only). */

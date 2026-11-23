@@ -231,7 +231,7 @@ generate(settings: Settings, request?: {
 - A `DrawnSentence` (from a previous outcome): keep it, for Refresh. Exact
   bits.
 - A string: the user's own sentence, or a drawn one they edited. Fitted as
-  today's "Use my sentence"; scores, no exact bits. A string equal to the
+  today's "Custom Sentence"; scores, no exact bits. A string equal to the
   drawn sentence's text is still a string: the caller keeps the
   `DrawnSentence` while the box is unedited.
 - `Outcome` is `{ ok: true, sentence?: DrawnSentence, suggestions, warnings }`

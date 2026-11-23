@@ -588,7 +588,7 @@ function noPlan(req: Requirements, ctx: PlanContext, noClosing: boolean, tooFewL
         code: 'no-fit',
         message:
           `No sentence fits between ${req.minLength} and ${req.maxLength} characters${withCounts(req)}. Try widening the length range${req.minUppercase + req.minLowercase + req.minDigits + req.minSymbols > 0 ? ' or requiring fewer characters' : ''}, ` +
-          'or use your own sentence (Use my sentence), which can be shortened further.',
+          'or use your own sentence (Custom Sentence), which can be shortened further.',
       };
 }
 

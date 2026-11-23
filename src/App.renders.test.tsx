@@ -88,7 +88,7 @@ describe('App: what renders', () => {
   it('in sentence mode the swaps follow the sentence as it is typed', { timeout: 30_000 }, async () => {
     render(<App />);
     await settled();
-    fireEvent.click(screen.getByRole('tab', { name: 'Use my sentence' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Custom Sentence' }));
     const sentence = screen.getByLabelText('Your sentence') as HTMLTextAreaElement;
     fireEvent.change(sentence, { target: { value: 'sally eats sweets' } });
     const ph = () => screen.getByRole('button', { name: 'ph→f' }) as HTMLButtonElement;
