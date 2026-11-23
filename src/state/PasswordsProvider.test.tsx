@@ -417,7 +417,7 @@ describe('PasswordsProvider: inputs that go back to what is on screen within the
     await settled();
     const shown = text('first');
     expect(shown).not.toBe('');
-    // To "Use my sentence" (an empty one: the engine would say so) and straight back before the timer fires.
+    // To "Custom Sentence" (an empty one: the engine would say so) and straight back before the timer fires.
     fireEvent.click(screen.getByText('sentence-mode'));
     expect(text('busy')).toBe('true');
     fireEvent.click(screen.getByText('generated-mode'));

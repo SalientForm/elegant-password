@@ -151,9 +151,9 @@ test('adds a password to my list, scores it the same, and keeps the list across 
 
 test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps them across a reload', async ({ page }) => {
   await settledPasswords(page);
-  await page.getByRole('tab', { name: 'Make up a sentence' }).focus();
+  await page.getByRole('tab', { name: 'Generated Sentence' }).focus();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Use my sentence' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Custom Sentence' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('Type a sentence to turn into a password, then submit it.')).toBeVisible();
 
   await page.getByLabel('Your sentence', { exact: true }).fill(SENTENCE);
@@ -168,7 +168,7 @@ test('turns my own sentence into passwords, applied with Ctrl+Enter, and keeps t
   await page.reload();
   expect(await settledPasswords(page)).toEqual(mine);
   await expect(page.getByLabel('Your sentence', { exact: true })).toHaveValue(SENTENCE);
-  await expect(page.getByRole('tab', { name: 'Use my sentence' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Custom Sentence' })).toHaveAttribute('aria-selected', 'true');
 });
 
 test('a desktop has no Copy button on a card (the password is selected like text), and a password cut short reveals on click', async ({ page }) => {
@@ -177,7 +177,7 @@ test('a desktop has no Copy button on a card (the password is selected like text
   await expect(page.getByRole('button', { name: 'Copy sentence' })).toBeVisible(); // the sentence is not a password: its Copy button stays
   // A long own sentence under a wide length limit makes a password wider than its column: it ends in an ellipsis and is a button.
   await page.getByLabel('Maximum', { exact: true }).fill('120');
-  await page.getByRole('tab', { name: 'Use my sentence' }).click();
+  await page.getByRole('tab', { name: 'Custom Sentence' }).click();
   await page.getByLabel('Your sentence', { exact: true }).fill('Sally eats sweets on Sundays with her friends and family every single week of the whole year');
   await page.keyboard.press('Control+Enter');
   await expect(applyBar(page)).toHaveCount(0);
@@ -342,7 +342,7 @@ test('the Fun page shows both specs, the app first, and downloads each', async (
 
 test('pads a short sentence to the minimum with a length tag that states the length', async ({ page }) => {
   await settledPasswords(page);
-  await page.getByRole('tab', { name: 'Use my sentence' }).click();
+  await page.getByRole('tab', { name: 'Custom Sentence' }).click();
   await page.getByLabel('Your sentence', { exact: true }).fill('Hi there');
   await page.keyboard.press('Enter'); // Enter in the sentence field submits at once
   const mine = await settledPasswords(page);

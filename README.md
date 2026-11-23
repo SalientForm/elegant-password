@@ -58,7 +58,7 @@ explanation for each:
 
 ## Features
 
-- **Two modes.** *Make up a sentence* generates one; *Use my sentence* takes
+- **Two modes.** *Generated Sentence* generates one; *Custom Sentence* takes
   yours ("Sally eats sweets" -> `Salli3@tswts!`) and fits it to the rules:
   lowercase, drop inner vowels from long words, meet required digits with
   swaps half the time and otherwise a number in front or at the end, and
@@ -455,7 +455,7 @@ Shared core, `src/lib/`:
 - `validation.ts`: every contradiction in a set of requirements, each with a code
 - `consistency.ts`: contradictions including what only planning finds, and the unreachable-target warning
 - `twists.ts`, `mappingSettings.ts`: the 64 mappings, exact twist counting, and which are on
-- `fromSentence.ts`: "Use my sentence" mode
+- `fromSentence.ts`: "Custom Sentence" mode
 - `sitePresets.ts`, `ruleText.ts`: site rule presets and the pasted-rules parser
 - `modeProfiles.ts`: the options each typing mode fills in
 - `difficulty.ts`: the difficulty rubric

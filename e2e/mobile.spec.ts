@@ -350,7 +350,7 @@ test('fits the narrowest flagship phone with nothing clipped in any column', asy
 
 test('sentence mode and its keyboard map fit a phone', async ({ page }) => {
   await settled(page);
-  await page.getByRole('tab', { name: 'Use my sentence', exact: true }).click();
+  await page.getByRole('tab', { name: 'Custom Sentence', exact: true }).click();
   await page.getByLabel('Your sentence', { exact: true }).fill('Sally eats sweets on Sundays');
   await page.keyboard.press('Enter');
   await settled(page);
