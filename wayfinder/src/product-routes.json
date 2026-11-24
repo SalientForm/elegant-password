@@ -1,0 +1,12 @@
+{
+  "routes": [
+    "/",
+    "/scoring",
+    "/fun"
+  ],
+  "sidebar": [
+    "/",
+    "/scoring",
+    "/fun"
+  ]
+}

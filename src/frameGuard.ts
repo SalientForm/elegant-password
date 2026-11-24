@@ -6,7 +6,7 @@
 // field of its own. Framed, the app mounts nothing and shows a notice with a
 // link that opens it in a tab of its own. The proper fix is the header
 // `Content-Security-Policy: frame-ancestors 'none'` on a host that sends one
-// (TODO.md, "Protect the saved list").
+// (docs/TODO.md, EP-25 "Protect the saved list").
 //
 // The check runs from the bundle, since the CSP forbids inline scripts, and
 // only in the production build, as the CSP is: preview panes frame the dev

@@ -26,7 +26,13 @@
     "stats": "node scripts/devStats.mjs",
     "measure:modes": "MEASURE_MODES=1 vitest run src/lib/modeProfiles.test.ts --reporter=verbose --silent=false",
     "measure:wizard": "MEASURE_WIZARD=1 vitest run src/cli/walk.test.ts -t 'times every question' --reporter=verbose --silent=false",
-    "common:passwords": "node scripts/commonPasswords.mjs"
+    "common:passwords": "node scripts/commonPasswords.mjs",
+    "skills:install": "node node_modules/@salientform/workspace-wayfinder/check/install-skills.mjs",
+    "workspace:dev": "vite --config wayfinder/vite.config.ts",
+    "workspace:build": "vite build --config wayfinder/vite.config.ts",
+    "workspace:preview": "vite preview --config wayfinder/vite.config.ts",
+    "workspace:typecheck": "tsc -p wayfinder/tsconfig.json",
+    "workspace:check": "node .agents/skills/assess-audit/scripts/check-audit-registries.mjs && node .agents/skills/assess-feature-audit/scripts/check-features-registry.mjs && node .agents/skills/assess-features/scripts/check-feature-catalogue.mjs && node .agents/skills/assess-api/scripts/check-api-registry.mjs && node .agents/skills/assess-platform-docs/scripts/check-platform-docs.mjs && node .agents/skills/assess-workspace/scripts/check-about.mjs && node .agents/skills/document-repo/scripts/check-documents.mjs"
   },
   "dependencies": {
     "@clack/prompts": "^1.8.1",
@@ -39,6 +45,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
+    "@salientform/workspace-wayfinder": "file:vendor/salientform-workspace-wayfinder-0.3.0.tgz",
+    "@tanstack/react-router": "^1.170.46",
+    "@tanstack/router-core": "^1.171.39",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
@@ -56,5 +65,9 @@
   },
   "bin": {
     "tep": "dist-cli/tep.mjs"
+  },
+  "wayfinder": {
+    "config": "wayfinder/src/workspace.config.mts",
+    "hooks": "wayfinder/src/workspace.hooks.mjs"
   }
 }

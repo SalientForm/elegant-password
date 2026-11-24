@@ -1,5 +1,5 @@
 // The app modes: what kind of password the app makes. Sentences is the only
-// one until Keyboard patterns is built (TODO.md); building it adds a value
+// one until Keyboard patterns is built (docs/TODO.md, EP-3); building it adds a value
 // here and to a configuration's app-mode, not a key. The typing modes
 // (difficulty.ts) serve every app mode.
 

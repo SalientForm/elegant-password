@@ -395,6 +395,9 @@ cold scoring.
     pnpm test:e2e   # browser smoke tests (Playwright) against the build on 4272 and the dev server on 4273
     pnpm build && pnpm preview   # http://127.0.0.1:4271
     pnpm build:cli  # the command line, dist-cli/tep.mjs; pnpm tep g runs it
+    pnpm workspace:dev      # the Engineering Workspace (Workspace Wayfinder, wayfinder/): http://127.0.0.1:4274
+    pnpm workspace:build && pnpm workspace:preview   # the built workspace: http://127.0.0.1:4275
+    pnpm workspace:check    # the workspace's checks: documents, reviews and registries against the code
 
 Run `pnpm test:e2e` after each iteration: it builds, starts its own servers
 on this project's spare ports, drives a real Chromium through loading,

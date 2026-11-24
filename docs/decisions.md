@@ -9,7 +9,7 @@ it; the history is in git.
 A spec in `docs/specs/` is a working document (decided 2026-10-21): once it
 is built, every decision in it that remains accurate is recorded here, in
 the README or in the algorithm flow, and the spec, its plan and the audit
-it acted on are deleted. `TODO.md` keeps what is deferred and the decisions
+it acted on are deleted. `docs/TODO.md` keeps what is deferred and the decisions
 to revisit. An id such as H1 or L17 names an item of the 2026-10-21 audit,
 whose checklist was deleted on 2026-10-22 once every item was built,
 accepted or declined; each item's decisions are recorded here.
@@ -62,7 +62,7 @@ accepted or declined; each item's decisions are recorded here.
   less. Walks still read low (`qwertyuiop` 11, `asdfasdfasdf` 11.6,
   `zxcvbnm` 7.8, `bvc` 10). Declined: a floor at the bits or the tool's
   lists (the rule above), an English dictionary (Strength has no word
-  lists), and a table of letter pairs English never uses (`TODO.md`).
+  lists), and a table of letter pairs English never uses (`docs/TODO.md`, EP-21).
   `isNotEnglish`, `letterBits` in `src/lib/strength.ts`;
   `src/lib/strengthFloor.test.ts`.
 - **Where Strength still reads below a card's bits, and why it may**
@@ -175,7 +175,7 @@ twists). It is the lead if the budget is ever missed.
   page's thread. `src/state/PasswordsProvider.tsx`.
 - **The engine is a function, not a Promise.** A Promise that always
   resolved at once would be a hedge for a worker that returns only on a
-  measured reason (`TODO.md`, "A worker again"); the spec that brings one
+  measured reason (`docs/TODO.md`, EP-26 "A worker again"); the spec that brings one
   back makes the seam asynchronous then. The provider's `engine` prop is
   the seam for tests.
 - **"Working…" paints before the stall.** Busy is set in the effect and the
@@ -247,7 +247,7 @@ twists). It is the lead if the budget is ever missed.
   (Escape inside it too). A newer failure replaces it. `SlowNotice`.
 - **It shows when the work ends.** Work on the page's thread cannot be
   stopped part-way; the line makes a stall visible, it does not cut one
-  short. A worker could stop it, at the price `TODO.md` ("A worker
+  short. A worker could stop it, at the price `docs/TODO.md` (EP-26 "A worker
   again") sets out.
 - **The clock is the web app's.** `src/lib` stays free of one, and the CLI
   is unchanged: its wizard's 2 s line is `pnpm measure:wizard`. Nothing
@@ -383,7 +383,7 @@ undone).
 ## Input and persistence
 
 - **Copy never clears the clipboard** (accepted 2026-10-22, audit L16;
-  to revisit, `TODO.md`), in the web app or `tep --copy`. A password left
+  to revisit, `docs/TODO.md` EP-19), in the web app or `tep --copy`. A password left
   there can reach clipboard history, sync to other devices or be pasted by
   mistake. A page can clear it only while open and focused, cannot check
   the clipboard still holds the password without a permission prompt, so
@@ -568,7 +568,7 @@ undone).
 - **The three largest core modules are split only as a change needs it**
   (accepted 2026-10-22, audit L13): `generate.ts`, `score.ts` and
   `fromSentence.ts` (1,100, 729 and 765 lines on 2026-10-22). Each split
-  takes out one responsibility, as `checks.ts` did (`TODO.md`).
+  takes out one responsibility, as `checks.ts` did (`docs/TODO.md`, EP-32).
 - **The CLI modules the Fun page's prompt draws on stay free of Node
   APIs** (the field table, names, messages, constraints, the config writer,
   help), so the browser can run them; the boundaries test follows the
@@ -587,7 +587,7 @@ undone).
 
 ## The command line
 
-What `tep` does is in the README's "Command line"; `TODO.md` lists the
+What `tep` does is in the README's "Command line"; `docs/TODO.md` lists the
 decisions taken on the recommendation alone, to revisit once it is in use.
 
 - **Two words for two kinds of mode.** `--mode` is the typing mode
@@ -738,7 +738,7 @@ decisions taken on the recommendation alone, to revisit once it is in use.
 - **One ESM file, bundled by tsdown**, with its dependencies (`yaml`,
   `zod`, `@clack/prompts`) inlined, so `dist-cli/tep.mjs` needs only Node
   24. The dependencies stay inside `src/cli/` so they can be replaced
-  (`TODO.md`, "A CLI with no dependencies").
+  (`docs/TODO.md`, EP-23 "A CLI with no dependencies").
 - **Not on npm**: the package stays private and the name `tep` is taken.
   `pnpm link:cli` builds and links `~/.local/bin/tep` instead of `pnpm
   link`, which from pnpm 10 on adds a directory to the project's
@@ -780,7 +780,7 @@ decisions taken on the recommendation alone, to revisit once it is in use.
   `innerHTML` and no inline style (its look is `.framed-notice` in
   `styles.css`). The proper fix is the header
   `Content-Security-Policy: frame-ancestors 'none'` on a host that sends
-  one (`TODO.md`, "Protect the saved list").
+  one (`docs/TODO.md`, EP-25 "Protect the saved list").
 - **The smoke suites are the check that the built app works under the
   CSP**, on this project's own ports: 4272 the build, 4273 the dev server.
   The framing test needs no port: its framing page is served by request

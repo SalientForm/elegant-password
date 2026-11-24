@@ -9,9 +9,11 @@ evidence: Branch feature/core-package (2026-11-18), P1 and P2 of the plan built.
 
 # The core as a package: `@salientform/elegant-passwords`
 
+**Milestone:** EP-M1.1
+
 Status: **draft for the user's review**, 2026-11-03; decisions 1 to 3 of
 §10 taken on 2026-11-18 with the modes' names, publishing still open. Acts on the first item
-of `TODO.md`, "Asked for by Dossier", and settles the config's shape for
+of `docs/TODO.md`, "Asked for by Dossier" (now EP-M1.1 on the roadmap), and settles the config's shape for
 the third (one sentence mode) so the format does not change once the
 package ships. Dossier's side is its `docs/TODO.md` #19, "Password
 generator dialog".
@@ -65,7 +67,7 @@ What Dossier's dialog needs (its #19), each of which the API in §5 covers:
   stays the CLI's.
 - Sentences and Keyboard patterns are the **app mode**; what was called
   the mode is the **typing mode** (2026-11-18, the user's decision). The
-  typing modes serve both app modes (`TODO.md`, 2026-11-18).
+  typing modes serve both app modes (`docs/TODO.md`, EP-3, 2026-11-18).
 
 ## 3. Where it lives
 
@@ -138,7 +140,7 @@ Everywhere else follows the names: the web app's "Mode" heading becomes
 "Typing mode", and `tep`'s `--mode` becomes `--typing-mode` (`--mode`
 fails, naming the new flag).
 
-### 4.2 The sentence (TODO's third item)
+### 4.2 The sentence (TODO's third item, EP-2)
 
 The `sentence` section keeps its seven keys and their meaning as fitting
 options: how long words shrink, from how many letters, toward what length,
@@ -260,7 +262,7 @@ item reads the same in a year.
 `zxcvbnReading(password): Promise<ZxcvbnReading>`: the badge's word and
 crack time, with the estimator loaded on first use (about 400 KB
 gzipped), so a caller that never shows the badge never loads it. The
-estimator becomes zxcvbn-ts's code merged into `src/lib` (`TODO.md`,
+estimator becomes zxcvbn-ts's code merged into `src/lib` (`docs/TODO.md`, EP-4,
 2026-11-18), so the package lists no zxcvbn dependency. If the package
 ships before the merge, this entry wraps `zxcvbn` 4.4.2 as a dependency
 until then; its API does not change.
@@ -300,7 +302,7 @@ Imports the config model, names, fields, schema, layering and writer from
 `src/lib/config/`, and adds its `output` section and count rules.
 Everything it prints is unchanged except the renaming (§4.1): `--mode`
 becomes `--typing-mode`, and help, messages and the wizard say "typing
-mode". `tep` stays out of npm (`TODO.md`, "tep
+mode". `tep` stays out of npm (`docs/TODO.md`, EP-17, one of "tep
 CLI: decisions to revisit").
 
 ## 8. Building and publishing
@@ -324,7 +326,7 @@ CLI: decisions to revisit").
 
 ## 9. Out of scope
 
-- One sentence mode's screen and algorithm (`TODO.md`); §4.2 settles only
+- One sentence mode's screen and algorithm (`docs/TODO.md`, EP-2); §4.2 settles only
   its format.
 - `tep` on npm, and a CLI with no dependencies.
 - A worker: the engine answers within its budget on the caller's thread
@@ -348,5 +350,5 @@ Taken on 2026-11-18:
 Still open:
 
 5. **Publishing**: the user registers the npm organisation `salientform`
-   (`TODO.md`); whether and when to publish is to be discussed. Until
+   (`docs/TODO.md`, EP-5); whether and when to publish is to be discussed. Until
    then Dossier uses the tarball or a `file:` path (§8).

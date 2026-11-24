@@ -10,6 +10,8 @@ spec: docs/specs/2026-11-03-core-package-design.md
 
 # Plan: the core as a package, `@salientform/elegant-passwords`
 
+**Milestone:** EP-M1.1
+
 Implements `docs/specs/2026-11-03-core-package-design.md`. The package
 ships before zxcvbn-ts is merged (2026-11-18, the user's choice), so its
 `./zxcvbn` entry wraps `zxcvbn` 4.4.2 until then (spec §5.5). Each
@@ -132,6 +134,6 @@ A move, with no change in behaviour.
   version 1), "One core, two front ends" (`src/lib/config/`, the index as
   the only entry), the changed typing mode, and the web app's one
   configuration.
-- `TODO.md`: the first of Dossier's items goes, and `tep`'s
+- `docs/TODO.md`: the first of Dossier's items goes, and `tep`'s
   "`--mode` replaces a config's own options" becomes `--typing-mode`.
 - The spec and this plan are deleted.

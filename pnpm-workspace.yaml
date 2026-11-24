@@ -1,2 +1,7 @@
 # pnpm's settings for this single-package repository. The file also marks this folder as pnpm's root, so a
 # worktree under .worktrees/ never resolves to the checkout it sits in.
+
+# Workspace Wayfinder ships as a tarball in vendor/, never from a registry: pnpm's release-age check would ask the
+# registry for it and fail.
+minimumReleaseAgeExclude:
+  - '@salientform/workspace-wayfinder'
