@@ -101,7 +101,8 @@ own repository, `skills/`.
   backticks, one short sentence on what it does (written fresh: not the `description`, which says when to use it),
   and its path.
 - **Wayfinder skills collection**: the kit's skills installed in the repository, in a section of their own, each with
-  what it does and a link to its `REPOSITORY.md` where the repository has written one. In the kit's own repository the
+  what it does and a link to its `REPOSITORY.md` where the repository has written one (`—` where not; the check fails
+  on a missing or wrong link). In the kit's own repository the
   collection's source is its own `skills/`: they are the repository's own skills, and there is no collection section.
 - Not listed: a vendor's skills (recorded in `skills-lock.json`), the user's or a plugin's (a link that resolves
   outside the repository), and agents' built-in commands. `list-skills.mjs` names what it leaves out.

@@ -64,7 +64,7 @@ All six areas are in every workspace, in the templates' header order. Readme, Au
 | Readme Index (`readme`) | READMEs | always generated |
 | Audit (`audit`) | the reviews folder, each spec's and plan's front matter, and the roadmap, the TODO list and the architecture document in the kit's formats (`node_modules/@salientform/workspace-wayfinder/docs/formats.md`), all three required and written by `document-repo` (§3 step 7) | always generated. A repository with no planned work, no TODO list or nothing to say about a section still gets the file, with a placeholder that says why. Without a feature audit (`featureAudit`), Audit's Features page is a placeholder the kit states |
 | About (`about`) | the manifest | always generated |
-| Features (`features`) | routes the product serves and test files | a placeholder. With routes but `typescript` 5 not installed (on TypeScript 7 alone, whose package has no compiler API, the test inventory cannot parse), the area is generated with `tests: { placeholder }`; without `json-summary` coverage output, leave `coverage` out and the kit shows its coverage as a placeholder |
+| Features (`features`) | routes the product serves and test files | a placeholder. With routes but no test files, the area is generated with `tests: { placeholder }`; without `json-summary` coverage output, leave `coverage` out and the kit shows its coverage as a placeholder |
 | API (`api`) | an OpenAPI 3 JSON document | a placeholder (the area reads no other format) |
 | Platform Docs (`platform-docs`) | plain-language pages, `<order>-<slug>.md` with `title`, `order`, `summary`; or a product UI with navigation to describe, from which `assess-platform-docs`' first run drafts a page per navigation item (§4) | a placeholder (no product UI) |
 

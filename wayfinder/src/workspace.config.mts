@@ -62,15 +62,13 @@ export default {
     features: {
       // One markdown file per feature: the web app's three pages, tep, and the planned core package.
       directory: 'docs/features',
-      reviewedAt: '2026-11-24',
+      reviewedAt: '2026-11-25',
       sourceRoots: ['src'],
-      // TypeScript 7 has no compiler API, which the test inventory parses with, and the kit loads the one package named
-      // typescript: the tests stay a placeholder while the repository is on 7.
+      // The test files of Vitest (vite.config.ts) and Playwright (playwright.config.ts), as assess-features proposed.
       tests: {
-        placeholder: {
-          reason: 'The test files cannot be listed: the inventory parses them with the TypeScript 5 compiler API, and this repository resolves typescript 7.0.2, which has none.',
-          toFill: 'Move the repository to typescript 5.x (5.9 or later) and run assess-features again, which sets areas.features.tests and maps the tests to features. On TypeScript 7 it stays a placeholder: the kit loads the one package named typescript.',
-        },
+        include: ['e2e/**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}', '**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}'],
+        // The architecture's own rules, the CI workflows and the build's security policy: no feature's.
+        infrastructure: ['src/boundaries.test.ts', 'src/workflows.test.ts', 'src/lib/csp.test.ts'],
       },
     },
     api: {

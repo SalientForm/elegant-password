@@ -1,5 +1,5 @@
 {
-  "reviewedAt": "2026-11-24",
+  "reviewedAt": "2026-11-25",
   "groups": [
     {
       "id": "dead-code",
@@ -7,18 +7,5 @@
       "blurb": "Exports and files nothing in the product uses, found by the dead-code sweep and confirmed by reading the code."
     }
   ],
-  "findings": [
-    {
-      "slug": "dead-src-lib-common",
-      "title": "isCommonPassword is used nowhere",
-      "kind": "dead-code",
-      "group": "dead-code",
-      "status": "open",
-      "summary": "`isCommonPassword` in the core's common-password module has no reference but its declaration (`git grep -n isCommonPassword`): every caller asks `commonRank` instead, which also gives the rank that Strength reads.",
-      "files": [
-        "src/lib/common.ts"
-      ],
-      "action": "Delete the export, or keep it for the core package's public API (EP-M1.1) and export it from there."
-    }
-  ]
+  "findings": []
 }

@@ -15,8 +15,6 @@ export function commonRank(password: string): number | undefined {
   return ranks.get(password);
 }
 
-export const isCommonPassword = (password: string) => commonRank(password) !== undefined;
-
 /** How many passwords the list holds. */
 export const COMMON_PASSWORD_COUNT = COMMON_PASSWORDS_TEXT.split('\n').length;
 

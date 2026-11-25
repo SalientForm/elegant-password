@@ -1,6 +1,6 @@
 # Architecture
 
-Reviewed: 2026-11-24
+Reviewed: 2026-11-25
 
 ## Overview
 
@@ -39,7 +39,7 @@ its Ref names the roadmap phase that delivers it.
 | --- | --- | --- | --- |
 | Node 24 | current | `engines` in package.json | package.json |
 | pnpm 11 | current | `packageManager` | pnpm-workspace.yaml |
-| TypeScript 7 | current | `tsc -b` typechecks; no compiler API, so the workspace's test inventory is a placeholder | tsconfig.json |
+| TypeScript 7 | current | `tsc -b` typechecks | tsconfig.json |
 
 ### Web app
 

@@ -20,9 +20,9 @@ not drafted: 90 exports used only in their own file and 92 used only by tests, w
 - The settings went into `areas.audit` as proposed. `ignore` is unset: the workspace app (`wayfinder/`) is outside
   `src`, and `src` holds no fixtures. `src/lib` is not ignored as a public API yet: the core package (EP-M1.1) will
   have one entry, `src/lib/index.ts`, and only its exports are public.
-- **The one draft finding is confirmed:** `isCommonPassword` (`src/lib/common.ts`) has no reference but its own
-  declaration; callers use `commonRank`. Its action leaves the choice between deleting it and exporting it from the
-  package.
+- **The one draft finding was confirmed, then fixed:** `isCommonPassword` (`src/lib/common.ts`) had no reference but
+  its own declaration (callers use `commonRank`, which the common-password check runs on). The user had it deleted on
+  2026-11-25, so the feature audit holds no finding.
 - **Nothing else found** by reading the product: the three pages are all in the header's navigation (no unreachable
   page), there is no `public/` directory, no `TODO` or `FIXME` comment in `src/`, and no API. So one group, `dead-code`,
   and no `todo` finding (and no `feature-audit:` TODO entry).

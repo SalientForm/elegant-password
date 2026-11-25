@@ -1,6 +1,6 @@
 # Issues
 
-Reviewed: 2026-11-24
+Reviewed: 2026-11-25
 
 Known problems and limits in what exists today. Each says how to work around it and what would fix it; an issue is
 deleted once it is fixed. Ideas and planned work are not issues: they belong in [TODO.md](TODO.md) and
@@ -47,13 +47,3 @@ the page. The built app checks at start-up instead and, framed, mounts nothing (
 
 The typing model assumes QWERTY on a physical keyboard. The typing test reads a soft keyboard's typing, but Difficulty
 is not claimed to be reliable for phones or for other layouts.
-
-## The workspace's Features area lists no tests
-
-- **Area:** repo
-- **Found:** 2026-11-24
-- **Workaround:** —
-- **Fix:** —
-
-The Engineering Workspace's test inventory parses test files with TypeScript 5's compiler API. This repository is on
-TypeScript 7, whose package has none, and cannot install 5 beside it, so the Features area's tests are a placeholder.

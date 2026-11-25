@@ -19,8 +19,8 @@ judged: areas.about.prose — a file of the repository's own only where the kit'
 
 - The seven collections went into `content` as proposed; the config had no other collection.
 - **No About prose of the repository's own:** each of the kit's defaults (`overview`, `shell`, `skills` and the five
-  areas') is true here as written. They speak of a placeholder where a part is one (Features' tests and coverage,
-  the API area), and the check script runs in CI (`.github/workflows/check.yml`), as the overview says it may.
+  areas') is true here as written. They speak of a placeholder where a part is one (Features' coverage, the API
+  area). The check script runs locally, not in CI.
 - `skillsDir` and `skillLinks` keep their defaults: `.agents/skills` (read by Codex) and `['.claude/skills']` (for
   Claude Code), the two agents this repository's people use.
 

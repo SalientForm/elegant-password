@@ -60,6 +60,7 @@ export const ABOUT_MANIFEST: AboutManifest = {
         { name: 'product-routes.json routes', file: 'wayfinder/src/product-routes.json', source: 'json', holds: "a mirror of the product's routes (productRoutes), equal to its router; each belongs to one feature", owner: 'assess-features', count: FEATURES.productRoutes.routes.length, date: { name: 'areas.features.reviewedAt', value: FEATURES.reviewedAt } },
         { name: 'product-routes.json sidebar', file: 'wayfinder/src/product-routes.json', source: 'json', holds: "a mirror of the product's sidebar paths", owner: 'assess-features', count: FEATURES.productRoutes.sidebar?.length ?? 0, date: { name: 'areas.features.reviewedAt', value: FEATURES.reviewedAt } },
         { name: 'virtual:workspace-feature-sources', file: 'wayfinder/vite.config.ts', source: 'generated', holds: "the files the catalogue's globs can match, walked at build time from areas.features.sourceRoots and each feature's sources", count: FEATURES.sourceScan.files.length },
+        { name: 'virtual:workspace-test-inventory', file: 'wayfinder/vite.config.ts', source: 'generated', holds: 'every test file areas.features.tests.include matches, parsed at build time and mapped to features', count: FEATURES.testInventory.files.length },
       ],
       models: [],
     },

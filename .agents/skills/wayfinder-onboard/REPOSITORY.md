@@ -28,10 +28,10 @@ What `scripts/propose.mjs` read off the repository:
 | Header links | Elegant Passwords on 4270, with no `path`: the product deploys to GitHub Pages on its own origin, never beside the workspace |
 | Tailwind | none: the product has no Tailwind, so the app imports the kit's compiled `styles.css` and installs neither `tailwindcss` nor `@tailwindcss/vite` |
 | Theme | the kit's (`startTheme()` and `ThemeToggle`): the product follows `prefers-color-scheme` in CSS alone, with no provider, control or class on `<html>` |
-| Installed | the kit's tarball (`vendor/`, committed), `@tanstack/react-router` and `@tanstack/router-core`; React, Vite and `@vitejs/plugin-react` were already there. `minimumReleaseAgeExclude` names the kit in `pnpm-workspace.yaml` |
-| TypeScript | 7 only, so the Features area's tests are a placeholder (the test inventory needs TypeScript 5's compiler API) |
+| Installed | the kit's tarball (`vendor/`, committed), `@tanstack/react-router` (it brings its own `@tanstack/router-core`, which was a separate dependency until 2026-11-25); React, Vite and `@vitejs/plugin-react` were already there. `minimumReleaseAgeExclude` names the kit in `pnpm-workspace.yaml` |
+| TypeScript | 7 only; the Features area lists the tests all the same (the kit parses them with `oxc-parser` since 2026-11-25) |
 | Agents | Claude Code and Codex: the skills directory is `.agents/skills` (Codex reads it) and `skillLinks` keeps its default `['.claude/skills']` (Claude Code). Git ignores only `.claude/worktrees/` and `.claude/settings.local.json`, so the links are tracked |
-| CI | runs `pnpm workspace:check` in `.github/workflows/check.yml`, after the typecheck (the user's choice). No ignore file drops `vendor/` or `*.tgz`; there is no Dockerfile |
+| CI | runs no Workspace Wayfinder check (the user's choice, 2026-11-25). No ignore file drops `vendor/` or `*.tgz`; there is no Dockerfile |
 | Task runner | none that caches: no Nx or Turborepo |
 | About prose | none of the repository's own: the kit's defaults are true here |
 
@@ -41,7 +41,7 @@ What `scripts/propose.mjs` read off the repository:
 | --- | --- | --- |
 | Readme | generated | the root README only: no README below it |
 | Audit | generated | the document set, the reviews, the core package's spec and plan (EP-M1.1), and the feature audit |
-| Features | generated, its tests and coverage placeholders | three hash routes read by the hooks file from `PAGES` in `src/App.tsx`; TypeScript 7 has no compiler API; no test run writes `json-summary` coverage |
+| Features | generated, its coverage a placeholder | three hash routes read by the hooks file from `PAGES` in `src/App.tsx`; every test file listed and placed; no test run writes `json-summary` coverage |
 | API | placeholder | no API: no tracked OpenAPI 3 JSON document, no `fetch` in `src/` |
 | Platform Docs | generated | a page per page of the app, drafted from its own text, each still opening with the draft placeholder |
 | About | generated | the manifest, built by `assess-workspace` |

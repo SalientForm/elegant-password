@@ -1,10 +1,11 @@
 # assess-features in Elegant Passwords
 
-What `scripts/propose.mjs` read off the repository on the Features area's first run (2026-11-24), before `--write`:
+What `scripts/propose.mjs` read off the repository on the Features area's first run (2026-11-24), before `--write`,
+with the tests as it proposed them on 2026-11-25, once the kit's test inventory stopped needing TypeScript 5:
 
 | Setting | Proposed | From |
 | --- | --- | --- |
-| `areas.features.tests` | `{"placeholder":{"reason":"The test files cannot be listed: the inventory parses them with the TypeScript 5 compiler API, and this repository resolves typescript 7.0.2, which has none.","toFill":"Move the repository to typescript 5.x (5.9 or later) and run assess-features again, which sets areas.features.tests and maps the tests to features. On TypeScript 7 it stays a placeholder: the kit loads the one package named typescript."}}` | the repository's typescript (typescript 7.0.2) |
+| `areas.features.tests.include` | `["e2e/**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}","**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}"]` | playwright.config.ts, vite.config.ts |
 | `areas.features.sourceRoots` | `["src"]` | each package's src directory |
 | `areas.features.directory` | `"docs/features"` | the kit's default: one markdown file per feature |
 | `productRoutes` | `"wayfinder/src/product-routes.json"` | the hooks file's productRoutes (src/App.tsx) |
@@ -14,7 +15,6 @@ judged: the catalogue — one file per feature in the directory: one per route g
 judged: areas.features.reviewedAt — today, once the catalogue is written
 judged: areas.features.sourceRoots — narrow each root to the product's pages and libraries where the package holds more
 
-with typescript 5 installed, areas.features.tests.include would be: e2e/**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}, **/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}
 no test config writes a json-summary coverage report: leave coverage unset, and the kit shows it as a placeholder
 
 ## What was judged, and why
@@ -22,8 +22,11 @@ no test config writes a json-summary coverage report: leave coverage unset, and 
 - **The route mirror** comes from the hooks file's `productRoutes` (`wayfinder/src/workspace.hooks.mjs`): the web app has
   no router library, so the hook reads `PAGES` in `src/App.tsx`, whose hash links (`#/`, `#/scoring`, `#/fun`) are
   written as paths (`/`, `/scoring`, `/fun`). They are the header's navigation too, so `sidebar` equals `routes`.
-- **Tests stay a placeholder**, as proposed: the repository is on TypeScript 7 and cannot add 5 beside it. So there is
-  no `tests.include`, no `tests.infrastructure` and no test mapping; the E2E specs carry no `@feature:` tags yet.
+- **Tests** (2026-11-25): the include globs as proposed, and the 13 files no feature's `sources` reached placed by
+  hand. As a feature's `tests` glob: the smoke and phone E2E specs, `App.renders`, `generate.modes` and `reduceTo12`
+  (Passwords: the page and its generation); `strengthFloor` (Scoring); `bundle`, `walk` and `scripts/linkCli`
+  (tep); `testTitles` (Fun, whose prompt lists them). As `tests.infrastructure`: `boundaries` (the architecture's
+  rules), `workflows` (CI) and `csp` (the build's security policy). The E2E specs carry no `@feature:` tags.
 - **No coverage:** no test config writes a `json-summary` report, so `coverage` is unset and the kit shows its
   placeholder.
 - **`sourceRoots`** stays `src`: everything under it is product code (the core, the web app, the CLI, the prompts).
