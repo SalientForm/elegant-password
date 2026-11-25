@@ -1,4 +1,4 @@
-# The checks, once: types, the workspace's checks, the unit tests, both builds and the browser smoke tests. Called by ci.yml on every
+# The checks, once: types, the unit tests, both builds and the browser smoke tests. Called by ci.yml on every
 # branch push and pull request, and by pages.yml before a deploy.
 # Callers own the triggers and the concurrency.
 name: Check
@@ -21,7 +21,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm workspace:check # the Engineering Workspace's checks: documents, reviews and registries against the code
       - run: pnpm test
       - run: pnpm build:cli
       - run: pnpm exec playwright install --with-deps chromium

@@ -68,8 +68,13 @@ Plain CommonMark, two labelled lines in one blockquote, exactly:
    another shape is rewritten into the format, keeping its wording and its numbers (a TODO entry's, a phase's), each id given the prefix: `#4` becomes
    `<P>-4`, `M2.1` becomes `<P>-M2.1`, and every mention of them in the repository's markdown follows. A list with no
    numbers is numbered in its own order; an entry's `Added` is the day it first appeared in git (`git log -S`), or today;
-   its `Source` is who asked where the list says so (a group's heading, `Asked for by X`, gives `x`), else `idea`; a
-   group's introduction goes into the body of its first entry, and each other entry under it points there.
+   its `Source` is where it came from as the list says, for an entry or its group (a group's heading, `Asked for by X`,
+   gives `x`), else `idea`; a group's introduction is copied into the body of each of its entries, so each reads on its
+   own. An entry's `Area` is the part of the repository it touches, named after its top-level folders (`app`, `cli`,
+   `docs`); the audit check fails on any not in the config's `todoAreas` until `assess-audit`'s first run proposes the
+   list from the entries (`wayfinder-onboard` §3 step 7). An item that already has a spec, a plan or both is not a TODO
+   entry: it becomes a roadmap phase (its `Status` from them: a spec alone is `specified`, a plan `planned`, work
+   begun `in progress`) and leaves the TODO list.
    A document already in the format is refreshed, not rewritten.
 3. **Write each document** from its sources (below), in the order of the table: `ABOUT.md` last in practice, since it
    summarises the others.
@@ -132,7 +137,8 @@ feature's title, its summary and a link to its catalogue file), never a second c
 what a consumer can do with it; a tool's, its commands.
 
 **`TODO.md`** (`templates/TODO.md`): from an existing TODO file or a README section of that
-kind, moved into the format with its wording and its numbers, each entry's id the prefix and its number (`<P>-4`). `TODO` and `FIXME` comments in code are not copied in.
+kind, moved into the format with its wording and its numbers, each entry's id the prefix and its number (`<P>-4`),
+by step 2's rules (an item with a spec or plan is a roadmap phase instead). `TODO` and `FIXME` comments in code are not copied in.
 Nothing found: the template as it is, its header and its placeholder, the reason saying where you looked; with
 entries, no placeholder (the audit check refuses one beside an entry). Where the Audit area reads it, the `todo` skill owns it from then on.
 

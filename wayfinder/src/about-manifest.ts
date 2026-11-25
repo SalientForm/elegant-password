@@ -19,7 +19,7 @@ const { implementation, ledger, featureAudit } = AUDIT_AREA.module;
 const FEATURES = FEATURES_AREA.module;
 
 /** Set by the assess-workspace skill when the manifest changes. */
-export const ABOUT_REVIEWED_AT = '2026-11-24';
+export const ABOUT_REVIEWED_AT = '2026-11-25';
 
 /** Workspace skills, ordered by the first area (header order) they maintain. */
 export const ABOUT_SKILLS: AboutSkill[] = [
@@ -31,7 +31,7 @@ export const ABOUT_SKILLS: AboutSkill[] = [
   { name: 'assess-platform-docs', scripts: ['.agents/skills/assess-platform-docs/scripts/check-platform-docs.mjs', '.agents/skills/assess-platform-docs/scripts/propose.mjs'] },
   { name: 'assess-workspace', scripts: ['.agents/skills/assess-workspace/scripts/check-about.mjs', '.agents/skills/assess-workspace/scripts/propose.mjs'] },
   { name: 'document-repo', scripts: ['.agents/skills/document-repo/scripts/check-documents.mjs', '.agents/skills/document-repo/scripts/list-skills.mjs'] },
-  { name: 'wayfinder-onboard', scripts: ['.agents/skills/wayfinder-onboard/scripts/propose.mjs'] },
+  { name: 'wayfinder-onboard', scripts: ['.agents/skills/wayfinder-onboard/scripts/propose.mjs', '.agents/skills/wayfinder-onboard/scripts/walk-pages.mjs'] },
 ];
 
 export const ABOUT_MANIFEST: AboutManifest = {

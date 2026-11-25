@@ -69,7 +69,7 @@ The first paragraph: how the feature is reached, in a sentence or two.
 - **Lists** are written inline, `[a, b]`: one line, comma-separated. The front matter is YAML, so an item with a brace, `: ` or `#` is quoted (`['src/{a,b}.ts', src/c.ts]`): an unquoted `{a,b}` glob fails to load (`docs/formats.md`, the front-matter rule).
 - **`status`**: `live` is a route with a sidebar item or in-app link, or a feature without a route that its users reach another way (a command line, a background job); `partial` is a route or sidebar item without its counterpart; `parked` is a library nothing imports; `planned` is roadmap work with no route yet.
 - **`routes`**: written exactly as in the mirror (`:param`). Every mirror route belongs to exactly one feature.
-- **`sources`**: repository-relative globs (`**`, `*`, `?`, `{a,b}`; no `!`, no `[…]`). Name the route's page, the feature's library files and the API handlers it calls. Where one library serves several features, list the files each feature's page imports, not `src/**`. A file several features use (a barrel, shared data) goes in each. Use `page.*` rather than `page*` when another page shares the prefix (`orders*` also matches `orders-export.tsx`).
+- **`sources`**: repository-relative globs (`**`, `*`, `?`, `{a,b}`; no `!`, no `[…]`). Name the route's page, the feature's library files and the API handlers it calls. Where one library serves several features, name the files that are this feature's by their names (`src/lib/scoring*`), not `src/**`; no import list is traced. A file several features use (a barrel, shared data) goes in each. Use `page.*` rather than `page*` when another page shares the prefix (`orders*` also matches `orders-export.tsx`).
 - **API handlers**: when `areas.api.registry` is configured, for every registry row, the feature owning each of its `pages` names its `handler` in `sources`. The check fails otherwise, so a new endpoint from `assess-api` means a change here.
 - **`platformDoc`**: a Platform Docs file (under `areas['platform-docs'].directory`), optionally with `#anchor`, where the anchor is a `##` or `###` heading's slug.
 - **`roadmap`**: milestone, phase, Completed-row or Outside-the-roadmap ids from the roadmap (`areas.audit.roadmap`; the format is the kit's `docs/formats.md`).
@@ -104,7 +104,7 @@ Titles are the documentation: a top-level `describe` names the unit or the featu
 |---|---|
 | A route in two features, or in none | One owner per route; split the feature or move the route |
 | `routes: /orders` without brackets | Every list is `[…]`, even with one item |
-| A lib-wide `src/**` for a shared lib | List the files the feature's page actually imports |
+| A lib-wide `src/**` for a shared lib | Name the library's files that are this feature's |
 | Forgetting the API handler of a new endpoint | Add it to the `sources` of the feature owning each of the endpoint's pages |
 | Updating the router without the mirror | The mirror (`productRoutes`) and the owning feature move together; with a `productRoutes` rule the check compares the mirror with the router |
 | Writing an H1 or code-level prose | The header shows the title; write for an engineer new to the product |

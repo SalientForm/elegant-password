@@ -35,13 +35,10 @@ importers:
         version: 1.64.1
       '@salientform/workspace-wayfinder':
         specifier: file:vendor/salientform-workspace-wayfinder-0.3.0.tgz
-        version: file:vendor/salientform-workspace-wayfinder-0.3.0.tgz(@tanstack/react-router@1.170.46(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@tanstack/router-core@1.171.39)(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(yaml@2.9.1))(vitest@5.0.4)
+        version: file:vendor/salientform-workspace-wayfinder-0.3.0.tgz(@tanstack/react-router@1.170.46(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(yaml@2.9.1))(vitest@5.0.4)
       '@tanstack/react-router':
         specifier: ^1.170.46
         version: 1.170.46(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@tanstack/router-core':
-        specifier: ^1.171.39
-        version: 1.171.39
       '@testing-library/dom':
         specifier: ^10.4.2
         version: 10.4.2
@@ -552,13 +549,12 @@ packages:
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
   '@salientform/workspace-wayfinder@file:vendor/salientform-workspace-wayfinder-0.3.0.tgz':
-    resolution: {integrity: sha512-IPqo+hCDVEnEJS/yzaYwKHCe1YI/91X1MjXm+MpsPyEOacb0vt0bqu1sGYhAvugo/HEqnIW4BdLjRJohBxDZxw==, tarball: file:vendor/salientform-workspace-wayfinder-0.3.0.tgz}
+    resolution: {integrity: sha512-7zbD/3IfhFFsuA0kMtEX0G8V8tLHYvyPns2/PsZXxtOOpkwJiJJSjJMhE3lsOWn5dX1vA0IAq+Ik/wVnxmu5/w==, tarball: file:vendor/salientform-workspace-wayfinder-0.3.0.tgz}
     version: 0.3.0
     engines: {node: '>=22.18'}
     hasBin: true
     peerDependencies:
       '@tanstack/react-router': ^1.170.36
-      '@tanstack/router-core': ^1.170.36
       '@testing-library/react': ^16.0.0
       react: ^19.0.0
       react-dom: ^19.0.0
@@ -2242,12 +2238,11 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@salientform/workspace-wayfinder@file:vendor/salientform-workspace-wayfinder-0.3.0.tgz(@tanstack/react-router@1.170.46(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@tanstack/router-core@1.171.39)(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(yaml@2.9.1))(vitest@5.0.4)':
+  '@salientform/workspace-wayfinder@file:vendor/salientform-workspace-wayfinder-0.3.0.tgz(@tanstack/react-router@1.170.46(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(yaml@2.9.1))(vitest@5.0.4)':
     dependencies:
       '@radix-ui/react-dialog': 1.3.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-tooltip': 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tanstack/react-router': 1.170.46(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@tanstack/router-core': 1.171.39
       clsx: 2.1.1
       lucide-react: 0.552.0(react@19.3.0)
       react: 19.3.0
