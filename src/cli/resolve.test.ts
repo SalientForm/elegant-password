@@ -5,6 +5,10 @@ import { profileValues, withProfile } from '../lib/modeProfiles';
 import { MAX_RULES_TEXT_LENGTH } from '../lib/ruleText';
 import { applyPreset, SITE_PRESETS } from '../lib/sitePresets';
 import { CliError, EXIT } from './errors';
+import { settingsData } from '../lib/api/config';
+import { MODE_NAMES, SITE_NAMES } from '../lib/config/names';
+import { configFromYaml, resolveConfig } from '../lib/index';
+import { layerOf, parseConfig } from './config';
 import { emptyLayer, resolve } from './resolve';
 import { fileAt, fileLayer, flag, flagsLayer } from './testing';
 
@@ -181,5 +185,55 @@ describe('resolve: options a mode has no use for', () => {
   it('warns about a file\'s value too', () => {
     const r = resolve(fileLayer({ 'options.ease-swaps': true }, { mode: 'two-finger' }), emptyLayer(), tty);
     expect(r.warnings).toEqual([expect.stringMatching(/^tep\.yml line 3 \(options\.ease-swaps\) sets deliberate swaps|^tep\.yml line 3 \(options\.ease-swaps\) sets ease awkward words/)]);
+  });
+});
+
+describe('the package resolves a configuration to the same settings as tep', () => {
+  const coreOf = (config: unknown) => {
+    const r = resolveConfig(config);
+    if (!r.ok) throw new Error(JSON.stringify(r.problems));
+    return settingsData(r.settings);
+  };
+
+  it('for every site preset and typing mode', () => {
+    for (const site of SITE_NAMES) {
+      for (const mode of MODE_NAMES) {
+        const r = resolve(undefined, flagsLayer({}, { site: site.name, mode: mode.value }), tty);
+        const core = coreOf({ version: 2, site: site.name, 'typing-mode': mode.name });
+        expect({ ...core.req, count: 5 }, `${site.name} ${mode.name}`).toEqual(r.generation.req);
+        expect(core.typingMode).toBe(r.typingMode);
+      }
+    }
+  });
+
+  it('for a file that states every section, read by tep and by the package from the same text', () => {
+    const text = [
+      'version: 2',
+      'typing-mode: two-finger',
+      'site: nist-passphrase',
+      'rules:',
+      '  max-length: 40',
+      '  symbols: "!@#"',
+      'options:',
+      '  strength: very-strong',
+      '  separator: none',
+      '  swaps: 3',
+      'sentence:',
+      '  shrink: ends',
+      '  target-length: 30',
+      'swaps:',
+      '  off: [a>@]',
+      '  custom:',
+      '    - { from: cat, to: k@ }',
+      '',
+    ].join('\n');
+    const r = resolve(layerOf(parseConfig(text, 'tep.yml')), emptyLayer(), tty);
+    const read = configFromYaml(text);
+    if (!read.ok) throw new Error(JSON.stringify(read.problems));
+    const core = coreOf(read.config);
+    expect({ ...core.req, count: 5 }).toEqual(r.generation.req);
+    expect(core.sentenceOptions).toEqual(r.generation.sentenceOptions);
+    expect(core.mappingSettings).toEqual(r.generation.mappingSettings);
+    expect(core.typingMode).toBe(r.typingMode);
   });
 });

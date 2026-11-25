@@ -9,7 +9,7 @@ import { problemsOf, warningsOf } from '../lib/consistency';
 import { runInputs } from '../lib/engine';
 import { shortfallWarning } from '../lib/generate';
 import { inputsFor, presentSuggestions } from '../lib/pipeline';
-import { normalizeSentence, sentenceLengthProblem } from '../lib/text';
+import { sentenceProblem } from '../lib/text';
 import { ruleProblems } from '../lib/validation';
 import { copyToClipboard } from './clipboard';
 import { DEFAULT_CONFIG_FILE, layerOf, loadConfig } from './config';
@@ -21,15 +21,6 @@ import { explainWarning, renderExplained, type Refer } from './messages';
 import { contradictionError, renderNotice } from './report';
 import { COLOR, configLine, PLAIN, render, useColor, type Config } from './output';
 import { resolve, type Layer } from './resolve';
-
-/** Why a sentence cannot be used, or undefined when it can. */
-function sentenceProblem(sentence: string): string | undefined {
-  if (!sentence.trim()) return 'Type a sentence, such as "Sally eats sweets on Sundays".';
-  const tooLong = sentenceLengthProblem(sentence);
-  if (tooLong) return tooLong;
-  if (!normalizeSentence(sentence).length) return 'It has no words made of the letters a-z or digits, which are what the keyboard model types (accents are fine), such as "Sally eats sweets on Sundays".';
-  return undefined;
-}
 
 async function readSentence(io: Io): Promise<string> {
   if (io.stdin.isTTY) {

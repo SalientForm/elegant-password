@@ -3,20 +3,19 @@
 // short-max-16 site preset (chosen by --site)", "line 3 of the review".
 // And how to change it, in the same terms.
 
-import type { TypingMode } from '../lib/difficulty';
+import type { Origin } from '../lib/config/resolve';
 import { keyPath, type CliField } from './fields';
 import { modeName } from '../lib/config/names';
 
-export type Source =
-  | { kind: 'default' }
+/** Where tep was told a value: the core's layering (src/lib/config/resolve.ts) adds the defaults and presets. */
+export type Given =
   /** The count's default, which depends on whether output goes to a terminal. */
   | { kind: 'terminal'; tty: boolean }
   | { kind: 'flag'; flag: string }
   | { kind: 'file'; file: string; line: number; key: string }
-  | { kind: 'site'; preset: string; via: Source }
-  | { kind: 'mode'; mode: TypingMode; via: Source }
-  | { kind: 'rules-text'; via: Source }
   | { kind: 'wizard'; line: number; label: string };
+
+export type Source = Origin<Given>;
 
 /** Where a value came from, as a phrase that follows "from". */
 export function describeSource(s: Source): string {

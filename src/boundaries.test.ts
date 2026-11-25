@@ -66,9 +66,11 @@ const CLI = filesUnder('src/cli');
 const WEB = [...filesUnder('src/components'), ...filesUnder('src/state'), 'src/App.tsx', 'src/main.tsx'];
 
 describe('src/lib, the shared core', () => {
-  it('imports only from src/lib, and yaml and zod in src/lib/config only', () => {
-    // Reading a configuration is the core's (spec §3): its schema needs zod and its YAML reader yaml. Nothing else in the core takes a package.
-    const configPackage = (f: string, from: string) => f.startsWith('src/lib/config/') && /^(yaml|zod)$/.test(from);
+  it('imports only from src/lib, yaml and zod in src/lib/config only, and zxcvbn in the package\'s zxcvbn entry only', () => {
+    // Reading a configuration is the core's (spec §3): its schema needs zod and its YAML reader yaml. The package's
+    // zxcvbn entry loads the library on first use (spec §5.5). Nothing else in the core takes a package.
+    const configPackage = (f: string, from: string) =>
+      (f.startsWith('src/lib/config/') && /^(yaml|zod)$/.test(from)) || (f === 'src/lib/zxcvbnEntry.ts' && from === 'zxcvbn');
     const outside = LIB.filter((f) => !isTest(f)).flatMap((f) =>
       importsOf(f)
         .filter((i) => (!i.from.startsWith('.') || !join(f, '..', i.from).startsWith('src/lib/')) && !configPackage(f, i.from))

@@ -68,6 +68,26 @@ export function zxcvbnBand(crackTime: string, password: string): { label: Zxcvbn
   return { label: 'very weak', fill: 25 };
 }
 
+/** What the reading takes from the zxcvbn library's result: the same names, so the library's own result can be passed. */
+export interface ZxcvbnResult {
+  crack_times_display: { offline_slow_hashing_1e4_per_second: string | number };
+  guesses_log10: number;
+  score: number;
+}
+
+/** The reading of zxcvbn's result for a password, checked now. */
+export function readingOf(result: ZxcvbnResult, password: string): ZxcvbnReading {
+  const crackTime = String(result.crack_times_display.offline_slow_hashing_1e4_per_second);
+  return {
+    ...zxcvbnBand(crackTime, password),
+    crackTime,
+    guessesLog10: result.guesses_log10,
+    score: result.score,
+    estimator: ZXCVBN_ESTIMATOR,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
 /** One line for a reading: "zxcvbn: strong (centuries to crack)". */
 export const zxcvbnLine = (r: Pick<ZxcvbnReading, 'label' | 'crackTime'>) => `zxcvbn: ${r.label} (${r.crackTime} to crack)`;
 
