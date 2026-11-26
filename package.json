@@ -18,6 +18,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -b",
     "test:e2e": "playwright test",
     "test:e2e:built": "playwright test --project built",

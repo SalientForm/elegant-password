@@ -13,5 +13,14 @@ export default defineConfig({
   server: { host: '127.0.0.1', port: 4270, strictPort: true, allowedHosts: ['lean.tail4b6ff1.ts.net'] },
   preview: { host: '127.0.0.1', port: 4271, strictPort: true },
   // Unit tests only; the browser smoke tests in e2e/ run under Playwright (pnpm test:e2e).
-  test: { exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**'] }, // .claude holds review agents' scratch worktrees
+  test: {
+    exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**'], // .claude holds review agents' scratch worktrees
+    // pnpm test:coverage: a v8 json-summary of every file under src/, which the workspace's Features area reads.
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: './coverage',
+      reporter: ['json-summary', 'text-summary'],
+      include: ['src/**/*.{ts,tsx}'],
+    },
+  },
 });

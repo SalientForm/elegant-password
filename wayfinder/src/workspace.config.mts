@@ -70,6 +70,8 @@ export default {
         // The architecture's own rules, the CI workflows and the build's security policy: no feature's.
         infrastructure: ['src/boundaries.test.ts', 'src/workflows.test.ts', 'src/lib/csp.test.ts'],
       },
+      // The v8 json-summary pnpm test:coverage writes (vite.config.ts); until it has run, the area reads "Not measured".
+      coverage: { summaries: ['coverage/coverage-summary.json'] },
     },
     api: {
       placeholder: {

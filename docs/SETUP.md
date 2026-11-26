@@ -46,6 +46,7 @@ pnpm workspace:dev       # the Engineering Workspace: http://127.0.0.1:4274
 ```bash
 pnpm typecheck           # tsc -b
 pnpm test                # unit tests (Vitest)
+pnpm test:coverage       # the same, writing coverage/coverage-summary.json for the workspace's Features area
 pnpm exec playwright install chromium-headless-shell   # first time only
 pnpm test:e2e            # browser smoke tests against the build (4272) and the dev server (4273)
 pnpm workspace:check     # the workspace's checks: documents, reviews and registries against the code

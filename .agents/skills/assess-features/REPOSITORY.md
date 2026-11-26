@@ -6,6 +6,7 @@ with the tests as it proposed them on 2026-11-25, once the kit's test inventory 
 | Setting | Proposed | From |
 | --- | --- | --- |
 | `areas.features.tests.include` | `["e2e/**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}","**/*.{test,spec}.{ts,tsx,js,jsx,mts,mjs}"]` | playwright.config.ts, vite.config.ts |
+| `areas.features.coverage.summaries` | `["coverage/coverage-summary.json"]` | the Vitest configs' json-summary reporters (added 2026-11-26) |
 | `areas.features.sourceRoots` | `["src"]` | each package's src directory |
 | `areas.features.directory` | `"docs/features"` | the kit's default: one markdown file per feature |
 | `productRoutes` | `"wayfinder/src/product-routes.json"` | the hooks file's productRoutes (src/App.tsx) |
@@ -14,8 +15,6 @@ judged: areas.features.tests.infrastructure — the tests of tooling, the platfo
 judged: the catalogue — one file per feature in the directory: one per route group of the mirror, and one per feature without a route
 judged: areas.features.reviewedAt — today, once the catalogue is written
 judged: areas.features.sourceRoots — narrow each root to the product's pages and libraries where the package holds more
-
-no test config writes a json-summary coverage report: leave coverage unset, and the kit shows it as a placeholder
 
 ## What was judged, and why
 
@@ -27,8 +26,9 @@ no test config writes a json-summary coverage report: leave coverage unset, and 
   (Passwords: the page and its generation); `strengthFloor` (Scoring); `bundle`, `walk` and `scripts/linkCli`
   (tep); `testTitles` (Fun, whose prompt lists them). As `tests.infrastructure`: `boundaries` (the architecture's
   rules), `workflows` (CI) and `csp` (the build's security policy). The E2E specs carry no `@feature:` tags.
-- **No coverage:** no test config writes a `json-summary` report, so `coverage` is unset and the kit shows its
-  placeholder.
+- **Coverage** (2026-11-26): `vite.config.ts` gives Vitest a v8 coverage block writing `json-summary` to `coverage/`
+  over `src/`, run by `pnpm test:coverage`. `coverage/` is ignored by git, so a fresh checkout reads "Not measured"
+  until the command has run.
 - **`sourceRoots`** stays `src`: everything under it is product code (the core, the web app, the CLI, the prompts).
 - **The catalogue:** one feature per page of the web app (Passwords, Scoring, Fun), `tep` as a live feature with no
   route (reached from a terminal), and the core package as planned work (EP-M1.1, no sources). Each feature's
@@ -42,4 +42,5 @@ no test config writes a json-summary coverage report: leave coverage unset, and 
 
 - A page of the web app is a `PAGES` row in `src/App.tsx`; a new one changes the mirror (`propose.mjs --write`) and
   gets a feature file.
+- Run `pnpm test:coverage` before reading or refreshing coverage.
 - Verify with `pnpm workspace:check`, then `pnpm typecheck` and `pnpm test`.

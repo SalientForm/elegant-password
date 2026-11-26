@@ -19,7 +19,7 @@ const { implementation, ledger, featureAudit } = AUDIT_AREA.module;
 const FEATURES = FEATURES_AREA.module;
 
 /** Set by the assess-workspace skill when the manifest changes. */
-export const ABOUT_REVIEWED_AT = '2026-11-25';
+export const ABOUT_REVIEWED_AT = '2026-11-26';
 
 /** Workspace skills, ordered by the first area (header order) they maintain. */
 export const ABOUT_SKILLS: AboutSkill[] = [
@@ -61,6 +61,7 @@ export const ABOUT_MANIFEST: AboutManifest = {
         { name: 'product-routes.json sidebar', file: 'wayfinder/src/product-routes.json', source: 'json', holds: "a mirror of the product's sidebar paths", owner: 'assess-features', count: FEATURES.productRoutes.sidebar?.length ?? 0, date: { name: 'areas.features.reviewedAt', value: FEATURES.reviewedAt } },
         { name: 'virtual:workspace-feature-sources', file: 'wayfinder/vite.config.ts', source: 'generated', holds: "the files the catalogue's globs can match, walked at build time from areas.features.sourceRoots and each feature's sources", count: FEATURES.sourceScan.files.length },
         { name: 'virtual:workspace-test-inventory', file: 'wayfinder/vite.config.ts', source: 'generated', holds: 'every test file areas.features.tests.include matches, parsed at build time and mapped to features', count: FEATURES.testInventory.files.length },
+        { name: 'virtual:workspace-feature-coverage', file: 'wayfinder/vite.config.ts', source: 'generated', holds: 'the coverage summaries areas.features.coverage.summaries finds, summed per feature', count: FEATURES.coverage?.summaries.length ?? 0 },
       ],
       models: [],
     },

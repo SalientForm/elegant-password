@@ -391,6 +391,7 @@ cold scoring.
     pnpm install
     pnpm dev        # http://127.0.0.1:4270
     pnpm test       # unit tests (Vitest)
+    pnpm test:coverage   # the same, with the coverage the workspace's Features area shows
     pnpm measure:wizard  # times every tep config question against its 750 ms target; fails one over 2 s
     pnpm test:e2e   # browser smoke tests (Playwright) against the build on 4272 and the dev server on 4273
     pnpm build && pnpm preview   # http://127.0.0.1:4271
