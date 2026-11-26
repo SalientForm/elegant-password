@@ -24,6 +24,15 @@ export function sentenceLengthProblem(sentence: string): string | undefined {
   return sentence.length > MAX_HINT_LENGTH ? `The sentence is ${sentence.length} characters; ${MAX_HINT_LENGTH} is the most this tool takes. Use a shorter sentence.` : undefined;
 }
 
+/** Why a sentence of the user's own cannot be used, or undefined when it can: the one wording for `tep g` and the package. */
+export function sentenceProblem(sentence: string): string | undefined {
+  if (!sentence.trim()) return 'Type a sentence, such as "Sally eats sweets on Sundays".';
+  const tooLong = sentenceLengthProblem(sentence);
+  if (tooLong) return tooLong;
+  if (!normalizeSentence(sentence).length) return 'It has no words made of the letters a-z or digits, which are what the keyboard model types (accents are fine), such as "Sally eats sweets on Sundays".';
+  return undefined;
+}
+
 /** Small words: these become capital initials and are the first to be dropped. */
 export const SMALL_WORDS: ReadonlySet<string> = new Set(
   `a an the of for to in on at by with from into onto over under up off out and or but nor so as than that

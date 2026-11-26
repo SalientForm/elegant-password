@@ -352,7 +352,7 @@
       },
       {
         "kind": "test",
-        "title": "imports only from src/lib, and yaml and zod in src/lib/config only"
+        "title": "imports only from src/lib, yaml and zod in src/lib/config only, and zxcvbn in the package's zxcvbn entry only"
       },
       {
         "kind": "test",
@@ -1303,6 +1303,18 @@
       {
         "kind": "test",
         "title": "warns about a file's value too"
+      },
+      {
+        "kind": "group",
+        "title": "the package resolves a configuration to the same settings as tep"
+      },
+      {
+        "kind": "test",
+        "title": "for every site preset and typing mode"
+      },
+      {
+        "kind": "test",
+        "title": "for a file that states every section, read by tep and by the package from the same text"
       }
     ]
   },
@@ -2312,6 +2324,139 @@
       {
         "kind": "test",
         "title": "replaces the root with the notice: why, a link to a new tab, and the address"
+      }
+    ]
+  },
+  {
+    "file": "src/lib/api/api.test.ts",
+    "titles": [
+      {
+        "kind": "group",
+        "title": "the index"
+      },
+      {
+        "kind": "test",
+        "title": "exports only the names spec §5 gives, and the zxcvbn reading is not one of them"
+      },
+      {
+        "kind": "group",
+        "title": "the choices"
+      },
+      {
+        "kind": "test",
+        "title": "name the modes and presets as a configuration does"
+      },
+      {
+        "kind": "test",
+        "title": "list every rules, options and sentence key with its default, symbols filled with the default set"
+      },
+      {
+        "kind": "test",
+        "title": "are frozen, so a caller cannot change them by accident"
+      },
+      {
+        "kind": "group",
+        "title": "resolveConfig"
+      },
+      {
+        "kind": "test",
+        "title": "resolves the configuration that states nothing to the defaults and the ten-finger options"
+      },
+      {
+        "kind": "test",
+        "title": "names the keys of every schema problem at once"
+      },
+      {
+        "kind": "test",
+        "title": "names the keys of a contradiction, and fixes nothing to fit"
+      },
+      {
+        "kind": "test",
+        "title": "warns of a target out of reach and of an option the typing mode has no use for, and still resolves"
+      },
+      {
+        "kind": "test",
+        "title": "lists the options that differ from the typing mode's own as changed"
+      },
+      {
+        "kind": "test",
+        "title": "reads a version 1 configuration, its mode as the typing mode, and says so"
+      },
+      {
+        "kind": "test",
+        "title": "gives settings that are plain data, safe to keep and to send between threads"
+      },
+      {
+        "kind": "group",
+        "title": "generate"
+      },
+      {
+        "kind": "test",
+        "title": "draws a made-up sentence and gives one password with exact bits, readings and rule checks"
+      },
+      {
+        "kind": "test",
+        "title": "keeps a drawn sentence for Refresh, even after a round trip through JSON"
+      },
+      {
+        "kind": "test",
+        "title": "fits a string as the user's own sentence: scores, no exact bits, no drawn sentence"
+      },
+      {
+        "kind": "test",
+        "title": "scores Difficulty for the configuration's typing mode"
+      },
+      {
+        "kind": "test",
+        "title": "gives a problem, never a throw, for a sentence or a count that cannot be used"
+      },
+      {
+        "kind": "group",
+        "title": "scorePassword"
+      },
+      {
+        "kind": "test",
+        "title": "reads a password as My list does, from the password and hint alone"
+      },
+      {
+        "kind": "test",
+        "title": "has no Memorability without a hint, and refuses a typing mode that does not exist"
+      },
+      {
+        "kind": "group",
+        "title": "readRulesText"
+      },
+      {
+        "kind": "test",
+        "title": "reads sign-up text as rules values in config keys, ready to merge into rules"
+      },
+      {
+        "kind": "test",
+        "title": "takes symbols it rules out from the default set"
+      },
+      {
+        "kind": "test",
+        "title": "names a rule it cannot keep, and refuses text past the cap whole"
+      },
+      {
+        "kind": "group",
+        "title": "configToYaml and configFromYaml"
+      },
+      {
+        "kind": "test",
+        "title": "round-trip a configuration"
+      },
+      {
+        "kind": "test",
+        "title": "read a version 1 file as version 2"
+      },
+      {
+        "kind": "test",
+        "title": "give every problem with its line and key path"
+      },
+      {
+        "kind": "test",
+        "title": "refuse to write a configuration that is not one"
       }
     ]
   },
