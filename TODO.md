@@ -54,6 +54,9 @@ most urgent.
   `--sentence` and the config's `sentence` options follow; the config's
   shape for them is settled in the package's spec, so the format does not
   change again once the package ships.
+  Specified in `docs/specs/2026-11-26-one-sentence-design.md`, with the
+  user's decision of 2026-11-26 that every option works on every
+  sentence, drawn or the user's own.
 
 ## Asked for by the user (2026-11-18)
 
